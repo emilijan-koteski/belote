@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Belote — UX Design Directions</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface-el: #1c1c26;
+    --border: #2a2a38;
+    --accent: #00e5a0;
+    --accent-glow: #00e5a040;
+    --accent-dim: #00804a;
+    --team-red: #ff4d4d;
+    --team-blue: #4d9fff;
+    --text: #f0f0f8;
+    --text-sec: #8888a0;
+    --text-dis: #44445a;
+    --warning: #f59e0b;
+    --success: #22c55e;
+    --dest: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #05050a;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(10,10,15,0.95);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 24px;
+    backdrop-filter: blur(8px);
+  }
+  .nav-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; color: var(--accent); margin-right: 16px; }
+  .nav-btn {
+    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-sec); font-family: 'Inter', sans-serif;
+    font-size: 12px; cursor: pointer; transition: all 0.15s;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+
+  /* ── SECTIONS ── */
+  .section { display: none; padding-top: 56px; min-height: 100vh; }
+  .section.active { display: block; }
+
+  .section-header {
+    padding: 32px 40px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-header h2 { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; }
+  .section-header p { color: var(--text-sec); font-size: 14px; margin-top: 6px; }
+
+  /* ── DIRECTION GRID ── */
+  .directions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 24px 40px 40px;
+  }
+
+  .direction-card {
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    background: var(--surface);
+  }
+  .direction-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .direction-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 24px var(--accent-glow); }
+
+  .direction-label {
+    padding: 12px 16px;
+    background: var(--surface-el);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .direction-label span { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; }
+  .direction-label em { font-size: 11px; color: var(--text-sec); font-style: normal; }
+  .selected-badge {
+    display: none;
+    font-size: 10px; font-weight: 600; color: #000;
+    background: var(--accent); padding: 2px 8px; border-radius: 4px;
+  }
+  .direction-card.selected .selected-badge { display: block; }
+
+  .mockup-frame { width: 100%; height: 360px; position: relative; overflow: hidden; }
+
+  /* ════════════════════════════════════════
+     DIRECTION 1 — Cinematic Immersion
+  ════════════════════════════════════════ */
+  .d1 { background: var(--bg); }
+  .d1 .lobby {
+    height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 0;
+    position: relative;
+  }
+  .d1 .lobby::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 100%, #00e5a010 0%, transparent 60%);
+  }
+  .d1 .logo-area { text-align: center; margin-bottom: 40px; }
+  .d1 .logo { font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 700; color: var(--accent); letter-spacing: -1px; }
+  .d1 .tagline { font-size: 11px; color: var(--text-sec); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+  .d1 .action-strip {
+    display: flex; gap: 12px;
+  }
+  .d1 .action-btn {
+    padding: 10px 24px; border-radius: 8px;
+    font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .d1 .action-btn.primary {
+    background: var(--accent); color: #000; border: none;
+  }
+  .d1 .action-btn.ghost {
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+  }
+  .d1 .live-strip {
+    position: absolute; bottom: 16px; left: 0; right: 0;
+    display: flex; justify-content: center; gap: 24px;
+    font-size: 11px; color: var(--text-sec);
+  }
+  .d1 .live-strip span { display: flex; align-items: center; gap: 4px; }
+  .d1 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  /* ════════════════════════════════════════
+     DIRECTION 2 — Dashboard Split
+  ════════════════════════════════════════ */
+  .d2 { background: var(--bg); }
+  .d2 .layout { display: flex; height: 100%; }
+  .d2 .sidebar {
+    width: 180px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 16px 0;
+    flex-shrink: 0;
+  }
+  .d2 .sidebar-logo { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--accent); padding: 0 16px 16px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .d2 .nav-item {
+    padding: 8px 16px; font-size: 12px; color: var(--text-sec);
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+  }
+  .d2 .nav-item.active { color: var(--accent); background: var(--accent-glow); border-right: 2px solid var(--accent); }
+  .d2 .nav-icon { width: 14px; height: 14px; border-radius: 2px; background: currentColor; opacity: 0.5; flex-shrink: 0; }
+  .d2 .main { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .d2 .stat-row { display: flex; gap: 8px; }
+  .d2 .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .d2 .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent); }
+  .d2 .stat-label { font-size: 10px; color: var(--text-sec); margin-top: 2px; }
+  .d2 .play-section { display: flex; gap: 8px; }
+  .d2 .play-card {
+    flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; text-align: center; cursor: pointer;
+  }
+  .d2 .play-card.featured { border-color: var(--accent); background: var(--accent-glow); }
+  .d2 .play-card-title { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+  .d2 .play-card-sub { font-size: 10px; color: var(--text-sec); margin-top: 3px; }
+  .d2 .room-list { flex: 1; overflow: hidden; }
+  .d2 .room-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; margin-bottom: 4px; font-size: 11px;
+  }
+  .d2 .room-name { font-weight: 500; }
+  .d2 .room-meta { color: var(--text-sec); font-size: 10px; }
+  .d2 .join-btn { font-size: 10px; color: var(--accent); font-weight: 600; cursor: pointer; }
+
+  /* ════════════════════════════════════════
+     DIRECTION 3 — Game Table Focus
+  ════════════════════════════════════════ */
+  .d3 { background: #060610; }
+  .d3 .table-view { height: 100%; position: relative; }
+  .d3 .felt {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 50%, #0d1a12 0%, #060610 70%);
+  }
+  .d3 .table-oval {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 260px; height: 160px;
+    border: 2px solid #1a3a25;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, #0d1a12 0%, #080f0d 100%);
+  }
+  .d3 .trick-area {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    display: flex; gap: 4px;
+  }
+  .d3 .card-sm {
+    width: 22px; height: 32px; border-radius: 3px;
+    background: #f5f0e8; border: 1px solid #ccc;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 700; color: #c00;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+  .d3 .card-sm.black { color: #111; }
+  /* Seats */
+  .d3 .seat {
+    position: absolute; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .d3 .seat-name { font-size: 9px; color: var(--text-sec); }
+  .d3 .seat-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--surface-el); border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+  }
+  .d3 .seat.active .seat-avatar { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+  .d3 .seat.red .seat-avatar { border-color: var(--team-red); }
+  .d3 .seat.blue .seat-avatar { border-color: var(--team-blue); }
+  .d3 .seat-top { top: 20px; left: 50%; transform: translateX(-50%); flex-direction: column-reverse; }
+  .d3 .seat-bottom { bottom: 60px; left: 50%; transform: translateX(-50%); }
+  .d3 .seat-left { left: 20px; top: 50%; transform: translateY(-50%); }
+  .d3 .seat-right { right: 20px; top: 50%; transform: translateY(-50%); }
+  /* Player hand */
+  .d3 .hand {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: -4px;
+  }
+  .d3 .hand-card {
+    width: 24px; height: 36px; border-radius: 3px; margin-left: -8px;
+    background: #f5f0e8; border: 1px solid #ddd;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    display: flex; align-items: flex-start; justify-content: flex-start;
+    padding: 2px; font-size: 7px; font-weight: 700;
+    transition: transform 0.1s;
+    position: relative;
+  }
+  .d3 .hand-card:first-child { margin-left: 0; }
+  .d3 .hand-card.playable { color: #c00; box-shadow: 0 0 8px var(--accent-glow), 0 2px 6px rgba(0,0,0,0.6); transform: translateY(-4px); }
+  .d3 .hand-card.black-card { color: #111; }
+  .d3 .hand-card.dim { opacity: 0.4; }
+  /* HUD */
+  .d3 .hud-top {
+    position: absolute; top: 8px; left: 8px; right: 8px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .d3 .score-panel {
+    background: rgba(19,19,26,0.9); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; font-size: 10px;
+  }
+  .d3 .score-row { display: flex; gap: 8px; align-items: center; }
+  .d3 .score-team { font-size: 9px; font-weight: 600; }
+  .d3 .score-val { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; }
+  .d3 .trump-indicator {
+    background: rgba(19,19,26,0.9); border: 1px solid var(--accent);
+    border-radius: 6px; padding: 6px 10px; text-align: center;
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .d3 .trump-suit { font-size: 16px; color: var(--accent); }
+  .d3 .trump-label { font-size: 8px; color: var(--text-sec); margin-top: 1px; }
+  .d3 .timer-ring {
+    background: rgba(19,19,26,0.9); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; text-align: center;
+  }
+  .d3 .timer-val { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--warning); }
+  .d3 .timer-label { font-size: 8px; color: var(--text-sec); }
+
+  /* ════════════════════════════════════════
+     DIRECTION 4 — Compact Lobby Cards
+  ════════════════════════════════════════ */
+  .d4 { background: var(--bg); }
+  .d4 .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .d4 .top-logo { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent); }
+  .d4 .top-player { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sec); }
+  .d4 .avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-glow); border: 1px solid var(--accent); }
+  .d4 .content { padding: 16px 20px; }
+  .d4 .mode-tabs {
+    display: flex; gap: 0; margin-bottom: 16px;
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .d4 .tab {
+    flex: 1; padding: 8px; text-align: center; font-size: 11px; font-weight: 600;
+    color: var(--text-sec); cursor: pointer; border-right: 1px solid var(--border);
+  }
+  .d4 .tab:last-child { border-right: none; }
+  .d4 .tab.active { background: var(--accent); color: #000; }
+  .d4 .room-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .d4 .room-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; cursor: pointer; transition: border-color 0.15s;
+  }
+  .d4 .room-card:hover { border-color: var(--accent); }
+  .d4 .rc-name { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .d4 .rc-meta { font-size: 10px; color: var(--text-sec); display: flex; gap: 8px; }
+  .d4 .rc-players {
+    display: flex; gap: 2px; margin-top: 8px;
+  }
+  .d4 .player-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .d4 .player-dot.empty { background: var(--border); }
+  .d4 .rc-join { font-size: 10px; font-weight: 600; color: var(--accent); margin-top: 6px; }
+
+  /* ════════════════════════════════════════
+     DIRECTION 5 — Social / Chat Forward
+  ════════════════════════════════════════ */
+  .d5 { background: var(--bg); }
+  .d5 .layout { display: flex; height: 100%; }
+  .d5 .main { flex: 1; display: flex; flex-direction: column; }
+  .d5 .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .d5 .logo { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--accent); }
+  .d5 .play-btns { display: flex; gap: 6px; }
+  .d5 .pbtn {
+    padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-sec);
+  }
+  .d5 .pbtn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  .d5 .rooms-area { flex: 1; padding: 12px 16px; overflow: hidden; }
+  .d5 .rooms-title { font-size: 10px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .d5 .room-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 11px;
+  }
+  .d5 .rr-name { font-weight: 600; }
+  .d5 .rr-info { color: var(--text-sec); font-size: 10px; }
+  .d5 .rr-action { color: var(--accent); font-weight: 600; font-size: 10px; cursor: pointer; }
+  .d5 .chat-panel {
+    width: 200px; background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  .d5 .chat-header { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text-sec); }
+  .d5 .chat-messages { flex: 1; padding: 8px 12px; overflow: hidden; display: flex; flex-direction: column; gap: 6px; }
+  .d5 .chat-msg { font-size: 10px; line-height: 1.4; }
+  .d5 .chat-user { font-weight: 600; color: var(--accent); }
+  .d5 .chat-input-area { padding: 8px 12px; border-top: 1px solid var(--border); }
+  .d5 .chat-input {
+    width: 100%; padding: 5px 8px; border-radius: 4px;
+    background: var(--surface-el); border: 1px solid var(--border);
+    color: var(--text-sec); font-size: 10px; font-family: 'Inter', sans-serif;
+  }
+
+  /* ════════════════════════════════════════
+     DIRECTION 6 — Competitive / Esports
+  ════════════════════════════════════════ */
+  .d6 { background: var(--bg); }
+  .d6 .header {
+    display: flex; align-items: center; gap: 0;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 16px; height: 44px;
+  }
+  .d6 .logo { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--accent); margin-right: 24px; }
+  .d6 .nav-tabs { display: flex; height: 100%; }
+  .d6 .ntab {
+    padding: 0 14px; font-size: 11px; font-weight: 600; color: var(--text-sec);
+    display: flex; align-items: center; cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .d6 .ntab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .d6 .rank-banner {
+    margin: 12px 16px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .d6 .rank-badge {
+    width: 44px; height: 44px; border-radius: 50%; background: var(--surface-el);
+    border: 2px solid #cd7f32; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; box-shadow: 0 0 12px #cd7f3240;
+  }
+  .d6 .rank-info { flex: 1; }
+  .d6 .rank-name { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: #cd7f32; }
+  .d6 .rank-sub { font-size: 10px; color: var(--text-sec); margin-top: 2px; }
+  .d6 .rank-progress { margin-top: 6px; height: 4px; background: var(--border); border-radius: 2px; }
+  .d6 .rank-fill { height: 100%; width: 65%; background: #cd7f32; border-radius: 2px; }
+  .d6 .season-info { text-align: right; font-size: 10px; color: var(--text-sec); }
+  .d6 .season-val { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); display: block; }
+  .d6 .body { display: flex; gap: 12px; padding: 0 16px 16px; }
+  .d6 .play-col { width: 180px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+  .d6 .play-option {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; cursor: pointer; transition: border-color 0.15s;
+  }
+  .d6 .play-option.featured { border-color: var(--accent); background: var(--accent-glow); }
+  .d6 .po-title { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; }
+  .d6 .po-desc { font-size: 10px; color: var(--text-sec); margin-top: 3px; }
+  .d6 .leaderboard { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .d6 .lb-header { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 10px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; }
+  .d6 .lb-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px; border-bottom: 1px solid var(--border); font-size: 11px;
+  }
+  .d6 .lb-rank { width: 20px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--text-sec); font-size: 10px; }
+  .d6 .lb-name { flex: 1; font-weight: 500; }
+  .d6 .lb-tier { font-size: 9px; color: var(--text-sec); }
+  .d6 .lb-elo { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; color: var(--accent); }
+
+  /* ════════════════════════════════════════
+     DIRECTION 7 — Prompt / Trump Moment
+  ════════════════════════════════════════ */
+  .d7 { background: #060610; }
+  .d7 .scene { height: 100%; position: relative; display: flex; align-items: center; justify-content: center; }
+  .d7 .table-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 50%, #0d1a12 0%, #060610 70%);
+  }
+  .d7 .trump-prompt {
+    position: relative; z-index: 2;
+    background: var(--surface-el); border: 1px solid var(--accent);
+    border-radius: 12px; padding: 20px 24px; text-align: center;
+    box-shadow: 0 0 32px var(--accent-glow), 0 16px 48px rgba(0,0,0,0.6);
+    max-width: 240px;
+  }
+  .d7 .prompt-label { font-size: 10px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; }
+  .d7 .trump-card-display {
+    width: 56px; height: 80px; border-radius: 6px;
+    background: #f5f0e8; border: 1px solid #ddd;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .d7 .prompt-question { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .d7 .prompt-sub { font-size: 10px; color: var(--text-sec); margin-bottom: 16px; }
+  .d7 .prompt-actions { display: flex; gap: 8px; }
+  .d7 .prompt-btn {
+    flex: 1; padding: 8px; border-radius: 6px; font-weight: 700;
+    font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  .d7 .prompt-btn.pick { background: var(--accent); color: #000; border: none; }
+  .d7 .prompt-btn.pass { background: transparent; color: var(--text-sec); border: 1px solid var(--border); }
+  /* Other players dimmed */
+  .d7 .bg-seats { position: absolute; inset: 0; opacity: 0.3; pointer-events: none; }
+  .d7 .bg-seat { position: absolute; }
+  .d7 .bg-av { width: 24px; height: 24px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); }
+
+  /* ════════════════════════════════════════
+     DIRECTION 8 — Score Reveal Moment
+  ════════════════════════════════════════ */
+  .d8 { background: #060610; }
+  .d8 .scene { height: 100%; position: relative; display: flex; align-items: center; justify-content: center; }
+  .d8 .overlay {
+    position: absolute; inset: 0;
+    background: rgba(6,6,16,0.8);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .d8 .score-modal {
+    background: var(--surface-el); border: 1px solid var(--border);
+    border-radius: 14px; padding: 24px; min-width: 280px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+  }
+  .d8 .hand-result { font-size: 10px; color: var(--text-sec); text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+  .d8 .teams { display: flex; gap: 0; margin-bottom: 16px; }
+  .d8 .team-col { flex: 1; text-align: center; padding: 12px; }
+  .d8 .team-col.red { border-right: 1px solid var(--border); }
+  .d8 .team-name { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .d8 .team-name.red { color: var(--team-red); }
+  .d8 .team-name.blue { color: var(--team-blue); }
+  .d8 .team-score { font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 700; }
+  .d8 .team-score.red { color: var(--team-red); }
+  .d8 .team-score.blue { color: var(--team-blue); }
+  .d8 .score-breakdown { font-size: 10px; color: var(--text-sec); margin-top: 4px; }
+  .d8 .divider { height: 1px; background: var(--border); margin: 0 0 12px; }
+  .d8 .totals { display: flex; }
+  .d8 .total-col { flex: 1; text-align: center; }
+  .d8 .total-label { font-size: 9px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; }
+  .d8 .total-val { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; margin-top: 2px; }
+  .d8 .total-val.red { color: var(--team-red); }
+  .d8 .total-val.blue { color: var(--team-blue); }
+  .d8 .continue-btn {
+    width: 100%; margin-top: 14px; padding: 10px;
+    background: var(--accent); color: #000; border: none; border-radius: 8px;
+    font-weight: 700; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer;
+  }
+
+  /* ── DETAIL PANEL ── */
+  .detail-section { padding: 24px 40px 40px; }
+  .detail-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .detail-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .detail-card h4 { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+  .detail-card p { font-size: 12px; color: var(--text-sec); line-height: 1.6; }
+
+  /* ── SELECTION PANEL ── */
+  .selection-section {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 12px 40px; display: flex; align-items: center; gap: 16px;
+    z-index: 50;
+  }
+  .selection-label { font-size: 12px; color: var(--text-sec); }
+  .selection-name { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; color: var(--accent); }
+  .confirm-btn {
+    margin-left: auto; padding: 8px 24px;
+    background: var(--accent); color: #000; border: none; border-radius: 8px;
+    font-weight: 700; font-size: 13px; font-family: 'Inter', sans-serif; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── NAVIGATION ── -->
+<nav class="nav">
+  <span class="nav-title">BELOTE · Design Directions</span>
+  <button class="nav-btn active" onclick="showSection('overview')">Overview</button>
+  <button class="nav-btn" onclick="showSection('lobby')">Lobby Views</button>
+  <button class="nav-btn" onclick="showSection('table')">Table Views</button>
+  <button class="nav-btn" onclick="showSection('moments')">Key Moments</button>
+</nav>
+
+<!-- ════════════════════════════════════════
+     OVERVIEW — All directions
+════════════════════════════════════════ -->
+<section class="section active" id="overview">
+  <div class="section-header">
+    <h2>Design Direction Overview</h2>
+    <p>6 directions exploring different layout, density, and emphasis approaches — all within the established Balatro register.</p>
+  </div>
+  <div class="directions-grid">
+
+    <!-- D1 — Cinematic -->
+    <div class="direction-card" id="card-d1" onclick="selectDirection('d1', 'Cinematic Immersion')">
+      <div class="direction-label">
+        <span>1 — Cinematic Immersion</span>
+        <span class="selected-badge">SELECTED</span>
+        <em>Hero-centred, logo-first lobby</em>
+      </div>
+      <div class="mockup-frame d1">
+        <div class="lobby">
+          <div class="logo-area">
+            <div class="logo">BELOTE</div>
+            <div class="tagline">Balkan Belot · Online</div>
+          </div>
+          <div class="action-strip">
+            <button class="action-btn ghost">Browse Rooms</button>
+            <button class="action-btn primary">Quick Play</button>
+            <button class="action-btn ghost">Create Room</button>
+          </div>
+          <div class="live-strip">
+            <span><span class="dot"></span>142 online</span>
+            <span>18 games live</span>
+            <span>Season 3 · 24d left</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D2 — Dashboard -->
+    <div class="direction-card" id="card-d2" onclick="selectDirection('d2', 'Dashboard Split')">
+      <div class="direction-label">
+        <span>2 — Dashboard Split</span>
+        <span class="selected-badge">SELECTED</span>
+        <em>Sidebar nav, stats prominent</em>
+      </div>
+      <div class="mockup-frame d2">
+        <div class="layout">
+          <div class="sidebar">
+            <div class="sidebar-logo">BELOTE</div>
+            <div class="nav-item active"><span class="nav-icon"></span>Lobby</div>
+            <div class="nav-item"><span class="nav-icon"></span>Ranked</div>
+            <div class="nav-item"><span class="nav-icon"></span>Leaderboard</div>
+            <div class="nav-item"><span class="nav-icon"></span>Profile</div>
+            <div class="nav-item"><span class="nav-icon"></span>Rules</div>
+          </div>
+          <div class="main">
+            <div class="stat-row">
+              <div class="stat-card"><div class="stat-val">Silver II</div><div class="stat-label">Current Rank</div></div>
+              <div class="stat-card"><div class="stat-val">47</div><div class="stat-label">Leaderboard</div></div>
+              <div class="stat-card"><div class="stat-val">68%</div><div class="stat-label">Win Rate</div></div>
+            </div>
+            <div class="play-section">
+              <div class="play-card featured"><div class="play-card-title" style="color:var(--accent)">⚡ Quick Play</div><div class="play-card-sub">Match now</div></div>
+              <div class="play-card"><div class="play-card-title">Browse</div><div class="play-card-sub">Find a room</div></div>
+              <div class="play-card"><div class="play-card-title">Create</div><div class="play-card-sub">Host a game</div></div>
+            </div>
+            <div class="room-list">
+              <div class="room-item"><span class="room-name">Nedelen Belot</span><span class="room-meta">2/4 · Bitola · Relaxed</span><span class="join-btn">JOIN</span></div>
+              <div class="room-item"><span class="room-name">Zagreb Ekipa</span><span class="room-meta">3/4 · Croatian · 30s</span><span class="join-btn">JOIN</span></div>
+              <div class="room-item"><span class="room-name">SUBOTA-BELOT</span><span class="room-meta">4/4 · Bitola · Relaxed</span><span style="font-size:10px;color:var(--text-dis)">FULL</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D4 — Compact Cards -->
+    <div class="direction-card" id="card-d4" onclick="selectDirection('d4', 'Compact Lobby Cards')">
+      <div class="direction-label">
+        <span>3 — Compact Lobby Cards</span>
+        <span class="selected-badge">SELECTED</span>
+        <em>Tab navigation, room cards grid</em>
+      </div>
+      <div class="mockup-frame d4">
+        <div class="top-bar">
+          <div class="top-logo">BELOTE</div>
+          <div class="top-player">
+            <div class="avatar"></div>
+            Emilijan
+          </div>
+        </div>
+        <div class="content">
+          <div class="mode-tabs">
+            <div class="tab active">Quick Play</div>
+            <div class="tab">Browse</div>
+            <div class="tab">Create</div>
+          </div>
+          <div class="room-grid">
+            <div class="room-card">
+              <div class="rc-name">Nedelen Belot</div>
+              <div class="rc-meta"><span>Bitola</span><span>Relaxed</span></div>
+              <div class="rc-players">
+                <div class="player-dot"></div><div class="player-dot"></div>
+                <div class="player-dot empty"></div><div class="player-dot empty"></div>
+              </div>
+              <div class="rc-join">JOIN →</div>
+            </div>
+            <div class="room-card" style="border-color:var(--accent)">
+              <div class="rc-name" style="color:var(--accent)">Zagreb Ekipa</div>
+              <div class="rc-meta"><span>Croatian</span><span>30s</span></div>
+              <div class="rc-players">
+                <div class="player-dot"></div><div class="player-dot"></div>
+                <div class="player-dot"></div><div class="player-dot empty"></div>
+              </div>
+              <div class="rc-join">JOIN →</div>
+            </div>
+            <div class="room-card">
+              <div class="rc-name">SUBOTA-BELOT</div>
+              <div class="rc-meta"><span>Bitola</span><span>1001</span></div>
+              <div class="rc-players">
+                <div class="player-dot"></div><div class="player-dot"></div>
+                <div class="player-dot"></div><div class="player-dot"></div>
+              </div>
+              <div class="rc-join" style="color:var(--text-dis)">FULL</div>
+            </div>
+            <div class="room-card" style="border-style:dashed;opacity:0.5">
+              <div class="rc-name" style="color:var(--accent)">+ Create Room</div>
+              <div class="rc-meta">Host your own game</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D5 — Social -->
+    <div class="direction-card" id="card-d5" onclick="selectDirection('d5', 'Social / Chat Forward')">
+      <div class="direction-label">
+        <span>4 — Social / Chat Forward</span>
+        <span class="selected-badge">SELECTED</span>
+        <em>Global chat always visible in lobby</em>
+      </div>
+      <div class="mockup-frame d5">
+        <div class="layout">
+          <div class="main">
+            <div class="header">
+              <span class="logo">BELOTE</span>
+              <div class="play-btns">
+                <button class="pbtn">Browse</button>
+                <button class="pbtn">Create</button>
+                <button class="pbtn primary">⚡ Quick Play</button>
+              </div>
+            </div>
+            <div class="rooms-area">
+              <div class="rooms-title">Open Rooms</div>
+              <div class="room-row"><span class="rr-name">Nedelen Belot</span><span class="rr-info">2/4 · Bitola</span><span class="rr-action">JOIN</span></div>
+              <div class="room-row"><span class="rr-name">Zagreb Ekipa</span><span class="rr-info">3/4 · Croatian</span><span class="rr-action">JOIN</span></div>
+              <div class="room-row"><span class="rr-name">SUBOTA-BELOT</span><span class="rr-info">4/4 · Full</span><span style="font-size:10px;color:var(--text-dis)">—</span></div>
+              <div class="room-row"><span class="rr-name">Ponedelnik Igra</span><span class="rr-info">1/4 · Bitola</span><span class="rr-action">JOIN</span></div>
+            </div>
+          </div>
+          <div class="chat-panel">
+            <div class="chat-header">Global Chat</div>
+            <div class="chat-messages">
+              <div class="chat-msg"><span class="chat-user">Marko</span><span style="color:var(--text-sec)"> gg everyone</span></div>
+              <div class="chat-msg"><span class="chat-user">Ana</span><span style="color:var(--text-sec)"> same time sunday?</span></div>
+              <div class="chat-msg"><span class="chat-user">Ivan</span><span style="color:var(--text-sec)"> da da 🃏</span></div>
+              <div class="chat-msg"><span class="chat-user">Darko</span><span style="color:var(--text-sec)"> ko ide ranked?</span></div>
+            </div>
+            <div class="chat-input-area">
+              <input class="chat-input" type="text" placeholder="Say something...">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D6 — Competitive -->
+    <div class="direction-card" id="card-d6" onclick="selectDirection('d6', 'Competitive / Esports')">
+      <div class="direction-label">
+        <span>5 — Competitive / Esports</span>
+        <span class="selected-badge">SELECTED</span>
+        <em>Rank banner prominent, leaderboard visible</em>
+      </div>
+      <div class="mockup-frame d6">
+        <div class="header">
+          <span class="logo">BELOTE</span>
+          <div class="nav-tabs">
+            <div class="ntab active">Play</div>
+            <div class="ntab">Leaderboard</div>
+            <div class="ntab">Profile</div>
+            <div class="ntab">Rules</div>
+          </div>
+        </div>
+        <div class="rank-banner">
+          <div class="rank-badge">🥉</div>
+          <div class="rank-info">
+            <div class="rank-name">Bronze II</div>
+            <div class="rank-sub">Season 3 · 47 LP to Silver</div>
+            <div class="rank-progress"><div class="rank-fill"></div></div>
+          </div>
+          <div class="season-info">
+            <span class="season-val">24d</span>
+            season left
+          </div>
+        </div>
+        <div class="body">
+          <div class="play-col">
+            <div class="play-option featured">
+              <div class="po-title" style="color:var(--accent)">⚡ Quick Play</div>
+              <div class="po-desc">Jump into a casual game</div>
+            </div>
+            <div class="play-option">
+              <div class="po-title">Ranked</div>
+              <div class="po-desc">Level 5 required</div>
+            </div>
+            <div class="play-option">
+              <div class="po-title">Browse Rooms</div>
+              <div class="po-desc">Find or join a room</div>
+            </div>
+            <div class="play-option">
+              <div class="po-title">Create Room</div>
+              <div class="po-desc">Host a private game</div>
+            </div>
+          </div>
+          <div class="leaderboard">
+            <div class="lb-header">Season Leaderboard</div>
+            <div class="lb-row"><div class="lb-rank">#1</div><div class="lb-name">NikolaS</div><div class="lb-tier">Radiant</div><div class="lb-elo">2841</div></div>
+            <div class="lb-row"><div class="lb-rank">#2</div><div class="lb-name">Marko_BG</div><div class="lb-tier">Immortal I</div><div class="lb-elo">2654</div></div>
+            <div class="lb-row"><div class="lb-rank">#3</div><div class="lb-name">IvanStuttgart</div><div class="lb-tier">Diamond III</div><div class="lb-elo">2488</div></div>
+            <div class="lb-row"><div class="lb-rank">#4</div><div class="lb-name">DarkoZG</div><div class="lb-tier">Diamond II</div><div class="lb-elo">2310</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D3 — Table Focus -->
+    <div class="direction-card" id="card-d3" onclick="selectDirection('d3', 'Game Table Preview')">
+      <div class="direction-label">
+        <span>6 — Game Table Preview</span>
+        <span class="selected-badge">SELECTED</span>
+        <em>Show the table in lobby to build anticipation</em>
+      </div>
+      <div class="mockup-frame d3">
+        <div class="table-view">
+          <div class="felt"></div>
+          <div class="table-oval"></div>
+          <div class="trick-area">
+            <div class="card-sm black">A♠</div>
+            <div class="card-sm">K♥</div>
+            <div class="card-sm black">J♣</div>
+          </div>
+          <!-- Seats -->
+          <div class="seat seat-top blue"><div class="seat-avatar">I</div><div class="seat-name">Ivan</div></div>
+          <div class="seat seat-left red"><div class="seat-avatar">A</div><div class="seat-name">Ana</div></div>
+          <div class="seat seat-right blue"><div class="seat-avatar">D</div><div class="seat-name">Darko</div></div>
+          <div class="seat seat-bottom active red"><div class="seat-avatar" style="border-color:var(--accent)">M</div><div class="seat-name" style="color:var(--accent)">Marko</div></div>
+          <!-- HUD -->
+          <div class="hud-top">
+            <div class="score-panel">
+              <div class="score-row"><span class="score-team" style="color:var(--team-red)">RED</span><span class="score-val" style="color:var(--team-red)">480</span></div>
+              <div class="score-row"><span class="score-team" style="color:var(--team-blue)">BLU</span><span class="score-val" style="color:var(--team-blue)">320</span></div>
+            </div>
+            <div class="trump-indicator">
+              <div class="trump-suit">♠</div>
+              <div class="trump-label">TRUMP</div>
+            </div>
+            <div class="timer-ring">
+              <div class="timer-val">18</div>
+              <div class="timer-label">seconds</div>
+            </div>
+          </div>
+          <!-- Hand -->
+          <div class="hand">
+            <div class="hand-card playable">A♥</div>
+            <div class="hand-card playable">K♥</div>
+            <div class="hand-card dim black">J♠</div>
+            <div class="hand-card dim black">9♠</div>
+            <div class="hand-card playable">Q♥</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-title">Direction Analysis</div>
+    <div class="detail-grid">
+      <div class="detail-card">
+        <h4>For Ana (Casual)</h4>
+        <p>Directions 1, 3, and 4 offer the fastest path to a private room. Direction 5 adds social energy that may help groups feel connected before the game starts.</p>
+      </div>
+      <div class="detail-card">
+        <h4>For Marko (Competitive)</h4>
+        <p>Directions 2 and 5 surface rank and stats prominently. Direction 5 is the strongest esports read — rank banner is the first thing you see.</p>
+      </div>
+      <div class="detail-card">
+        <h4>Recommendation</h4>
+        <p>Direction 3 (Compact Cards) or Direction 5 (Competitive) for MVP. Both balance the three entry points while serving the dominant use case clearly.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     LOBBY — Larger lobby views
+════════════════════════════════════════ -->
+<section class="section" id="lobby">
+  <div class="section-header">
+    <h2>Lobby Views — Full Width</h2>
+    <p>The three main lobby entry points across different layout approaches.</p>
+  </div>
+  <div class="directions-grid" style="grid-template-columns:1fr">
+    <div class="direction-card" style="cursor:default">
+      <div class="direction-label"><span>Direction 3 — Compact Cards (Recommended)</span><em>Most natural for both Ana and Marko</em></div>
+      <div class="mockup-frame d4" style="height:480px">
+        <div class="top-bar">
+          <div class="top-logo">BELOTE</div>
+          <div class="top-player"><div class="avatar"></div>Emilijan · Level 3</div>
+        </div>
+        <div class="content">
+          <div class="mode-tabs">
+            <div class="tab active">⚡ Quick Play</div>
+            <div class="tab">Browse Rooms</div>
+            <div class="tab">+ Create Room</div>
+          </div>
+          <div class="room-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="room-card" style="border-color:var(--accent)">
+              <div class="rc-name" style="color:var(--accent)">Nedelen Belot</div>
+              <div class="rc-meta"><span>Bitola</span><span>Relaxed timer</span></div>
+              <div class="rc-players"><div class="player-dot"></div><div class="player-dot"></div><div class="player-dot empty"></div><div class="player-dot empty"></div></div>
+              <div class="rc-join">JOIN →</div>
+            </div>
+            <div class="room-card">
+              <div class="rc-name">Zagreb Ekipa</div>
+              <div class="rc-meta"><span>Croatian</span><span>30s timer</span></div>
+              <div class="rc-players"><div class="player-dot"></div><div class="player-dot"></div><div class="player-dot"></div><div class="player-dot empty"></div></div>
+              <div class="rc-join">JOIN →</div>
+            </div>
+            <div class="room-card">
+              <div class="rc-name">SUBOTA-BELOT</div>
+              <div class="rc-meta"><span>Bitola</span><span>1001 mode</span></div>
+              <div class="rc-players"><div class="player-dot"></div><div class="player-dot"></div><div class="player-dot"></div><div class="player-dot"></div></div>
+              <div class="rc-join" style="color:var(--text-dis)">FULL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     TABLE — Game table views
+════════════════════════════════════════ -->
+<section class="section" id="table">
+  <div class="section-header">
+    <h2>Game Table Views</h2>
+    <p>The card table in play — the core product experience.</p>
+  </div>
+  <div class="directions-grid" style="grid-template-columns:1fr">
+    <div class="direction-card" style="cursor:default">
+      <div class="direction-label"><span>Active Table — Your Turn</span><em>Playable cards glow, unplayable cards dim</em></div>
+      <div class="mockup-frame d3" style="height:480px">
+        <div class="table-view">
+          <div class="felt" style="background:radial-gradient(ellipse at 50% 50%, #0d1a12 0%, #060610 70%)"></div>
+          <div class="table-oval" style="width:320px;height:200px"></div>
+          <div class="trick-area">
+            <div class="card-sm black" style="width:28px;height:42px;font-size:10px">A♠</div>
+            <div class="card-sm" style="width:28px;height:42px;font-size:10px">K♥</div>
+            <div class="card-sm black" style="width:28px;height:42px;font-size:10px">J♣</div>
+          </div>
+          <div class="seat seat-top blue"><div class="seat-avatar" style="width:36px;height:36px">I</div><div class="seat-name">Ivan</div></div>
+          <div class="seat seat-left red"><div class="seat-avatar" style="width:36px;height:36px">A</div><div class="seat-name">Ana</div></div>
+          <div class="seat seat-right blue"><div class="seat-avatar" style="width:36px;height:36px">D</div><div class="seat-name">Darko</div></div>
+          <div class="seat seat-bottom active red" style="bottom:90px">
+            <div class="seat-avatar" style="width:36px;height:36px;border-color:var(--accent);box-shadow:0 0 12px var(--accent-glow)">M</div>
+            <div class="seat-name" style="color:var(--accent)">Marko · YOUR TURN</div>
+          </div>
+          <div class="hud-top">
+            <div class="score-panel">
+              <div class="score-row" style="margin-bottom:4px"><span class="score-team" style="color:var(--team-red);min-width:28px">RED</span><span class="score-val" style="color:var(--team-red)">480</span></div>
+              <div class="score-row"><span class="score-team" style="color:var(--team-blue);min-width:28px">BLU</span><span class="score-val" style="color:var(--team-blue)">320</span></div>
+            </div>
+            <div class="trump-indicator"><div class="trump-suit" style="font-size:20px">♠</div><div class="trump-label">TRUMP</div></div>
+            <div class="timer-ring"><div class="timer-val" style="font-size:20px">18</div><div class="timer-label">seconds</div></div>
+          </div>
+          <div class="hand" style="bottom:12px;gap:0">
+            <div class="hand-card playable" style="width:32px;height:48px;font-size:9px;margin-left:0">A♥</div>
+            <div class="hand-card playable" style="width:32px;height:48px;font-size:9px;margin-left:-10px">K♥</div>
+            <div class="hand-card playable" style="width:32px;height:48px;font-size:9px;margin-left:-10px">Q♥</div>
+            <div class="hand-card dim black" style="width:32px;height:48px;font-size:9px;margin-left:-10px">J♠</div>
+            <div class="hand-card dim black" style="width:32px;height:48px;font-size:9px;margin-left:-10px">9♠</div>
+            <div class="hand-card dim black" style="width:32px;height:48px;font-size:9px;margin-left:-10px">7♣</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     MOMENTS — Trump prompt, Score reveal
+════════════════════════════════════════ -->
+<section class="section" id="moments">
+  <div class="section-header">
+    <h2>Key Game Moments</h2>
+    <p>Trump bidding prompt and hand score reveal — the theatrical moments.</p>
+  </div>
+  <div class="directions-grid">
+
+    <div class="direction-card" style="cursor:default">
+      <div class="direction-label"><span>Trump Selection Prompt</span><em>PICK / PASS — clear, decisive</em></div>
+      <div class="mockup-frame d7">
+        <div class="scene">
+          <div class="table-bg"></div>
+          <div class="trump-prompt">
+            <div class="prompt-label">Trump Candidate</div>
+            <div class="trump-card-display">♥</div>
+            <div class="prompt-question">Pick Hearts as trump?</div>
+            <div class="prompt-sub">You are the last to bid</div>
+            <div class="prompt-actions">
+              <button class="prompt-btn pick">PICK</button>
+              <button class="prompt-btn pass">PASS</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="direction-card" style="cursor:default">
+      <div class="direction-label"><span>Hand Score Reveal</span><em>Theatrical, weighted, legible</em></div>
+      <div class="mockup-frame d8">
+        <div class="scene">
+          <div class="overlay">
+            <div class="score-modal">
+              <div class="hand-result">Hand 4 Complete</div>
+              <div class="teams">
+                <div class="team-col red">
+                  <div class="team-name red">Red Team</div>
+                  <div class="team-score red">82</div>
+                  <div class="score-breakdown">72 cards + 10 last trick</div>
+                </div>
+                <div class="team-col">
+                  <div class="team-name blue">Blue Team</div>
+                  <div class="team-score blue">80</div>
+                  <div class="score-breakdown">80 cards + declaration</div>
+                </div>
+              </div>
+              <div class="divider"></div>
+              <div class="totals">
+                <div class="total-col">
+                  <div class="total-label">Red Total</div>
+                  <div class="total-val red">562</div>
+                </div>
+                <div class="total-col">
+                  <div class="total-label">Blue Total</div>
+                  <div class="total-val blue">400</div>
+                </div>
+              </div>
+              <button class="continue-btn">Continue →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── SELECTION PANEL ── -->
+<div class="selection-section" id="selectionPanel" style="display:none">
+  <div>
+    <div class="selection-label">Selected direction:</div>
+    <div class="selection-name" id="selectionName">—</div>
+  </div>
+  <button class="confirm-btn" onclick="confirmSelection()">Confirm Selection →</button>
+</div>
+
+<script>
+  function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  let selected = null;
+  function selectDirection(id, name) {
+    document.querySelectorAll('.direction-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('card-' + id).classList.add('selected');
+    selected = { id, name };
+    document.getElementById('selectionName').textContent = name;
+    document.getElementById('selectionPanel').style.display = 'flex';
+  }
+
+  function confirmSelection() {
+    if (selected) {
+      alert('Direction confirmed: ' + selected.name + '\n\nReturn to Claude and type C to save this choice to the UX specification.');
+    }
+  }
+</script>
+
+</body>
+</html>
