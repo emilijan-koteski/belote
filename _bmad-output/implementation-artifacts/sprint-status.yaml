@@ -1,0 +1,142 @@
+# generated: 2026-04-06
+# last_updated: 2026-04-06
+# project: belote
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-04-06
+last_updated: 2026-04-06T00:00:00Z
+project: belote
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # --- Epic 1: Project Foundation & Player Identity (Phase 1) ---
+  epic-1: in-progress
+  1-1-project-scaffold-and-development-environment: ready-for-dev
+  1-2-user-registration: backlog
+  1-3-user-login-and-session-persistence: backlog
+  1-4-basic-player-profile-and-navigation-shell: backlog
+  epic-1-retrospective: optional
+
+  # --- Epic 2: Lobby & Room Management (Phase 1) ---
+  epic-2: backlog
+  2-1-create-room-and-room-configuration: backlog
+  2-2-browse-and-search-rooms: backlog
+  2-3-join-room-and-room-lobby: backlog
+  2-4-team-assignment-and-game-start: backlog
+  2-5-quick-play-matchmaking: backlog
+  epic-2-retrospective: optional
+
+  # --- Epic 3: Belot Rules Engine - Bitola Variant (Phase 1) ---
+  epic-3: backlog
+  3-1-game-state-types-card-encoding-and-deck: backlog
+  3-2-trump-bidding-bitola-variant: backlog
+  3-3-card-play-and-trick-resolution: backlog
+  3-4-declarations-and-belot-bonus: backlog
+  3-5-hand-scoring-failed-contracts-and-capot: backlog
+  3-6-match-completion-and-special-conditions: backlog
+  epic-3-retrospective: optional
+
+  # --- Epic 4: Real-Time Game Experience (Phase 1) ---
+  epic-4: backlog
+  4-1-websocket-gateway-and-event-contract: backlog
+  4-2-game-session-manager-and-state-sync: backlog
+  4-3-game-table-ui-layout-seats-and-cards: backlog
+  4-4-trump-bidding-and-declaration-ui: backlog
+  4-5-per-move-timer-and-auto-play: backlog
+  4-6-score-panel-score-reveal-and-match-flow: backlog
+  epic-4-retrospective: optional
+
+  # --- Epic 5: Game Session Resilience (Phase 1) ---
+  epic-5: backlog
+  5-1-player-pause-system: backlog
+  5-2-room-owner-pause-override: backlog
+  5-3-disconnect-detection-and-reconnect-countdown: backlog
+  5-4-reconnection-and-state-restoration: backlog
+  5-5-match-abandonment-on-timeout: backlog
+  epic-5-retrospective: optional
+
+  # --- Epic 6: In-Game & Lobby Communication (Phase 1) ---
+  epic-6: backlog
+  6-1-global-lobby-chat: backlog
+  6-2-match-scoped-chat: backlog
+  epic-6-retrospective: optional
+
+  # --- Epic 7: Match History & Player Profile (Phase 1) ---
+  epic-7: backlog
+  7-1-match-history-display: backlog
+  7-2-expanded-player-profile: backlog
+  epic-7-retrospective: optional
+
+  # --- Epic 8: Croatian Variant, 501 Mode & Game Enhancements (Phase 2) ---
+  epic-8: backlog
+  8-1-croatian-variant-rules-engine: backlog
+  8-2-501-point-match-mode: backlog
+  8-3-in-app-rules-reference: backlog
+  8-4-team-surrender: backlog
+  8-5-in-game-emotes: backlog
+  epic-8-retrospective: optional
+
+  # --- Epic 9: Player Progression & Competitive Ranked Play (Phase 2) ---
+  epic-9: backlog
+  9-1-xp-system-and-level-progression: backlog
+  9-2-ranked-queue-and-elo-matchmaking: backlog
+  9-3-placement-matches-and-rank-reveal: backlog
+  9-4-rank-tiers-and-season-system: backlog
+  9-5-seasonal-leaderboard: backlog
+  9-6-career-statistics-and-abandonment-penalties: backlog
+  epic-9-retrospective: optional
+
+  # --- Epic 10: Social & Friend System (Phase 3) ---
+  epic-10: backlog
+  10-1-social-login: backlog
+  10-2-player-search: backlog
+  10-3-friend-requests-and-friend-list: backlog
+  10-4-public-player-profiles: backlog
+  10-5-additional-languages: backlog
+  epic-10-retrospective: optional
+
+  # --- Epic 11: Spectator Mode, Achievements & Cosmetics (Phase 4) ---
+  epic-11: backlog
+  11-1-spectator-mode: backlog
+  11-2-achievements-and-badges: backlog
+  11-3-cosmetic-store: backlog
+  epic-11-retrospective: optional
+
+  # --- Epic 12: Tournaments & Mobile (Phase 4) ---
+  epic-12: backlog
+  12-1-tournament-system: backlog
+  12-2-mobile-experience: backlog
+  epic-12-retrospective: optional
