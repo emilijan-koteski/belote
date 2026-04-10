@@ -1,0 +1,100 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* Balatro design tokens */
+  --color-background: #0a0a0f;
+  --color-surface: #13131a;
+  --color-surface-elevated: #1c1c26;
+  --color-border: #2a2a38;
+  --color-accent: #00e5a0;
+  --color-accent-glow: #00e5a040;
+  --color-team-red: #ff4d4d;
+  --color-team-blue: #4d9fff;
+  --color-text-primary: #f0f0f8;
+  --color-text-secondary: #8888a0;
+  --color-text-disabled: #44445a;
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-destructive: #ef4444;
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+@theme inline {
+  --font-heading: var(--font-display);
+  --font-sans: "Inter", sans-serif;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+}
+
+/* Balatro dark theme as default — card game UI is always dark */
+:root {
+  --background: #0a0a0f;
+  --foreground: #f0f0f8;
+  --card: #13131a;
+  --card-foreground: #f0f0f8;
+  --popover: #1c1c26;
+  --popover-foreground: #f0f0f8;
+  --primary: #00e5a0;
+  --primary-foreground: #0a0a0f;
+  --secondary: #1c1c26;
+  --secondary-foreground: #f0f0f8;
+  --muted: #13131a;
+  --muted-foreground: #8888a0;
+  --accent: #1c1c26;
+  --accent-foreground: #f0f0f8;
+  --destructive: #ef4444;
+  --border: #2a2a38;
+  --input: #2a2a38;
+  --ring: #00e5a0;
+  --radius: 0.625rem;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
