@@ -1,5 +1,7 @@
 package ws
 
+import _ "nhooyr.io/websocket" // Required dependency — anchored here for go.mod
+
 // WebSocket event contract — keep in sync with client/src/shared/types/wsEvents.ts
 
 // Event type prefixes:

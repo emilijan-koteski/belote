@@ -1,6 +1,6 @@
 # Story 1.1: Project Scaffold & Development Environment
 
-Status: review
+Status: done
 
 ## Story
 
@@ -368,6 +368,25 @@ Claude Opus 4.6 (1M context)
 - CI pipeline configured (GitHub Actions) with Go 1.26, Node 22, PostgreSQL, golangci-lint
 - Migration system set up with golang-migrate CLI
 - All tests pass: 4 frontend (Vitest) + 2 backend test files (Go)
+
+### Review Findings
+
+- [x] [Review][Decision] D1: PostgreSQL dev container mapped to host port 5433, not 5432 — RESOLVED: keep 5433 to avoid local PG conflict; AC deviation accepted.
+- [x] [Review][Patch] P1: JWT secret: no startup validation — silently uses default or empty string [server/internal/config/config.go]
+- [x] [Review][Patch] P2: fetchClient crashes on non-JSON error/success responses (502 HTML, 204 No Content) [client/src/shared/api/fetchClient.ts]
+- [x] [Review][Patch] P3: No graceful shutdown — SIGTERM kills in-flight connections [server/cmd/api/main.go]
+- [x] [Review][Patch] P4: CORS AllowOrigins hardcoded to localhost:5173 — production will reject requests [server/cmd/api/main.go]
+- [x] [Review][Patch] P5: Go version mismatch: go.mod says 1.25.0, CI says 1.26 [server/go.mod, .github/workflows/ci.yml]
+- [x] [Review][Patch] P6: CI pipeline doesn't invoke make test / make lint as AC 4 requires [.github/workflows/ci.yml]
+- [x] [Review][Patch] P7: nhooyr.io/websocket dependency missing from go.mod (AC 1) [server/go.mod]
+- [x] [Review][Patch] P8: ESLint config missing import ordering rules and named-exports-only enforcement [client/eslint.config.js]
+- [x] [Review][Patch] P9: features/chat/ directory missing from frontend scaffold [client/src/features/]
+- [x] [Review][Patch] P10: appErrorHandler silently drops c.JSON() write errors [server/cmd/api/main.go]
+- [x] [Review][Patch] P11: Makefile dev target orphans npm run dev on exit [Makefile]
+- [x] [Review][Patch] P12: Production docker-compose.prod.yml exposes API port 8080 directly, bypassing Caddy [docker-compose.prod.yml]
+- [x] [Review][Defer] W1: fetchClient 401 handler doesn't implement refresh-then-retry cycle — deferred, explicitly scoped to Story 1.3
+- [x] [Review][Defer] W2: apperr.Wrap wraps raw error instead of AppError (errors.As won't match) — deferred, function unused
+- [x] [Review][Defer] W3: ErrorBoundary "Try again" can loop on deterministic errors — deferred, safety-net works for transient errors
 
 ### Change Log
 

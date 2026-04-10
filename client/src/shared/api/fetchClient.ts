@@ -49,8 +49,17 @@ export async function fetchClient<T>(path: string, options: RequestInit = {}): P
   }
 
   if (!response.ok) {
-    const body = (await response.json()) as ApiErrorResponse;
-    throw new FetchError(response.status, body.error.code, body.error.message);
+    try {
+      const body = (await response.json()) as ApiErrorResponse;
+      throw new FetchError(response.status, body.error.code, body.error.message);
+    } catch (e) {
+      if (e instanceof FetchError) throw e;
+      throw new FetchError(response.status, "UNKNOWN_ERROR", response.statusText || "Request failed");
+    }
+  }
+
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
   }
 
   const body = (await response.json()) as { data: T };

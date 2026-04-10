@@ -5,7 +5,8 @@ export
 
 dev:
 	docker compose up -d
-	@echo "PostgreSQL started on port 5432"
+	@echo "PostgreSQL started on port 5433"
+	trap 'kill 0' EXIT; \
 	cd client && npm run dev & \
 	cd server && go run cmd/api/main.go
 

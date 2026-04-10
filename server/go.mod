@@ -1,12 +1,13 @@
 module github.com/emilijan/belote/server
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/labstack/echo/v4 v4.15.1
 	github.com/stretchr/testify v1.11.1
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
+	nhooyr.io/websocket v1.8.17
 )
 
 require (
