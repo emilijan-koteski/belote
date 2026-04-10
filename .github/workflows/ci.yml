@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: belote
+          POSTGRES_PASSWORD: belote_test_password
+          POSTGRES_DB: belote_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U belote"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      BELOTE_DB_URL: postgres://belote:belote_test_password@localhost:5432/belote_test?sslmode=disable
+      BELOTE_JWT_SECRET: test-secret
+      BELOTE_PORT: 8080
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: server
+          args: --timeout=5m
+
+      - name: Install frontend dependencies
+        run: cd client && npm ci
+
+      - name: Frontend lint
+        run: cd client && npx eslint . && npx prettier --check .
+
+      - name: Frontend tests
+        run: cd client && npx vitest run
+
+      - name: Backend tests
+        run: cd server && go test ./...

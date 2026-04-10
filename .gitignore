@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+client/dist/
+server/bin/
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Coverage
+coverage/
+*.cover
+*.prof
+
+#Playwright
+.playwright-mcp/

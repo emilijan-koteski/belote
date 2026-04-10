@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(python \"d:/My Projects/belote/.claude/skills/bmad-init/scripts/bmad_init.py\" load --project-root \"d:/My Projects/belote\" --all)",
+      "Bash(pip install:*)",
+      "Bash(python \"d:/My Projects/belote/.claude/skills/bmad-init/scripts/bmad_init.py\" load --project-root \"d:/My Projects/belote\" --module bmm)",
+      "Bash(python \"d:/My Projects/belote/.claude/skills/bmad-init/scripts/bmad_init.py\" load --project-root \"d:/My Projects/belote\" --module bmm --all)",
+      "Bash(python3 -c ':*)",
+      "Bash(python -c ':*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(rm -f src/main.ts src/counter.ts src/style.css)",
+      "Bash(rm -rf src/assets public)",
+      "Bash(npx tsc:*)",
+      "Bash(npx shadcn@latest init -y)",
+      "Bash(npx shadcn@latest init --defaults)",
+      "Bash(mkdir -p src/shared/lib)",
+      "Bash(mv src/lib/utils.ts src/shared/lib/utils.ts)",
+      "Bash(mv src/components/ui/button.tsx src/shared/components/ui/button.tsx)",
+      "Bash(rm -rf src/lib src/components)",
+      "Bash(npx shadcn@latest add dialog input tabs toast tooltip -y)",
+      "Bash(npx shadcn@latest add dialog input tabs sonner tooltip -y)",
+      "Bash(npx shadcn@latest add dialog input tabs sonner tooltip --overwrite)",
+      "Bash(npx shadcn@latest add input tabs sonner tooltip --overwrite)",
+      "Bash(npx vite:*)",
+      "Bash(go mod:*)",
+      "Bash(where go:*)",
+      "Bash(export PATH=\"/c/Users/Emilijan-LT/sdk/go1.23.4/bin:$PATH\")",
+      "Bash(go install:*)",
+      "Bash(export PATH=\"/c/Users/Emilijan-LT/go/bin:/c/Users/Emilijan-LT/sdk/go1.23.4/bin:$PATH\")",
+      "Bash(go1.26.0 download:*)",
+      "Bash(export PATH=\"/c/Users/Emilijan-LT/sdk/go1.26.0/bin:/c/Users/Emilijan-LT/go/bin:$PATH\")",
+      "Bash(export GOROOT=\"/c/Users/Emilijan-LT/sdk/go1.26.0\")",
+      "Bash(go version:*)",
+      "Bash(go get:*)",
+      "Bash(go build:*)",
+      "Bash(npx vitest:*)",
+      "Bash(go test:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_snapshot"
+    ],
+    "additionalDirectories": [
+      "d:\\My Projects\\belote\\_bmad-output\\planning-artifacts"
+    ]
+  }
+}
