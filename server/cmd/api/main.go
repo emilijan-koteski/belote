@@ -16,7 +16,9 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/emilijan/belote/server/internal/apperr"
+	"github.com/emilijan/belote/server/internal/auth"
 	"github.com/emilijan/belote/server/internal/config"
+	"github.com/emilijan/belote/server/internal/user"
 )
 
 func main() {
@@ -30,7 +32,8 @@ func main() {
 		slog.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	_ = db // will be used for dependency injection in later stories
+	userRepo := user.NewGormUserRepository(db)
+	authHandler := auth.NewAuthHandler(userRepo, cfg.JWTSecret)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -63,6 +66,10 @@ func main() {
 
 	// Routes
 	e.GET("/health", healthHandler)
+
+	// Auth routes — public, no auth middleware
+	authGroup := e.Group("/api/v1/auth")
+	authGroup.POST("/register", authHandler.Register)
 
 	// Graceful shutdown
 	go func() {

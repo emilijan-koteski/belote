@@ -35,4 +35,14 @@ var (
 	ErrForbidden    = NewAppError("FORBIDDEN", "Access denied", http.StatusForbidden)
 	ErrBadRequest   = NewAppError("BAD_REQUEST", "Invalid request", http.StatusBadRequest)
 	ErrConflict     = NewAppError("CONFLICT", "Resource conflict", http.StatusConflict)
+
+	// Auth domain errors
+	ErrEmailTaken           = NewAppError("EMAIL_TAKEN", "email is already registered", http.StatusConflict)
+	ErrUsernameTaken        = NewAppError("USERNAME_TAKEN", "username is already taken", http.StatusConflict)
+	ErrInvalidEmail         = NewAppError("INVALID_EMAIL", "invalid email format", http.StatusBadRequest)
+	ErrPasswordTooShort     = NewAppError("PASSWORD_TOO_SHORT", "password must be at least 8 characters", http.StatusBadRequest)
+	ErrPasswordTooLong      = NewAppError("PASSWORD_TOO_LONG", "password must be at most 72 characters", http.StatusBadRequest)
+	ErrUsernameTooShort     = NewAppError("USERNAME_TOO_SHORT", "username must be at least 3 characters", http.StatusBadRequest)
+	ErrUsernameTooLong      = NewAppError("USERNAME_TOO_LONG", "username must be at most 20 characters", http.StatusBadRequest)
+	ErrUsernameInvalidChars = NewAppError("USERNAME_INVALID_CHARS", "username can only contain letters, numbers, and underscores", http.StatusBadRequest)
 )

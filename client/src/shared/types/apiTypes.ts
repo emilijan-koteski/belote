@@ -10,3 +10,11 @@ export interface ApiErrorResponse {
     message: string;
   };
 }
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  languagePreference: string;
+  createdAt: string;
+}

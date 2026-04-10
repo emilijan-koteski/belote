@@ -1,5 +1,33 @@
 {
   "common": {
     "appName": "Belote"
+  },
+  "auth": {
+    "register": {
+      "title": "Create Account",
+      "emailLabel": "Email",
+      "emailPlaceholder": "your@email.com",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Choose a username",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Minimum 8 characters",
+      "submitButton": "Create Account",
+      "submitting": "Creating...",
+      "loginLink": "Already have an account? Log in",
+      "errors": {
+        "emailRequired": "Email is required",
+        "emailInvalid": "Enter a valid email address",
+        "emailTaken": "This email is already registered",
+        "usernameRequired": "Username is required",
+        "usernameTooShort": "Username must be at least 3 characters",
+        "usernameTooLong": "Username must be at most 20 characters",
+        "usernameInvalidChars": "Letters, numbers, and underscores only",
+        "usernameTaken": "This username is already taken",
+        "passwordRequired": "Password is required",
+        "passwordTooShort": "Password must be at least 8 characters",
+        "passwordTooLong": "Password must be at most 72 characters",
+        "registrationFailed": "Registration failed. Please try again."
+      }
+    }
   }
 }

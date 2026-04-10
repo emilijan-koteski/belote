@@ -1,5 +1,33 @@
 {
   "common": {
     "appName": "Belote"
+  },
+  "auth": {
+    "register": {
+      "title": "Kreiraj nalog",
+      "emailLabel": "Email",
+      "emailPlaceholder": "vas@email.com",
+      "usernameLabel": "Korisničko ime",
+      "usernamePlaceholder": "Izaberite korisničko ime",
+      "passwordLabel": "Lozinka",
+      "passwordPlaceholder": "Najmanje 8 karaktera",
+      "submitButton": "Kreiraj nalog",
+      "submitting": "Kreiranje...",
+      "loginLink": "Već imate nalog? Prijavite se",
+      "errors": {
+        "emailRequired": "Email je obavezan",
+        "emailInvalid": "Unesite validnu email adresu",
+        "emailTaken": "Ovaj email je već registrovan",
+        "usernameRequired": "Korisničko ime je obavezno",
+        "usernameTooShort": "Korisničko ime mora imati najmanje 3 karaktera",
+        "usernameTooLong": "Korisničko ime može imati najviše 20 karaktera",
+        "usernameInvalidChars": "Samo slova, brojevi i donje crte",
+        "usernameTaken": "Ovo korisničko ime je već zauzeto",
+        "passwordRequired": "Lozinka je obavezna",
+        "passwordTooShort": "Lozinka mora imati najmanje 8 karaktera",
+        "passwordTooLong": "Lozinka može imati najviše 72 karaktera",
+        "registrationFailed": "Registracija nije uspela. Pokušajte ponovo."
+      }
+    }
   }
 }
