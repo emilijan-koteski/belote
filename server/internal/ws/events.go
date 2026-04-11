@@ -9,3 +9,6 @@ import _ "nhooyr.io/websocket" // Required dependency — anchored here for go.m
 // event:  — server -> client (game state)
 // error:  — server -> client (errors)
 // system: — server -> client (platform events)
+
+// Room events
+const SystemRoomCreated = "system:room_created"

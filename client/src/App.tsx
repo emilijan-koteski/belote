@@ -5,6 +5,7 @@ import { RegisterPage } from "@/features/auth/RegisterPage";
 import { GamePage } from "@/features/game/GamePage";
 import { LeaderboardPage } from "@/features/leaderboard/LeaderboardPage";
 import { LobbyPage } from "@/features/lobby/LobbyPage";
+import { RoomLobby } from "@/features/lobby/RoomLobby";
 import { ProfilePage } from "@/features/profile/ProfilePage";
 import { RulesPage } from "@/features/rules/RulesPage";
 import { AppLayout } from "@/shared/components/AppLayout";
@@ -31,6 +32,7 @@ function AppRoutes() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/rules" element={<RulesPage />} />
+          <Route path="/rooms/:id" element={<RoomLobby />} />
         </Route>
         <Route path="/game" element={<GamePage />} />
       </Route>

@@ -39,7 +39,8 @@ export function ProfilePage() {
   let formattedDate = "";
   if (createdAt) {
     try {
-      formattedDate = new Intl.DateTimeFormat(i18n.language, {
+      const dateLocale = i18n.language === "sr" ? "sr-Latn" : i18n.language;
+      formattedDate = new Intl.DateTimeFormat(dateLocale, {
         year: "numeric",
         month: "long",
         day: "numeric",

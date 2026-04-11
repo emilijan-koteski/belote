@@ -30,6 +30,39 @@
     "title": "Pravila",
     "comingSoon": "Pravila uskoro dolaze"
   },
+  "lobby": {
+    "title": "Lobi",
+    "quickPlay": "Brza igra",
+    "quickPlayDesc": "Odmah uskoči u igru",
+    "browseRooms": "Pregledaj sobe",
+    "browseRoomsDesc": "Pronađi otvorenu igru",
+    "createRoom": "Napravi sobu",
+    "createRoomDesc": "Podesi igru po svom",
+    "leaderboardPlaceholder": "Lista lidera uskoro",
+    "createRoomModal": {
+      "title": "Napravi sobu za igru",
+      "roomName": "Ime sobe",
+      "roomNamePlaceholder": "Unesi ime sobe...",
+      "variant": "Varijanta igre",
+      "variantBitola": "Bitola",
+      "matchMode": "Režim igre",
+      "matchMode1001": "1001 poen",
+      "timerStyle": "Stil tajmera",
+      "timerRelaxed": "Opušteno (bez tajmera)",
+      "timerPerMove": "Tajmer po potezu",
+      "timerDuration": "Trajanje tajmera (sekunde)",
+      "create": "Napravi sobu",
+      "cancel": "Otkaži",
+      "errors": {
+        "nameRequired": "Ime sobe je obavezno",
+        "nameTaken": "Soba sa ovim imenom već postoji",
+        "unexpected": "Došlo je do neočekivane greške"
+      }
+    },
+    "roomLobby": {
+      "waitingForPlayers": "Čekanje igrača..."
+    }
+  },
   "auth": {
     "login": {
       "title": "Prijavite se",

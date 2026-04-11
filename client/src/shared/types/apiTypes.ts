@@ -18,3 +18,26 @@ export interface User {
   languagePreference: string;
   createdAt: string;
 }
+
+export interface Room {
+  id: number;
+  name: string;
+  code: string;
+  ownerId: number;
+  variant: string;
+  matchMode: string;
+  timerStyle: string;
+  timerDurationSeconds: number | null;
+  status: string;
+  playerCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateRoomRequest {
+  name: string;
+  variant: string;
+  matchMode: string;
+  timerStyle: string;
+  timerDurationSeconds: number | null;
+}

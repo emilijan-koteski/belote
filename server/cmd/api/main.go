@@ -18,6 +18,7 @@ import (
 	"github.com/emilijan/belote/server/internal/apperr"
 	"github.com/emilijan/belote/server/internal/auth"
 	"github.com/emilijan/belote/server/internal/config"
+	"github.com/emilijan/belote/server/internal/room"
 	"github.com/emilijan/belote/server/internal/user"
 )
 
@@ -77,6 +78,11 @@ func main() {
 	api := e.Group("/api/v1", auth.AuthMiddleware(cfg.JWTSecret))
 	api.GET("/users/:id/profile", userHandler.GetProfile)
 	api.PATCH("/users/:id/preferences", userHandler.UpdatePreferences)
+
+	// Room routes
+	roomRepo := room.NewGormRepository(db)
+	roomHandler := room.NewRoomHandler(roomRepo)
+	api.POST("/rooms", roomHandler.CreateRoom)
 
 	// Graceful shutdown
 	go func() {

@@ -14,6 +14,10 @@ vi.mock("@/shared/api/auth", () => ({
   logout: vi.fn(),
 }));
 
+vi.mock("@/shared/api/rooms", () => ({
+  createRoom: vi.fn(),
+}));
+
 describe("App routing", () => {
   beforeEach(() => {
     useAuthStore.setState({ token: null, user: null, isLoading: false });
@@ -40,6 +44,7 @@ describe("App routing", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Lobby")).toBeInTheDocument();
+    expect(screen.getByTestId("quick-play-card")).toBeInTheDocument();
+    expect(screen.getByTestId("create-room-card")).toBeInTheDocument();
   });
 });

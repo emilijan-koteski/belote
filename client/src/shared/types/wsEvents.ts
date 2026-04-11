@@ -10,3 +10,21 @@ export interface WsMessage<T = unknown> {
   type: string;
   payload: T;
 }
+
+// Room events
+export const SYSTEM_ROOM_CREATED = "system:room_created" as const;
+
+export interface RoomCreatedPayload {
+  id: number;
+  name: string;
+  code: string;
+  ownerId: number;
+  variant: string;
+  matchMode: string;
+  timerStyle: string;
+  timerDurationSeconds: number | null;
+  status: string;
+  playerCount: number;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -29,3 +29,9 @@
 - **D13: Duplicate `getUserID` helper diverges from `auth.GetUserID`** — `user/handler.go:32-42` duplicates the JWT extraction logic from `auth/middleware.go`. Intentional to avoid import cycle (`user -> auth -> user`). If the context key or type changes in auth middleware, this copy will silently break. Revisit if packages are restructured.
 - **D14: `i18n.language` region subtag comparison** — `LanguageSelector.tsx:23` compares `lang === i18n.language` but `i18n.language` can include region subtags (e.g., `"en-US"`). Currently safe because the project configures only `"en"` and `"sr"` as supported locales. Revisit if locale detection plugins are added.
 - **D15: Path parameter `:id` accepts 0 as valid user ID** — `handler.go:50` parses 0 without rejection. GORM `First(&u, 0)` may return an arbitrary first record instead of not-found. Mitigated by JWT IDs always starting at 1. Revisit if zero-ID edge cases become reachable.
+
+## Deferred from: code review of 2-1-create-room-and-room-configuration (2026-04-11)
+
+- **D16: FindByID returns (nil, nil) for missing rooms** — `gorm_repo.go:34-43` returns `(nil, nil)` when room not found. Callers must check `room == nil` after a nil-error return. Not called by any handler in this diff; follows established project pattern. Revisit when FindByID is first used in a handler.
+- **D17: No rate limiting on room creation endpoint** — `POST /api/v1/rooms` has no per-user rate limit. An authenticated user can create rooms in a tight loop. Infrastructure-level concern, not story-scoped. Address when adding API gateway or rate-limiting middleware.
+- **D18: No per-user active room count cap** — Handler does not check how many active rooms a user already owns. Business rule not specified in story requirements. Revisit if abuse becomes a concern or when product defines a limit.

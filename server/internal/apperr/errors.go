@@ -50,4 +50,18 @@ var (
 	// User domain errors
 	ErrUserNotFound    = NewAppError("USER_NOT_FOUND", "user not found", http.StatusNotFound)
 	ErrInvalidLanguage = NewAppError("INVALID_LANGUAGE", "language must be 'en' or 'sr'", http.StatusBadRequest)
+
+	// Room domain errors
+	ErrRoomNameRequired        = NewAppError("ROOM_NAME_REQUIRED", "room name is required", http.StatusBadRequest)
+	ErrRoomNameTooLong         = NewAppError("ROOM_NAME_TOO_LONG", "room name must be at most 100 characters", http.StatusBadRequest)
+	ErrRoomNameTaken           = NewAppError("ROOM_NAME_TAKEN", "a room with this name already exists", http.StatusConflict)
+	ErrRoomNotFound            = NewAppError("ROOM_NOT_FOUND", "room not found", http.StatusNotFound)
+	ErrRoomFull                = NewAppError("ROOM_FULL", "room is full", http.StatusConflict)
+	ErrNotRoomOwner            = NewAppError("NOT_ROOM_OWNER", "only the room owner can perform this action", http.StatusForbidden)
+	ErrInvalidVariant          = NewAppError("INVALID_VARIANT", "invalid game variant", http.StatusBadRequest)
+	ErrInvalidMatchMode        = NewAppError("INVALID_MATCH_MODE", "invalid match mode", http.StatusBadRequest)
+	ErrInvalidTimerStyle       = NewAppError("INVALID_TIMER_STYLE", "timer style must be 'relaxed' or 'per-move'", http.StatusBadRequest)
+	ErrTimerDurationRequired   = NewAppError("TIMER_DURATION_REQUIRED", "timer duration is required for per-move timer", http.StatusBadRequest)
+	ErrTimerDurationOutOfRange = NewAppError("TIMER_DURATION_OUT_OF_RANGE", "timer duration must be between 10 and 120 seconds", http.StatusBadRequest)
+	ErrRoomCodeTaken           = NewAppError("ROOM_CODE_TAKEN", "room code collision", http.StatusInternalServerError)
 )

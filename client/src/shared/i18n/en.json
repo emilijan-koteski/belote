@@ -30,6 +30,39 @@
     "title": "Rules",
     "comingSoon": "Rules reference coming soon"
   },
+  "lobby": {
+    "title": "Lobby",
+    "quickPlay": "Quick Play",
+    "quickPlayDesc": "Jump into a game instantly",
+    "browseRooms": "Browse Rooms",
+    "browseRoomsDesc": "Find an open game to join",
+    "createRoom": "Create Room",
+    "createRoomDesc": "Set up a game your way",
+    "leaderboardPlaceholder": "Leaderboard coming soon",
+    "createRoomModal": {
+      "title": "Create a Game Room",
+      "roomName": "Room Name",
+      "roomNamePlaceholder": "Enter room name...",
+      "variant": "Game Variant",
+      "variantBitola": "Bitola",
+      "matchMode": "Match Mode",
+      "matchMode1001": "1001 points",
+      "timerStyle": "Timer Style",
+      "timerRelaxed": "Relaxed (no timer)",
+      "timerPerMove": "Per-move timer",
+      "timerDuration": "Timer Duration (seconds)",
+      "create": "Create Room",
+      "cancel": "Cancel",
+      "errors": {
+        "nameRequired": "Room name is required",
+        "nameTaken": "A room with this name already exists",
+        "unexpected": "An unexpected error occurred"
+      }
+    },
+    "roomLobby": {
+      "waitingForPlayers": "Waiting for players..."
+    }
+  },
   "auth": {
     "login": {
       "title": "Log In",
