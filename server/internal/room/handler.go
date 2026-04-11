@@ -17,7 +17,8 @@ import (
 var (
 	validVariants   = map[string]bool{"bitola": true}
 	validMatchModes = map[string]bool{"1001": true}
-	validTimerStyles = map[string]bool{"relaxed": true, "per-move": true}
+	validTimerStyles  = map[string]bool{"relaxed": true, "per-move": true}
+	validStatuses     = map[string]bool{"waiting": true, "playing": true, "finished": true}
 )
 
 const (
@@ -137,6 +138,24 @@ func (h *RoomHandler) CreateRoom(c echo.Context) error {
 	// TODO: broadcast via WS hub when available (Story 2.2)
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{"data": room})
+}
+
+func (h *RoomHandler) ListRooms(c echo.Context) error {
+	status := c.QueryParam("status")
+	if status == "" {
+		status = "waiting"
+	}
+
+	if !validStatuses[status] {
+		return apperr.ErrInvalidRoomStatus
+	}
+
+	rooms, err := h.repo.FindByStatus(status)
+	if err != nil {
+		return fmt.Errorf("listing rooms: %w", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": rooms})
 }
 
 func generateRoomCode() (string, error) {

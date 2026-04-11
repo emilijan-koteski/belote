@@ -11,6 +11,9 @@ interface LobbyState {
   addRoom: (room: Room) => void;
   removeRoom: (roomId: number) => void;
   updateRoom: (room: Room) => void;
+
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
 }
 
 export const useLobbyStore = create<LobbyState>((set) => ({
@@ -26,4 +29,7 @@ export const useLobbyStore = create<LobbyState>((set) => ({
     set((state) => ({
       rooms: state.rooms.map((r) => (r.id === room.id ? room : r)),
     })),
+
+  searchQuery: "",
+  setSearchQuery: (searchQuery) => set({ searchQuery }),
 }));

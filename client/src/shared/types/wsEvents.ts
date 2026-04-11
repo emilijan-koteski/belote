@@ -13,8 +13,24 @@ export interface WsMessage<T = unknown> {
 
 // Room events
 export const SYSTEM_ROOM_CREATED = "system:room_created" as const;
+export const SYSTEM_ROOM_UPDATED = "system:room_updated" as const;
 
 export interface RoomCreatedPayload {
+  id: number;
+  name: string;
+  code: string;
+  ownerId: number;
+  variant: string;
+  matchMode: string;
+  timerStyle: string;
+  timerDurationSeconds: number | null;
+  status: string;
+  playerCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoomUpdatedPayload {
   id: number;
   name: string;
   code: string;

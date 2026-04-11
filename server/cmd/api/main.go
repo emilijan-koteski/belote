@@ -83,6 +83,7 @@ func main() {
 	roomRepo := room.NewGormRepository(db)
 	roomHandler := room.NewRoomHandler(roomRepo)
 	api.POST("/rooms", roomHandler.CreateRoom)
+	api.GET("/rooms", roomHandler.ListRooms)
 
 	// Graceful shutdown
 	go func() {

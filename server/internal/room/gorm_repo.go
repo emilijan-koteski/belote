@@ -35,6 +35,14 @@ func (r *GormRepository) Create(room *Room) error {
 	return nil
 }
 
+func (r *GormRepository) FindByStatus(status string) ([]Room, error) {
+	var rooms []Room
+	if err := r.db.Where("status = ?", status).Order("created_at DESC").Find(&rooms).Error; err != nil {
+		return nil, fmt.Errorf("finding rooms by status: %w", err)
+	}
+	return rooms, nil
+}
+
 func (r *GormRepository) FindByID(id uint) (*Room, error) {
 	var room Room
 	if err := r.db.First(&room, id).Error; err != nil {

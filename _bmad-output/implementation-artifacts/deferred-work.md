@@ -35,3 +35,7 @@
 - **D16: FindByID returns (nil, nil) for missing rooms** — `gorm_repo.go:34-43` returns `(nil, nil)` when room not found. Callers must check `room == nil` after a nil-error return. Not called by any handler in this diff; follows established project pattern. Revisit when FindByID is first used in a handler.
 - **D17: No rate limiting on room creation endpoint** — `POST /api/v1/rooms` has no per-user rate limit. An authenticated user can create rooms in a tight loop. Infrastructure-level concern, not story-scoped. Address when adding API gateway or rate-limiting middleware.
 - **D18: No per-user active room count cap** — Handler does not check how many active rooms a user already owns. Business rule not specified in story requirements. Revisit if abuse becomes a concern or when product defines a limit.
+
+## Deferred from: code review of 2-2-browse-and-search-rooms (2026-04-11)
+
+- **D19: `handleWsMessage` uses unsafe `as` casts on raw `JSON.parse` output** — Violates project rule requiring typed WS dispatch function for all incoming WebSocket messages. Code is dormant (WS hub not wired). Deferred to Story 4-1 (WS Gateway) where the central typed dispatch + validation function will be built. Validation belongs at the dispatch layer, not in per-feature handlers.

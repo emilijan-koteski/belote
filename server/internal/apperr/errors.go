@@ -64,4 +64,5 @@ var (
 	ErrTimerDurationRequired   = NewAppError("TIMER_DURATION_REQUIRED", "timer duration is required for per-move timer", http.StatusBadRequest)
 	ErrTimerDurationOutOfRange = NewAppError("TIMER_DURATION_OUT_OF_RANGE", "timer duration must be between 10 and 120 seconds", http.StatusBadRequest)
 	ErrRoomCodeTaken           = NewAppError("ROOM_CODE_TAKEN", "room code collision", http.StatusInternalServerError)
+	ErrInvalidRoomStatus       = NewAppError("INVALID_ROOM_STATUS", "invalid room status filter", http.StatusBadRequest)
 )

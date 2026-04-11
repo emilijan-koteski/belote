@@ -53,6 +53,19 @@ func (m *mockRoomRepo) FindByID(id uint) (*room.Room, error) {
 	return nil, nil
 }
 
+func (m *mockRoomRepo) FindByStatus(status string) ([]room.Room, error) {
+	var result []room.Room
+	for _, r := range m.rooms {
+		if r.Status == status {
+			result = append(result, *r)
+		}
+	}
+	if result == nil {
+		result = []room.Room{}
+	}
+	return result, nil
+}
+
 // --- Test Infrastructure ---
 
 func testErrorHandler(err error, c echo.Context) {
@@ -87,6 +100,7 @@ func setupTest() (*echo.Echo, *mockRoomRepo) {
 	e.HTTPErrorHandler = testErrorHandler
 	api := e.Group("/api/v1", auth.AuthMiddleware("test-jwt-secret"))
 	api.POST("/rooms", handler.CreateRoom)
+	api.GET("/rooms", handler.ListRooms)
 
 	return e, repo
 }
@@ -380,4 +394,108 @@ func TestCreateRoom_TimerDurationTooHigh(t *testing.T) {
 	var errResp map[string]map[string]string
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
 	assert.Equal(t, "TIMER_DURATION_OUT_OF_RANGE", errResp["error"]["code"])
+}
+
+// --- ListRooms Tests ---
+
+func doListRooms(e *echo.Echo, query string, token string) *httptest.ResponseRecorder {
+	url := "/api/v1/rooms"
+	if query != "" {
+		url += "?" + query
+	}
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+func seedRoom(repo *mockRoomRepo, name string, status string) {
+	r := &room.Room{
+		Name:        name,
+		Code:        "ABC123",
+		OwnerID:     1,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		Status:      status,
+		PlayerCount: 1,
+	}
+	r.ID = repo.nextID
+	r.CreatedAt = time.Now()
+	r.UpdatedAt = time.Now()
+	repo.nextID++
+	repo.rooms = append(repo.rooms, r)
+}
+
+func TestListRooms_DefaultsToWaiting(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoom(repo, "Open Room", "waiting")
+	seedRoom(repo, "Full Room", "playing")
+
+	rec := doListRooms(e, "", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string][]room.Room
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	require.Len(t, resp["data"], 1)
+	assert.Equal(t, "Open Room", resp["data"][0].Name)
+}
+
+func TestListRooms_RespectsStatusParam(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoom(repo, "Waiting Room", "waiting")
+	seedRoom(repo, "Playing Room", "playing")
+
+	rec := doListRooms(e, "status=playing", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string][]room.Room
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	require.Len(t, resp["data"], 1)
+	assert.Equal(t, "Playing Room", resp["data"][0].Name)
+}
+
+func TestListRooms_EmptyArrayNotNull(t *testing.T) {
+	e, _ := setupTest()
+	token := validToken(1)
+
+	rec := doListRooms(e, "", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Verify the raw JSON contains [] not null
+	body := rec.Body.String()
+	assert.Contains(t, body, `"data":[]`)
+}
+
+func TestListRooms_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doListRooms(e, "", "")
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestListRooms_InvalidStatus(t *testing.T) {
+	e, _ := setupTest()
+	token := validToken(1)
+
+	rec := doListRooms(e, "status=invalid", token)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "INVALID_ROOM_STATUS", errResp["error"]["code"])
 }

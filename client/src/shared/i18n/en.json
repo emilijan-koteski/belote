@@ -59,6 +59,22 @@
         "unexpected": "An unexpected error occurred"
       }
     },
+    "roomList": {
+      "searchPlaceholder": "Search rooms by name or code...",
+      "backToOptions": "Back",
+      "variant": "Variant",
+      "variantBitola": "Bitola",
+      "mode": "Mode",
+      "matchMode1001": "1001 pts",
+      "players": "{{current}}/{{max}}",
+      "timerRelaxed": "Relaxed",
+      "timerPerMove": "{{seconds}}s timer",
+      "join": "Join",
+      "loading": "Loading rooms...",
+      "emptyNoRooms": "No open rooms \u2014 Create one or try Quick Play",
+      "emptyNoMatch": "No rooms match '{{query}}' \u2014",
+      "clearSearch": "Clear search"
+    },
     "roomLobby": {
       "waitingForPlayers": "Waiting for players..."
     }

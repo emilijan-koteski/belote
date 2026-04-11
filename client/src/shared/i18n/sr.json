@@ -59,8 +59,24 @@
         "unexpected": "Došlo je do neočekivane greške"
       }
     },
+    "roomList": {
+      "searchPlaceholder": "Pretra\u017ei sobe po imenu ili kodu...",
+      "backToOptions": "Nazad",
+      "variant": "Varijanta",
+      "variantBitola": "Bitola",
+      "mode": "Re\u017eim",
+      "matchMode1001": "1001 poena",
+      "players": "{{current}}/{{max}}",
+      "timerRelaxed": "Opu\u0161teno",
+      "timerPerMove": "{{seconds}}s tajmer",
+      "join": "Pridru\u017ei se",
+      "loading": "U\u010ditavanje soba...",
+      "emptyNoRooms": "Nema otvorenih soba \u2014 Napravi sobu ili probaj Brzu igru",
+      "emptyNoMatch": "Nijedna soba ne odgovara '{{query}}' \u2014",
+      "clearSearch": "Obri\u0161i pretragu"
+    },
     "roomLobby": {
-      "waitingForPlayers": "Čekanje igrača..."
+      "waitingForPlayers": "\u010cekanje igra\u010da..."
     }
   },
   "auth": {

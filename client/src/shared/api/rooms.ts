@@ -7,3 +7,7 @@ export function createRoom(req: CreateRoomRequest): Promise<Room> {
     body: JSON.stringify(req),
   });
 }
+
+export function getRooms(status: string = "waiting"): Promise<Room[]> {
+  return fetchClient<Room[]>(`/rooms?status=${encodeURIComponent(status)}`);
+}
