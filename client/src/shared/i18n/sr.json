@@ -3,6 +3,23 @@
     "appName": "Belote"
   },
   "auth": {
+    "login": {
+      "title": "Prijavite se",
+      "emailLabel": "Email",
+      "emailPlaceholder": "vas@email.com",
+      "passwordLabel": "Lozinka",
+      "passwordPlaceholder": "Unesite lozinku",
+      "submitButton": "Prijavite se",
+      "submitting": "Prijavljivanje...",
+      "registerLink": "Nemate nalog? Kreirajte jedan",
+      "errors": {
+        "emailRequired": "Email je obavezan",
+        "emailInvalid": "Unesite validnu email adresu",
+        "passwordRequired": "Lozinka je obavezna",
+        "invalidCredentials": "Pogrešan email ili lozinka",
+        "loginFailed": "Prijava nije uspela. Pokušajte ponovo."
+      }
+    },
     "register": {
       "title": "Kreiraj nalog",
       "emailLabel": "Email",

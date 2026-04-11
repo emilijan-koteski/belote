@@ -33,7 +33,7 @@ func main() {
 		os.Exit(1)
 	}
 	userRepo := user.NewGormUserRepository(db)
-	authHandler := auth.NewAuthHandler(userRepo, cfg.JWTSecret)
+	authHandler := auth.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.Environment)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -62,14 +62,18 @@ func main() {
 
 	e.HTTPErrorHandler = appErrorHandler
 
-	// Auth middleware placeholder — will be added in Story 1.3
-
 	// Routes
 	e.GET("/health", healthHandler)
 
 	// Auth routes — public, no auth middleware
 	authGroup := e.Group("/api/v1/auth")
 	authGroup.POST("/register", authHandler.Register)
+	authGroup.POST("/login", authHandler.Login)
+	authGroup.POST("/refresh", authHandler.Refresh)
+	authGroup.POST("/logout", authHandler.Logout)
+
+	// Authenticated route group — future protected endpoints go here
+	_ = e.Group("/api/v1", auth.AuthMiddleware(cfg.JWTSecret))
 
 	// Graceful shutdown
 	go func() {

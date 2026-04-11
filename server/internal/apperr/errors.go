@@ -37,6 +37,7 @@ var (
 	ErrConflict     = NewAppError("CONFLICT", "Resource conflict", http.StatusConflict)
 
 	// Auth domain errors
+	ErrInvalidCredentials   = NewAppError("INVALID_CREDENTIALS", "invalid email or password", http.StatusUnauthorized)
 	ErrEmailTaken           = NewAppError("EMAIL_TAKEN", "email is already registered", http.StatusConflict)
 	ErrUsernameTaken        = NewAppError("USERNAME_TAKEN", "username is already taken", http.StatusConflict)
 	ErrInvalidEmail         = NewAppError("INVALID_EMAIL", "invalid email format", http.StatusBadRequest)

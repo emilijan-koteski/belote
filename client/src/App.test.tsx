@@ -1,11 +1,24 @@
+import "@/shared/i18n/i18n";
+
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
-import { MemoryRouter, Routes, Route } from "react-router";
+import { MemoryRouter, Route,Routes } from "react-router";
+import { beforeEach,describe, expect, it, vi } from "vitest";
 
 import { LoginPage } from "@/features/auth/LoginPage";
 import { LobbyPage } from "@/features/lobby/LobbyPage";
+import { useAuthStore } from "@/shared/stores/authStore";
+
+vi.mock("@/shared/api/auth", () => ({
+  login: vi.fn(),
+  refresh: vi.fn(),
+  logout: vi.fn(),
+}));
 
 describe("App routing", () => {
+  beforeEach(() => {
+    useAuthStore.setState({ token: null, user: null, isLoading: false });
+  });
+
   it("renders login page at /login", () => {
     render(
       <MemoryRouter initialEntries={["/login"]}>
@@ -15,7 +28,7 @@ describe("App routing", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Login")).toBeInTheDocument();
+    expect(screen.getByTestId("login-title")).toHaveTextContent("Log In");
   });
 
   it("renders lobby page at /lobby", () => {

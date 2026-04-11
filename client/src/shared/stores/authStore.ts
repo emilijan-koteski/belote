@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { logout as logoutApi } from "@/shared/api/auth";
 import type { User } from "@/shared/types/apiTypes";
 
 interface AuthState {
@@ -15,9 +16,12 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   user: null,
-  isLoading: false,
+  isLoading: true,
   setToken: (token) => set({ token }),
   setUser: (user) => set({ user }),
   setLoading: (isLoading) => set({ isLoading }),
-  logout: () => set({ token: null, user: null }),
+  logout: () => {
+    logoutApi();
+    set({ token: null, user: null });
+  },
 }));
