@@ -60,3 +60,8 @@
 - **D29: player_count denormalized counter drift risk** — player_count is manually tracked via IncrementPlayerCount/DecrementPlayerCount. Any code path that adds/removes players without updating the counter causes drift. Pre-existing since Story 2.1.
 - **D30: No TTL/cleanup for abandoned Quick Play rooms** — Quick Play rooms with no players persist in waiting status. LeaveRoom marks empty rooms as completed, but rooms where the last player disconnects without leaving may linger. Same concern applies to manual rooms.
 - **D31: RoomLobby has no real-time refresh for other players' actions** — RoomLobby fetches room data once on mount with no polling or WS subscription. Other players' seat selections and joins are invisible until page refresh. Pre-existing, affects all rooms. WS solution in Epic 4.
+
+## Deferred from: code review of 3-1-game-state-types-card-encoding-and-deck (2026-04-12)
+
+- **D32: Duplicate playerID validation missing in `NewGame`** — `NewGame` accepts `[4]uint{10, 10, 20, 30}` silently. Validation is the session manager's responsibility (Epic 4), not the pure game layer. Pre-existing design pattern.
+- **D33: Zero UserID (uint 0) accepted silently in `NewGame`** — GORM auto-increment starts at 1 so DB ID=0 is impossible, but the game layer doesn't enforce. Session manager will validate. Pre-existing pattern.

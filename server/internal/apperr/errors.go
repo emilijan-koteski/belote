@@ -70,5 +70,13 @@ var (
 	ErrSeatTaken               = NewAppError("SEAT_TAKEN", "seat is already occupied", http.StatusConflict)
 	ErrInvalidSeat             = NewAppError("INVALID_SEAT", "seat must be 0, 1, 2, or 3", http.StatusBadRequest)
 	ErrNotAllSeated            = NewAppError("NOT_ALL_SEATED", "all 4 players must be seated to start", http.StatusBadRequest)
-	ErrGameNotStartable        = NewAppError("GAME_NOT_STARTABLE", "room is not in waiting status", http.StatusConflict)
+	ErrGameNotStartable = NewAppError("GAME_NOT_STARTABLE", "room is not in waiting status", http.StatusConflict)
+
+	// Game domain errors
+	ErrWrongPhase         = NewAppError("WRONG_PHASE", "action not valid in current game phase", http.StatusBadRequest)
+	ErrNotYourTurn        = NewAppError("NOT_YOUR_TURN", "it is not your turn", http.StatusForbidden)
+	ErrInvalidCard        = NewAppError("INVALID_CARD", "card is not in your hand", http.StatusBadRequest)
+	ErrIllegalPlay        = NewAppError("ILLEGAL_PLAY", "card play violates game rules", http.StatusBadRequest)
+	ErrGamePaused         = NewAppError("GAME_PAUSED", "game is currently paused", http.StatusConflict)
+	ErrPlayerDisconnected = NewAppError("PLAYER_DISCONNECTED", "player is disconnected", http.StatusConflict)
 )

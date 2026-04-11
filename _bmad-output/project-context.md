@@ -286,7 +286,7 @@ Every feature must pass all items before it is considered complete — this is a
 | Add WS events to only one contract file | Update both `wsEvents.ts` and `events.go` together |
 | Use `PascalCase` or `snake_case` in JSON | Always `camelCase` in wire format |
 | Send relative timer durations ("30 seconds") | Send absolute timestamps ("expires at X") |
-| Assume clockwise turn order | Counter-clockwise: `(currentPlayer - 1 + 4) % 4` |
+| Assume clockwise turn order | Counter-clockwise: `(currentPlayer + 1) % 4` — seats are numbered CCW |
 | Continue rotation after trick resolves | Trick winner leads the next trick — rotation resets |
 | Implement generic trump bidding | Branch by variant from the start — separate code paths |
 | Auto-award Belot bonus (K+Q of trump) | Require player announcement — prompt on trump K/Q play |
@@ -302,7 +302,7 @@ Every feature must pass all items before it is considered complete — this is a
 
 **Game Rules — Critical Correctness:**
 
-- **Turn order is counter-clockwise** — dealing, bidding, and trick play. Turn advancement: `(currentPlayer - 1 + 4) % 4`. Never clockwise
+- **Turn order is counter-clockwise** — dealing, bidding, and trick play. Seats are numbered counter-clockwise (0→1→2→3→0). Turn advancement: `(currentPlayer + 1) % 4`. Never clockwise
 - **Trick winner leads next trick** — rotation resets to the winner, then continues counter-clockwise
 - **Trump bidding branches by variant** — Bitola: reshuffle-and-rotate-dealer when no one picks in round 2. Croatian: last player forced to pick. Separate code paths in `bidding.go`, never a generic flow
 - **Declarations resolved at first trick only** — after all four cards played on trick 1. Highest-value set wins ties. Only the winning team's declarations count. After resolution, declarations are locked for that hand
