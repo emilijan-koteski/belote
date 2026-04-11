@@ -40,10 +40,10 @@
     "createRoomDesc": "Podesi igru po svom",
     "leaderboardPlaceholder": "Lista lidera uskoro",
     "matchmaking": {
-      "finding": "Baranje natprevar...",
-      "cancel": "Otkazi",
-      "failed": "Ne moze da se najde natprevar \u2014 probaj povtorno",
-      "alreadyInRoom": "Veke ste vo soba \u2014 prvo napustete ja"
+      "finding": "Tra\u017eenje me\u010da...",
+      "cancel": "Otka\u017ei",
+      "failed": "Nije mogu\u0107e prona\u0107i me\u010d \u2014 poku\u0161ajte ponovo",
+      "alreadyInRoom": "Ve\u0107 ste u sobi \u2014 prvo je napustite"
     },
     "createRoomModal": {
       "title": "Napravi sobu za igru",
@@ -101,21 +101,21 @@
       "notFoundAction": "Nazad u lobi",
       "playerJoined": "{{username}} se pridru\u017eio sobi",
       "playerLeft": "{{username}} je napustio sobu",
-      "teamRed": "Crven tim",
-      "teamBlue": "Plav tim",
-      "startGame": "Zapo\u010dni igra",
-      "startGameDisabled": "Site 4 igra\u010di mora da se sednat",
-      "waitingForOwner": "\u010cekanje {{owner}} da ja zapo\u010dne igrata...",
-      "seatTaken": "Toa mesto e zazemeno",
+      "teamRed": "Crveni tim",
+      "teamBlue": "Plavi tim",
+      "startGame": "Zapo\u010dni igru",
+      "startGameDisabled": "Sva 4 igra\u010da moraju da sednu",
+      "waitingForOwner": "\u010cekanje da {{owner}} zapo\u010dne igru...",
+      "seatTaken": "To mesto je zauzeto",
       "seatUpdated": "Mesto a\u017eurirano",
-      "gameStarting": "Igrata po\u010dnuva...",
-      "autoStartMessage": "Igrata pocnuva avtomatski koga site igraci ke sednat",
-      "autoStarting": "Igrata pocnuva...",
+      "gameStarting": "Igra po\u010dinje...",
+      "autoStartMessage": "Igra po\u010dinje automatski kada svi igra\u010di sednu",
+      "autoStarting": "Igra po\u010dinje...",
       "errors": {
-        "seatFailed": "Neuspe\u0161en izbor na mesto \u2014 probaj povtorno",
-        "startFailed": "Neuspe\u0161no zapo\u010dnuvanje \u2014 probaj povtorno",
-        "notOwner": "Samo sopstvenikot na sobata mo\u017ee da zapo\u010dne",
-        "notAllSeated": "Site 4 igra\u010di mora da se sednat za da po\u010dne"
+        "seatFailed": "Neuspe\u0161an izbor mesta \u2014 poku\u0161ajte ponovo",
+        "startFailed": "Neuspe\u0161no pokretanje \u2014 poku\u0161ajte ponovo",
+        "notOwner": "Samo vlasnik sobe mo\u017ee da zapo\u010dne",
+        "notAllSeated": "Sva 4 igra\u010da moraju da sednu da bi po\u010delo"
       }
     }
   },
