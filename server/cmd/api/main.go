@@ -87,6 +87,8 @@ func main() {
 	api.GET("/rooms/:id", roomHandler.GetRoom)
 	api.POST("/rooms/:id/join", roomHandler.JoinRoom)
 	api.POST("/rooms/:id/leave", roomHandler.LeaveRoom)
+	api.POST("/rooms/:id/seat", roomHandler.SelectSeat)
+	api.POST("/rooms/:id/start", roomHandler.StartGame)
 
 	// Graceful shutdown
 	go func() {

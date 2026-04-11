@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { FetchError } from "@/shared/api/fetchClient";
 import { useAuthStore } from "@/shared/stores/authStore";
 
 import { RoomLobby } from "./RoomLobby";
@@ -24,6 +25,8 @@ vi.mock("react-router", async () => {
 vi.mock("@/shared/api/rooms", () => ({
   getRoom: vi.fn(),
   leaveRoom: vi.fn(),
+  selectSeat: vi.fn(),
+  startGame: vi.fn(),
 }));
 
 // Mock sonner toast
@@ -34,11 +37,14 @@ vi.mock("sonner", () => ({
   },
 }));
 
-import { getRoom, leaveRoom } from "@/shared/api/rooms";
 import { toast } from "sonner";
+
+import { getRoom, leaveRoom, selectSeat, startGame } from "@/shared/api/rooms";
 
 const mockGetRoom = vi.mocked(getRoom);
 const mockLeaveRoom = vi.mocked(leaveRoom);
+const mockSelectSeat = vi.mocked(selectSeat);
+const mockStartGame = vi.mocked(startGame);
 
 function renderRoomLobby() {
   render(
@@ -48,8 +54,30 @@ function renderRoomLobby() {
   );
 }
 
+const defaultRoom = {
+  id: 1,
+  name: "Test Room",
+  code: "XYZ123",
+  ownerId: 10,
+  variant: "bitola",
+  matchMode: "1001",
+  timerStyle: "relaxed",
+  timerDurationSeconds: null,
+  status: "waiting",
+  playerCount: 2,
+  createdAt: "",
+  updatedAt: "",
+};
+
+const defaultUser = {
+  id: 10,
+  username: "alice",
+  email: "a@b.com",
+  languagePreference: "en",
+  createdAt: "",
+};
+
 beforeEach(() => {
-  // Default: leaveRoom resolves so cleanup effect doesn't throw
   mockLeaveRoom.mockResolvedValue(undefined);
 });
 
@@ -60,20 +88,12 @@ afterEach(() => {
 
 describe("RoomLobby", () => {
   it("renders room name and configuration", async () => {
-    useAuthStore.setState({
-      user: { id: 10, username: "alice", email: "a@b.com", languagePreference: "en", createdAt: "" },
-      token: "tok",
-    });
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
 
     mockGetRoom.mockResolvedValue({
-      room: {
-        id: 1, name: "Test Room", code: "XYZ123", ownerId: 10,
-        variant: "bitola", matchMode: "1001", timerStyle: "relaxed",
-        timerDurationSeconds: null, status: "waiting", playerCount: 1,
-        createdAt: "", updatedAt: "",
-      },
+      room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: null, team: null, createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
       ],
     });
 
@@ -90,21 +110,13 @@ describe("RoomLobby", () => {
   });
 
   it("displays occupied seats with player usernames", async () => {
-    useAuthStore.setState({
-      user: { id: 10, username: "alice", email: "a@b.com", languagePreference: "en", createdAt: "" },
-      token: "tok",
-    });
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
 
     mockGetRoom.mockResolvedValue({
-      room: {
-        id: 1, name: "Room", code: "ABC", ownerId: 10,
-        variant: "bitola", matchMode: "1001", timerStyle: "relaxed",
-        timerDurationSeconds: null, status: "waiting", playerCount: 2,
-        createdAt: "", updatedAt: "",
-      },
+      room: { ...defaultRoom, playerCount: 2 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: null, team: null, createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: null, team: null, createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
       ],
     });
 
@@ -118,20 +130,12 @@ describe("RoomLobby", () => {
   });
 
   it("displays empty seats with Waiting text", async () => {
-    useAuthStore.setState({
-      user: { id: 10, username: "alice", email: "a@b.com", languagePreference: "en", createdAt: "" },
-      token: "tok",
-    });
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
 
     mockGetRoom.mockResolvedValue({
-      room: {
-        id: 1, name: "Room", code: "ABC", ownerId: 10,
-        variant: "bitola", matchMode: "1001", timerStyle: "relaxed",
-        timerDurationSeconds: null, status: "waiting", playerCount: 1,
-        createdAt: "", updatedAt: "",
-      },
+      room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: null, team: null, createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
       ],
     });
 
@@ -146,20 +150,12 @@ describe("RoomLobby", () => {
   });
 
   it("highlights current user seat with You indicator", async () => {
-    useAuthStore.setState({
-      user: { id: 10, username: "alice", email: "a@b.com", languagePreference: "en", createdAt: "" },
-      token: "tok",
-    });
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
 
     mockGetRoom.mockResolvedValue({
-      room: {
-        id: 1, name: "Room", code: "ABC", ownerId: 10,
-        variant: "bitola", matchMode: "1001", timerStyle: "relaxed",
-        timerDurationSeconds: null, status: "waiting", playerCount: 1,
-        createdAt: "", updatedAt: "",
-      },
+      room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: null, team: null, createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
       ],
     });
 
@@ -172,10 +168,7 @@ describe("RoomLobby", () => {
 
   it("calls clipboard API on copy link click", async () => {
     const user = userEvent.setup();
-    useAuthStore.setState({
-      user: { id: 10, username: "alice", email: "a@b.com", languagePreference: "en", createdAt: "" },
-      token: "tok",
-    });
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
 
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
@@ -185,14 +178,9 @@ describe("RoomLobby", () => {
     });
 
     mockGetRoom.mockResolvedValue({
-      room: {
-        id: 1, name: "Room", code: "XYZ123", ownerId: 10,
-        variant: "bitola", matchMode: "1001", timerStyle: "relaxed",
-        timerDurationSeconds: null, status: "waiting", playerCount: 1,
-        createdAt: "", updatedAt: "",
-      },
+      room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: null, team: null, createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
       ],
     });
 
@@ -210,22 +198,14 @@ describe("RoomLobby", () => {
 
   it("calls leaveRoom and navigates to lobby on leave click", async () => {
     const user = userEvent.setup();
-    useAuthStore.setState({
-      user: { id: 10, username: "alice", email: "a@b.com", languagePreference: "en", createdAt: "" },
-      token: "tok",
-    });
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
 
     mockLeaveRoom.mockResolvedValue(undefined);
 
     mockGetRoom.mockResolvedValue({
-      room: {
-        id: 1, name: "Room", code: "ABC", ownerId: 10,
-        variant: "bitola", matchMode: "1001", timerStyle: "relaxed",
-        timerDurationSeconds: null, status: "waiting", playerCount: 1,
-        createdAt: "", updatedAt: "",
-      },
+      room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: null, team: null, createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
       ],
     });
 
@@ -259,5 +239,290 @@ describe("RoomLobby", () => {
     });
 
     expect(screen.getByText("Room not found")).toBeInTheDocument();
+  });
+
+  // --- Team color indicators ---
+
+  it("renders Red Team and Blue Team labels", async () => {
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 1 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByText("Red Team")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Blue Team")).toBeInTheDocument();
+  });
+
+  // --- Seat selection ---
+
+  it("calls selectSeat API when clicking an empty seat", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 2 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: null, team: null, createdAt: "" },
+      ],
+    });
+
+    mockSelectSeat.mockResolvedValue({
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("player-seat-1")).toBeInTheDocument();
+    });
+
+    // Seat 1 is empty — click it
+    await user.click(screen.getByTestId("player-seat-1"));
+
+    expect(mockSelectSeat).toHaveBeenCalledWith(1, 1);
+  });
+
+  it("does not call selectSeat when clicking seat occupied by another player", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 2 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByText("bob")).toBeInTheDocument();
+    });
+
+    // Seat 1 is occupied by bob — should be disabled
+    await user.click(screen.getByTestId("player-seat-1"));
+
+    expect(mockSelectSeat).not.toHaveBeenCalled();
+  });
+
+  it("calls selectSeat when clicking own occupied seat (for switching)", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 1 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+      ],
+    });
+
+    mockSelectSeat.mockResolvedValue({
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 1, team: "blue", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByText("alice")).toBeInTheDocument();
+    });
+
+    // Click empty seat 1 to switch
+    await user.click(screen.getByTestId("player-seat-1"));
+
+    expect(mockSelectSeat).toHaveBeenCalledWith(1, 1);
+  });
+
+  it("shows toast when seat selection fails", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 1 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+      ],
+    });
+
+    mockSelectSeat.mockRejectedValue(new FetchError(409, "SEAT_TAKEN", "seat is taken"));
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("player-seat-1")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId("player-seat-1"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled();
+    });
+  });
+
+  // --- Start Game ---
+
+  it("renders Start Game button for room owner", async () => {
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 4 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("start-game")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("start-game")).toBeEnabled();
+  });
+
+  it("renders disabled Start Game button when fewer than 4 players seated", async () => {
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 2 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: null, team: null, createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("start-game")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("start-game")).toBeDisabled();
+  });
+
+  it("calls startGame API and navigates on success", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 4 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+      ],
+    });
+
+    mockStartGame.mockResolvedValue({
+      ...defaultRoom,
+      status: "in_progress",
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("start-game")).toBeEnabled();
+    });
+
+    await user.click(screen.getByTestId("start-game"));
+
+    expect(mockStartGame).toHaveBeenCalledWith(1);
+    expect(mockNavigate).toHaveBeenCalledWith("/game/1");
+  });
+
+  it("renders waiting message for non-owner when 4 players seated", async () => {
+    useAuthStore.setState({
+      user: { id: 20, username: "bob", email: "b@b.com", languagePreference: "en", createdAt: "" },
+      token: "tok",
+    });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 4 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("waiting-for-start")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Waiting for alice to start/)).toBeInTheDocument();
+    expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
+  });
+
+  it("does not render Start Game button for non-owner", async () => {
+    useAuthStore.setState({
+      user: { id: 20, username: "bob", email: "b@b.com", languagePreference: "en", createdAt: "" },
+      token: "tok",
+    });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 2 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByText("bob")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
+  });
+
+  it("shows toast when game start fails", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 4 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+      ],
+    });
+
+    mockStartGame.mockRejectedValue(new FetchError(400, "NOT_ALL_SEATED", "not all seated"));
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("start-game")).toBeEnabled();
+    });
+
+    await user.click(screen.getByTestId("start-game"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled();
+    });
   });
 });

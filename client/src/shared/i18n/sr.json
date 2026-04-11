@@ -94,7 +94,21 @@
       "notFound": "Soba nije prona\u0111ena",
       "notFoundAction": "Nazad u lobi",
       "playerJoined": "{{username}} se pridru\u017eio sobi",
-      "playerLeft": "{{username}} je napustio sobu"
+      "playerLeft": "{{username}} je napustio sobu",
+      "teamRed": "Crven tim",
+      "teamBlue": "Plav tim",
+      "startGame": "Zapo\u010dni igra",
+      "startGameDisabled": "Site 4 igra\u010di mora da se sednat",
+      "waitingForOwner": "\u010cekanje {{owner}} da ja zapo\u010dne igrata...",
+      "seatTaken": "Toa mesto e zazemeno",
+      "seatUpdated": "Mesto a\u017eurirano",
+      "gameStarting": "Igrata po\u010dnuva...",
+      "errors": {
+        "seatFailed": "Neuspe\u0161en izbor na mesto \u2014 probaj povtorno",
+        "startFailed": "Neuspe\u0161no zapo\u010dnuvanje \u2014 probaj povtorno",
+        "notOwner": "Samo sopstvenikot na sobata mo\u017ee da zapo\u010dne",
+        "notAllSeated": "Site 4 igra\u010di mora da se sednat za da po\u010dne"
+      }
     }
   },
   "auth": {

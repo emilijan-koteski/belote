@@ -323,6 +323,177 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]string{"message": "left room"}})
 }
 
+type SelectSeatRequest struct {
+	Seat *int `json:"seat"`
+}
+
+type PlayersResponse struct {
+	Players []RoomPlayer `json:"players"`
+}
+
+func teamForSeat(seat int) string {
+	if seat%2 == 0 {
+		return "red"
+	}
+	return "blue"
+}
+
+func (h *RoomHandler) SelectSeat(c echo.Context) error {
+	userID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	var req SelectSeatRequest
+	if err := c.Bind(&req); err != nil {
+		return apperr.ErrBadRequest
+	}
+
+	if req.Seat == nil {
+		return apperr.ErrInvalidSeat
+	}
+	seat := *req.Seat
+	if seat < 0 || seat > 3 {
+		return apperr.ErrInvalidSeat
+	}
+
+	team := teamForSeat(seat)
+
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		// Re-check room status inside transaction to prevent TOCTOU
+		room, err := tx.FindByID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("finding room: %w", err)
+		}
+		if room == nil {
+			return apperr.ErrRoomNotFound
+		}
+		if room.Status != "waiting" {
+			return apperr.ErrGameNotStartable
+		}
+
+		// Check if seat is already taken
+		existing, err := tx.FindPlayerBySeat(uint(roomID), seat)
+		if err != nil {
+			return fmt.Errorf("checking seat occupancy: %w", err)
+		}
+		if existing != nil {
+			if existing.UserID == userID {
+				// Player already in this seat — no-op
+				return nil
+			}
+			return apperr.ErrSeatTaken
+		}
+
+		// Check if player is in this room and has an existing seat to clear
+		player, err := tx.FindPlayerRoom(userID)
+		if err != nil {
+			return fmt.Errorf("finding player room: %w", err)
+		}
+		if player == nil || player.RoomID != uint(roomID) {
+			return apperr.ErrNotInRoom
+		}
+
+		if player.Seat != nil {
+			if err := tx.ClearPlayerSeat(uint(roomID), userID); err != nil {
+				return fmt.Errorf("clearing previous seat: %w", err)
+			}
+		}
+
+		if err := tx.UpdatePlayerSeat(uint(roomID), userID, seat, team); err != nil {
+			return fmt.Errorf("updating player seat: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		if errors.Is(err, apperr.ErrSeatTaken) || errors.Is(err, apperr.ErrNotInRoom) ||
+			errors.Is(err, apperr.ErrRoomNotFound) || errors.Is(err, apperr.ErrGameNotStartable) {
+			return err
+		}
+		return fmt.Errorf("selecting seat: %w", err)
+	}
+
+	// TODO: broadcast system:seat_updated to room participants (WS hub not yet wired)
+
+	players, err := h.repo.FindPlayersByRoomID(uint(roomID))
+	if err != nil {
+		return fmt.Errorf("fetching players after seat update: %w", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": PlayersResponse{Players: players},
+	})
+}
+
+func (h *RoomHandler) StartGame(c echo.Context) error {
+	userID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	var updatedRoom *Room
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		room, err := tx.FindByID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("finding room: %w", err)
+		}
+		if room == nil {
+			return apperr.ErrRoomNotFound
+		}
+
+		if room.Status != "waiting" {
+			return apperr.ErrGameNotStartable
+		}
+
+		if room.OwnerID != userID {
+			return apperr.ErrNotRoomOwner
+		}
+
+		players, err := tx.FindPlayersByRoomID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("finding room players: %w", err)
+		}
+
+		seatedCount := 0
+		for _, p := range players {
+			if p.Seat != nil {
+				seatedCount++
+			}
+		}
+		if seatedCount < 4 {
+			return apperr.ErrNotAllSeated
+		}
+
+		room.Status = "playing"
+		if err := tx.Update(room); err != nil {
+			return fmt.Errorf("starting game: %w", err)
+		}
+
+		updatedRoom = room
+		return nil
+	}); err != nil {
+		if errors.Is(err, apperr.ErrRoomNotFound) || errors.Is(err, apperr.ErrGameNotStartable) ||
+			errors.Is(err, apperr.ErrNotRoomOwner) || errors.Is(err, apperr.ErrNotAllSeated) {
+			return err
+		}
+		return fmt.Errorf("starting game: %w", err)
+	}
+
+	// TODO: broadcast system:game_started to room participants + system:room_updated to lobby (WS hub not yet wired)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": updatedRoom})
+}
+
 func generateRoomCode() (string, error) {
 	result := make([]byte, codeLength)
 	max := big.NewInt(int64(len(codeChars)))

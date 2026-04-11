@@ -71,9 +71,9 @@ func TestGormUserRepository_FindByEmail_NotFound(t *testing.T) {
 	db := getTestDB(t)
 	repo := NewGormUserRepository(db)
 
-	_, err := repo.FindByEmail("nonexistent@test.com")
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	found, err := repo.FindByEmail("nonexistent@test.com")
+	assert.NoError(t, err)
+	assert.Nil(t, found)
 }
 
 func TestGormUserRepository_FindByUsername_Found(t *testing.T) {
@@ -98,7 +98,7 @@ func TestGormUserRepository_FindByUsername_NotFound(t *testing.T) {
 	db := getTestDB(t)
 	repo := NewGormUserRepository(db)
 
-	_, err := repo.FindByUsername("nonexistent")
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	found, err := repo.FindByUsername("nonexistent")
+	assert.NoError(t, err)
+	assert.Nil(t, found)
 }

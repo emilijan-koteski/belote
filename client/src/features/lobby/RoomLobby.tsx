@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 
-import { getRoom, leaveRoom } from "@/shared/api/rooms";
+import { FetchError } from "@/shared/api/fetchClient";
+import { getRoom, leaveRoom, selectSeat, startGame } from "@/shared/api/rooms";
 import { Button } from "@/shared/components/ui/button";
 import { useAuthStore } from "@/shared/stores/authStore";
 import type { Room, RoomPlayer } from "@/shared/types/apiTypes";
@@ -16,6 +17,20 @@ const matchModeKeys: Record<string, string> = {
   "1001": "lobby.roomList.matchMode1001",
 };
 
+// Seat layout: left column = Red (0, 2), right column = Blue (1, 3)
+const SEAT_LAYOUT = [
+  [0, 1],
+  [2, 3],
+] as const;
+
+function getTeamForSeat(seat: number): "red" | "blue" {
+  return seat % 2 === 0 ? "red" : "blue";
+}
+
+function getPlayerAtSeat(players: RoomPlayer[], seatIndex: number): RoomPlayer | undefined {
+  return players.find((p) => p.seat === seatIndex);
+}
+
 export function RoomLobby() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -26,6 +41,7 @@ export function RoomLobby() {
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
   const hasLeftRef = useRef(false);
   const hasJoinedRef = useRef(false);
 
@@ -39,7 +55,6 @@ export function RoomLobby() {
         const data = await getRoom(Number(id));
         setRoom(data.room);
         setPlayers(data.players);
-        // Only mark as joined if the current user is in the players list
         const userId = useAuthStore.getState().user?.id;
         if (userId && data.players.some((p) => p.userId === userId)) {
           hasJoinedRef.current = true;
@@ -82,13 +97,49 @@ export function RoomLobby() {
     navigate("/lobby");
   };
 
+  const handleSelectSeat = async (seatIndex: number) => {
+    if (!room) return;
+    try {
+      const data = await selectSeat(room.id, seatIndex);
+      setPlayers(data.players);
+    } catch (err) {
+      if (err instanceof FetchError && err.code === "SEAT_TAKEN") {
+        toast.error(t("lobby.roomLobby.seatTaken"));
+      } else {
+        toast.error(t("lobby.roomLobby.errors.seatFailed"));
+      }
+    }
+  };
+
+  const handleStartGame = async () => {
+    if (!room || isStarting) return;
+    setIsStarting(true);
+    try {
+      await startGame(room.id);
+      hasLeftRef.current = true; // Prevent cleanup leave on navigation
+      navigate(`/game/${room.id}`);
+    } catch (err) {
+      setIsStarting(false);
+      if (err instanceof FetchError && err.code === "NOT_ROOM_OWNER") {
+        toast.error(t("lobby.roomLobby.errors.notOwner"));
+      } else if (err instanceof FetchError && err.code === "NOT_ALL_SEATED") {
+        toast.error(t("lobby.roomLobby.errors.notAllSeated"));
+      } else {
+        toast.error(t("lobby.roomLobby.errors.startFailed"));
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-2xl px-8 py-8" data-testid="room-lobby-loading">
         <div className="mb-6 h-8 w-48 animate-pulse rounded bg-surface" />
         <div className="grid grid-cols-2 gap-6">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl border border-border bg-surface" />
+            <div
+              key={i}
+              className="h-24 animate-pulse rounded-xl border border-border bg-surface"
+            />
           ))}
         </div>
       </div>
@@ -113,6 +164,13 @@ export function RoomLobby() {
       ? t("lobby.roomList.timerRelaxed")
       : t("lobby.roomList.timerPerMove", { seconds: room.timerDurationSeconds ?? "?" });
 
+  const isOwner = currentUser !== null && currentUser.id === room.ownerId;
+  const seatedCount = players.filter((p) => p.seat !== null).length;
+  const allSeated = seatedCount === 4;
+
+  const ownerPlayer = players.find((p) => p.userId === room.ownerId);
+  const ownerUsername = ownerPlayer?.username ?? t("lobby.roomLobby.seatOwner");
+
   return (
     <div className="mx-auto max-w-2xl px-8 py-8" data-testid="room-lobby">
       {/* Header */}
@@ -126,50 +184,97 @@ export function RoomLobby() {
         </Button>
       </div>
 
-      {/* Player seats grid */}
-      <div className="mb-8 grid grid-cols-2 gap-6">
-        {[0, 1, 2, 3].map((seatIndex) => {
-          const player = players[seatIndex];
-          const isCurrentUser = player && currentUser && player.userId === currentUser.id;
-          const isOwner = player && player.userId === room.ownerId;
-
-          return (
-            <div
-              key={seatIndex}
-              className={`flex min-h-24 flex-col items-center justify-center rounded-xl p-6 ${
-                player
-                  ? `border border-border bg-surface ${isCurrentUser ? "ring-1 ring-accent" : ""}`
-                  : "border border-dashed border-border bg-surface/50"
-              }`}
-              data-testid={`player-seat-${seatIndex}`}
-            >
-              {player ? (
-                <div className="text-center">
-                  <span className="font-semibold text-text-primary">{player.username}</span>
-                  <div className="mt-1 flex items-center justify-center gap-2">
-                    {isCurrentUser && (
-                      <span className="text-xs text-accent">{t("lobby.roomLobby.seatYou")}</span>
-                    )}
-                    {isOwner && (
-                      <span className="text-xs text-text-secondary">
-                        {t("lobby.roomLobby.seatOwner")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <span className="text-text-secondary">{t("lobby.roomLobby.seatEmpty")}</span>
-              )}
-            </div>
-          );
-        })}
+      {/* Team labels */}
+      <div className="mb-4 grid grid-cols-2 gap-6">
+        <p className="text-center text-sm font-semibold text-team-red">
+          {t("lobby.roomLobby.teamRed")}
+        </p>
+        <p className="text-center text-sm font-semibold text-team-blue">
+          {t("lobby.roomLobby.teamBlue")}
+        </p>
       </div>
 
-      {/* Room config bar + Leave */}
-      <div className="flex items-center justify-between">
+      {/* Player seats grid — 2 rows x 2 columns */}
+      <div className="mb-8 grid grid-cols-2 gap-6">
+        {SEAT_LAYOUT.map((row) =>
+          row.map((seatIndex) => {
+            const player = getPlayerAtSeat(players, seatIndex);
+            const team = getTeamForSeat(seatIndex);
+            const isCurrentUser =
+              player !== undefined && currentUser !== null && player.userId === currentUser.id;
+            const isSeatOwner = player !== undefined && player.userId === room.ownerId;
+            const isClickable = player === undefined || isCurrentUser;
+
+            const teamBorderClass = team === "red" ? "border-team-red" : "border-team-blue";
+
+            return (
+              <button
+                key={seatIndex}
+                type="button"
+                className={`flex min-h-24 flex-col items-center justify-center rounded-xl border-2 p-6 transition-colors ${
+                  player !== undefined
+                    ? `bg-surface ${teamBorderClass} ${isCurrentUser ? "ring-1 ring-accent" : ""} ${
+                        isClickable ? "cursor-pointer hover:bg-surface-elevated" : "cursor-default"
+                      }`
+                    : `border-dashed ${teamBorderClass} bg-surface/50 cursor-pointer hover:bg-surface/80`
+                }`}
+                onClick={() => {
+                  if (isClickable) {
+                    handleSelectSeat(seatIndex);
+                  }
+                }}
+                disabled={!isClickable}
+                data-testid={`player-seat-${seatIndex}`}
+              >
+                {player !== undefined ? (
+                  <div className="text-center">
+                    <span className="font-semibold text-text-primary">{player.username}</span>
+                    <div className="mt-1 flex items-center justify-center gap-2">
+                      {isCurrentUser && (
+                        <span className="text-xs text-accent">{t("lobby.roomLobby.seatYou")}</span>
+                      )}
+                      {isSeatOwner && (
+                        <span className="text-xs text-text-secondary">
+                          {t("lobby.roomLobby.seatOwner")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-text-secondary">{t("lobby.roomLobby.seatEmpty")}</span>
+                )}
+              </button>
+            );
+          }),
+        )}
+      </div>
+
+      {/* Room config bar */}
+      <div className="mb-6">
         <p className="text-sm text-text-secondary">
           {variantLabel} &middot; {matchModeLabel} &middot; {timerLabel}
         </p>
+      </div>
+
+      {/* Start Game / Waiting message */}
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          {isOwner ? (
+            <Button
+              onClick={handleStartGame}
+              disabled={!allSeated || isStarting}
+              className={allSeated && !isStarting ? "" : "opacity-40 cursor-not-allowed"}
+              title={allSeated ? undefined : t("lobby.roomLobby.startGameDisabled")}
+              data-testid="start-game"
+            >
+              {isStarting ? t("lobby.roomLobby.gameStarting") : t("lobby.roomLobby.startGame")}
+            </Button>
+          ) : allSeated ? (
+            <p className="text-sm text-text-secondary" data-testid="waiting-for-start">
+              {t("lobby.roomLobby.waitingForOwner", { owner: ownerUsername })}
+            </p>
+          ) : null}
+        </div>
         <Button
           variant="ghost"
           className="text-destructive"

@@ -46,3 +46,8 @@
 - **D21: Copy Link copies room code, not a full URL** — Spec says "code/link" and user journeys describe sharing codes via WhatsApp/Viber. Current behavior matches spec intent. Revisit if URL sharing is needed.
 - **D22: Orphan room_players rows for soft-deleted rooms** — GORM soft delete doesn't trigger FK CASCADE. room_players rows for soft-deleted rooms linger with no functional impact. Cleanup script for Phase 2.
 - **D23: No unit test for useRoomLobbyUpdates handler logic** — WS not yet wired. Test when WS infrastructure lands (Story 4-1).
+
+## Deferred from: code review of 2-4-team-assignment-and-game-start (2026-04-11)
+
+- **D24: `useRoomLobbyUpdates` hardcodes `id: 0` for joined players** — Pre-existing from Story 2.3. When constructing a RoomPlayer from PlayerJoinedPayload, `id` is hardcoded to 0. Multiple WS join events before a refresh would produce duplicate IDs. Fix when WS infrastructure lands (Story 4-1).
+- **D25: `onRoomUpdated` uses unsafe `as unknown as Room` cast** — Pre-existing from Story 2.3. Bypasses TypeScript safety between RoomUpdatedPayload and Room types. Fix when WS typed dispatch is built (Story 4-1).

@@ -94,7 +94,21 @@
       "notFound": "Room not found",
       "notFoundAction": "Back to Lobby",
       "playerJoined": "{{username}} joined the room",
-      "playerLeft": "{{username}} left the room"
+      "playerLeft": "{{username}} left the room",
+      "teamRed": "Red Team",
+      "teamBlue": "Blue Team",
+      "startGame": "Start Game",
+      "startGameDisabled": "All 4 players must be seated",
+      "waitingForOwner": "Waiting for {{owner}} to start the game...",
+      "seatTaken": "That seat is already taken",
+      "seatUpdated": "Seat updated",
+      "gameStarting": "Game starting...",
+      "errors": {
+        "seatFailed": "Failed to select seat — try again",
+        "startFailed": "Failed to start game — try again",
+        "notOwner": "Only the room owner can start the game",
+        "notAllSeated": "All 4 players must be seated to start"
+      }
     }
   },
   "auth": {

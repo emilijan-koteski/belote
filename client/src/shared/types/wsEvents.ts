@@ -63,3 +63,20 @@ export interface PlayerLeftPayload {
   playerCount: number;
   newOwnerId?: number;
 }
+
+// Seat and game events
+export const SYSTEM_SEAT_UPDATED = "system:seat_updated" as const;
+export const SYSTEM_GAME_STARTED = "system:game_started" as const;
+
+export interface SeatUpdatedPayload {
+  roomId: number;
+  userId: number;
+  username: string;
+  seat: number;
+  team: string;
+  previousSeat: number | null;
+}
+
+export interface GameStartedPayload {
+  roomId: number;
+}

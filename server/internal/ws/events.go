@@ -17,3 +17,7 @@ const SystemRoomUpdated = "system:room_updated"
 // Room player events
 const SystemPlayerJoined = "system:player_joined"
 const SystemPlayerLeft = "system:player_left"
+
+// Seat and game events
+const SystemSeatUpdated = "system:seat_updated"
+const SystemGameStarted = "system:game_started"

@@ -11,5 +11,8 @@ type RoomRepository interface {
 	FindPlayerRoom(userID uint) (*RoomPlayer, error)
 	IncrementPlayerCount(roomID uint) error
 	DecrementPlayerCount(roomID uint) error
+	UpdatePlayerSeat(roomID uint, userID uint, seat int, team string) error
+	ClearPlayerSeat(roomID uint, userID uint) error
+	FindPlayerBySeat(roomID uint, seat int) (*RoomPlayer, error)
 	RunInTransaction(fn func(RoomRepository) error) error
 }

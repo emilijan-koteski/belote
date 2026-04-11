@@ -1,5 +1,5 @@
 import { fetchClient } from "@/shared/api/fetchClient";
-import type { CreateRoomRequest, Room, RoomDetail } from "@/shared/types/apiTypes";
+import type { CreateRoomRequest, Room, RoomDetail, RoomPlayer } from "@/shared/types/apiTypes";
 
 export function createRoom(req: CreateRoomRequest): Promise<Room> {
   return fetchClient<Room>("/rooms", {
@@ -22,4 +22,15 @@ export function joinRoom(id: number): Promise<Room> {
 
 export function leaveRoom(id: number): Promise<void> {
   return fetchClient<void>(`/rooms/${id}/leave`, { method: "POST" });
+}
+
+export function selectSeat(roomId: number, seat: number): Promise<{ players: RoomPlayer[] }> {
+  return fetchClient<{ players: RoomPlayer[] }>(`/rooms/${roomId}/seat`, {
+    method: "POST",
+    body: JSON.stringify({ seat }),
+  });
+}
+
+export function startGame(roomId: number): Promise<Room> {
+  return fetchClient<Room>(`/rooms/${roomId}/start`, { method: "POST" });
 }

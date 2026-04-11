@@ -48,8 +48,14 @@ jobs:
       - name: Install golangci-lint
         run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
+      - name: Install golang-migrate
+        run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
       - name: Install frontend dependencies
         run: cd client && npm ci
+
+      - name: Run database migrations
+        run: migrate -path server/migrations -database "$BELOTE_DB_URL" up
 
       - name: Lint
         run: make lint

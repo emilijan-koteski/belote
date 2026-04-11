@@ -117,6 +117,48 @@ func (r *GormRepository) FindPlayerRoom(userID uint) (*RoomPlayer, error) {
 	return &player, nil
 }
 
+func (r *GormRepository) UpdatePlayerSeat(roomID uint, userID uint, seat int, team string) error {
+	result := r.db.Model(&RoomPlayer{}).
+		Where("room_id = ? AND user_id = ?", roomID, userID).
+		Updates(map[string]interface{}{"seat": seat, "team": team})
+	if result.Error != nil {
+		return fmt.Errorf("updating player seat: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return apperr.ErrNotInRoom
+	}
+	return nil
+}
+
+func (r *GormRepository) ClearPlayerSeat(roomID uint, userID uint) error {
+	result := r.db.Model(&RoomPlayer{}).
+		Where("room_id = ? AND user_id = ?", roomID, userID).
+		Updates(map[string]interface{}{"seat": nil, "team": nil})
+	if result.Error != nil {
+		return fmt.Errorf("clearing player seat: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return apperr.ErrNotInRoom
+	}
+	return nil
+}
+
+func (r *GormRepository) FindPlayerBySeat(roomID uint, seat int) (*RoomPlayer, error) {
+	var player RoomPlayer
+	err := r.db.Table("room_players").
+		Select("room_players.*, users.username").
+		Joins("JOIN users ON users.id = room_players.user_id").
+		Where("room_players.room_id = ? AND room_players.seat = ?", roomID, seat).
+		Scan(&player).Error
+	if err != nil {
+		return nil, fmt.Errorf("finding player by seat: %w", err)
+	}
+	if player.ID == 0 {
+		return nil, nil
+	}
+	return &player, nil
+}
+
 func (r *GormRepository) RunInTransaction(fn func(RoomRepository) error) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		txRepo := &GormRepository{db: tx}

@@ -67,4 +67,8 @@ var (
 	ErrInvalidRoomStatus       = NewAppError("INVALID_ROOM_STATUS", "invalid room status filter", http.StatusBadRequest)
 	ErrAlreadyInRoom           = NewAppError("ALREADY_IN_ROOM", "player is already in a room", http.StatusConflict)
 	ErrNotInRoom               = NewAppError("NOT_IN_ROOM", "player is not in this room", http.StatusNotFound)
+	ErrSeatTaken               = NewAppError("SEAT_TAKEN", "seat is already occupied", http.StatusConflict)
+	ErrInvalidSeat             = NewAppError("INVALID_SEAT", "seat must be 0, 1, 2, or 3", http.StatusBadRequest)
+	ErrNotAllSeated            = NewAppError("NOT_ALL_SEATED", "all 4 players must be seated to start", http.StatusBadRequest)
+	ErrGameNotStartable        = NewAppError("GAME_NOT_STARTABLE", "room is not in waiting status", http.StatusConflict)
 )

@@ -144,6 +144,37 @@ func (m *mockRoomRepo) DecrementPlayerCount(roomID uint) error {
 	return nil
 }
 
+func (m *mockRoomRepo) UpdatePlayerSeat(roomID uint, userID uint, seat int, team string) error {
+	for _, p := range m.players {
+		if p.RoomID == roomID && p.UserID == userID {
+			p.Seat = &seat
+			p.Team = &team
+			return nil
+		}
+	}
+	return apperr.ErrNotInRoom
+}
+
+func (m *mockRoomRepo) ClearPlayerSeat(roomID uint, userID uint) error {
+	for _, p := range m.players {
+		if p.RoomID == roomID && p.UserID == userID {
+			p.Seat = nil
+			p.Team = nil
+			return nil
+		}
+	}
+	return apperr.ErrNotInRoom
+}
+
+func (m *mockRoomRepo) FindPlayerBySeat(roomID uint, seat int) (*room.RoomPlayer, error) {
+	for _, p := range m.players {
+		if p.RoomID == roomID && p.Seat != nil && *p.Seat == seat {
+			return p, nil
+		}
+	}
+	return nil, nil
+}
+
 func (m *mockRoomRepo) RunInTransaction(fn func(room.RoomRepository) error) error {
 	return fn(m)
 }
@@ -186,6 +217,8 @@ func setupTest() (*echo.Echo, *mockRoomRepo) {
 	api.GET("/rooms/:id", handler.GetRoom)
 	api.POST("/rooms/:id/join", handler.JoinRoom)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
+	api.POST("/rooms/:id/seat", handler.SelectSeat)
+	api.POST("/rooms/:id/start", handler.StartGame)
 
 	return e, repo
 }
@@ -833,6 +866,375 @@ func TestLeaveRoom_Unauthorized(t *testing.T) {
 	e, _ := setupTest()
 
 	rec := doLeaveRoom(e, "1", "")
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// --- SelectSeat Tests ---
+
+func doSelectSeat(e *echo.Echo, id string, body string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/seat", strings.NewReader(body))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+func intPtr(v int) *int { return &v }
+
+func strPtr(v string) *string { return &v }
+
+func seedRoomWithPlayers(repo *mockRoomRepo, name string, ownerID uint, playerIDs ...uint) *room.Room {
+	r := &room.Room{
+		Name:        name,
+		Code:        "TEST01",
+		OwnerID:     ownerID,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		Status:      "waiting",
+		PlayerCount: len(playerIDs),
+	}
+	r.ID = repo.nextID
+	r.CreatedAt = time.Now()
+	r.UpdatedAt = time.Now()
+	repo.nextID++
+	repo.rooms = append(repo.rooms, r)
+
+	for _, uid := range playerIDs {
+		p := &room.RoomPlayer{
+			ID:        repo.nextPID,
+			RoomID:    r.ID,
+			UserID:    uid,
+			Username:  "user" + string(rune('0'+uid%10)),
+			CreatedAt: time.Now(),
+		}
+		repo.nextPID++
+		repo.players = append(repo.players, p)
+	}
+
+	return r
+}
+
+func TestSelectSeat_Success(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoomWithPlayers(repo, "Seat Test", 1, 1, 10)
+
+	rec := doSelectSeat(e, "1", `{"seat":0}`, token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Find the player and verify seat assignment
+	for _, p := range repo.players {
+		if p.UserID == 10 {
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 0, *p.Seat)
+			require.NotNil(t, p.Team)
+			assert.Equal(t, "red", *p.Team)
+		}
+	}
+}
+
+func TestSelectSeat_TeamDerivation(t *testing.T) {
+	tests := []struct {
+		seat int
+		team string
+	}{
+		{0, "red"},
+		{1, "blue"},
+		{2, "red"},
+		{3, "blue"},
+	}
+
+	for _, tc := range tests {
+		t.Run("seat_"+string(rune('0'+tc.seat)), func(t *testing.T) {
+			e, repo := setupTest()
+			token := validToken(10)
+
+			seedRoomWithPlayers(repo, "Team Test", 1, 1, 10)
+
+			body := `{"seat":` + string(rune('0'+tc.seat)) + `}`
+			rec := doSelectSeat(e, "1", body, token)
+
+			assert.Equal(t, http.StatusOK, rec.Code)
+
+			for _, p := range repo.players {
+				if p.UserID == 10 && p.Team != nil {
+					assert.Equal(t, tc.team, *p.Team)
+				}
+			}
+		})
+	}
+}
+
+func TestSelectSeat_Switching(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoomWithPlayers(repo, "Switch Test", 1, 1, 10)
+	// Pre-assign player 10 to seat 0
+	for _, p := range repo.players {
+		if p.UserID == 10 {
+			p.Seat = intPtr(0)
+			p.Team = strPtr("red")
+		}
+	}
+
+	rec := doSelectSeat(e, "1", `{"seat":3}`, token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	for _, p := range repo.players {
+		if p.UserID == 10 {
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 3, *p.Seat)
+			require.NotNil(t, p.Team)
+			assert.Equal(t, "blue", *p.Team)
+		}
+	}
+}
+
+func TestSelectSeat_Taken(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoomWithPlayers(repo, "Taken Test", 1, 1, 10)
+	// Player 1 already in seat 0
+	for _, p := range repo.players {
+		if p.UserID == 1 {
+			p.Seat = intPtr(0)
+			p.Team = strPtr("red")
+		}
+	}
+
+	rec := doSelectSeat(e, "1", `{"seat":0}`, token)
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "SEAT_TAKEN", errResp["error"]["code"])
+}
+
+func TestSelectSeat_InvalidSeatNumber(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoomWithPlayers(repo, "Invalid Seat", 1, 1, 10)
+
+	rec := doSelectSeat(e, "1", `{"seat":5}`, token)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "INVALID_SEAT", errResp["error"]["code"])
+}
+
+func TestSelectSeat_NegativeSeat(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoomWithPlayers(repo, "Neg Seat", 1, 1, 10)
+
+	rec := doSelectSeat(e, "1", `{"seat":-1}`, token)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "INVALID_SEAT", errResp["error"]["code"])
+}
+
+func TestSelectSeat_MissingSeat(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoomWithPlayers(repo, "Missing Seat", 1, 1, 10)
+
+	rec := doSelectSeat(e, "1", `{}`, token)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "INVALID_SEAT", errResp["error"]["code"])
+}
+
+func TestSelectSeat_NotInRoom(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(99) // user 99 not in room
+
+	seedRoomWithPlayers(repo, "Not In Room", 1, 1, 10)
+
+	rec := doSelectSeat(e, "1", `{"seat":0}`, token)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_IN_ROOM", errResp["error"]["code"])
+}
+
+func TestSelectSeat_RoomNotWaiting(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoomWithPlayers(repo, "In Progress", 1, 1, 10)
+	repo.rooms[0].Status = "in_progress"
+
+	rec := doSelectSeat(e, "1", `{"seat":0}`, token)
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "GAME_NOT_STARTABLE", errResp["error"]["code"])
+}
+
+func TestSelectSeat_OwnCurrentSeat(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoomWithPlayers(repo, "No-op Test", 1, 1, 10)
+	// Player 10 already in seat 2
+	for _, p := range repo.players {
+		if p.UserID == 10 {
+			p.Seat = intPtr(2)
+			p.Team = strPtr("red")
+		}
+	}
+
+	rec := doSelectSeat(e, "1", `{"seat":2}`, token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Seat should remain unchanged
+	for _, p := range repo.players {
+		if p.UserID == 10 {
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 2, *p.Seat)
+		}
+	}
+}
+
+func TestSelectSeat_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doSelectSeat(e, "1", `{"seat":0}`, "")
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// --- StartGame Tests ---
+
+func doStartGame(e *echo.Echo, id string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/start", nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestStartGame_Success(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1) // owner
+
+	seedRoomWithPlayers(repo, "Start Test", 1, 1, 2, 3, 4)
+	// Seat all 4 players
+	seats := []int{0, 1, 2, 3}
+	teams := []string{"red", "blue", "red", "blue"}
+	for i, p := range repo.players {
+		p.Seat = intPtr(seats[i])
+		p.Team = strPtr(teams[i])
+	}
+
+	rec := doStartGame(e, "1", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "playing", repo.rooms[0].Status)
+
+	var resp map[string]room.Room
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "playing", resp["data"].Status)
+}
+
+func TestStartGame_NotOwner(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10) // not the owner
+
+	seedRoomWithPlayers(repo, "Not Owner", 1, 1, 10, 3, 4)
+	for i, p := range repo.players {
+		p.Seat = intPtr(i)
+		teams := []string{"red", "blue", "red", "blue"}
+		p.Team = strPtr(teams[i])
+	}
+
+	rec := doStartGame(e, "1", token)
+
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_ROOM_OWNER", errResp["error"]["code"])
+}
+
+func TestStartGame_NotAllSeated(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoomWithPlayers(repo, "Not All Seated", 1, 1, 2, 3, 4)
+	// Only seat 2 out of 4
+	repo.players[0].Seat = intPtr(0)
+	repo.players[0].Team = strPtr("red")
+	repo.players[1].Seat = intPtr(1)
+	repo.players[1].Team = strPtr("blue")
+
+	rec := doStartGame(e, "1", token)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_ALL_SEATED", errResp["error"]["code"])
+}
+
+func TestStartGame_RoomNotWaiting(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoomWithPlayers(repo, "Already Started", 1, 1, 2, 3, 4)
+	repo.rooms[0].Status = "in_progress"
+
+	rec := doStartGame(e, "1", token)
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "GAME_NOT_STARTABLE", errResp["error"]["code"])
+}
+
+func TestStartGame_RoomNotFound(t *testing.T) {
+	e, _ := setupTest()
+	token := validToken(1)
+
+	rec := doStartGame(e, "999", token)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestStartGame_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doStartGame(e, "1", "")
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
