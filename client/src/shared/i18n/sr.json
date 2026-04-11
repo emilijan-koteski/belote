@@ -39,6 +39,12 @@
     "createRoom": "Napravi sobu",
     "createRoomDesc": "Podesi igru po svom",
     "leaderboardPlaceholder": "Lista lidera uskoro",
+    "matchmaking": {
+      "finding": "Baranje natprevar...",
+      "cancel": "Otkazi",
+      "failed": "Ne moze da se najde natprevar \u2014 probaj povtorno",
+      "alreadyInRoom": "Veke ste vo soba \u2014 prvo napustete ja"
+    },
     "createRoomModal": {
       "title": "Napravi sobu za igru",
       "roomName": "Ime sobe",
@@ -103,6 +109,8 @@
       "seatTaken": "Toa mesto e zazemeno",
       "seatUpdated": "Mesto a\u017eurirano",
       "gameStarting": "Igrata po\u010dnuva...",
+      "autoStartMessage": "Igrata pocnuva avtomatski koga site igraci ke sednat",
+      "autoStarting": "Igrata pocnuva...",
       "errors": {
         "seatFailed": "Neuspe\u0161en izbor na mesto \u2014 probaj povtorno",
         "startFailed": "Neuspe\u0161no zapo\u010dnuvanje \u2014 probaj povtorno",

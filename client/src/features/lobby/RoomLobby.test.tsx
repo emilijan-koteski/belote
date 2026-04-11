@@ -65,6 +65,7 @@ const defaultRoom = {
   timerDurationSeconds: null,
   status: "waiting",
   playerCount: 2,
+  isQuickPlay: false,
   createdAt: "",
   updatedAt: "",
 };
@@ -276,6 +277,7 @@ describe("RoomLobby", () => {
     });
 
     mockSelectSeat.mockResolvedValue({
+      gameStarted: false,
       players: [
         { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
         { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
@@ -330,6 +332,7 @@ describe("RoomLobby", () => {
     });
 
     mockSelectSeat.mockResolvedValue({
+      gameStarted: false,
       players: [
         { id: 1, roomId: 1, userId: 10, username: "alice", seat: 1, team: "blue", createdAt: "" },
       ],
@@ -523,6 +526,115 @@ describe("RoomLobby", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalled();
+    });
+  });
+
+  // --- Quick Play Room Behavior ---
+
+  it("renders auto-start message for Quick Play room instead of Start Game button", async () => {
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, isQuickPlay: true, playerCount: 2 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: null, team: null, createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auto-start-message")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("waiting-for-start")).not.toBeInTheDocument();
+  });
+
+  it("does not show Start Game button for owner in Quick Play room", async () => {
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, isQuickPlay: true, playerCount: 4 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auto-start-message")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
+  });
+
+  it("does not show waiting-for-owner message for non-owner in Quick Play room", async () => {
+    useAuthStore.setState({
+      user: { id: 20, username: "bob", email: "b@b.com", languagePreference: "en", createdAt: "" },
+      token: "tok",
+    });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, isQuickPlay: true, playerCount: 4 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auto-start-message")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("waiting-for-start")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
+  });
+
+  it("navigates to game when selectSeat returns gameStarted true", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, isQuickPlay: true, playerCount: 4 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: null, team: null, createdAt: "" },
+      ],
+    });
+
+    mockSelectSeat.mockResolvedValue({
+      gameStarted: true,
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("player-seat-3")).toBeInTheDocument();
+    });
+
+    // Seat 3 is empty — click it to trigger auto-start
+    await user.click(screen.getByTestId("player-seat-3"));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/game/1");
     });
   });
 });

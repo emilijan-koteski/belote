@@ -17,6 +17,7 @@ type Room struct {
 	TimerDurationSeconds *int           `json:"timerDurationSeconds"`
 	Status               string         `gorm:"size:20;not null;default:waiting;index" json:"status"`
 	PlayerCount          int            `gorm:"not null;default:1" json:"playerCount"`
+	IsQuickPlay          bool           `gorm:"not null;default:false" json:"isQuickPlay"`
 	CreatedAt            time.Time      `json:"createdAt"`
 	UpdatedAt            time.Time      `json:"updatedAt"`
 	DeletedAt            gorm.DeletedAt `gorm:"index" json:"-"`

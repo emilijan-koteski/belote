@@ -425,8 +425,34 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 		return fmt.Errorf("fetching players after seat update: %w", err)
 	}
 
+	// Check if Quick Play room should auto-start
+	room, err := h.repo.FindByID(uint(roomID))
+	if err != nil {
+		return fmt.Errorf("fetching room for auto-start check: %w", err)
+	}
+
+	gameStarted := false
+	if room != nil && room.IsQuickPlay && room.Status == "waiting" {
+		seatedCount := 0
+		for _, p := range players {
+			if p.Seat != nil {
+				seatedCount++
+			}
+		}
+		if seatedCount == 4 {
+			room.Status = "playing"
+			if err := h.repo.Update(room); err != nil {
+				return fmt.Errorf("auto-starting quick play room: %w", err)
+			}
+			gameStarted = true
+		}
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"data": PlayersResponse{Players: players},
+		"data": map[string]interface{}{
+			"players":     players,
+			"gameStarted": gameStarted,
+		},
 	})
 }
 
@@ -452,6 +478,10 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 		}
 
 		if room.Status != "waiting" {
+			return apperr.ErrGameNotStartable
+		}
+
+		if room.IsQuickPlay {
 			return apperr.ErrGameNotStartable
 		}
 
@@ -492,6 +522,89 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 	// TODO: broadcast system:game_started to room participants + system:room_updated to lobby (WS hub not yet wired)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": updatedRoom})
+}
+
+func (h *RoomHandler) QuickPlay(c echo.Context) error {
+	userID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	existingRoom, err := h.repo.FindPlayerRoom(userID)
+	if err != nil {
+		return fmt.Errorf("checking existing room: %w", err)
+	}
+	if existingRoom != nil {
+		return apperr.ErrAlreadyInRoom
+	}
+
+	var resultRoom *Room
+	var createErr error
+	for i := 0; i < maxRetries; i++ {
+		createErr = h.repo.RunInTransaction(func(tx RoomRepository) error {
+			available, err := tx.FindQuickPlayRoom()
+			if err != nil {
+				return fmt.Errorf("finding quick play room: %w", err)
+			}
+
+			if available != nil {
+				rp := &RoomPlayer{RoomID: available.ID, UserID: userID}
+				if err := tx.AddPlayer(rp); err != nil {
+					return err
+				}
+				if err := tx.IncrementPlayerCount(available.ID); err != nil {
+					return fmt.Errorf("incrementing player count: %w", err)
+				}
+				r, err := tx.FindByID(available.ID)
+				if err != nil {
+					return fmt.Errorf("re-fetching room after join: %w", err)
+				}
+				resultRoom = r
+				return nil
+			}
+
+			code, err := generateRoomCode()
+			if err != nil {
+				return fmt.Errorf("generating room code: %w", err)
+			}
+
+			newRoom := &Room{
+				Name:        "Quick Play " + code,
+				Code:        code,
+				OwnerID:     userID,
+				Variant:     "bitola",
+				MatchMode:   "1001",
+				TimerStyle:  "relaxed",
+				IsQuickPlay: true,
+				Status:      "waiting",
+				PlayerCount: 1,
+			}
+			if err := tx.Create(newRoom); err != nil {
+				return err
+			}
+			rp := &RoomPlayer{RoomID: newRoom.ID, UserID: userID}
+			if err := tx.AddPlayer(rp); err != nil {
+				return fmt.Errorf("adding creator to room players: %w", err)
+			}
+			resultRoom = newRoom
+			return nil
+		})
+		if createErr == nil {
+			break
+		}
+		if errors.Is(createErr, apperr.ErrRoomCodeTaken) || errors.Is(createErr, apperr.ErrRoomNameTaken) {
+			continue
+		}
+		if errors.Is(createErr, apperr.ErrAlreadyInRoom) {
+			return createErr
+		}
+		return createErr
+	}
+	if createErr != nil {
+		return createErr
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": resultRoom})
 }
 
 func generateRoomCode() (string, error) {

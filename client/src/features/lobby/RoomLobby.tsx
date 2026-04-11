@@ -102,6 +102,11 @@ export function RoomLobby() {
     try {
       const data = await selectSeat(room.id, seatIndex);
       setPlayers(data.players);
+      if (data.gameStarted) {
+        hasLeftRef.current = true;
+        navigate(`/game/${room.id}`);
+        return;
+      }
     } catch (err) {
       if (err instanceof FetchError && err.code === "SEAT_TAKEN") {
         toast.error(t("lobby.roomLobby.seatTaken"));
@@ -259,7 +264,13 @@ export function RoomLobby() {
       {/* Start Game / Waiting message */}
       <div className="mb-4 flex items-center justify-between">
         <div>
-          {isOwner ? (
+          {room.isQuickPlay ? (
+            <p className="text-sm text-text-secondary" data-testid="auto-start-message">
+              {allSeated
+                ? t("lobby.roomLobby.autoStarting")
+                : t("lobby.roomLobby.autoStartMessage")}
+            </p>
+          ) : isOwner ? (
             <Button
               onClick={handleStartGame}
               disabled={!allSeated || isStarting}

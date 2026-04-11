@@ -39,6 +39,12 @@
     "createRoom": "Create Room",
     "createRoomDesc": "Set up a game your way",
     "leaderboardPlaceholder": "Leaderboard coming soon",
+    "matchmaking": {
+      "finding": "Finding match...",
+      "cancel": "Cancel",
+      "failed": "Could not find a match \u2014 try again",
+      "alreadyInRoom": "You're already in a room \u2014 leave it first"
+    },
     "createRoomModal": {
       "title": "Create a Game Room",
       "roomName": "Room Name",
@@ -103,6 +109,8 @@
       "seatTaken": "That seat is already taken",
       "seatUpdated": "Seat updated",
       "gameStarting": "Game starting...",
+      "autoStartMessage": "Game starts automatically when all players are seated",
+      "autoStarting": "Starting game...",
       "errors": {
         "seatFailed": "Failed to select seat — try again",
         "startFailed": "Failed to start game — try again",

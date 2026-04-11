@@ -30,6 +30,7 @@ export interface Room {
   timerDurationSeconds: number | null;
   status: string;
   playerCount: number;
+  isQuickPlay: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,4 +56,9 @@ export interface RoomPlayer {
 export interface RoomDetail {
   room: Room;
   players: RoomPlayer[];
+}
+
+export interface SelectSeatResponse {
+  players: RoomPlayer[];
+  gameStarted: boolean;
 }

@@ -10,10 +10,23 @@ import { useLobbyStore } from "@/shared/stores/lobbyStore";
 import { LobbyPage } from "./LobbyPage";
 
 const mockGetRooms = vi.fn();
+const mockQuickPlay = vi.fn();
+const mockJoinRoom = vi.fn();
+
+const mockNavigate = vi.fn();
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual("react-router");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 vi.mock("@/shared/api/rooms", () => ({
   createRoom: vi.fn(),
   getRooms: (...args: unknown[]) => mockGetRooms(...args),
+  joinRoom: (...args: unknown[]) => mockJoinRoom(...args),
+  quickPlay: (...args: unknown[]) => mockQuickPlay(...args),
 }));
 
 afterEach(() => {
@@ -97,6 +110,65 @@ describe("LobbyPage", () => {
 
     await waitFor(() => {
       expect(mockGetRooms).toHaveBeenCalledWith("waiting");
+    });
+  });
+
+  it("calls quickPlay API and navigates on success", async () => {
+    const user = userEvent.setup();
+    mockQuickPlay.mockResolvedValueOnce({ id: 42, isQuickPlay: true });
+    renderLobbyPage();
+
+    const quickPlayCard = screen.getByTestId("quick-play-card");
+    await user.click(quickPlayCard);
+
+    await waitFor(() => {
+      expect(mockQuickPlay).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/rooms/42");
+    });
+  });
+
+  it("shows matchmaking overlay with cancel button during matchmaking", async () => {
+    const user = userEvent.setup();
+    // Make quickPlay hang indefinitely
+    mockQuickPlay.mockReturnValue(new Promise(() => {}));
+    renderLobbyPage();
+
+    const quickPlayCard = screen.getByTestId("quick-play-card");
+    await user.click(quickPlayCard);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("matchmaking-overlay")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("matchmaking-cancel")).toBeInTheDocument();
+    expect(screen.queryByTestId("quick-play-card")).not.toBeInTheDocument();
+  });
+
+  it("cancels matchmaking and returns to options view", async () => {
+    const user = userEvent.setup();
+    // Make quickPlay reject with AbortError on abort
+    mockQuickPlay.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          setTimeout(() => reject(new DOMException("Aborted", "AbortError")), 100);
+        }),
+    );
+    renderLobbyPage();
+
+    const quickPlayCard = screen.getByTestId("quick-play-card");
+    await user.click(quickPlayCard);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("matchmaking-cancel")).toBeInTheDocument();
+    });
+
+    const cancelButton = screen.getByTestId("matchmaking-cancel");
+    await user.click(cancelButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("quick-play-card")).toBeInTheDocument();
     });
   });
 });

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/emilijan/belote/server/internal/apperr"
 )
@@ -157,6 +158,21 @@ func (r *GormRepository) FindPlayerBySeat(roomID uint, seat int) (*RoomPlayer, e
 		return nil, nil
 	}
 	return &player, nil
+}
+
+func (r *GormRepository) FindQuickPlayRoom() (*Room, error) {
+	var room Room
+	err := r.db.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
+		Where("is_quick_play = ? AND status = ? AND player_count < 4", true, "waiting").
+		Order("created_at ASC").
+		First(&room).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("finding quick play room: %w", err)
+	}
+	return &room, nil
 }
 
 func (r *GormRepository) RunInTransaction(fn func(RoomRepository) error) error {

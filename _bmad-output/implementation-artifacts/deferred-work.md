@@ -51,3 +51,12 @@
 
 - **D24: `useRoomLobbyUpdates` hardcodes `id: 0` for joined players** — Pre-existing from Story 2.3. When constructing a RoomPlayer from PlayerJoinedPayload, `id` is hardcoded to 0. Multiple WS join events before a refresh would produce duplicate IDs. Fix when WS infrastructure lands (Story 4-1).
 - **D25: `onRoomUpdated` uses unsafe `as unknown as Room` cast** — Pre-existing from Story 2.3. Bypasses TypeScript safety between RoomUpdatedPayload and Room types. Fix when WS typed dispatch is built (Story 4-1).
+
+## Deferred from: code review of 2-5-quick-play-matchmaking (2026-04-11)
+
+- **D26: TOCTOU race on FindPlayerRoom check before transaction** — FindPlayerRoom runs outside the transaction in QuickPlay handler (same pattern as JoinRoom). Two concurrent requests from the same user can both pass the check. Pre-existing architectural pattern; mitigated by low Phase 1 scale.
+- **D27: Only 4th-seat player receives gameStarted notification** — SelectSeat auto-start returns gameStarted:true only to the triggering player. Other 3 players have no notification mechanism until WS hub is wired in Epic 4.
+- **D28: Client abort does not cancel server-side room join/creation** — AbortController cancels the HTTP fetch but the server completes the operation. User gets ALREADY_IN_ROOM on next attempt with recovery via browse. Acceptable for Phase 1.
+- **D29: player_count denormalized counter drift risk** — player_count is manually tracked via IncrementPlayerCount/DecrementPlayerCount. Any code path that adds/removes players without updating the counter causes drift. Pre-existing since Story 2.1.
+- **D30: No TTL/cleanup for abandoned Quick Play rooms** — Quick Play rooms with no players persist in waiting status. LeaveRoom marks empty rooms as completed, but rooms where the last player disconnects without leaving may linger. Same concern applies to manual rooms.
+- **D31: RoomLobby has no real-time refresh for other players' actions** — RoomLobby fetches room data once on mount with no polling or WS subscription. Other players' seat selections and joins are invisible until page refresh. Pre-existing, affects all rooms. WS solution in Epic 4.

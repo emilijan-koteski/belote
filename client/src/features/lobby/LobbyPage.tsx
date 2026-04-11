@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { CreateRoomModal } from "@/features/lobby/CreateRoomModal";
 import { RoomList } from "@/features/lobby/RoomList";
 import { FetchError } from "@/shared/api/fetchClient";
-import { getRooms, joinRoom } from "@/shared/api/rooms";
+import { getRooms, joinRoom, quickPlay } from "@/shared/api/rooms";
 import { Button } from "@/shared/components/ui/button";
 import { useLobbyStore } from "@/shared/stores/lobbyStore";
 
@@ -16,6 +16,46 @@ export function LobbyPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeView, setActiveView] = useState<"options" | "browse">("options");
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isMatchmaking, setIsMatchmaking] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
+  async function handleQuickPlay() {
+    if (isMatchmaking) return;
+    setIsMatchmaking(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      const room = await quickPlay(controller.signal);
+      navigate(`/rooms/${room.id}`);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
+      if (err instanceof FetchError) {
+        if (err.code === "ALREADY_IN_ROOM") {
+          toast.error(t("lobby.matchmaking.alreadyInRoom"));
+        } else {
+          toast.error(t("lobby.matchmaking.failed"));
+        }
+      } else {
+        toast.error(t("lobby.matchmaking.failed"));
+      }
+    } finally {
+      setIsMatchmaking(false);
+      abortRef.current = null;
+    }
+  }
+
+  function handleCancelMatchmaking() {
+    abortRef.current?.abort();
+    setIsMatchmaking(false);
+  }
 
   async function handleBrowseRooms() {
     if (useLobbyStore.getState().isLoading) return;
@@ -69,10 +109,11 @@ export function LobbyPage() {
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
         {/* Left: Play Options or Browse view */}
         <div className="flex flex-col gap-4">
-          {activeView === "options" && (
+          {activeView === "options" && !isMatchmaking && (
             <>
               <button
                 className="rounded-xl bg-accent-glow p-6 text-left transition-colors hover:opacity-90"
+                onClick={handleQuickPlay}
                 data-testid="quick-play-card"
               >
                 <h3 className="font-display text-lg font-semibold text-text-primary">
@@ -103,6 +144,27 @@ export function LobbyPage() {
                 <p className="mt-1 text-sm text-text-secondary">{t("lobby.createRoomDesc")}</p>
               </button>
             </>
+          )}
+
+          {activeView === "options" && isMatchmaking && (
+            <div
+              className="flex flex-col items-center justify-center gap-6 rounded-xl border border-border bg-surface p-10"
+              data-testid="matchmaking-overlay"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-accent" />
+                <span className="text-lg font-semibold text-text-primary">
+                  {t("lobby.matchmaking.finding")}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={handleCancelMatchmaking}
+                data-testid="matchmaking-cancel"
+              >
+                {t("lobby.matchmaking.cancel")}
+              </Button>
+            </div>
           )}
 
           {activeView === "browse" && (
