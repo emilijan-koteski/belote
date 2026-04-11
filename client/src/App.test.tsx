@@ -1,8 +1,8 @@
 import "@/shared/i18n/i18n";
 
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route,Routes } from "react-router";
-import { beforeEach,describe, expect, it, vi } from "vitest";
+import { MemoryRouter, Route, Routes } from "react-router";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginPage } from "@/features/auth/LoginPage";
 import { LobbyPage } from "@/features/lobby/LobbyPage";

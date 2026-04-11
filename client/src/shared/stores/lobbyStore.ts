@@ -23,8 +23,7 @@ export const useLobbyStore = create<LobbyState>((set) => ({
   rooms: [],
   setRooms: (rooms) => set({ rooms }),
   addRoom: (room) => set((state) => ({ rooms: [...state.rooms, room] })),
-  removeRoom: (roomId) =>
-    set((state) => ({ rooms: state.rooms.filter((r) => r.id !== roomId) })),
+  removeRoom: (roomId) => set((state) => ({ rooms: state.rooms.filter((r) => r.id !== roomId) })),
   updateRoom: (room) =>
     set((state) => ({
       rooms: state.rooms.map((r) => (r.id === room.id ? room : r)),

@@ -164,9 +164,7 @@ export function LoginPage() {
             disabled={isLoading}
             data-testid="submit-button"
           >
-            {isLoading
-              ? t("auth.login.submitting")
-              : t("auth.login.submitButton")}
+            {isLoading ? t("auth.login.submitting") : t("auth.login.submitButton")}
           </Button>
         </form>
 

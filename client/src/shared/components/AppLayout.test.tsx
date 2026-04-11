@@ -23,7 +23,10 @@ function renderWithRouter(initialPath: string) {
         <Route element={<AppLayout />}>
           <Route path="/lobby" element={<div data-testid="lobby-content">Lobby</div>} />
           <Route path="/profile" element={<div data-testid="profile-content">Profile</div>} />
-          <Route path="/leaderboard" element={<div data-testid="leaderboard-content">Leaderboard</div>} />
+          <Route
+            path="/leaderboard"
+            element={<div data-testid="leaderboard-content">Leaderboard</div>}
+          />
           <Route path="/rules" element={<div data-testid="rules-content">Rules</div>} />
         </Route>
       </Routes>

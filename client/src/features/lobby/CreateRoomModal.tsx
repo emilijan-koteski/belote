@@ -139,9 +139,7 @@ export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
                 <SelectValue>{variantLabels[variant]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bitola">
-                  {t("lobby.createRoomModal.variantBitola")}
-                </SelectItem>
+                <SelectItem value="bitola">{t("lobby.createRoomModal.variantBitola")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -155,9 +153,7 @@ export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
                 <SelectValue>{matchModeLabels[matchMode]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1001">
-                  {t("lobby.createRoomModal.matchMode1001")}
-                </SelectItem>
+                <SelectItem value="1001">{t("lobby.createRoomModal.matchMode1001")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -166,17 +162,18 @@ export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
             <label className="mb-1 block text-sm text-text-secondary">
               {t("lobby.createRoomModal.timerStyle")}
             </label>
-            <Select value={timerStyle} onValueChange={(val) => { if (val) setTimerStyle(val); }}>
+            <Select
+              value={timerStyle}
+              onValueChange={(val) => {
+                if (val) setTimerStyle(val);
+              }}
+            >
               <SelectTrigger className="w-full" data-testid="timer-style-select">
                 <SelectValue>{timerStyleLabels[timerStyle]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="relaxed">
-                  {t("lobby.createRoomModal.timerRelaxed")}
-                </SelectItem>
-                <SelectItem value="per-move">
-                  {t("lobby.createRoomModal.timerPerMove")}
-                </SelectItem>
+                <SelectItem value="relaxed">{t("lobby.createRoomModal.timerRelaxed")}</SelectItem>
+                <SelectItem value="per-move">{t("lobby.createRoomModal.timerPerMove")}</SelectItem>
               </SelectContent>
             </Select>
           </div>

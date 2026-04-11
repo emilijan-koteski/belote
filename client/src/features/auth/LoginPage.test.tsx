@@ -3,7 +3,7 @@ import "@/shared/i18n/i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
-import { beforeEach,describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FetchError } from "@/shared/api/fetchClient";
 import { useAuthStore } from "@/shared/stores/authStore";
@@ -118,9 +118,7 @@ describe("LoginPage", () => {
 
   it("shows toast for non-401 errors", async () => {
     const user = userEvent.setup();
-    mockLogin.mockRejectedValueOnce(
-      new FetchError(500, "INTERNAL_ERROR", "Something went wrong"),
-    );
+    mockLogin.mockRejectedValueOnce(new FetchError(500, "INTERNAL_ERROR", "Something went wrong"));
 
     renderLoginPage();
 

@@ -113,7 +113,11 @@ export async function fetchClient<T>(
       throw new FetchError(response.status, body.error.code, body.error.message);
     } catch (e) {
       if (e instanceof FetchError) throw e;
-      throw new FetchError(response.status, "UNKNOWN_ERROR", response.statusText || "Request failed");
+      throw new FetchError(
+        response.status,
+        "UNKNOWN_ERROR",
+        response.statusText || "Request failed",
+      );
     }
   }
 

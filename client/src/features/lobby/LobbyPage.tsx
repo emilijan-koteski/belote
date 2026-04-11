@@ -78,9 +78,7 @@ export function LobbyPage() {
                 <h3 className="font-display text-lg font-semibold text-text-primary">
                   {t("lobby.quickPlay")}
                 </h3>
-                <p className="mt-1 text-sm text-text-secondary">
-                  {t("lobby.quickPlayDesc")}
-                </p>
+                <p className="mt-1 text-sm text-text-secondary">{t("lobby.quickPlayDesc")}</p>
               </button>
 
               <button
@@ -91,9 +89,7 @@ export function LobbyPage() {
                 <h3 className="font-display text-lg font-semibold text-text-primary">
                   {t("lobby.browseRooms")}
                 </h3>
-                <p className="mt-1 text-sm text-text-secondary">
-                  {t("lobby.browseRoomsDesc")}
-                </p>
+                <p className="mt-1 text-sm text-text-secondary">{t("lobby.browseRoomsDesc")}</p>
               </button>
 
               <button
@@ -104,20 +100,14 @@ export function LobbyPage() {
                 <h3 className="font-display text-lg font-semibold text-text-primary">
                   {t("lobby.createRoom")}
                 </h3>
-                <p className="mt-1 text-sm text-text-secondary">
-                  {t("lobby.createRoomDesc")}
-                </p>
+                <p className="mt-1 text-sm text-text-secondary">{t("lobby.createRoomDesc")}</p>
               </button>
             </>
           )}
 
           {activeView === "browse" && (
             <>
-              <Button
-                variant="ghost"
-                onClick={handleBackToOptions}
-                data-testid="back-to-options"
-              >
+              <Button variant="ghost" onClick={handleBackToOptions} data-testid="back-to-options">
                 &larr; {t("lobby.roomList.backToOptions")}
               </Button>
 

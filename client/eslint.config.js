@@ -1,12 +1,12 @@
 import js from "@eslint/js";
-import tseslint from "typescript-eslint";
+import prettier from "eslint-config-prettier";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
-import prettier from "eslint-config-prettier";
+import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  { ignores: ["dist", "eslint.config.js"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -31,4 +31,16 @@ export default tseslint.config(
     },
   },
   prettier,
+  {
+    files: ["vite.config.ts", "vitest.config.ts"],
+    rules: {
+      "no-restricted-syntax": "off",
+    },
+  },
+  {
+    files: ["src/shared/components/ui/**/*.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
 );

@@ -19,11 +19,8 @@ export function updatePreferences(
   userId: number,
   prefs: UpdatePreferencesRequest,
 ): Promise<{ languagePreference: string }> {
-  return fetchClient<{ languagePreference: string }>(
-    `/users/${userId}/preferences`,
-    {
-      method: "PATCH",
-      body: JSON.stringify(prefs),
-    },
-  );
+  return fetchClient<{ languagePreference: string }>(`/users/${userId}/preferences`, {
+    method: "PATCH",
+    body: JSON.stringify(prefs),
+  });
 }

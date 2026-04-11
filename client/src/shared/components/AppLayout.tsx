@@ -20,7 +20,10 @@ export function AppLayout() {
         className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center border-b border-border bg-surface px-6"
         data-testid="app-nav"
       >
-        <span className="font-display text-xl font-semibold text-text-primary" data-testid="app-name">
+        <span
+          className="font-display text-xl font-semibold text-text-primary"
+          data-testid="app-name"
+        >
           {t("nav.appName")}
         </span>
 

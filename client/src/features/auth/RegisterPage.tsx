@@ -206,9 +206,7 @@ export function RegisterPage() {
             disabled={isLoading}
             data-testid="submit-button"
           >
-            {isLoading
-              ? t("auth.register.submitting")
-              : t("auth.register.submitButton")}
+            {isLoading ? t("auth.register.submitting") : t("auth.register.submitButton")}
           </Button>
         </form>
 

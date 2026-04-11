@@ -35,8 +35,7 @@ export function RoomCard({ room, onJoin }: RoomCardProps) {
         <h3 className="font-semibold text-text-primary">{room.name}</h3>
         <p className="mt-1 text-sm text-text-secondary">
           {variantLabel} &middot; {matchModeLabel} &middot;{" "}
-          {t("lobby.roomList.players", { current: room.playerCount, max: 4 })} &middot;{" "}
-          {timerLabel}
+          {t("lobby.roomList.players", { current: room.playerCount, max: 4 })} &middot; {timerLabel}
         </p>
       </div>
       <Button size="sm" onClick={() => onJoin(room.id)} data-testid="room-card-join">

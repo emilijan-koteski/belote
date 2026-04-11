@@ -24,9 +24,7 @@ export function RoomList({ onJoinRoom }: RoomListProps) {
     if (!searchQuery) return rooms;
     const query = searchQuery.toLowerCase();
     return rooms.filter(
-      (room) =>
-        room.name.toLowerCase().includes(query) ||
-        room.code.toLowerCase().includes(query),
+      (room) => room.name.toLowerCase().includes(query) || room.code.toLowerCase().includes(query),
     );
   }, [rooms, searchQuery]);
 

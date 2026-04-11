@@ -23,7 +23,7 @@ export function ProfilePage() {
         // Error handled silently — profile data falls back to auth store
       })
       .finally(() => setIsLoading(false));
-  }, [user?.id]);
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -73,9 +73,7 @@ export function ProfilePage() {
           <h2 className="font-display text-lg font-semibold text-text-primary">
             {t("profile.matchHistory")}
           </h2>
-          <p className="mt-2 text-sm text-text-secondary">
-            {t("profile.matchHistoryEmpty")}
-          </p>
+          <p className="mt-2 text-sm text-text-secondary">{t("profile.matchHistoryEmpty")}</p>
         </section>
 
         <section
@@ -85,9 +83,7 @@ export function ProfilePage() {
           <h2 className="font-display text-lg font-semibold text-text-primary">
             {t("profile.stats")}
           </h2>
-          <p className="mt-2 text-sm text-text-secondary">
-            {t("profile.statsEmpty")}
-          </p>
+          <p className="mt-2 text-sm text-text-secondary">{t("profile.statsEmpty")}</p>
         </section>
       </div>
     </div>

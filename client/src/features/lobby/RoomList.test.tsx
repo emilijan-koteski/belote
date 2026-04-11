@@ -48,10 +48,7 @@ afterEach(() => {
 describe("RoomList", () => {
   it("renders room cards from data", () => {
     useLobbyStore.setState({
-      rooms: [
-        makeRoom({ id: 1, name: "Room Alpha" }),
-        makeRoom({ id: 2, name: "Room Beta" }),
-      ],
+      rooms: [makeRoom({ id: 1, name: "Room Alpha" }), makeRoom({ id: 2, name: "Room Beta" })],
     });
 
     renderRoomList();
