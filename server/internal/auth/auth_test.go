@@ -75,3 +75,23 @@ func TestValidateToken_FailsWithInvalidTokenString(t *testing.T) {
 	_, err := ValidateToken("not-a-valid-token", "secret")
 	assert.Error(t, err)
 }
+
+func TestValidateToken_AudienceDistinguishesAccessFromRefresh(t *testing.T) {
+	secret := "test-secret"
+
+	accessToken, err := GenerateAccessToken(1, secret)
+	require.NoError(t, err)
+
+	refreshToken, err := GenerateRefreshToken(1, secret)
+	require.NoError(t, err)
+
+	accessClaims, err := ValidateToken(accessToken, secret)
+	require.NoError(t, err)
+	assert.Contains(t, []string(accessClaims.Audience), "access")
+	assert.NotContains(t, []string(accessClaims.Audience), "refresh")
+
+	refreshClaims, err := ValidateToken(refreshToken, secret)
+	require.NoError(t, err)
+	assert.Contains(t, []string(refreshClaims.Audience), "refresh")
+	assert.NotContains(t, []string(refreshClaims.Audience), "access")
+}

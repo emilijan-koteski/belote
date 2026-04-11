@@ -202,7 +202,7 @@ export function RegisterPage() {
 
           <Button
             type="submit"
-            className="mt-2 h-10 w-full bg-accent text-background font-semibold hover:bg-accent/80 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="mt-2 h-10 w-full bg-primary text-primary-foreground font-semibold hover:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={isLoading}
             data-testid="submit-button"
           >
@@ -213,7 +213,7 @@ export function RegisterPage() {
         </form>
 
         <p className="mt-4 text-center text-sm text-text-secondary">
-          <Link to="/login" className="text-accent hover:underline" data-testid="login-link">
+          <Link to="/login" className="text-primary hover:underline" data-testid="login-link">
             {t("auth.register.loginLink")}
           </Link>
         </p>

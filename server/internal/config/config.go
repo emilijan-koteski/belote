@@ -11,6 +11,7 @@ type Config struct {
 	JWTSecret    string
 	Port         string
 	CORSOrigins  []string
+	Environment  string
 }
 
 func Load() *Config {
@@ -19,6 +20,7 @@ func Load() *Config {
 		JWTSecret:    getEnv("BELOTE_JWT_SECRET", "change-me-in-production"),
 		Port:         getEnv("BELOTE_PORT", "8080"),
 		CORSOrigins:  parseOrigins(getEnv("BELOTE_CORS_ORIGINS", "http://localhost:5173")),
+		Environment:  getEnv("BELOTE_ENV", "development"),
 	}
 
 	if cfg.JWTSecret == "" || cfg.JWTSecret == "change-me-in-production" {

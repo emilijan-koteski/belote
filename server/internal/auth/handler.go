@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/mail"
 	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,13 +36,39 @@ type RegisterResponseData struct {
 type AuthHandler struct {
 	userRepo  user.UserRepository
 	jwtSecret string
+	env       string
 }
 
-func NewAuthHandler(userRepo user.UserRepository, jwtSecret string) *AuthHandler {
+func NewAuthHandler(userRepo user.UserRepository, jwtSecret string, env string) *AuthHandler {
 	return &AuthHandler{
 		userRepo:  userRepo,
 		jwtSecret: jwtSecret,
+		env:       env,
 	}
+}
+
+func (h *AuthHandler) setRefreshCookie(c echo.Context, token string) {
+	c.SetCookie(&http.Cookie{
+		Name:     "refresh_token",
+		Value:    token,
+		Path:     "/api/v1/auth",
+		HttpOnly: true,
+		Secure:   h.env != "development",
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   7 * 24 * 60 * 60,
+	})
+}
+
+func (h *AuthHandler) clearRefreshCookie(c echo.Context) {
+	c.SetCookie(&http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/api/v1/auth",
+		HttpOnly: true,
+		Secure:   h.env != "development",
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   -1,
+	})
 }
 
 func (h *AuthHandler) Register(c echo.Context) error {
@@ -95,15 +123,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return fmt.Errorf("generating refresh token: %w", err)
 	}
 
-	c.SetCookie(&http.Cookie{
-		Name:     "refresh_token",
-		Value:    refreshToken,
-		Path:     "/api/v1/auth",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-		MaxAge:   7 * 24 * 60 * 60,
-	})
+	h.setRefreshCookie(c, refreshToken)
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"data": RegisterResponseData{
@@ -113,6 +133,121 @@ func (h *AuthHandler) Register(c echo.Context) error {
 			LanguagePreference: u.LanguagePreference,
 			CreatedAt:          u.CreatedAt,
 			Token:              accessToken,
+		},
+	})
+}
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (h *AuthHandler) Login(c echo.Context) error {
+	var req LoginRequest
+	if err := c.Bind(&req); err != nil {
+		return apperr.ErrBadRequest
+	}
+
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	if email == "" || req.Password == "" {
+		return apperr.ErrInvalidCredentials
+	}
+	addr, err := mail.ParseAddress(email)
+	if err == nil {
+		email = strings.ToLower(addr.Address)
+	}
+
+	u, err := h.userRepo.FindByEmail(email)
+	if err != nil {
+		return fmt.Errorf("finding user: %w", err)
+	}
+	if u == nil {
+		return apperr.ErrInvalidCredentials
+	}
+
+	if err := CheckPassword(u.PasswordHash, req.Password); err != nil {
+		return apperr.ErrInvalidCredentials
+	}
+
+	accessToken, err := GenerateAccessToken(u.ID, h.jwtSecret)
+	if err != nil {
+		return fmt.Errorf("generating access token: %w", err)
+	}
+
+	refreshToken, err := GenerateRefreshToken(u.ID, h.jwtSecret)
+	if err != nil {
+		return fmt.Errorf("generating refresh token: %w", err)
+	}
+
+	h.setRefreshCookie(c, refreshToken)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": RegisterResponseData{
+			ID:                 u.ID,
+			Username:           u.Username,
+			Email:              u.Email,
+			LanguagePreference: u.LanguagePreference,
+			CreatedAt:          u.CreatedAt,
+			Token:              accessToken,
+		},
+	})
+}
+
+func (h *AuthHandler) Refresh(c echo.Context) error {
+	cookie, err := c.Cookie("refresh_token")
+	if err != nil {
+		h.clearRefreshCookie(c)
+		return apperr.ErrUnauthorized
+	}
+
+	claims, err := ValidateToken(cookie.Value, h.jwtSecret)
+	if err != nil {
+		h.clearRefreshCookie(c)
+		return apperr.ErrUnauthorized
+	}
+
+	if !slices.Contains([]string(claims.Audience), "refresh") {
+		h.clearRefreshCookie(c)
+		return apperr.ErrUnauthorized
+	}
+
+	userID, err := strconv.ParseUint(claims.Subject, 10, 64)
+	if err != nil {
+		h.clearRefreshCookie(c)
+		return apperr.ErrUnauthorized
+	}
+
+	u, err := h.userRepo.FindByID(uint(userID))
+	if err != nil {
+		return fmt.Errorf("finding user: %w", err)
+	}
+	if u == nil {
+		h.clearRefreshCookie(c)
+		return apperr.ErrUnauthorized
+	}
+
+	accessToken, err := GenerateAccessToken(u.ID, h.jwtSecret)
+	if err != nil {
+		return fmt.Errorf("generating access token: %w", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": RegisterResponseData{
+			ID:                 u.ID,
+			Username:           u.Username,
+			Email:              u.Email,
+			LanguagePreference: u.LanguagePreference,
+			CreatedAt:          u.CreatedAt,
+			Token:              accessToken,
+		},
+	})
+}
+
+func (h *AuthHandler) Logout(c echo.Context) error {
+	h.clearRefreshCookie(c)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": map[string]string{
+			"message": "logged out",
 		},
 	})
 }

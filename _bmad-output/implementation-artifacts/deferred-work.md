@@ -13,3 +13,13 @@
 - **D3: Default JWT secret warning-only** — Config logs `slog.Warn` but continues with insecure default `"change-me-in-production"`. Acknowledged in Story 1.1 review (P1 RESOLVED). Should fail hard in production mode.
 - **D4: No rate limiting on registration endpoint** — bcrypt cost makes registration a CPU DoS vector. Infrastructure-level concern, not story-scoped. Address when adding API gateway or middleware.
 - **D5: Refresh token Secure:true hardcoded** — Cookie `Secure: true` prevents sending over HTTP in dev. Moot until refresh endpoint exists in Story 1.3. Make configurable by environment then.
+
+## Deferred from: code review of 1-3-user-login-and-session-persistence (2026-04-11)
+
+- **D6: Logout fire-and-forget can orphan refresh cookie server-side** — `logout()` is fire-and-forget per spec. If the network call fails, the refresh cookie remains valid for up to 7 days. Requires server-side token revocation/blocklist to truly fix. Phase 1 design decision.
+- **D7: Refresh tokens stateless with no server-side revocation** — No token blocklist or session store. Once issued, a refresh token is valid until expiry. Logout only clears the browser cookie. Requires DB session store or token-version column for Phase 2+.
+- **D8: Same signing secret for access and refresh tokens** — Both token types use identical `jwtSecret`. Audience claim is the only differentiator. Separate keys would provide defense-in-depth. Phase 2+ improvement.
+- **D9: Mutable `var` AppError sentinels shared across goroutines** — Pre-existing from Story 1.1. Sentinel errors are `var *AppError` pointers — any accidental mutation would affect all goroutines. Currently safe (nobody mutates), but latent.
+- **D10: `apperr.Wrap()` wraps raw error instead of AppError** — Pre-existing from Story 1.2 (also tracked as W2). Still unused but still broken.
+- **D11: Default JWT secret only warns, doesn't abort in production** — Pre-existing (D3). Config logs warning but continues with insecure default. Should fail hard when `BELOTE_ENV=production`.
+- **D12: No Unicode normalization on email addresses** — `strings.ToLower` doesn't handle NFC/NFD normalization or locale-specific case folding (e.g., Turkish dotless i). Pre-existing, affects both registration and login.

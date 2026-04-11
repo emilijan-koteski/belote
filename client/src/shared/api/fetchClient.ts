@@ -1,3 +1,4 @@
+import { refresh } from "@/shared/api/auth";
 import { useAuthStore } from "@/shared/stores/authStore";
 
 const BASE_URL = "/api/v1";
@@ -23,7 +24,51 @@ export class FetchError extends Error {
   }
 }
 
-export async function fetchClient<T>(path: string, options: RequestInit = {}): Promise<T> {
+let authRedirect: (() => void) | null = null;
+
+export function setAuthRedirect(fn: () => void): void {
+  authRedirect = fn;
+}
+
+function redirectToLogin(): void {
+  if (authRedirect) {
+    authRedirect();
+  } else {
+    window.location.href = "/login";
+  }
+}
+
+let refreshPromise: Promise<string> | null = null;
+
+async function doRefresh(): Promise<string> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = refresh()
+    .then((res) => {
+      useAuthStore.getState().setToken(res.token);
+      useAuthStore.getState().setUser({
+        id: res.id,
+        username: res.username,
+        email: res.email,
+        languagePreference: res.languagePreference,
+        createdAt: res.createdAt,
+      });
+      return res.token;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+}
+
+export async function fetchClient<T>(
+  path: string,
+  options: RequestInit = {},
+  _isRetry = false,
+): Promise<T> {
   const token = useAuthStore.getState().token;
 
   const headers: HeadersInit = {
@@ -42,10 +87,24 @@ export async function fetchClient<T>(path: string, options: RequestInit = {}): P
   });
 
   if (response.status === 401) {
-    // TODO: implement refresh token cycle
-    useAuthStore.getState().logout();
-    window.location.href = "/login";
-    throw new FetchError(401, "UNAUTHORIZED", "Session expired");
+    if (_isRetry) {
+      useAuthStore.getState().logout();
+      redirectToLogin();
+      throw new FetchError(401, "UNAUTHORIZED", "Session expired");
+    }
+
+    try {
+      const newToken = await doRefresh();
+      const retryHeaders = {
+        ...headers,
+        Authorization: `Bearer ${newToken}`,
+      };
+      return fetchClient<T>(path, { ...options, headers: retryHeaders }, true);
+    } catch {
+      useAuthStore.getState().logout();
+      redirectToLogin();
+      throw new FetchError(401, "UNAUTHORIZED", "Session expired");
+    }
   }
 
   if (!response.ok) {
