@@ -66,3 +66,14 @@ func (r *GormUserRepository) FindByID(id uint) (*User, error) {
 	}
 	return &u, nil
 }
+
+func (r *GormUserRepository) UpdateLanguagePreference(id uint, lang string) error {
+	result := r.db.Model(&User{}).Where("id = ?", id).Update("language_preference", lang)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return apperr.ErrUserNotFound
+	}
+	return nil
+}

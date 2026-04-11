@@ -46,4 +46,8 @@ var (
 	ErrUsernameTooShort     = NewAppError("USERNAME_TOO_SHORT", "username must be at least 3 characters", http.StatusBadRequest)
 	ErrUsernameTooLong      = NewAppError("USERNAME_TOO_LONG", "username must be at most 20 characters", http.StatusBadRequest)
 	ErrUsernameInvalidChars = NewAppError("USERNAME_INVALID_CHARS", "username can only contain letters, numbers, and underscores", http.StatusBadRequest)
+
+	// User domain errors
+	ErrUserNotFound    = NewAppError("USER_NOT_FOUND", "user not found", http.StatusNotFound)
+	ErrInvalidLanguage = NewAppError("INVALID_LANGUAGE", "language must be 'en' or 'sr'", http.StatusBadRequest)
 )

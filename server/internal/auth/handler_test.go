@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -72,6 +73,16 @@ func (m *mockUserRepo) FindByID(id uint) (*user.User, error) {
 		}
 	}
 	return nil, nil
+}
+
+func (m *mockUserRepo) UpdateLanguagePreference(id uint, lang string) error {
+	for _, u := range m.users {
+		if u.ID == id {
+			u.LanguagePreference = lang
+			return nil
+		}
+	}
+	return gorm.ErrRecordNotFound
 }
 
 func testErrorHandler(err error, c echo.Context) {

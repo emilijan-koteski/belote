@@ -23,3 +23,9 @@
 - **D10: `apperr.Wrap()` wraps raw error instead of AppError** — Pre-existing from Story 1.2 (also tracked as W2). Still unused but still broken.
 - **D11: Default JWT secret only warns, doesn't abort in production** — Pre-existing (D3). Config logs warning but continues with insecure default. Should fail hard when `BELOTE_ENV=production`.
 - **D12: No Unicode normalization on email addresses** — `strings.ToLower` doesn't handle NFC/NFD normalization or locale-specific case folding (e.g., Turkish dotless i). Pre-existing, affects both registration and login.
+
+## Deferred from: code review of 1-4-basic-player-profile-and-navigation-shell (2026-04-11)
+
+- **D13: Duplicate `getUserID` helper diverges from `auth.GetUserID`** — `user/handler.go:32-42` duplicates the JWT extraction logic from `auth/middleware.go`. Intentional to avoid import cycle (`user -> auth -> user`). If the context key or type changes in auth middleware, this copy will silently break. Revisit if packages are restructured.
+- **D14: `i18n.language` region subtag comparison** — `LanguageSelector.tsx:23` compares `lang === i18n.language` but `i18n.language` can include region subtags (e.g., `"en-US"`). Currently safe because the project configures only `"en"` and `"sr"` as supported locales. Revisit if locale detection plugins are added.
+- **D15: Path parameter `:id` accepts 0 as valid user ID** — `handler.go:50` parses 0 without rejection. GORM `First(&u, 0)` may return an arbitrary first record instead of not-found. Mitigated by JWT IDs always starting at 1. Revisit if zero-ID edge cases become reachable.

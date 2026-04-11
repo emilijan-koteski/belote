@@ -2,6 +2,34 @@
   "common": {
     "appName": "Belote"
   },
+  "nav": {
+    "play": "Play",
+    "leaderboard": "Leaderboard",
+    "profile": "Profile",
+    "rules": "Rules",
+    "appName": "Belote"
+  },
+  "profile": {
+    "title": "Profile",
+    "memberSince": "Member since {{date}}",
+    "matchHistory": "Match History",
+    "matchHistoryEmpty": "No matches yet \u2014 play your first game!",
+    "stats": "Stats",
+    "statsEmpty": "Stats will appear after your first match"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "sr": "Srpski"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "comingSoon": "Leaderboard coming soon"
+  },
+  "rules": {
+    "title": "Rules",
+    "comingSoon": "Rules reference coming soon"
+  },
   "auth": {
     "login": {
       "title": "Log In",

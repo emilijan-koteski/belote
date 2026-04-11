@@ -2,6 +2,34 @@
   "common": {
     "appName": "Belote"
   },
+  "nav": {
+    "play": "Igraj",
+    "leaderboard": "Rang lista",
+    "profile": "Profil",
+    "rules": "Pravila",
+    "appName": "Belote"
+  },
+  "profile": {
+    "title": "Profil",
+    "memberSince": "\u010clan od {{date}}",
+    "matchHistory": "Istorija me\u010deva",
+    "matchHistoryEmpty": "Nema me\u010deva \u2014 odigrajte prvu partiju!",
+    "stats": "Statistika",
+    "statsEmpty": "Statistika \u0107e se pojaviti nakon prvog me\u010da"
+  },
+  "language": {
+    "label": "Jezik",
+    "en": "English",
+    "sr": "Srpski"
+  },
+  "leaderboard": {
+    "title": "Rang lista",
+    "comingSoon": "Rang lista uskoro dolazi"
+  },
+  "rules": {
+    "title": "Pravila",
+    "comingSoon": "Pravila uskoro dolaze"
+  },
   "auth": {
     "login": {
       "title": "Prijavite se",

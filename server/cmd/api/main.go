@@ -41,7 +41,7 @@ func main() {
 	// Middleware registration order is load-bearing: CORS -> Logging -> Error Handler -> Auth
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:     cfg.CORSOrigins,
-		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
 		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 		AllowCredentials: true,
 	}))
@@ -72,8 +72,11 @@ func main() {
 	authGroup.POST("/refresh", authHandler.Refresh)
 	authGroup.POST("/logout", authHandler.Logout)
 
-	// Authenticated route group — future protected endpoints go here
-	_ = e.Group("/api/v1", auth.AuthMiddleware(cfg.JWTSecret))
+	// Authenticated route group
+	userHandler := user.NewUserHandler(userRepo)
+	api := e.Group("/api/v1", auth.AuthMiddleware(cfg.JWTSecret))
+	api.GET("/users/:id/profile", userHandler.GetProfile)
+	api.PATCH("/users/:id/preferences", userHandler.UpdatePreferences)
 
 	// Graceful shutdown
 	go func() {
