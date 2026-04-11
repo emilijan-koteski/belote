@@ -11,6 +11,7 @@ server/bin/
 # IDE
 .idea/
 .vscode/
+.claude/settings.json
 *.swp
 *.swo
 
