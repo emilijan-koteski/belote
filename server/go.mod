@@ -3,6 +3,7 @@ module github.com/emilijan/belote/server
 go 1.26
 
 require (
+	github.com/coder/websocket v1.8.14
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/labstack/echo/v4 v4.15.1
@@ -10,7 +11,6 @@ require (
 	golang.org/x/crypto v0.50.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
-	nhooyr.io/websocket v1.8.17
 )
 
 require (
