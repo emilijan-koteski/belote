@@ -6,7 +6,11 @@ import { useRoomUpdates } from "@/features/lobby/useRoomUpdates";
 import { Input } from "@/shared/components/ui/input";
 import { useLobbyStore } from "@/shared/stores/lobbyStore";
 
-export function RoomList() {
+interface RoomListProps {
+  onJoinRoom: (roomId: number) => void;
+}
+
+export function RoomList({ onJoinRoom }: RoomListProps) {
   const { t } = useTranslation();
 
   // WS room update listener — scoped to browse view lifecycle (WS hub not yet wired)
@@ -68,7 +72,7 @@ export function RoomList() {
       {!isLoading && filteredRooms.length > 0 && (
         <div className="flex flex-col gap-2">
           {filteredRooms.map((room) => (
-            <RoomCard key={room.id} room={room} />
+            <RoomCard key={room.id} room={room} onJoin={onJoinRoom} />
           ))}
         </div>
       )}

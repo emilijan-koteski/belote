@@ -39,3 +39,10 @@
 ## Deferred from: code review of 2-2-browse-and-search-rooms (2026-04-11)
 
 - **D19: `handleWsMessage` uses unsafe `as` casts on raw `JSON.parse` output** — Violates project rule requiring typed WS dispatch function for all incoming WebSocket messages. Code is dormant (WS hub not wired). Deferred to Story 4-1 (WS Gateway) where the central typed dispatch + validation function will be built. Validation belongs at the dispatch layer, not in per-feature handlers.
+
+## Deferred from: code review of 2-3-join-room-and-room-lobby (2026-04-11)
+
+- **D20: WS events system:player_joined and system:player_left are TODO-only** — Event constants defined in both contract files but never broadcast. Requires WS hub infrastructure from Story 4-1. Real-time seat updates will not work until then.
+- **D21: Copy Link copies room code, not a full URL** — Spec says "code/link" and user journeys describe sharing codes via WhatsApp/Viber. Current behavior matches spec intent. Revisit if URL sharing is needed.
+- **D22: Orphan room_players rows for soft-deleted rooms** — GORM soft delete doesn't trigger FK CASCADE. room_players rows for soft-deleted rooms linger with no functional impact. Cleanup script for Phase 2.
+- **D23: No unit test for useRoomLobbyUpdates handler logic** — WS not yet wired. Test when WS infrastructure lands (Story 4-1).

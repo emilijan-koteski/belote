@@ -84,6 +84,9 @@ func main() {
 	roomHandler := room.NewRoomHandler(roomRepo)
 	api.POST("/rooms", roomHandler.CreateRoom)
 	api.GET("/rooms", roomHandler.ListRooms)
+	api.GET("/rooms/:id", roomHandler.GetRoom)
+	api.POST("/rooms/:id/join", roomHandler.JoinRoom)
+	api.POST("/rooms/:id/leave", roomHandler.LeaveRoom)
 
 	// Graceful shutdown
 	go func() {

@@ -1,8 +1,9 @@
 import "@/shared/i18n/i18n";
 
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Room } from "@/shared/types/apiTypes";
 
@@ -26,12 +27,13 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
   };
 }
 
-function renderRoomCard(room: Room = makeRoom()) {
+function renderRoomCard(room: Room = makeRoom(), onJoin = vi.fn()) {
   render(
     <BrowserRouter>
-      <RoomCard room={room} />
+      <RoomCard room={room} onJoin={onJoin} />
     </BrowserRouter>,
   );
+  return { onJoin };
 }
 
 describe("RoomCard", () => {
@@ -71,5 +73,14 @@ describe("RoomCard", () => {
 
     expect(screen.getByTestId("room-card-join")).toBeInTheDocument();
     expect(screen.getByTestId("room-card-join")).toHaveTextContent("Join");
+  });
+
+  it("invokes onJoin callback with room id on join click", async () => {
+    const room = makeRoom({ id: 42 });
+    const { onJoin } = renderRoomCard(room);
+
+    await userEvent.click(screen.getByTestId("room-card-join"));
+
+    expect(onJoin).toHaveBeenCalledWith(42);
   });
 });

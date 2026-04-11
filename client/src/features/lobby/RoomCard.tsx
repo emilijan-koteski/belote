@@ -5,6 +5,7 @@ import type { Room } from "@/shared/types/apiTypes";
 
 interface RoomCardProps {
   room: Room;
+  onJoin: (roomId: number) => void;
 }
 
 const variantKeys: Record<string, string> = {
@@ -15,7 +16,7 @@ const matchModeKeys: Record<string, string> = {
   "1001": "lobby.roomList.matchMode1001",
 };
 
-export function RoomCard({ room }: RoomCardProps) {
+export function RoomCard({ room, onJoin }: RoomCardProps) {
   const { t } = useTranslation();
 
   const variantLabel = t(variantKeys[room.variant] ?? room.variant);
@@ -38,7 +39,7 @@ export function RoomCard({ room }: RoomCardProps) {
           {timerLabel}
         </p>
       </div>
-      <Button size="sm" data-testid="room-card-join">
+      <Button size="sm" onClick={() => onJoin(room.id)} data-testid="room-card-join">
         {t("lobby.roomList.join")}
       </Button>
     </div>

@@ -3,7 +3,7 @@ import "@/shared/i18n/i18n";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useLobbyStore } from "@/shared/stores/lobbyStore";
 import type { Room } from "@/shared/types/apiTypes";
@@ -28,12 +28,13 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
   };
 }
 
-function renderRoomList() {
+function renderRoomList(onJoinRoom = vi.fn()) {
   render(
     <BrowserRouter>
-      <RoomList />
+      <RoomList onJoinRoom={onJoinRoom} />
     </BrowserRouter>,
   );
+  return { onJoinRoom };
 }
 
 afterEach(() => {

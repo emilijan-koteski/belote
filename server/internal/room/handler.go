@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -18,7 +19,7 @@ var (
 	validVariants   = map[string]bool{"bitola": true}
 	validMatchModes = map[string]bool{"1001": true}
 	validTimerStyles  = map[string]bool{"relaxed": true, "per-move": true}
-	validStatuses     = map[string]bool{"waiting": true, "playing": true, "finished": true}
+	validStatuses     = map[string]bool{"waiting": true, "playing": true, "finished": true, "completed": true}
 )
 
 const (
@@ -117,7 +118,16 @@ func (h *RoomHandler) CreateRoom(c echo.Context) error {
 
 	var createErr error
 	for i := 0; i < maxRetries; i++ {
-		createErr = h.repo.Create(room)
+		createErr = h.repo.RunInTransaction(func(tx RoomRepository) error {
+			if err := tx.Create(room); err != nil {
+				return err
+			}
+			rp := &RoomPlayer{RoomID: room.ID, UserID: userID}
+			if err := tx.AddPlayer(rp); err != nil {
+				return fmt.Errorf("adding creator to room players: %w", err)
+			}
+			return nil
+		})
 		if createErr == nil {
 			break
 		}
@@ -156,6 +166,161 @@ func (h *RoomHandler) ListRooms(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": rooms})
+}
+
+type RoomDetailResponse struct {
+	Room    *Room        `json:"room"`
+	Players []RoomPlayer `json:"players"`
+}
+
+func (h *RoomHandler) GetRoom(c echo.Context) error {
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	room, err := h.repo.FindByID(uint(roomID))
+	if err != nil {
+		return fmt.Errorf("finding room: %w", err)
+	}
+	if room == nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	players, err := h.repo.FindPlayersByRoomID(uint(roomID))
+	if err != nil {
+		return fmt.Errorf("finding room players: %w", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": RoomDetailResponse{
+			Room:    room,
+			Players: players,
+		},
+	})
+}
+
+func (h *RoomHandler) JoinRoom(c echo.Context) error {
+	userID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	room, err := h.repo.FindByID(uint(roomID))
+	if err != nil {
+		return fmt.Errorf("finding room: %w", err)
+	}
+	if room == nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	if room.Status != "waiting" {
+		return apperr.ErrRoomNotFound
+	}
+
+	if room.PlayerCount >= 4 {
+		return apperr.ErrRoomFull
+	}
+
+	existingRoom, err := h.repo.FindPlayerRoom(userID)
+	if err != nil {
+		return fmt.Errorf("checking existing room: %w", err)
+	}
+	if existingRoom != nil {
+		return apperr.ErrAlreadyInRoom
+	}
+
+	var updatedRoom *Room
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		rp := &RoomPlayer{RoomID: uint(roomID), UserID: userID}
+		if err := tx.AddPlayer(rp); err != nil {
+			return err
+		}
+		if err := tx.IncrementPlayerCount(uint(roomID)); err != nil {
+			return fmt.Errorf("incrementing player count: %w", err)
+		}
+		r, err := tx.FindByID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("re-fetching room after join: %w", err)
+		}
+		updatedRoom = r
+		return nil
+	}); err != nil {
+		if errors.Is(err, apperr.ErrAlreadyInRoom) || errors.Is(err, apperr.ErrRoomNotFound) {
+			return err
+		}
+		return fmt.Errorf("joining room: %w", err)
+	}
+
+	// TODO: broadcast system:player_joined to room participants (WS hub not yet wired)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": updatedRoom})
+}
+
+func (h *RoomHandler) LeaveRoom(c echo.Context) error {
+	userID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	room, err := h.repo.FindByID(uint(roomID))
+	if err != nil {
+		return fmt.Errorf("finding room: %w", err)
+	}
+	if room == nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		if err := tx.RemovePlayer(uint(roomID), userID); err != nil {
+			return err
+		}
+		if err := tx.DecrementPlayerCount(uint(roomID)); err != nil {
+			return fmt.Errorf("decrementing player count: %w", err)
+		}
+		if room.OwnerID == userID {
+			// Re-fetch room inside tx to get current state after decrement
+			freshRoom, err := tx.FindByID(uint(roomID))
+			if err != nil {
+				return fmt.Errorf("re-fetching room: %w", err)
+			}
+			players, err := tx.FindPlayersByRoomID(uint(roomID))
+			if err != nil {
+				return fmt.Errorf("finding remaining players: %w", err)
+			}
+			if len(players) > 0 {
+				freshRoom.OwnerID = players[0].UserID
+				if err := tx.Update(freshRoom); err != nil {
+					return fmt.Errorf("transferring room ownership: %w", err)
+				}
+			} else {
+				freshRoom.Status = "completed"
+				if err := tx.Update(freshRoom); err != nil {
+					return fmt.Errorf("closing empty room: %w", err)
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, apperr.ErrNotInRoom) || errors.Is(err, apperr.ErrRoomNotFound) {
+			return err
+		}
+		return fmt.Errorf("leaving room: %w", err)
+	}
+
+	// TODO: broadcast system:player_left to room participants (WS hub not yet wired)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]string{"message": "left room"}})
 }
 
 func generateRoomCode() (string, error) {

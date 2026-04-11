@@ -65,4 +65,6 @@ var (
 	ErrTimerDurationOutOfRange = NewAppError("TIMER_DURATION_OUT_OF_RANGE", "timer duration must be between 10 and 120 seconds", http.StatusBadRequest)
 	ErrRoomCodeTaken           = NewAppError("ROOM_CODE_TAKEN", "room code collision", http.StatusInternalServerError)
 	ErrInvalidRoomStatus       = NewAppError("INVALID_ROOM_STATUS", "invalid room status filter", http.StatusBadRequest)
+	ErrAlreadyInRoom           = NewAppError("ALREADY_IN_ROOM", "player is already in a room", http.StatusConflict)
+	ErrNotInRoom               = NewAppError("NOT_IN_ROOM", "player is not in this room", http.StatusNotFound)
 )

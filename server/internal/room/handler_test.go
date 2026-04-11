@@ -21,16 +21,17 @@ import (
 // --- Mock Repository ---
 
 type mockRoomRepo struct {
-	rooms  []*room.Room
-	nextID uint
+	rooms      []*room.Room
+	players    []*room.RoomPlayer
+	nextID     uint
+	nextPID    uint
 }
 
 func newMockRoomRepo() *mockRoomRepo {
-	return &mockRoomRepo{nextID: 1}
+	return &mockRoomRepo{nextID: 1, nextPID: 1}
 }
 
 func (m *mockRoomRepo) Create(r *room.Room) error {
-	// Check for duplicate active room name
 	for _, existing := range m.rooms {
 		if existing.Name == r.Name {
 			return apperr.ErrRoomNameTaken
@@ -41,6 +42,16 @@ func (m *mockRoomRepo) Create(r *room.Room) error {
 	r.UpdatedAt = time.Now()
 	m.nextID++
 	m.rooms = append(m.rooms, r)
+	return nil
+}
+
+func (m *mockRoomRepo) Update(r *room.Room) error {
+	for i, existing := range m.rooms {
+		if existing.ID == r.ID {
+			m.rooms[i] = r
+			return nil
+		}
+	}
 	return nil
 }
 
@@ -64,6 +75,77 @@ func (m *mockRoomRepo) FindByStatus(status string) ([]room.Room, error) {
 		result = []room.Room{}
 	}
 	return result, nil
+}
+
+func (m *mockRoomRepo) AddPlayer(p *room.RoomPlayer) error {
+	for _, existing := range m.players {
+		if existing.RoomID == p.RoomID && existing.UserID == p.UserID {
+			return apperr.ErrAlreadyInRoom
+		}
+	}
+	p.ID = m.nextPID
+	p.CreatedAt = time.Now()
+	m.nextPID++
+	m.players = append(m.players, p)
+	return nil
+}
+
+func (m *mockRoomRepo) RemovePlayer(roomID uint, userID uint) error {
+	for i, p := range m.players {
+		if p.RoomID == roomID && p.UserID == userID {
+			m.players = append(m.players[:i], m.players[i+1:]...)
+			return nil
+		}
+	}
+	return apperr.ErrNotInRoom
+}
+
+func (m *mockRoomRepo) FindPlayersByRoomID(roomID uint) ([]room.RoomPlayer, error) {
+	var result []room.RoomPlayer
+	for _, p := range m.players {
+		if p.RoomID == roomID {
+			result = append(result, *p)
+		}
+	}
+	if result == nil {
+		result = []room.RoomPlayer{}
+	}
+	return result, nil
+}
+
+func (m *mockRoomRepo) FindPlayerRoom(userID uint) (*room.RoomPlayer, error) {
+	for _, p := range m.players {
+		for _, r := range m.rooms {
+			if r.ID == p.RoomID && r.Status == "waiting" && p.UserID == userID {
+				return p, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (m *mockRoomRepo) IncrementPlayerCount(roomID uint) error {
+	for _, r := range m.rooms {
+		if r.ID == roomID {
+			r.PlayerCount++
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *mockRoomRepo) DecrementPlayerCount(roomID uint) error {
+	for _, r := range m.rooms {
+		if r.ID == roomID && r.PlayerCount > 0 {
+			r.PlayerCount--
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *mockRoomRepo) RunInTransaction(fn func(room.RoomRepository) error) error {
+	return fn(m)
 }
 
 // --- Test Infrastructure ---
@@ -101,6 +183,9 @@ func setupTest() (*echo.Echo, *mockRoomRepo) {
 	api := e.Group("/api/v1", auth.AuthMiddleware("test-jwt-secret"))
 	api.POST("/rooms", handler.CreateRoom)
 	api.GET("/rooms", handler.ListRooms)
+	api.GET("/rooms/:id", handler.GetRoom)
+	api.POST("/rooms/:id/join", handler.JoinRoom)
+	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 
 	return e, repo
 }
@@ -498,4 +583,256 @@ func TestListRooms_InvalidStatus(t *testing.T) {
 	var errResp map[string]map[string]string
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
 	assert.Equal(t, "INVALID_ROOM_STATUS", errResp["error"]["code"])
+}
+
+// --- GetRoom Tests ---
+
+func doGetRoom(e *echo.Echo, id string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/"+id, nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestGetRoom_Success(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoom(repo, "Test Room", "waiting")
+	repo.players = append(repo.players, &room.RoomPlayer{
+		ID: 1, RoomID: 1, UserID: 1, Username: "player1", CreatedAt: time.Now(),
+	})
+
+	rec := doGetRoom(e, "1", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]room.RoomDetailResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	assert.Equal(t, "Test Room", resp["data"].Room.Name)
+	require.Len(t, resp["data"].Players, 1)
+	assert.Equal(t, uint(1), resp["data"].Players[0].UserID)
+}
+
+func TestGetRoom_NotFound(t *testing.T) {
+	e, _ := setupTest()
+	token := validToken(1)
+
+	rec := doGetRoom(e, "999", token)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "ROOM_NOT_FOUND", errResp["error"]["code"])
+}
+
+func TestGetRoom_EmptyPlayersArray(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoom(repo, "Empty Room", "waiting")
+
+	rec := doGetRoom(e, "1", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	body := rec.Body.String()
+	assert.Contains(t, body, `"players":[]`)
+}
+
+func TestGetRoom_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doGetRoom(e, "1", "")
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// --- JoinRoom Tests ---
+
+func doJoinRoom(e *echo.Echo, id string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/join", nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestJoinRoom_Success(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoom(repo, "Join Test", "waiting")
+
+	rec := doJoinRoom(e, "1", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]room.Room
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, 2, resp["data"].PlayerCount)
+
+	// Verify player was added
+	require.Len(t, repo.players, 1)
+	assert.Equal(t, uint(10), repo.players[0].UserID)
+}
+
+func TestJoinRoom_NotFound(t *testing.T) {
+	e, _ := setupTest()
+	token := validToken(1)
+
+	rec := doJoinRoom(e, "999", token)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "ROOM_NOT_FOUND", errResp["error"]["code"])
+}
+
+func TestJoinRoom_Full(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoom(repo, "Full Room", "waiting")
+	repo.rooms[0].PlayerCount = 4
+
+	rec := doJoinRoom(e, "1", token)
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "ROOM_FULL", errResp["error"]["code"])
+}
+
+func TestJoinRoom_AlreadyInRoom(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoom(repo, "Room A", "waiting")
+	repo.players = append(repo.players, &room.RoomPlayer{
+		ID: 1, RoomID: 1, UserID: 10, CreatedAt: time.Now(),
+	})
+
+	seedRoom(repo, "Room B", "waiting")
+
+	rec := doJoinRoom(e, "2", token)
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "ALREADY_IN_ROOM", errResp["error"]["code"])
+}
+
+func TestJoinRoom_NotWaitingStatus(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoom(repo, "Playing Room", "playing")
+
+	rec := doJoinRoom(e, "1", token)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestJoinRoom_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doJoinRoom(e, "1", "")
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// --- LeaveRoom Tests ---
+
+func doLeaveRoom(e *echo.Echo, id string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/leave", nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestLeaveRoom_Success(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoom(repo, "Leave Test", "waiting")
+	repo.rooms[0].PlayerCount = 2
+	repo.players = append(repo.players,
+		&room.RoomPlayer{ID: 1, RoomID: 1, UserID: 1, CreatedAt: time.Now()},
+		&room.RoomPlayer{ID: 2, RoomID: 1, UserID: 10, CreatedAt: time.Now()},
+	)
+
+	rec := doLeaveRoom(e, "1", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, 1, repo.rooms[0].PlayerCount)
+	require.Len(t, repo.players, 1)
+}
+
+func TestLeaveRoom_NotInRoom(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(10)
+
+	seedRoom(repo, "Not In Room", "waiting")
+
+	rec := doLeaveRoom(e, "1", token)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_IN_ROOM", errResp["error"]["code"])
+}
+
+func TestLeaveRoom_OwnerTransfersOwnership(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1) // user 1 is the owner (seedRoom sets OwnerID=1)
+
+	seedRoom(repo, "Owner Leave", "waiting")
+	repo.rooms[0].PlayerCount = 2
+	repo.players = append(repo.players,
+		&room.RoomPlayer{ID: 1, RoomID: 1, UserID: 1, CreatedAt: time.Now()},
+		&room.RoomPlayer{ID: 2, RoomID: 1, UserID: 20, CreatedAt: time.Now().Add(time.Second)},
+	)
+
+	rec := doLeaveRoom(e, "1", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, uint(20), repo.rooms[0].OwnerID)
+}
+
+func TestLeaveRoom_OwnerAloneClosesRoom(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoom(repo, "Solo Owner", "waiting")
+	repo.players = append(repo.players,
+		&room.RoomPlayer{ID: 1, RoomID: 1, UserID: 1, CreatedAt: time.Now()},
+	)
+
+	rec := doLeaveRoom(e, "1", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "completed", repo.rooms[0].Status)
+}
+
+func TestLeaveRoom_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doLeaveRoom(e, "1", "")
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }

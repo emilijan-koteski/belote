@@ -73,10 +73,28 @@
       "loading": "U\u010ditavanje soba...",
       "emptyNoRooms": "Nema otvorenih soba \u2014 Napravi sobu ili probaj Brzu igru",
       "emptyNoMatch": "Nijedna soba ne odgovara '{{query}}' \u2014",
-      "clearSearch": "Obri\u0161i pretragu"
+      "clearSearch": "Obri\u0161i pretragu",
+      "errors": {
+        "roomFull": "Soba je puna \u2014 probaj drugu",
+        "alreadyInRoom": "Ve\u0107 si u sobi",
+        "joinFailed": "Pridru\u017eivanje neuspe\u0161no \u2014 probaj ponovo"
+      }
     },
     "roomLobby": {
-      "waitingForPlayers": "\u010cekanje igra\u010da..."
+      "waitingForPlayers": "\u010cekanje igra\u010da...",
+      "backToLobby": "Nazad u lobi",
+      "copyLink": "Kopiraj link",
+      "copyLinkSuccess": "Kod sobe kopiran!",
+      "copyLinkFailed": "Kopiranje neuspe\u0161no \u2014 kod: {{code}}",
+      "leaveRoom": "Napusti sobu",
+      "seatEmpty": "\u010cekanje...",
+      "seatYou": "Ti",
+      "seatOwner": "Vlasnik",
+      "loading": "U\u010ditavanje sobe...",
+      "notFound": "Soba nije prona\u0111ena",
+      "notFoundAction": "Nazad u lobi",
+      "playerJoined": "{{username}} se pridru\u017eio sobi",
+      "playerLeft": "{{username}} je napustio sobu"
     }
   },
   "auth": {

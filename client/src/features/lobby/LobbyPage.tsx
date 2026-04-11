@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 
 import { CreateRoomModal } from "@/features/lobby/CreateRoomModal";
 import { RoomList } from "@/features/lobby/RoomList";
 import { FetchError } from "@/shared/api/fetchClient";
-import { getRooms } from "@/shared/api/rooms";
+import { getRooms, joinRoom } from "@/shared/api/rooms";
 import { Button } from "@/shared/components/ui/button";
 import { useLobbyStore } from "@/shared/stores/lobbyStore";
 
 export function LobbyPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeView, setActiveView] = useState<"options" | "browse">("options");
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -40,6 +43,25 @@ export function LobbyPage() {
     setFetchError(null);
     useLobbyStore.getState().setSearchQuery("");
     useLobbyStore.getState().setRooms([]);
+  }
+
+  async function handleJoinRoom(roomId: number) {
+    try {
+      await joinRoom(roomId);
+      navigate(`/rooms/${roomId}`);
+    } catch (err) {
+      if (err instanceof FetchError) {
+        if (err.code === "ROOM_FULL") {
+          toast.error(t("lobby.roomList.errors.roomFull"));
+        } else if (err.code === "ALREADY_IN_ROOM") {
+          toast.error(t("lobby.roomList.errors.alreadyInRoom"));
+        } else {
+          toast.error(t("lobby.roomList.errors.joinFailed"));
+        }
+      } else {
+        toast.error(t("lobby.roomList.errors.joinFailed"));
+      }
+    }
   }
 
   return (
@@ -105,7 +127,7 @@ export function LobbyPage() {
                 </p>
               )}
 
-              <RoomList />
+              <RoomList onJoinRoom={handleJoinRoom} />
             </>
           )}
         </div>

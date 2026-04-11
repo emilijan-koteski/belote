@@ -73,10 +73,28 @@
       "loading": "Loading rooms...",
       "emptyNoRooms": "No open rooms \u2014 Create one or try Quick Play",
       "emptyNoMatch": "No rooms match '{{query}}' \u2014",
-      "clearSearch": "Clear search"
+      "clearSearch": "Clear search",
+      "errors": {
+        "roomFull": "Room is full \u2014 try another",
+        "alreadyInRoom": "You're already in a room",
+        "joinFailed": "Failed to join room \u2014 try again"
+      }
     },
     "roomLobby": {
-      "waitingForPlayers": "Waiting for players..."
+      "waitingForPlayers": "Waiting for players...",
+      "backToLobby": "Back to Lobby",
+      "copyLink": "Copy Link",
+      "copyLinkSuccess": "Room code copied!",
+      "copyLinkFailed": "Failed to copy \u2014 code: {{code}}",
+      "leaveRoom": "Leave Room",
+      "seatEmpty": "Waiting...",
+      "seatYou": "You",
+      "seatOwner": "Owner",
+      "loading": "Loading room...",
+      "notFound": "Room not found",
+      "notFoundAction": "Back to Lobby",
+      "playerJoined": "{{username}} joined the room",
+      "playerLeft": "{{username}} left the room"
     }
   },
   "auth": {

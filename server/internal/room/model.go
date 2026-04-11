@@ -21,3 +21,13 @@ type Room struct {
 	UpdatedAt            time.Time      `json:"updatedAt"`
 	DeletedAt            gorm.DeletedAt `gorm:"index" json:"-"`
 }
+
+type RoomPlayer struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	RoomID    uint      `gorm:"not null;index" json:"roomId"`
+	UserID    uint      `gorm:"not null;index" json:"userId"`
+	Username  string    `gorm:"-" json:"username"`
+	Seat      *int      `json:"seat"`
+	Team      *string   `gorm:"size:10" json:"team"`
+	CreatedAt time.Time `json:"createdAt"`
+}

@@ -41,3 +41,18 @@ export interface CreateRoomRequest {
   timerStyle: string;
   timerDurationSeconds: number | null;
 }
+
+export interface RoomPlayer {
+  id: number;
+  roomId: number;
+  userId: number;
+  username: string;
+  seat: number | null;
+  team: string | null;
+  createdAt: string;
+}
+
+export interface RoomDetail {
+  room: Room;
+  players: RoomPlayer[];
+}

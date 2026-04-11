@@ -44,3 +44,22 @@ export interface RoomUpdatedPayload {
   createdAt: string;
   updatedAt: string;
 }
+
+// Room player events
+export const SYSTEM_PLAYER_JOINED = "system:player_joined" as const;
+export const SYSTEM_PLAYER_LEFT = "system:player_left" as const;
+
+export interface PlayerJoinedPayload {
+  roomId: number;
+  userId: number;
+  username: string;
+  playerCount: number;
+}
+
+export interface PlayerLeftPayload {
+  roomId: number;
+  userId: number;
+  username: string;
+  playerCount: number;
+  newOwnerId?: number;
+}

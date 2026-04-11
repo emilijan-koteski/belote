@@ -13,3 +13,7 @@ import _ "nhooyr.io/websocket" // Required dependency — anchored here for go.m
 // Room events
 const SystemRoomCreated = "system:room_created"
 const SystemRoomUpdated = "system:room_updated"
+
+// Room player events
+const SystemPlayerJoined = "system:player_joined"
+const SystemPlayerLeft = "system:player_left"
