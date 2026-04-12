@@ -86,6 +86,12 @@
         "joinFailed": "Pridru\u017eivanje neuspe\u0161no \u2014 probaj ponovo"
       }
     },
+    "joinByCode": {
+      "label": "Ima\u0161 kod sobe?",
+      "placeholder": "Unesi kod...",
+      "join": "Pridru\u017ei se",
+      "notFound": "Soba nije prona\u0111ena \u2014 proveri kod i probaj ponovo"
+    },
     "roomLobby": {
       "waitingForPlayers": "\u010cekanje igra\u010da...",
       "backToLobby": "Nazad u lobi",

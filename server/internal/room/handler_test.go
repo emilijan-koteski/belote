@@ -64,6 +64,15 @@ func (m *mockRoomRepo) FindByID(id uint) (*room.Room, error) {
 	return nil, nil
 }
 
+func (m *mockRoomRepo) FindByCode(code string) (*room.Room, error) {
+	for _, r := range m.rooms {
+		if r.Code == code {
+			return r, nil
+		}
+	}
+	return nil, nil
+}
+
 func (m *mockRoomRepo) FindByStatus(status string) ([]room.Room, error) {
 	var result []room.Room
 	for _, r := range m.rooms {
@@ -224,6 +233,7 @@ func setupTest() (*echo.Echo, *mockRoomRepo) {
 	api.POST("/rooms", handler.CreateRoom)
 	api.GET("/rooms", handler.ListRooms)
 	api.POST("/rooms/quick-play", handler.QuickPlay)
+	api.GET("/rooms/code/:code", handler.GetRoomByCode)
 	api.GET("/rooms/:id", handler.GetRoom)
 	api.POST("/rooms/:id/join", handler.JoinRoom)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
@@ -692,6 +702,111 @@ func TestGetRoom_Unauthorized(t *testing.T) {
 	e, _ := setupTest()
 
 	rec := doGetRoom(e, "1", "")
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// --- GetRoomByCode Tests ---
+
+func doGetRoomByCode(e *echo.Echo, code string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/code/"+code, nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+func seedRoomWithCode(repo *mockRoomRepo, name string, code string, status string) {
+	r := &room.Room{
+		Name:        name,
+		Code:        code,
+		OwnerID:     1,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		Status:      status,
+		PlayerCount: 1,
+	}
+	r.ID = repo.nextID
+	r.CreatedAt = time.Now()
+	r.UpdatedAt = time.Now()
+	repo.nextID++
+	repo.rooms = append(repo.rooms, r)
+}
+
+func TestGetRoomByCode_Success(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoomWithCode(repo, "Code Room", "XYZ789", "waiting")
+	repo.players = append(repo.players, &room.RoomPlayer{
+		ID: 1, RoomID: 1, UserID: 1, Username: "player1", CreatedAt: time.Now(),
+	})
+
+	rec := doGetRoomByCode(e, "XYZ789", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]room.RoomDetailResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	assert.Equal(t, "Code Room", resp["data"].Room.Name)
+	assert.Equal(t, "XYZ789", resp["data"].Room.Code)
+	require.Len(t, resp["data"].Players, 1)
+}
+
+func TestGetRoomByCode_NotFound(t *testing.T) {
+	e, _ := setupTest()
+	token := validToken(1)
+
+	rec := doGetRoomByCode(e, "NOROOM", token)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "ROOM_NOT_FOUND", errResp["error"]["code"])
+}
+
+func TestGetRoomByCode_RejectsNonWaitingRoom(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoomWithCode(repo, "Playing Room", "PLAY99", "playing")
+
+	rec := doGetRoomByCode(e, "PLAY99", token)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestGetRoomByCode_RejectsInvalidLength(t *testing.T) {
+	e, _ := setupTest()
+	token := validToken(1)
+
+	rec := doGetRoomByCode(e, "AB", token)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	rec = doGetRoomByCode(e, "TOOLONGCODE", token)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestGetRoomByCode_LowercaseNormalized(t *testing.T) {
+	e, repo := setupTest()
+	token := validToken(1)
+
+	seedRoomWithCode(repo, "Lower Room", "ABC456", "waiting")
+
+	rec := doGetRoomByCode(e, "abc456", token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestGetRoomByCode_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doGetRoomByCode(e, "ABC123", "")
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }

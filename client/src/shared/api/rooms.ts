@@ -21,6 +21,10 @@ export function getRoom(id: number): Promise<RoomDetail> {
   return fetchClient<RoomDetail>(`/rooms/${id}`);
 }
 
+export function getRoomByCode(code: string): Promise<RoomDetail> {
+  return fetchClient<RoomDetail>(`/rooms/code/${encodeURIComponent(code)}`);
+}
+
 export function joinRoom(id: number): Promise<Room> {
   return fetchClient<Room>(`/rooms/${id}/join`, { method: "POST" });
 }

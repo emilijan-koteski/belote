@@ -44,6 +44,17 @@ func (r *GormRepository) FindByStatus(status string) ([]Room, error) {
 	return rooms, nil
 }
 
+func (r *GormRepository) FindByCode(code string) (*Room, error) {
+	var room Room
+	if err := r.db.Where("code = ?", code).First(&room).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("finding room by code: %w", err)
+	}
+	return &room, nil
+}
+
 func (r *GormRepository) FindByID(id uint) (*Room, error) {
 	var room Room
 	if err := r.db.First(&room, id).Error; err != nil {

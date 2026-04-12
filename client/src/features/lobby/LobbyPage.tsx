@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { CreateRoomModal } from "@/features/lobby/CreateRoomModal";
+import { JoinByCode } from "@/features/lobby/JoinByCode";
 import { RoomList } from "@/features/lobby/RoomList";
 import { FetchError } from "@/shared/api/fetchClient";
 import { getRooms, joinRoom, quickPlay } from "@/shared/api/rooms";
@@ -143,6 +144,9 @@ export function LobbyPage() {
                 </h3>
                 <p className="mt-1 text-sm text-text-secondary">{t("lobby.createRoomDesc")}</p>
               </button>
+
+              <div className="my-2 border-t border-border" />
+              <JoinByCode />
             </>
           )}
 

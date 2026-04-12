@@ -200,6 +200,33 @@ func (h *RoomHandler) GetRoom(c echo.Context) error {
 	})
 }
 
+func (h *RoomHandler) GetRoomByCode(c echo.Context) error {
+	code := strings.ToUpper(strings.TrimSpace(c.Param("code")))
+	if len(code) != codeLength {
+		return apperr.ErrRoomNotFound
+	}
+
+	room, err := h.repo.FindByCode(code)
+	if err != nil {
+		return fmt.Errorf("finding room by code: %w", err)
+	}
+	if room == nil || room.Status != "waiting" {
+		return apperr.ErrRoomNotFound
+	}
+
+	players, err := h.repo.FindPlayersByRoomID(room.ID)
+	if err != nil {
+		return fmt.Errorf("finding room players: %w", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": RoomDetailResponse{
+			Room:    room,
+			Players: players,
+		},
+	})
+}
+
 func (h *RoomHandler) JoinRoom(c echo.Context) error {
 	userID, err := auth.GetUserID(c)
 	if err != nil {

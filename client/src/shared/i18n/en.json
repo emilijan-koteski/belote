@@ -86,6 +86,12 @@
         "joinFailed": "Failed to join room \u2014 try again"
       }
     },
+    "joinByCode": {
+      "label": "Have a room code?",
+      "placeholder": "Enter code...",
+      "join": "Join",
+      "notFound": "Room not found \u2014 check the code and try again"
+    },
     "roomLobby": {
       "waitingForPlayers": "Waiting for players...",
       "backToLobby": "Back to Lobby",

@@ -85,6 +85,7 @@ func main() {
 	api.POST("/rooms", roomHandler.CreateRoom)
 	api.GET("/rooms", roomHandler.ListRooms)
 	api.POST("/rooms/quick-play", roomHandler.QuickPlay)
+	api.GET("/rooms/code/:code", roomHandler.GetRoomByCode)
 	api.GET("/rooms/:id", roomHandler.GetRoom)
 	api.POST("/rooms/:id/join", roomHandler.JoinRoom)
 	api.POST("/rooms/:id/leave", roomHandler.LeaveRoom)

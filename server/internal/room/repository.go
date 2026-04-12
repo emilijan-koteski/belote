@@ -4,6 +4,7 @@ type RoomRepository interface {
 	Create(room *Room) error
 	Update(room *Room) error
 	FindByID(id uint) (*Room, error)
+	FindByCode(code string) (*Room, error)
 	FindByStatus(status string) ([]Room, error)
 	AddPlayer(roomPlayer *RoomPlayer) error
 	RemovePlayer(roomID uint, userID uint) error
