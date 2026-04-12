@@ -7,7 +7,8 @@
     "leaderboard": "Rang lista",
     "profile": "Profil",
     "rules": "Pravila",
-    "appName": "Belote"
+    "appName": "Belote",
+    "logout": "Odjavi se"
   },
   "profile": {
     "title": "Profil",

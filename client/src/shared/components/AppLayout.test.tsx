@@ -96,12 +96,14 @@ describe("AppLayout", () => {
     expect(userButton).toHaveTextContent("testuser");
   });
 
-  it("navigates to /profile when clicking the user avatar", async () => {
+  it("calls logout when clicking the user avatar", async () => {
     renderWithRouter("/lobby");
 
     await userEvent.click(screen.getByTestId("nav-user"));
 
-    expect(screen.getByTestId("profile-content")).toBeInTheDocument();
+    const { user, token } = useAuthStore.getState();
+    expect(user).toBeNull();
+    expect(token).toBeNull();
   });
 
   it("does not display user widget when no user is logged in", () => {

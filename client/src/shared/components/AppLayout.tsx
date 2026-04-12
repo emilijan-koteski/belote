@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { NavLink, Outlet } from "react-router";
 
 import { LanguageSelector } from "@/shared/components/LanguageSelector";
 import { cn } from "@/shared/lib/utils";
@@ -15,7 +15,7 @@ const navItems = [
 export function AppLayout() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
+  const logout = useAuthStore((s) => s.logout);
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,11 +51,12 @@ export function AppLayout() {
         </div>
 
         <div className="ml-auto flex items-center gap-3">
+          <LanguageSelector />
           {user && (
             <button
               type="button"
-              onClick={() => navigate("/profile")}
-              aria-label={t("nav.profile")}
+              onClick={logout}
+              aria-label={t("nav.logout")}
               className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-elevated"
               data-testid="nav-user"
             >
@@ -70,7 +71,6 @@ export function AppLayout() {
               </span>
             </button>
           )}
-          <LanguageSelector />
         </div>
       </nav>
 

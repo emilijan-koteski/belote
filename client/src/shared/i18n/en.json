@@ -7,7 +7,8 @@
     "leaderboard": "Leaderboard",
     "profile": "Profile",
     "rules": "Rules",
-    "appName": "Belote"
+    "appName": "Belote",
+    "logout": "Log out"
   },
   "profile": {
     "title": "Profile",
