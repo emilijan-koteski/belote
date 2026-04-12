@@ -125,6 +125,14 @@
       }
     }
   },
+  "ws": {
+    "connecting": "Povezivanje...",
+    "authenticating": "Autentifikacija...",
+    "connected": "Povezano",
+    "disconnected": "Prekinuta veza",
+    "reconnecting": "Ponovno povezivanje...",
+    "authFailed": "Autentifikacija veze nije uspela"
+  },
   "auth": {
     "login": {
       "title": "Prijavite se",

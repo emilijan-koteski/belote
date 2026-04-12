@@ -83,4 +83,9 @@ var (
 	ErrDeclarationNotAvailable = NewAppError("DECLARATION_NOT_AVAILABLE", "no declarable combinations in hand", http.StatusBadRequest)
 	ErrBelotNotAvailable       = NewAppError("BELOT_NOT_AVAILABLE", "belot announcement not available", http.StatusBadRequest)
 	ErrActionRequired          = NewAppError("ACTION_REQUIRED", "pending action must be resolved first", http.StatusBadRequest)
+
+	// WebSocket domain errors
+	ErrWSAuthTimeout      = NewAppError("WS_AUTH_TIMEOUT", "WebSocket authentication timed out", http.StatusUnauthorized)
+	ErrWSAuthFailed       = NewAppError("WS_AUTH_FAILED", "WebSocket authentication failed", http.StatusUnauthorized)
+	ErrWSInvalidMessage   = NewAppError("WS_INVALID_MESSAGE", "invalid WebSocket message format", http.StatusBadRequest)
 )

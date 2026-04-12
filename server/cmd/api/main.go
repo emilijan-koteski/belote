@@ -20,6 +20,7 @@ import (
 	"github.com/emilijan/belote/server/internal/config"
 	"github.com/emilijan/belote/server/internal/room"
 	"github.com/emilijan/belote/server/internal/user"
+	"github.com/emilijan/belote/server/internal/ws"
 )
 
 func main() {
@@ -92,6 +93,16 @@ func main() {
 	api.POST("/rooms/:id/seat", roomHandler.SelectSeat)
 	api.POST("/rooms/:id/start", roomHandler.StartGame)
 
+	// WebSocket hub and endpoint
+	hub := ws.NewHub()
+	go hub.Run()
+	wsHandler := &ws.WSHandler{
+		Hub:            hub,
+		JWTSecret:      cfg.JWTSecret,
+		AcceptedOrigins: cfg.CORSOrigins,
+	}
+	e.GET("/ws", wsHandler.HandleWS)
+
 	// Graceful shutdown
 	go func() {
 		slog.Info("starting server", "port", cfg.Port)
@@ -106,6 +117,7 @@ func main() {
 	<-quit
 
 	slog.Info("shutting down server")
+	hub.Shutdown()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := e.Shutdown(ctx); err != nil {

@@ -125,6 +125,14 @@
       }
     }
   },
+  "ws": {
+    "connecting": "Connecting...",
+    "authenticating": "Authenticating...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "reconnecting": "Reconnecting...",
+    "authFailed": "Connection authentication failed"
+  },
   "auth": {
     "login": {
       "title": "Log In",
