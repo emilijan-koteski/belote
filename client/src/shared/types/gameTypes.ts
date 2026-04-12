@@ -52,6 +52,7 @@ export interface PlayerState {
   hand: Card[];
   seat: number;
   userId: number;
+  username: string;
   team: string;
   declarations: Declaration[];
   connected: boolean;

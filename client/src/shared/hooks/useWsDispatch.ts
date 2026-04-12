@@ -7,6 +7,7 @@ import type {
   CardPlayedPayload,
   HandScoredPayload,
   MatchEndPayload,
+  TrickResolvedPayload,
   TrumpSelectedPayload,
   WsMessage,
 } from "@/shared/types/wsEvents";
@@ -91,12 +92,14 @@ function dispatchGameEvent(message: WsMessage): void {
   }
 
   if (type === EVENT_TRICK_RESOLVED) {
+    const payload = message.payload as TrickResolvedPayload;
     const current = store.gameState;
     if (current) {
       store.setGameState({
         ...current,
         currentTrick: [],
         trickNumber: current.trickNumber + 1,
+        trickWinnerSeat: payload.winnerSeat,
       });
     }
     return;

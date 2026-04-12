@@ -126,6 +126,19 @@
       }
     }
   },
+  "game": {
+    "seat": {
+      "waiting": "Waiting...",
+      "you": "You"
+    },
+    "chat": {
+      "title": "Match Chat",
+      "placeholder": "Chat available soon"
+    },
+    "trump": "Trump: {{suit}}",
+    "loading": "Connecting to game...",
+    "leaveConfirm": "Leave the game? You may lose your progress."
+  },
   "ws": {
     "connecting": "Connecting...",
     "authenticating": "Authenticating...",

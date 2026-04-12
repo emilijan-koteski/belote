@@ -126,6 +126,19 @@
       }
     }
   },
+  "game": {
+    "seat": {
+      "waiting": "\u010ceka se...",
+      "you": "Ti"
+    },
+    "chat": {
+      "title": "\u010cet u me\u010du",
+      "placeholder": "\u010cet uskoro dostupan"
+    },
+    "trump": "Adut: {{suit}}",
+    "loading": "Povezivanje na igru...",
+    "leaveConfirm": "Napusti igru? Mo\u017ee\u0161 izgubiti napredak."
+  },
   "ws": {
     "connecting": "Povezivanje...",
     "authenticating": "Autentifikacija...",

@@ -34,7 +34,7 @@ function AppRoutes() {
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/rooms/:id" element={<RoomLobby />} />
         </Route>
-        <Route path="/game" element={<GamePage />} />
+        <Route path="/game/:roomId" element={<GamePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

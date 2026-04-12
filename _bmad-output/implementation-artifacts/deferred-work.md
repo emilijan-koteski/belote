@@ -79,3 +79,12 @@
 ## Deferred from: code review of 3-6-match-completion-and-special-conditions (2026-04-12)
 
 - **D38: Nil TrickWinnerSeat dereference in `scoreHand()`** — `scoring.go:9` dereferences `*state.TrickWinnerSeat` without nil guard. Safe through current call chain (`resolveTrick` always sets it at trick 8 before `scoreHand` runs). Pre-existing from Story 3.5, explicitly listed in story Dev Notes as deferred. Latent panic risk if `scoreHand` gains callers from paths where `TrickWinnerSeat` is unset.
+
+## Deferred from: nav bar user avatar addition (2026-04-12)
+
+- **D39: AppLayout tests use `className` string-contains assertions for active tab styling** — `AppLayout.test.tsx` checks `className.toContain("border-accent")` instead of testing `aria-current="page"` which NavLink sets automatically. Fragile if Tailwind class names change. Pre-existing from Story 1.4.
+- **D40: No `afterEach` store reset in AppLayout tests** — `useAuthStore.setState()` in `beforeEach` is not cleaned up after each test. Same pattern as `LanguageSelector.test.tsx`. Safe under default Vitest worker isolation but non-deterministic if isolation is changed.
+
+## Deferred from: code review of 4-3-game-table-ui-layout-seats-and-cards (2026-04-12)
+
+- **D41: EVENT_CARD_PLAYED cardId[0]/[1] parsing assumes 2-char format** — `useWsDispatch.ts:82-86` extracts rank as `cardId[0]` and suit as `cardId[1]` with type assertions. If cardId deviates from the 2-char format (e.g., serialization bug), it silently corrupts game state. Pre-existing code not modified in this story.
