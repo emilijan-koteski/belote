@@ -482,6 +482,32 @@ func NewGameCapotInProgress() *game.GameState {
 	}
 }
 
+// NewGameNearEnd returns a GameState at trick 8 (like NewGameLastTrick) but with
+// configurable team scores, for testing match completion thresholds and tiebreakers.
+//
+// Trump = Hearts, TrumpCallerSeat = seat 1 (Blue team).
+// TricksWon = [4, 3] — Red won 4 tricks, Blue won 3 (7 total, 8th pending).
+// HandPoints = [70, 61] — realistic card point distribution from 7 tricks.
+//
+// Remaining cards are identical to NewGameLastTrick:
+//
+//	Seat 0 (Red):  AS — Ace of Spades (11 pts non-trump)
+//	Seat 1 (Blue): 8D — 8 of Diamonds (0 pts)
+//	Seat 2 (Red):  TD — Ten of Diamonds (10 pts non-trump)
+//	Seat 3 (Blue): 7H — 7 of Hearts (0 pts trump)
+//
+// After trick 8 resolves (Seat 0 leads AS, wins trick):
+//   - Red gets: 70 + 21(trick) + 10(last-trick) = 101 hand points
+//   - Blue gets: 61 hand points
+//   - Blue called trump so if 61 < 101 → failed contract → Red gets 162 total
+//
+// Use redScore/blueScore to position teams near the 1001 threshold.
+func NewGameNearEnd(redScore, blueScore int) *game.GameState {
+	gs := NewGameLastTrick()
+	gs.TeamScores = [2]int{redScore, blueScore}
+	return gs
+}
+
 // NewGameMidBidding returns a GameState with the specified number of passes
 // already recorded. Correctly tracks BiddingRound and ActivePlayerSeat.
 //

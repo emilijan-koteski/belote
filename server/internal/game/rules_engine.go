@@ -12,6 +12,10 @@ func ApplyAction(state *GameState, action Action) (*GameState, error) {
 		return handleBidding(state, action)
 	case PhasePlaying:
 		return handlePlaying(state, action)
+	case PhaseMatchEnd:
+		return nil, apperr.ErrWrongPhase
+	case PhasePaused:
+		return nil, apperr.ErrGamePaused
 	default:
 		return nil, apperr.ErrWrongPhase
 	}

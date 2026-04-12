@@ -315,3 +315,46 @@ func TestNewGameCapotInProgress(t *testing.T) {
 		assert.Equal(t, game.SuitHearts, gs.Players[0].Hand[0].Suit)
 	})
 }
+
+func TestNewGameNearEnd(t *testing.T) {
+	gs := testfixtures.NewGameNearEnd(900, 850)
+
+	t.Run("phase is playing at trick 8", func(t *testing.T) {
+		assert.Equal(t, game.PhasePlaying, gs.Phase)
+		assert.Equal(t, 8, gs.TrickNumber)
+	})
+
+	t.Run("team scores are set to provided values", func(t *testing.T) {
+		assert.Equal(t, 900, gs.TeamScores[0], "Red team score")
+		assert.Equal(t, 850, gs.TeamScores[1], "Blue team score")
+	})
+
+	t.Run("inherits NewGameLastTrick structure", func(t *testing.T) {
+		lastTrick := testfixtures.NewGameLastTrick()
+		// Same cards
+		for i := range gs.Players {
+			assert.Equal(t, lastTrick.Players[i].Hand, gs.Players[i].Hand,
+				"player %d hand should match NewGameLastTrick", i)
+		}
+		// Same hand points and tricks won
+		assert.Equal(t, lastTrick.HandPoints, gs.HandPoints)
+		assert.Equal(t, lastTrick.TricksWon, gs.TricksWon)
+	})
+
+	t.Run("each player has 1 card", func(t *testing.T) {
+		for i, p := range gs.Players {
+			assert.Len(t, p.Hand, 1, "player at seat %d should have 1 card", i)
+		}
+	})
+
+	t.Run("trump caller is blue team", func(t *testing.T) {
+		require.NotNil(t, gs.TrumpCallerSeat)
+		assert.Equal(t, 1, *gs.TrumpCallerSeat, "Blue team (seat 1) called trump")
+	})
+
+	t.Run("zero scores work", func(t *testing.T) {
+		gs0 := testfixtures.NewGameNearEnd(0, 0)
+		assert.Equal(t, 0, gs0.TeamScores[0])
+		assert.Equal(t, 0, gs0.TeamScores[1])
+	})
+}

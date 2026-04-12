@@ -27,7 +27,7 @@ func TestApplyActionPhaseBidding(t *testing.T) {
 
 	t.Run("unhandled phase returns ErrWrongPhase", func(t *testing.T) {
 		gs := testfixtures.NewGameJustDealt()
-		gs.Phase = game.PhaseMatchEnd
+		gs.Phase = game.Phase("unknown_phase")
 		action := game.Action{
 			Type:       game.ActionPlayCard,
 			PlayerSeat: 1,
@@ -39,4 +39,48 @@ func TestApplyActionPhaseBidding(t *testing.T) {
 		assert.Nil(t, result)
 		assert.ErrorIs(t, err, apperr.ErrWrongPhase)
 	})
+}
+
+func TestApplyAction_MatchEndPhase_ReturnsErrWrongPhase(t *testing.T) {
+	actions := []game.Action{
+		{Type: game.ActionPlayCard, PlayerSeat: 0, Card: &game.Card{Rank: game.RankAce, Suit: game.SuitSpades}},
+		{Type: game.ActionPickTrump, PlayerSeat: 0},
+		{Type: game.ActionPassTrump, PlayerSeat: 0},
+		{Type: game.ActionDeclare, PlayerSeat: 0},
+		{Type: game.ActionSkipDeclare, PlayerSeat: 0},
+	}
+
+	for _, action := range actions {
+		t.Run(action.Type, func(t *testing.T) {
+			gs := testfixtures.NewGameJustDealt()
+			gs.Phase = game.PhaseMatchEnd
+
+			result, err := game.ApplyAction(gs, action)
+
+			require.Error(t, err)
+			assert.Nil(t, result)
+			assert.ErrorIs(t, err, apperr.ErrWrongPhase)
+		})
+	}
+}
+
+func TestApplyAction_PausedPhase_ReturnsErrGamePaused(t *testing.T) {
+	actions := []game.Action{
+		{Type: game.ActionPlayCard, PlayerSeat: 0, Card: &game.Card{Rank: game.RankAce, Suit: game.SuitSpades}},
+		{Type: game.ActionPickTrump, PlayerSeat: 0},
+		{Type: game.ActionPassTrump, PlayerSeat: 0},
+	}
+
+	for _, action := range actions {
+		t.Run(action.Type, func(t *testing.T) {
+			gs := testfixtures.NewGameJustDealt()
+			gs.Phase = game.PhasePaused
+
+			result, err := game.ApplyAction(gs, action)
+
+			require.Error(t, err)
+			assert.Nil(t, result)
+			assert.ErrorIs(t, err, apperr.ErrGamePaused)
+		})
+	}
 }

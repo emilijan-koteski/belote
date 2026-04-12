@@ -65,6 +65,7 @@ type GameState struct {
 	TricksWon         [2]int `json:"tricksWon"`
 	PendingBelotSeat  *int   `json:"pendingBelotSeat"`
 	BelotAnnounced    bool   `json:"belotAnnounced"`
+	WinnerTeam        *int   `json:"winnerTeam"`
 
 	// Timer state
 	ActivePlayerSeat int        `json:"activePlayerSeat"`
@@ -127,6 +128,12 @@ func NewGame(playerIDs [4]uint, variant Variant, matchMode string, roomID uint) 
 	deck := NewDeck()
 	ShuffleDeck(deck)
 	dealCards(gs, deck)
+
+	// Check for instant-win (player holds all 8 trump cards)
+	if winnerTeam := checkInstantWin(gs); winnerTeam != nil {
+		gs.WinnerTeam = winnerTeam
+		gs.Phase = PhaseMatchEnd
+	}
 
 	return gs
 }

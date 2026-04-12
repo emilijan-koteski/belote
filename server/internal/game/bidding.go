@@ -108,6 +108,13 @@ func reshuffleAndRedeal(state *GameState) *GameState {
 	// Re-deal using existing deal logic
 	dealCards(state, deck)
 
+	// Check for instant-win (player holds all 8 trump cards)
+	if winnerTeam := checkInstantWin(state); winnerTeam != nil {
+		state.WinnerTeam = winnerTeam
+		state.Phase = PhaseMatchEnd
+		return state
+	}
+
 	// Reset bidding state
 	state.BiddingRound = 1
 	state.BiddingPassCount = 0
@@ -151,6 +158,10 @@ func cloneGameState(state *GameState) *GameState {
 	if state.PendingBelotSeat != nil {
 		v := *state.PendingBelotSeat
 		newState.PendingBelotSeat = &v
+	}
+	if state.WinnerTeam != nil {
+		v := *state.WinnerTeam
+		newState.WinnerTeam = &v
 	}
 
 	// Deep clone slice fields

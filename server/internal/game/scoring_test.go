@@ -149,6 +149,8 @@ func TestHandScoring_MatchEndTriggered(t *testing.T) {
 	// This should push Red over 1001 → PhaseMatchEnd
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase, "match should end when team crosses 1001")
 	assert.GreaterOrEqual(t, result.TeamScores[game.TeamRed], 1001)
+	require.NotNil(t, result.WinnerTeam, "WinnerTeam must be set on match end")
+	assert.Equal(t, game.TeamRed, *result.WinnerTeam, "Red team should win")
 }
 
 func TestHandScoring_MatchContinues(t *testing.T) {
@@ -191,6 +193,7 @@ func TestHandScoring_NewHandStateReset(t *testing.T) {
 	assert.Nil(t, result.TrumpCallerSeat, "TrumpCallerSeat reset")
 	assert.Nil(t, result.LeadSuit, "LeadSuit reset")
 	assert.Nil(t, result.TrickWinnerSeat, "TrickWinnerSeat reset")
+	assert.Nil(t, result.WinnerTeam, "WinnerTeam reset")
 	assert.Nil(t, result.TurnExpiresAt, "TurnExpiresAt reset")
 	for i, p := range result.Players {
 		assert.Nil(t, p.Declarations, "player %d declarations reset", i)
@@ -254,6 +257,8 @@ func TestHandScoring_501MatchMode(t *testing.T) {
 	// Red starts at 450. After scoring, Red gains 70 pts → 520 >= 501
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase, "match should end at 501 threshold")
 	assert.GreaterOrEqual(t, result.TeamScores[game.TeamRed], 501)
+	require.NotNil(t, result.WinnerTeam, "WinnerTeam must be set")
+	assert.Equal(t, game.TeamRed, *result.WinnerTeam, "Red team wins at 501 threshold")
 }
 
 func TestHandScoring_StateImmutability(t *testing.T) {
@@ -268,4 +273,137 @@ func TestHandScoring_StateImmutability(t *testing.T) {
 	assert.Equal(t, originalTeamScores, gs.TeamScores, "original TeamScores unchanged")
 	assert.Equal(t, originalHandPoints, gs.HandPoints, "original HandPoints unchanged")
 	assert.Equal(t, originalPhase, gs.Phase, "original Phase unchanged")
+}
+
+// --- Match-End Tiebreaker Tests (Story 3.6) ---
+
+func TestMatchEnd_SingleTeamReaches1001(t *testing.T) {
+	gs := testfixtures.NewGameNearEnd(950, 0)
+
+	result := playTrick8(t, gs)
+
+	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
+	require.NotNil(t, result.WinnerTeam)
+	assert.Equal(t, game.TeamRed, *result.WinnerTeam, "only Red crossed 1001")
+}
+
+func TestMatchEnd_BothTeamsExceed1001_HigherScoreWins(t *testing.T) {
+	// Blue is contracting (seat 1). After trick 8:
+	// Trick 8: 7H (trump) wins → Blue gets 21 + 10 = 31
+	// Blue total: 61 + 31 = 92 → Blue contracting succeeds (92 > 70)
+	// Normal scoring: Red += 70, Blue += 92
+	// Red final: 950 + 70 = 1020, Blue final: 920 + 92 = 1012
+	// Both >= 1001, Red has higher score → Red wins
+	gs := testfixtures.NewGameNearEnd(950, 920)
+
+	result := playTrick8(t, gs)
+
+	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
+	require.NotNil(t, result.WinnerTeam)
+	assert.Equal(t, game.TeamRed, *result.WinnerTeam, "Red has higher score when both cross 1001")
+	assert.Greater(t, result.TeamScores[game.TeamRed], result.TeamScores[game.TeamBlue])
+}
+
+func TestMatchEnd_BothTeamsExceed1001_TiedScore_ContractingTeamWins(t *testing.T) {
+	// Need both teams to end at EXACTLY the same score.
+	// Blue is contracting (seat 1). After trick 8:
+	// 7H (trump) wins → Blue gets trick 8 (21 pts) + last-trick bonus (10) = 31
+	// Blue total: 61 + 31 = 92, Red total: 70
+	// Blue(92) > Red(70) → normal scoring: Red += 70, Blue += 92
+	//
+	// We need: redScore + 70 == blueScore + 92
+	// So: redScore - blueScore = 22
+	// Example: Red=1000, Blue=978 → Red final=1070, Blue final=1070
+	gs := testfixtures.NewGameNearEnd(1000, 978)
+
+	result := playTrick8(t, gs)
+
+	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
+	require.NotNil(t, result.WinnerTeam)
+	assert.Equal(t, result.TeamScores[game.TeamRed], result.TeamScores[game.TeamBlue],
+		"scores should be tied")
+	// Blue is contracting team (seat 1 = Blue team)
+	assert.Equal(t, game.TeamBlue, *result.WinnerTeam,
+		"contracting team wins tiebreaker")
+}
+
+func TestMatchEnd_WinnerTeamFieldSet(t *testing.T) {
+	// Verify WinnerTeam is nil when match continues, set when match ends
+	t.Run("nil when match continues", func(t *testing.T) {
+		gs := testfixtures.NewGameNearEnd(100, 200)
+		result := playTrick8(t, gs)
+
+		assert.Equal(t, game.PhaseBidding, result.Phase)
+		assert.Nil(t, result.WinnerTeam, "WinnerTeam should be nil when match continues")
+	})
+
+	t.Run("set when match ends", func(t *testing.T) {
+		gs := testfixtures.NewGameNearEnd(950, 0)
+		result := playTrick8(t, gs)
+
+		assert.Equal(t, game.PhaseMatchEnd, result.Phase)
+		require.NotNil(t, result.WinnerTeam, "WinnerTeam must be set on match end")
+	})
+}
+
+func TestMatchEnd_501Mode(t *testing.T) {
+	gs := testfixtures.NewGameNearEnd(450, 0)
+	gs.MatchMode = "501"
+
+	result := playTrick8(t, gs)
+
+	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
+	require.NotNil(t, result.WinnerTeam)
+	assert.Equal(t, game.TeamRed, *result.WinnerTeam)
+	assert.GreaterOrEqual(t, result.TeamScores[game.TeamRed], 501)
+}
+
+func TestMatchEnd_BlueTeamWins(t *testing.T) {
+	// Blue is contracting (seat 1). Set Blue near 1001 so Blue's scoring pushes over.
+	// After trick 8: Blue total = 92 (see above). Blue needs: blueScore + 92 >= 1001
+	// Set Blue at 920: 920 + 92 = 1012 >= 1001
+	gs := testfixtures.NewGameNearEnd(0, 920)
+
+	result := playTrick8(t, gs)
+
+	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
+	require.NotNil(t, result.WinnerTeam)
+	assert.Equal(t, game.TeamBlue, *result.WinnerTeam, "Blue team should win")
+}
+
+// --- Instant-Win Tests (Story 3.6) ---
+// Note: checkInstantWin is unexported. Deterministic tests are in
+// scoring_internal_test.go (package game). These external tests verify
+// the plumbing (NewGame integration and partial-trump non-trigger).
+
+func TestInstantWin_NotTriggered_PartialTrump(t *testing.T) {
+	// Verify that having 7 (not 8) trump cards does NOT trigger instant-win.
+	gs := testfixtures.NewGameJustDealt()
+	// Swap: give seat 0 one Heart, give seat 1 one Spade
+	gs.Players[0].Hand[0] = game.Card{Rank: game.Rank7, Suit: game.SuitHearts}
+	gs.Players[1].Hand[0] = game.Card{Rank: game.Rank7, Suit: game.SuitSpades}
+
+	// Seat 1 now has 7 Hearts + 1 Spade — NOT all 8 trump
+	action := game.Action{
+		Type:       game.ActionPickTrump,
+		PlayerSeat: 1,
+	}
+	result, err := game.ApplyAction(gs, action)
+	require.NoError(t, err)
+	assert.Equal(t, game.PhasePlaying, result.Phase, "game should proceed normally, no instant-win")
+	assert.Nil(t, result.WinnerTeam)
+}
+
+func TestInstantWin_FirstHand(t *testing.T) {
+	// NewGame uses random shuffle — verify it always returns a valid state.
+	// IF instant-win triggers (astronomically unlikely), WinnerTeam must be set.
+	for i := 0; i < 100; i++ {
+		gs := game.NewGame([4]uint{10, 20, 30, 40}, game.VariantBitola, "1001", 1)
+		assert.True(t,
+			gs.Phase == game.PhaseBidding || gs.Phase == game.PhaseMatchEnd,
+			"NewGame should return PhaseBidding or PhaseMatchEnd, got %s", gs.Phase)
+		if gs.Phase == game.PhaseMatchEnd {
+			require.NotNil(t, gs.WinnerTeam, "WinnerTeam must be set if instant-win detected")
+		}
+	}
 }

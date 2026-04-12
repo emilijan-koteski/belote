@@ -44,9 +44,14 @@ func scoreHand(state *GameState) {
 		state.TeamScores[TeamBlue] += blueTotal
 	}
 
-	// Step 6: Check match-end condition
+	// Step 6: Check match-end condition with tiebreaker logic
 	target := matchTarget(state.MatchMode)
-	if state.TeamScores[TeamRed] >= target || state.TeamScores[TeamBlue] >= target {
+	redOver := state.TeamScores[TeamRed] >= target
+	blueOver := state.TeamScores[TeamBlue] >= target
+
+	if redOver || blueOver {
+		winner := determineMatchWinner(state, redOver, blueOver)
+		state.WinnerTeam = &winner
 		state.Phase = PhaseMatchEnd
 		return
 	}
@@ -83,6 +88,7 @@ func startNewHand(state *GameState) {
 	state.TricksWon = [2]int{0, 0}
 	state.PendingBelotSeat = nil
 	state.BelotAnnounced = false
+	state.WinnerTeam = nil
 	state.TurnExpiresAt = nil
 
 	// Clear player hands and declarations
@@ -98,7 +104,59 @@ func startNewHand(state *GameState) {
 
 	// Set active player and phase
 	state.ActivePlayerSeat = (state.DealerSeat + 1) % 4
+
+	// Check for instant-win (player holds all 8 trump cards)
+	if winnerTeam := checkInstantWin(state); winnerTeam != nil {
+		state.WinnerTeam = winnerTeam
+		state.Phase = PhaseMatchEnd
+		return
+	}
+
 	state.Phase = PhaseBidding
+}
+
+// checkInstantWin checks if any player holds all 8 cards of the trump suit after
+// dealing. Returns the winning team index, or nil if no instant-win.
+func checkInstantWin(state *GameState) *int {
+	if state.TrumpCandidate == nil {
+		return nil
+	}
+	trumpSuit := state.TrumpCandidate.Suit
+	for i := range state.Players {
+		trumpCount := 0
+		for _, card := range state.Players[i].Hand {
+			if card.Suit == trumpSuit {
+				trumpCount++
+			}
+		}
+		if trumpCount == 8 {
+			team := TeamForSeat(state.Players[i].Seat)
+			return &team
+		}
+	}
+	return nil
+}
+
+// determineMatchWinner resolves which team wins when at least one team has crossed
+// the match target. Handles tiebreaker: if both teams crossed, higher score wins;
+// if tied, the contracting team (trump picker) wins.
+func determineMatchWinner(state *GameState, redOver, blueOver bool) int {
+	if redOver && blueOver {
+		// Both teams crossed — higher score wins
+		if state.TeamScores[TeamRed] > state.TeamScores[TeamBlue] {
+			return TeamRed
+		}
+		if state.TeamScores[TeamBlue] > state.TeamScores[TeamRed] {
+			return TeamBlue
+		}
+		// Tied scores — contracting team (trump picker) wins
+		return TeamForSeat(*state.TrumpCallerSeat)
+	}
+	// Only one team crossed
+	if redOver {
+		return TeamRed
+	}
+	return TeamBlue
 }
 
 // matchTarget returns the point threshold for match completion based on the match mode.
