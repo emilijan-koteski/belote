@@ -1,8 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet } from "react-router";
+import { NavLink, Outlet, useNavigate } from "react-router";
 
 import { LanguageSelector } from "@/shared/components/LanguageSelector";
 import { cn } from "@/shared/lib/utils";
+import { useAuthStore } from "@/shared/stores/authStore";
 
 const navItems = [
   { path: "/lobby", labelKey: "nav.play" },
@@ -13,6 +14,8 @@ const navItems = [
 
 export function AppLayout() {
   const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,7 +50,26 @@ export function AppLayout() {
           ))}
         </div>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {user && (
+            <button
+              type="button"
+              onClick={() => navigate("/profile")}
+              aria-label={t("nav.profile")}
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-elevated"
+              data-testid="nav-user"
+            >
+              <span
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-sm font-semibold text-text-primary"
+                aria-hidden="true"
+              >
+                {(user.username.charAt(0) || "?").toUpperCase()}
+              </span>
+              <span className="font-body text-sm text-text-secondary">
+                {user.username}
+              </span>
+            </button>
+          )}
           <LanguageSelector />
         </div>
       </nav>

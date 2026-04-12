@@ -1,6 +1,7 @@
 import "@/shared/i18n/i18n";
 
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -84,5 +85,29 @@ describe("AppLayout", () => {
     renderWithRouter("/lobby");
 
     expect(screen.getByTestId("language-selector")).toBeInTheDocument();
+  });
+
+  it("displays current user's username and avatar", () => {
+    renderWithRouter("/lobby");
+
+    const userButton = screen.getByTestId("nav-user");
+    expect(userButton).toBeInTheDocument();
+    expect(userButton).toHaveTextContent("T");
+    expect(userButton).toHaveTextContent("testuser");
+  });
+
+  it("navigates to /profile when clicking the user avatar", async () => {
+    renderWithRouter("/lobby");
+
+    await userEvent.click(screen.getByTestId("nav-user"));
+
+    expect(screen.getByTestId("profile-content")).toBeInTheDocument();
+  });
+
+  it("does not display user widget when no user is logged in", () => {
+    useAuthStore.setState({ user: null, token: null });
+    renderWithRouter("/lobby");
+
+    expect(screen.queryByTestId("nav-user")).not.toBeInTheDocument();
   });
 });
