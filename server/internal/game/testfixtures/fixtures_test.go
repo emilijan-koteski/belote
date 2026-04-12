@@ -236,3 +236,82 @@ func TestNewGameJustDealt(t *testing.T) {
 		}
 	})
 }
+
+func TestNewGameLastTrick(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+
+	t.Run("phase is playing at trick 8", func(t *testing.T) {
+		assert.Equal(t, game.PhasePlaying, gs.Phase)
+		assert.Equal(t, 8, gs.TrickNumber)
+	})
+
+	t.Run("each player has 1 card", func(t *testing.T) {
+		for i, p := range gs.Players {
+			assert.Len(t, p.Hand, 1, "player at seat %d should have 1 card", i)
+		}
+	})
+
+	t.Run("tricks won sums to 7", func(t *testing.T) {
+		total := gs.TricksWon[0] + gs.TricksWon[1]
+		assert.Equal(t, 7, total, "7 tricks should have been played before trick 8")
+	})
+
+	t.Run("trump is set", func(t *testing.T) {
+		require.NotNil(t, gs.TrumpSuit)
+		assert.Equal(t, game.SuitHearts, *gs.TrumpSuit)
+	})
+
+	t.Run("trump caller is set", func(t *testing.T) {
+		require.NotNil(t, gs.TrumpCallerSeat)
+		assert.Equal(t, 1, *gs.TrumpCallerSeat, "Blue team (seat 1) called trump")
+	})
+
+	t.Run("declarations resolved", func(t *testing.T) {
+		assert.True(t, gs.DeclarationsResolved)
+	})
+
+	t.Run("hand points sum matches 7 tricks", func(t *testing.T) {
+		total := gs.HandPoints[0] + gs.HandPoints[1]
+		assert.Equal(t, 131, total, "7 tricks with 21 pts remaining = 131")
+	})
+
+	t.Run("current trick is empty", func(t *testing.T) {
+		assert.Empty(t, gs.CurrentTrick)
+	})
+}
+
+func TestNewGameCapotInProgress(t *testing.T) {
+	gs := testfixtures.NewGameCapotInProgress()
+
+	t.Run("phase is playing at trick 8", func(t *testing.T) {
+		assert.Equal(t, game.PhasePlaying, gs.Phase)
+		assert.Equal(t, 8, gs.TrickNumber)
+	})
+
+	t.Run("each player has 1 card", func(t *testing.T) {
+		for i, p := range gs.Players {
+			assert.Len(t, p.Hand, 1, "player at seat %d should have 1 card", i)
+		}
+	})
+
+	t.Run("red team won all 7 tricks", func(t *testing.T) {
+		assert.Equal(t, 7, gs.TricksWon[0], "Red should have 7 tricks")
+		assert.Equal(t, 0, gs.TricksWon[1], "Blue should have 0 tricks")
+	})
+
+	t.Run("all hand points with red", func(t *testing.T) {
+		assert.Equal(t, 121, gs.HandPoints[0], "Red should have 121 card points from 7 tricks")
+		assert.Equal(t, 0, gs.HandPoints[1], "Blue should have 0 card points")
+	})
+
+	t.Run("trump caller is red team", func(t *testing.T) {
+		require.NotNil(t, gs.TrumpCallerSeat)
+		assert.Equal(t, 0, *gs.TrumpCallerSeat, "Red team (seat 0) called trump")
+	})
+
+	t.Run("red has strongest cards to complete capot", func(t *testing.T) {
+		// Seat 0 has JH (strongest trump), seat 2 has AH (strong trump)
+		assert.Equal(t, game.RankJack, gs.Players[0].Hand[0].Rank)
+		assert.Equal(t, game.SuitHearts, gs.Players[0].Hand[0].Suit)
+	})
+}

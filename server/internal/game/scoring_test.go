@@ -1,0 +1,271 @@
+package game_test
+
+import (
+	"testing"
+
+	game "github.com/emilijan/belote/server/internal/game"
+	"github.com/emilijan/belote/server/internal/game/testfixtures"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// playTrick8 plays the last trick by having each player play their single
+// remaining card in seat order starting from the active player.
+// Returns the final state after all 4 cards are played and scoring completes.
+func playTrick8(t *testing.T, gs *game.GameState) *game.GameState {
+	t.Helper()
+	state := gs
+	for i := 0; i < 4; i++ {
+		seat := state.ActivePlayerSeat
+		require.Len(t, state.Players[seat].Hand, 1, "seat %d should have 1 card at trick 8 play %d", seat, i)
+		card := state.Players[seat].Hand[0]
+		newState, err := game.ApplyAction(state, game.Action{
+			Type:       game.ActionPlayCard,
+			PlayerSeat: seat,
+			Card:       &card,
+		})
+		require.NoError(t, err, "play_card for seat %d (play %d)", seat, i)
+		state = newState
+	}
+	return state
+}
+
+func TestHandScoring_LastTrickBonus(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+
+	// Seat 0 (Red) leads with AS (Ace of Spades)
+	// Seat 1 plays 8D, seat 2 plays TD, seat 3 plays 7H (trump)
+	// Trump 7H beats non-trump cards — seat 3 (Blue) wins trick 8
+	result := playTrick8(t, gs)
+
+	// After trick 8 + scoring, state should be PhaseBidding (new hand) or PhaseMatchEnd
+	assert.NotEqual(t, game.PhasePlaying, result.Phase, "should have left playing phase")
+
+	// Blue team (seat 3) won trick 8 — check that +10 bonus was applied
+	// Initial: Red=70, Blue=61. Trick 8 cards: AS(11) + 8D(0) + TD(10) + 7H(0) = 21
+	// Trump 7H wins (it's a trump card beating non-trump), so Blue gets 21 card pts + 10 bonus
+	// Red total: 70 + 0 (declarations) = 70
+	// Blue total: 61 + 21 (trick 8 card points) + 10 (last trick bonus) + 0 (declarations) = 92
+	// Blue is contracting team (seat 1), and blue total (92) > red total (70), so normal scoring
+	// TeamScores: Red += 70, Blue += 92
+	assert.Equal(t, 70, result.TeamScores[game.TeamRed], "Red team score")
+	assert.Equal(t, 92, result.TeamScores[game.TeamBlue], "Blue team score (includes +10 bonus)")
+}
+
+func TestHandScoring_CapotScoring(t *testing.T) {
+	gs := testfixtures.NewGameCapotInProgress()
+
+	// Seat 0 leads with JH (trump Jack, strongest card) — Red wins
+	result := playTrick8(t, gs)
+
+	// Red won all 8 tricks — Capot!
+	// HandPoints before scoring: Red=121, Blue=0
+	// Trick 8: JH(20 trump) + 7D(0) + AH(11 trump) + 7C(0) = 31 pts to Red
+	// After trick resolve: Red HandPoints = 121 + 31 = 152 (all card points)
+	// Capot bonus: +100 (replaces +10 last-trick)
+	// Red total: 152 + 100 = 252 + 0 declarations = 252
+	// Blue total: 0
+	// Red is contracting team (seat 0), red total > blue total → normal scoring
+	assert.Equal(t, 252, result.TeamScores[game.TeamRed], "Red gets all 152 card pts + 100 Capot")
+	assert.Equal(t, 0, result.TeamScores[game.TeamBlue], "Blue gets nothing")
+}
+
+func TestHandScoring_CapotBroken(t *testing.T) {
+	gs := testfixtures.NewGameCapotInProgress()
+	// Swap seat 0 and seat 1 cards so Blue can win trick 8
+	// Give seat 1 the JH (trump Jack) and seat 0 the 7D
+	gs.Players[0].Hand = []game.Card{{Rank: game.Rank7, Suit: game.SuitDiamonds}}
+	gs.Players[1].Hand = []game.Card{{Rank: game.RankJack, Suit: game.SuitHearts}}
+
+	result := playTrick8(t, gs)
+
+	// Red won 7, Blue wins trick 8 → TricksWon = [7, 1] — no Capot
+	// Last-trick bonus (+10) goes to Blue (seat 1 wins with JH)
+	// Trick 8: 7D(0) + JH(20 trump) + AH(11 trump) + 7C(0) = 31 pts to Blue
+	// After trick resolve: Red=121, Blue=0+31=31
+	// Last-trick bonus: Blue += 10 → Blue=41
+	// Red total: 121 + 0 = 121, Blue total: 41 + 0 = 41
+	// Red is contracting (seat 0), red(121) > blue(41) → normal scoring
+	assert.Equal(t, 121, result.TeamScores[game.TeamRed], "Red keeps their card points")
+	assert.Equal(t, 41, result.TeamScores[game.TeamBlue], "Blue gets trick 8 pts + 10 bonus")
+}
+
+func TestHandScoring_FailedContract(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	// Blue (seat 1) is contracting team. Adjust HandPoints so Blue has fewer total.
+	// Set Red high, Blue low to guarantee failed contract after trick 8.
+	gs.HandPoints = [2]int{100, 20}
+
+	result := playTrick8(t, gs)
+
+	// Trick 8: AS(11) + 8D(0) + TD(10) + 7H(0 trump) = 21 pts
+	// 7H is trump, so Blue (seat 3) wins trick 8 → Blue gets 21 pts + 10 bonus
+	// Red total: 100 + 0 (declarations) = 100
+	// Blue total: 20 + 21 + 10 + 0 (declarations) = 51
+	// Blue is contracting (seat 1), blue(51) < red(100) → FAILED CONTRACT
+	// Red gets ALL: 100 + 51 = 151
+	assert.Equal(t, 151, result.TeamScores[game.TeamRed], "Red gets ALL points on failed contract")
+	assert.Equal(t, 0, result.TeamScores[game.TeamBlue], "Blue gets 0 on failed contract")
+}
+
+func TestHandScoring_EqualPointsNotFailure(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	// Blue (seat 1) is contracting. Arrange so totals are equal after trick 8.
+	// Trick 8: 7H(trump) wins, Blue gets 21 card pts + 10 bonus = 31
+	// Blue after trick 8: handPts + 31 + declarations(0) should equal Red total
+	// Red total = redHandPts + 0 (declarations)
+	// Set: Red=80, Blue=49 → after trick 8: Red=80, Blue=49+21+10=80. Equal!
+	gs.HandPoints = [2]int{80, 49}
+
+	result := playTrick8(t, gs)
+
+	// Equal totals (80 = 80): contracting team succeeds → normal scoring
+	assert.Equal(t, 80, result.TeamScores[game.TeamRed], "Red keeps own points")
+	assert.Equal(t, 80, result.TeamScores[game.TeamBlue], "Blue keeps own points (equal = not failure)")
+}
+
+func TestHandScoring_NormalScoring(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	// Blue is contracting. Set points so Blue wins comfortably after trick 8.
+	gs.HandPoints = [2]int{40, 91}
+
+	result := playTrick8(t, gs)
+
+	// Trick 8: 7H(trump) wins, Blue gets 21 card pts + 10 bonus = 31
+	// Red total: 40, Blue total: 91 + 21 + 10 = 122
+	// Blue is contracting, blue(122) > red(40) → normal scoring
+	assert.Equal(t, 40, result.TeamScores[game.TeamRed], "Red keeps own points")
+	assert.Equal(t, 122, result.TeamScores[game.TeamBlue], "Blue keeps own points")
+}
+
+func TestHandScoring_MatchEndTriggered(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	// Set TeamScores near 1001 so scoring pushes over
+	gs.TeamScores = [2]int{950, 0}
+
+	result := playTrick8(t, gs)
+
+	// Red starts at 950. After trick 8 scoring, Red gains their hand points.
+	// This should push Red over 1001 → PhaseMatchEnd
+	assert.Equal(t, game.PhaseMatchEnd, result.Phase, "match should end when team crosses 1001")
+	assert.GreaterOrEqual(t, result.TeamScores[game.TeamRed], 1001)
+}
+
+func TestHandScoring_MatchContinues(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	// TeamScores well below 1001
+	gs.TeamScores = [2]int{100, 200}
+
+	result := playTrick8(t, gs)
+
+	// Neither team reaches 1001 → new hand starts
+	assert.Equal(t, game.PhaseBidding, result.Phase, "should start new hand")
+	assert.Equal(t, 2, result.HandNumber, "hand number should increment")
+	// Dealer rotates: was 0, now 1
+	assert.Equal(t, 1, result.DealerSeat, "dealer should rotate")
+	// Each player should have 8 cards (new deal)
+	for i, p := range result.Players {
+		assert.Len(t, p.Hand, 8, "player at seat %d should have 8 cards after new deal", i)
+	}
+}
+
+func TestHandScoring_NewHandStateReset(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	gs.TeamScores = [2]int{0, 0}
+	gs.DeclarationPoints = [2]int{50, 20} // Set declarations to verify they're included in scoring then reset
+
+	result := playTrick8(t, gs)
+
+	assert.Equal(t, game.PhaseBidding, result.Phase)
+
+	// Per-hand fields must be reset
+	assert.Equal(t, [2]int{0, 0}, result.HandPoints, "HandPoints reset")
+	assert.Equal(t, [2]int{0, 0}, result.DeclarationPoints, "DeclarationPoints reset")
+	assert.Equal(t, [2]int{0, 0}, result.TricksWon, "TricksWon reset")
+	assert.False(t, result.AwaitingDeclaration, "AwaitingDeclaration reset")
+	assert.False(t, result.DeclarationsResolved, "DeclarationsResolved reset")
+	assert.Nil(t, result.PendingBelotSeat, "PendingBelotSeat reset")
+	assert.False(t, result.BelotAnnounced, "BelotAnnounced reset")
+	assert.Equal(t, 0, result.TrickNumber, "TrickNumber reset")
+	assert.Nil(t, result.TrumpSuit, "TrumpSuit reset")
+	assert.Nil(t, result.TrumpCallerSeat, "TrumpCallerSeat reset")
+	assert.Nil(t, result.LeadSuit, "LeadSuit reset")
+	assert.Nil(t, result.TrickWinnerSeat, "TrickWinnerSeat reset")
+	assert.Nil(t, result.TurnExpiresAt, "TurnExpiresAt reset")
+	for i, p := range result.Players {
+		assert.Nil(t, p.Declarations, "player %d declarations reset", i)
+	}
+}
+
+func TestHandScoring_DeclarationsIncluded(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	gs.DeclarationPoints = [2]int{50, 0} // Red has 50 declaration points
+
+	result := playTrick8(t, gs)
+
+	// Red total: 70 (hand) + 50 (declarations) = 120
+	// Blue wins trick 8 with 7H trump: Blue gets 21 + 10 = 31
+	// Blue total: 61 + 31 + 0 (declarations) = 92
+	// Blue is contracting (seat 1), blue(92) < red(120) → FAILED CONTRACT
+	// Red gets ALL: 120 + 92 = 212
+	assert.Equal(t, 212, result.TeamScores[game.TeamRed], "declarations included in scoring")
+	assert.Equal(t, 0, result.TeamScores[game.TeamBlue], "failed contract = 0 for contracting team")
+}
+
+func TestHandScoring_FailedContractBothTeamsHaveDeclarations(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	// Blue (seat 1) is contracting. Give both teams declaration points.
+	gs.HandPoints = [2]int{60, 20}
+	gs.DeclarationPoints = [2]int{40, 30}
+
+	result := playTrick8(t, gs)
+
+	// Trick 8: 7H (trump) wins, Blue gets 21 card pts + 10 bonus
+	// Red total: 60 + 40 (declarations) = 100
+	// Blue total: 20 + 21 + 10 + 30 (declarations) = 81
+	// Blue is contracting (seat 1), blue(81) < red(100) → FAILED CONTRACT
+	// Red gets ALL: 100 + 81 = 181 (includes Blue's own declarations)
+	assert.Equal(t, 181, result.TeamScores[game.TeamRed], "Red gets ALL points including Blue's declarations")
+	assert.Equal(t, 0, result.TeamScores[game.TeamBlue], "Blue gets 0 on failed contract")
+}
+
+func TestHandScoring_BelotBonusIncluded(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	// Belot bonus (+20) is already in HandPoints from Story 3.4.
+	// Simulate: Red already got +20 Belot during the hand
+	gs.HandPoints = [2]int{90, 61}
+
+	result := playTrick8(t, gs)
+
+	// Red total: 90 + 0 (declarations) = 90
+	// Blue gets trick 8: 21 card pts + 10 bonus → Blue total: 61 + 21 + 10 = 92
+	// Blue is contracting (seat 1), blue(92) > red(90) → normal scoring
+	assert.Equal(t, 90, result.TeamScores[game.TeamRed], "Red total includes Belot bonus in HandPoints")
+	assert.Equal(t, 92, result.TeamScores[game.TeamBlue], "Blue keeps own total")
+}
+
+func TestHandScoring_501MatchMode(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	gs.MatchMode = "501"
+	gs.TeamScores = [2]int{450, 0}
+
+	result := playTrick8(t, gs)
+
+	// Red starts at 450. After scoring, Red gains 70 pts → 520 >= 501
+	assert.Equal(t, game.PhaseMatchEnd, result.Phase, "match should end at 501 threshold")
+	assert.GreaterOrEqual(t, result.TeamScores[game.TeamRed], 501)
+}
+
+func TestHandScoring_StateImmutability(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	originalTeamScores := gs.TeamScores
+	originalHandPoints := gs.HandPoints
+	originalPhase := gs.Phase
+
+	_ = playTrick8(t, gs)
+
+	// Original state should be unchanged (cloneGameState in handlePlayCard protects it)
+	assert.Equal(t, originalTeamScores, gs.TeamScores, "original TeamScores unchanged")
+	assert.Equal(t, originalHandPoints, gs.HandPoints, "original HandPoints unchanged")
+	assert.Equal(t, originalPhase, gs.Phase, "original Phase unchanged")
+}

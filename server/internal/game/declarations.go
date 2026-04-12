@@ -377,6 +377,12 @@ func resolveTrickWithDeclarations(state *GameState) {
 	if state.Phase == PhaseHandScoring && !state.DeclarationsResolved {
 		resolveDeclarationsForHand(state)
 	}
+
+	// After all tricks complete, score the hand and start next hand (or end match).
+	// PhaseHandScoring is only set by resolveTrick when TrickNumber == 8.
+	if state.Phase == PhaseHandScoring {
+		scoreHand(state)
+	}
 }
 
 // resolveDeclarationsForHand resolves declarations after trick 1 and awards points.

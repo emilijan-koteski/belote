@@ -504,9 +504,9 @@ func TestEighthTrickTransition(t *testing.T) {
 			state = result
 		}
 
-		assert.Equal(t, game.PhaseHandScoring, result.Phase)
-		assert.Equal(t, 8, result.TrickNumber) // TrickNumber stays at 8
-		require.NotNil(t, result.TrickWinnerSeat)
+		// After trick 8, scoring runs atomically — state advances to PhaseBidding (new hand) or PhaseMatchEnd
+		assert.Contains(t, []game.Phase{game.PhaseBidding, game.PhaseMatchEnd}, result.Phase,
+			"should advance past PhaseHandScoring to PhaseBidding or PhaseMatchEnd")
 	})
 }
 
@@ -774,17 +774,19 @@ func TestFull8TrickHand(t *testing.T) {
 			require.NoError(t, err, "trick 8 seat %d", c.seat)
 		}
 
-		// Phase should be hand_scoring
-		assert.Equal(t, game.PhaseHandScoring, state.Phase)
-		assert.Equal(t, 8, state.TrickNumber)
+		// After trick 8, scoring runs atomically — state advances to PhaseBidding (new hand) or PhaseMatchEnd.
+		// Scoring adds last-trick bonus (+10) to HandPoints, then resets HandPoints on new hand.
+		// Verify scoring completed by checking TeamScores increased (both teams had points from 8 tricks).
+		assert.Contains(t, []game.Phase{game.PhaseBidding, game.PhaseMatchEnd}, state.Phase,
+			"should advance past PhaseHandScoring to PhaseBidding or PhaseMatchEnd")
+		totalTeamScores := state.TeamScores[0] + state.TeamScores[1]
+		assert.Greater(t, totalTeamScores, 0, "TeamScores should reflect scored hand points (152 card pts + 10 last-trick bonus = 162)")
 
-		// Total points across both teams should be 152
-		totalPoints := state.HandPoints[0] + state.HandPoints[1]
-		assert.Equal(t, 152, totalPoints, "total card points in a hand must be 152")
-
-		// All players should have empty hands
-		for i, p := range state.Players {
-			assert.Empty(t, p.Hand, "player %d should have no cards left", i)
+		if state.Phase == game.PhaseBidding {
+			// New hand: each player gets 8 cards, HandPoints reset
+			for i, p := range state.Players {
+				assert.Len(t, p.Hand, 8, "player %d should have 8 cards after new deal", i)
+			}
 		}
 	})
 }

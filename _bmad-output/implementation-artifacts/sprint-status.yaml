@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-06
-last_updated: "2026-04-12"  # Story 3.4 done
+last_updated: "2026-04-12"  # Story 3.5 done
 project: belote
 project_key: NOKEY
 tracking_system: file-system
@@ -65,7 +65,7 @@ development_status:
   3-2-trump-bidding-bitola-variant: done
   3-3-card-play-and-trick-resolution: done
   3-4-declarations-and-belot-bonus: done
-  3-5-hand-scoring-failed-contracts-and-capot: backlog
+  3-5-hand-scoring-failed-contracts-and-capot: done
   3-6-match-completion-and-special-conditions: backlog
   epic-3-retrospective: optional
 

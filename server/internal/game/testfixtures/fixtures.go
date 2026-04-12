@@ -322,6 +322,166 @@ func NewGameWithDeclarations(decls []game.Declaration) *game.GameState {
 	return gs
 }
 
+// NewGameLastTrick returns a GameState at trick 8 (the final trick) for testing
+// hand-end scoring: last-trick bonus, Capot detection, failed contracts, and
+// match score updates.
+//
+// Trump = Hearts, TrumpCallerSeat = seat 1 (Blue team).
+// TricksWon = [4, 3] — Red won 4 tricks, Blue won 3 (7 total, 8th pending).
+// HandPoints = [70, 61] — realistic card point distribution from 7 tricks.
+// DeclarationPoints = [0, 0] — no declarations (simplifies scoring tests).
+//
+// Remaining cards (1 per player):
+//
+//	Seat 0 (Red):  AS — Ace of Spades (11 pts non-trump)
+//	Seat 1 (Blue): 8D — 8 of Diamonds (0 pts)
+//	Seat 2 (Red):  TD — Ten of Diamonds (10 pts non-trump)
+//	Seat 3 (Blue): 7H — 7 of Hearts (0 pts trump — can win if Hearts led)
+//
+// Remaining card points: 11 + 0 + 10 + 0 = 21. Total from 7 tricks: 152 - 21 = 131.
+// HandPoints 70 + 61 = 131 ✓
+//
+// ActivePlayerSeat = 0 (Red, winner of trick 7 — leads trick 8).
+func NewGameLastTrick() *game.GameState {
+	trumpSuit := game.SuitHearts
+	callerSeat := 1  // Blue team called trump
+	trickWinner := 0 // Seat 0 won trick 7
+
+	return &game.GameState{
+		RoomID:               1,
+		Variant:              game.VariantBitola,
+		MatchMode:            "1001",
+		Phase:                game.PhasePlaying,
+		HandNumber:           1,
+		DealerSeat:           0,
+		TrumpSuit:            &trumpSuit,
+		TrumpCallerSeat:      &callerSeat,
+		TrickNumber:          8,
+		CurrentTrick:         []game.TrickCard{},
+		TrickWinnerSeat:      &trickWinner,
+		DeclarationsResolved: true,
+		BelotAnnounced:       true,
+		ActivePlayerSeat:     0,
+		Players: [4]game.PlayerState{
+			{ // Seat 0 (Red): AS — strong non-trump
+				Hand:         []game.Card{{Rank: game.RankAce, Suit: game.SuitSpades}},
+				Seat:         0,
+				UserID:       10,
+				Team:         "red",
+				Declarations: nil,
+				Connected:    true,
+			},
+			{ // Seat 1 (Blue): 8D — weak non-trump
+				Hand:         []game.Card{{Rank: game.Rank8, Suit: game.SuitDiamonds}},
+				Seat:         1,
+				UserID:       20,
+				Team:         "blue",
+				Declarations: nil,
+				Connected:    true,
+			},
+			{ // Seat 2 (Red): TD — medium non-trump (10 pts)
+				Hand:         []game.Card{{Rank: game.RankTen, Suit: game.SuitDiamonds}},
+				Seat:         2,
+				UserID:       30,
+				Team:         "red",
+				Declarations: nil,
+				Connected:    true,
+			},
+			{ // Seat 3 (Blue): 7H — low trump (can win if led suit is hearts)
+				Hand:         []game.Card{{Rank: game.Rank7, Suit: game.SuitHearts}},
+				Seat:         3,
+				UserID:       40,
+				Team:         "blue",
+				Declarations: nil,
+				Connected:    true,
+			},
+		},
+		TeamScores:    [2]int{0, 0},
+		HandPoints:    [2]int{70, 61},
+		TricksWon:     [2]int{4, 3},
+		TurnExpiresAt: nil,
+	}
+}
+
+// NewGameCapotInProgress returns a GameState at trick 8 where one team (Red)
+// has won all 7 previous tricks. Used for testing Capot detection and scoring.
+//
+// Trump = Hearts, TrumpCallerSeat = seat 0 (Red team — the Capot team).
+// TricksWon = [7, 0] — Red has won every trick so far.
+// HandPoints = [121, 0] — all card points from 7 tricks go to Red.
+//
+// Remaining cards (1 per player):
+//
+//	Seat 0 (Red):  JH — Jack of Hearts (20 pts trump, strongest card)
+//	Seat 1 (Blue): 7D — 7 of Diamonds (0 pts)
+//	Seat 2 (Red):  AH — Ace of Hearts (11 pts trump)
+//	Seat 3 (Blue): 7C — 7 of Clubs (0 pts)
+//
+// Remaining card points: 20 + 0 + 11 + 0 = 31. Total from 7 tricks: 152 - 31 = 121 ✓
+//
+// ActivePlayerSeat = 0 (Red, winner of trick 7).
+// Red team is guaranteed to win trick 8 (JH is strongest possible trump).
+func NewGameCapotInProgress() *game.GameState {
+	trumpSuit := game.SuitHearts
+	callerSeat := 0  // Red team called trump
+	trickWinner := 0 // Seat 0 won trick 7
+
+	return &game.GameState{
+		RoomID:               1,
+		Variant:              game.VariantBitola,
+		MatchMode:            "1001",
+		Phase:                game.PhasePlaying,
+		HandNumber:           1,
+		DealerSeat:           0,
+		TrumpSuit:            &trumpSuit,
+		TrumpCallerSeat:      &callerSeat,
+		TrickNumber:          8,
+		CurrentTrick:         []game.TrickCard{},
+		TrickWinnerSeat:      &trickWinner,
+		DeclarationsResolved: true,
+		BelotAnnounced:       true,
+		ActivePlayerSeat:     0,
+		Players: [4]game.PlayerState{
+			{ // Seat 0 (Red): JH — Jack of Hearts (trump, strongest)
+				Hand:         []game.Card{{Rank: game.RankJack, Suit: game.SuitHearts}},
+				Seat:         0,
+				UserID:       10,
+				Team:         "red",
+				Declarations: nil,
+				Connected:    true,
+			},
+			{ // Seat 1 (Blue): 7D — weakest
+				Hand:         []game.Card{{Rank: game.Rank7, Suit: game.SuitDiamonds}},
+				Seat:         1,
+				UserID:       20,
+				Team:         "blue",
+				Declarations: nil,
+				Connected:    true,
+			},
+			{ // Seat 2 (Red): AH — Ace of Hearts (trump)
+				Hand:         []game.Card{{Rank: game.RankAce, Suit: game.SuitHearts}},
+				Seat:         2,
+				UserID:       30,
+				Team:         "red",
+				Declarations: nil,
+				Connected:    true,
+			},
+			{ // Seat 3 (Blue): 7C — weakest
+				Hand:         []game.Card{{Rank: game.Rank7, Suit: game.SuitClubs}},
+				Seat:         3,
+				UserID:       40,
+				Team:         "blue",
+				Declarations: nil,
+				Connected:    true,
+			},
+		},
+		TeamScores:    [2]int{0, 0},
+		HandPoints:    [2]int{121, 0},
+		TricksWon:     [2]int{7, 0},
+		TurnExpiresAt: nil,
+	}
+}
+
 // NewGameMidBidding returns a GameState with the specified number of passes
 // already recorded. Correctly tracks BiddingRound and ActivePlayerSeat.
 //
