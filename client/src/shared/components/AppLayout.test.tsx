@@ -1,6 +1,6 @@
 import "@/shared/i18n/i18n";
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -96,14 +96,24 @@ describe("AppLayout", () => {
     expect(userButton).toHaveTextContent("testuser");
   });
 
-  it("calls logout when clicking the user avatar", async () => {
+  it("shows dropdown with logout option and logs out on click", async () => {
+    const user = userEvent.setup();
     renderWithRouter("/lobby");
 
-    await userEvent.click(screen.getByTestId("nav-user"));
+    await user.click(screen.getByTestId("nav-user"));
 
-    const { user, token } = useAuthStore.getState();
-    expect(user).toBeNull();
-    expect(token).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByTestId("nav-logout")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("nav-logout")).toHaveTextContent("Log out");
+
+    await user.click(screen.getByTestId("nav-logout"));
+
+    await waitFor(() => {
+      const state = useAuthStore.getState();
+      expect(state.user).toBeNull();
+      expect(state.token).toBeNull();
+    });
   });
 
   it("does not display user widget when no user is logged in", () => {

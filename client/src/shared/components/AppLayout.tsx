@@ -2,6 +2,12 @@ import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router";
 
 import { LanguageSelector } from "@/shared/components/LanguageSelector";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/shared/stores/authStore";
 
@@ -53,23 +59,30 @@ export function AppLayout() {
         <div className="ml-auto flex items-center gap-3">
           <LanguageSelector />
           {user && (
-            <button
-              type="button"
-              onClick={logout}
-              aria-label={t("nav.logout")}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-elevated"
-              data-testid="nav-user"
-            >
-              <span
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-sm font-semibold text-text-primary"
-                aria-hidden="true"
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-elevated"
+                data-testid="nav-user"
               >
-                {(user.username.charAt(0) || "?").toUpperCase()}
-              </span>
-              <span className="font-body text-sm text-text-secondary">
-                {user.username}
-              </span>
-            </button>
+                <span
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-sm font-semibold text-text-primary"
+                  aria-hidden="true"
+                >
+                  {(user.username.charAt(0) || "?").toUpperCase()}
+                </span>
+                <span className="font-body text-sm text-text-secondary">
+                  {user.username}
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-surface-elevated">
+                <DropdownMenuItem
+                  onClick={logout}
+                  data-testid="nav-logout"
+                >
+                  {t("nav.logout")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </nav>
