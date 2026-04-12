@@ -88,3 +88,10 @@
 ## Deferred from: code review of 4-3-game-table-ui-layout-seats-and-cards (2026-04-12)
 
 - **D41: EVENT_CARD_PLAYED cardId[0]/[1] parsing assumes 2-char format** — `useWsDispatch.ts:82-86` extracts rank as `cardId[0]` and suit as `cardId[1]` with type assertions. If cardId deviates from the 2-char format (e.g., serialization bug), it silently corrupts game state. Pre-existing code not modified in this story.
+
+## Deferred from: code review of 4-4-trump-bidding-and-declaration-ui (2026-04-12)
+
+- **D42: `playableCardIds` includes ALL hand cards with no legal-move filtering** — `GamePage.tsx` marks every card in hand as playable when it's the player's turn. Belote has strict follow-suit and trump rules. Server rejects illegal plays, but UX suffers. Pre-existing design from Story 4.3; requires server to expose `legalMoves` in GameState.
+- **D43: `PlayerState.username` missing from server Go `PlayerState` struct** — Client `gameTypes.ts` declares `username: string` but server `state.go` `PlayerState` has no `Username` field. Players may display as undefined. Pre-existing from Story 4.3 when field was added to client type.
+- **D44: `TrumpSelectedPayload.trumpSuit` unsafe `as` cast from `string` to `Suit | null`** — `useWsDispatch.ts:143` casts without runtime validation. If server sends unexpected value, it silently enters GameState. Pre-existing from Story 4.2.
+- **D45: `window.confirm()` for back-button interception** — Blocking synchronous API, not styleable, may not render i18n correctly on all platforms. Pre-existing from Story 4.3.

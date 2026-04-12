@@ -25,6 +25,8 @@ export type ActionType =
   | "pass_trump"
   | "declare"
   | "skip_declare"
+  | "announce_belot"
+  | "decline_belot"
   | "pause"
   | "unpause"
   | "owner_unpause";
@@ -76,10 +78,15 @@ export interface GameState {
   currentTrick: TrickCard[];
   leadSuit: Suit | null;
   trickWinnerSeat: number | null;
+  awaitingDeclaration: boolean;
+  declarationsResolved: boolean;
   players: [PlayerState, PlayerState, PlayerState, PlayerState];
   teamScores: [number, number];
   handPoints: [number, number];
   declarationPoints: [number, number];
   tricksWon: [number, number];
+  pendingBelotSeat: number | null;
+  belotAnnounced: boolean;
+  winnerTeam: number | null;
   turnExpiresAt: string | null;
 }

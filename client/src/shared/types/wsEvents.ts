@@ -42,7 +42,7 @@ export interface PlayCardPayload {
 }
 
 export interface PickTrumpPayload {
-  // Empty — picking the revealed trump candidate
+  suit?: "S" | "H" | "D" | "C"; // Required in round 2 (free suit selection); omit in round 1
 }
 
 export interface PassTrumpPayload {

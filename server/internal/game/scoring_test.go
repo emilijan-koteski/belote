@@ -160,8 +160,8 @@ func TestHandScoring_MatchContinues(t *testing.T) {
 
 	result := playTrick8(t, gs)
 
-	// Neither team reaches 1001 → new hand starts
-	assert.Equal(t, game.PhaseBidding, result.Phase, "should start new hand")
+	// Neither team reaches 1001 → new hand starts (dealing phase before session manager transitions to bidding)
+	assert.Equal(t, game.PhaseDealing, result.Phase, "should start new hand in dealing phase")
 	assert.Equal(t, 2, result.HandNumber, "hand number should increment")
 	// Dealer rotates: was 0, now 1
 	assert.Equal(t, 1, result.DealerSeat, "dealer should rotate")
@@ -178,7 +178,7 @@ func TestHandScoring_NewHandStateReset(t *testing.T) {
 
 	result := playTrick8(t, gs)
 
-	assert.Equal(t, game.PhaseBidding, result.Phase)
+	assert.Equal(t, game.PhaseDealing, result.Phase)
 
 	// Per-hand fields must be reset
 	assert.Equal(t, [2]int{0, 0}, result.HandPoints, "HandPoints reset")
@@ -333,7 +333,7 @@ func TestMatchEnd_WinnerTeamFieldSet(t *testing.T) {
 		gs := testfixtures.NewGameNearEnd(100, 200)
 		result := playTrick8(t, gs)
 
-		assert.Equal(t, game.PhaseBidding, result.Phase)
+		assert.Equal(t, game.PhaseDealing, result.Phase)
 		assert.Nil(t, result.WinnerTeam, "WinnerTeam should be nil when match continues")
 	})
 
@@ -400,8 +400,8 @@ func TestInstantWin_FirstHand(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		gs := game.NewGame([4]uint{10, 20, 30, 40}, game.VariantBitola, "1001", 1)
 		assert.True(t,
-			gs.Phase == game.PhaseBidding || gs.Phase == game.PhaseMatchEnd,
-			"NewGame should return PhaseBidding or PhaseMatchEnd, got %s", gs.Phase)
+			gs.Phase == game.PhaseDealing || gs.Phase == game.PhaseMatchEnd,
+			"NewGame should return PhaseDealing or PhaseMatchEnd, got %s", gs.Phase)
 		if gs.Phase == game.PhaseMatchEnd {
 			require.NotNil(t, gs.WinnerTeam, "WinnerTeam must be set if instant-win detected")
 		}

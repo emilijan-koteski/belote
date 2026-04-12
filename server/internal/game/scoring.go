@@ -112,7 +112,7 @@ func startNewHand(state *GameState) {
 		return
 	}
 
-	state.Phase = PhaseBidding
+	state.Phase = PhaseDealing
 }
 
 // checkInstantWin checks if any player holds all 8 cards of the trump suit after

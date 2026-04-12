@@ -26,6 +26,8 @@ const mockGameState: GameState = {
   currentTrick: [],
   leadSuit: null,
   trickWinnerSeat: null,
+  awaitingDeclaration: false,
+  declarationsResolved: false,
   players: [
     { hand: [{ rank: "K", suit: "S" }], seat: 0, userId: 10, username: "Alice", team: "red", declarations: [], connected: true },
     { hand: [{ rank: "7", suit: "H" }], seat: 1, userId: 20, username: "Bob", team: "blue", declarations: [], connected: true },
@@ -36,6 +38,9 @@ const mockGameState: GameState = {
   handPoints: [0, 0],
   declarationPoints: [0, 0],
   tricksWon: [0, 0],
+  pendingBelotSeat: null,
+  belotAnnounced: false,
+  winnerTeam: null,
   turnExpiresAt: null,
 };
 

@@ -233,7 +233,7 @@ func TestRound2FullPassReshuffle(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, game.PhaseBidding, result.Phase)
+	assert.Equal(t, game.PhaseDealing, result.Phase, "reshuffle transitions to dealing phase")
 	assert.Equal(t, 1, result.BiddingRound, "round resets to 1 after reshuffle")
 	assert.Equal(t, 0, result.BiddingPassCount, "pass count resets after reshuffle")
 	assert.Equal(t, 1, result.DealerSeat, "dealer rotates from 0 to 1")
@@ -404,11 +404,15 @@ func TestMultipleReshuffles(t *testing.T) {
 		require.NoError(t, err, "pass %d should succeed", i+1)
 	}
 
-	// After first reshuffle: dealer should be 1
+	// After first reshuffle: dealer should be 1, phase is dealing
+	assert.Equal(t, game.PhaseDealing, gs.Phase, "reshuffle sets dealing phase")
 	assert.Equal(t, 1, gs.DealerSeat, "dealer should rotate to seat 1 after first reshuffle")
 	assert.Equal(t, 2, gs.ActivePlayerSeat, "active should be (1+1)%4=2")
 	assert.Equal(t, 1, gs.BiddingRound, "round should reset to 1")
 	assert.Equal(t, 0, gs.BiddingPassCount, "pass count should reset to 0")
+
+	// Simulate session manager auto-transition to bidding
+	gs.Phase = game.PhaseBidding
 
 	// Apply 8 more passes to trigger second reshuffle
 	for i := 0; i < 8; i++ {

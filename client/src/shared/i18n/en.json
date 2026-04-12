@@ -137,7 +137,53 @@
     },
     "trump": "Trump: {{suit}}",
     "loading": "Connecting to game...",
-    "leaveConfirm": "Leave the game? You may lose your progress."
+    "leaveConfirm": "Leave the game? You may lose your progress.",
+    "suits": {
+      "spades": "Spades",
+      "hearts": "Hearts",
+      "diamonds": "Diamonds",
+      "clubs": "Clubs"
+    },
+    "trumpIndicator": {
+      "trump": "Trump",
+      "label": "Trump suit: {{suit}}"
+    },
+    "trumpPrompt": {
+      "titleRound1": "Trump Candidate",
+      "titleRound2": "Choose Trump Suit",
+      "pick": "Pick",
+      "pass": "Pass",
+      "waiting": "Waiting for bidder..."
+    },
+    "deal": {
+      "dealing": "Dealing cards..."
+    },
+    "reshuffle": {
+      "message": "Reshuffling deck..."
+    },
+    "declaration": {
+      "title": "You have declarations!",
+      "declare": "Declare",
+      "skip": "Skip",
+      "pts": "pts",
+      "sequence": "Sequence of {{count}} — {{points}} pts",
+      "fourOfAKind": "Four of a Kind — {{points}} pts",
+      "resolved": "Declarations",
+      "teamRed": "Red Team",
+      "teamBlue": "Blue Team"
+    },
+    "belot": {
+      "title": "Announce Belot?",
+      "description": "You hold King and Queen of trump suit (+20 pts)",
+      "announce": "Announce",
+      "decline": "Skip"
+    },
+    "errors": {
+      "wrongPhase": "Action not available in this phase",
+      "notYourTurn": "It's not your turn",
+      "invalidAction": "Invalid action",
+      "illegalPlay": "That card cannot be played"
+    }
   },
   "ws": {
     "connecting": "Connecting...",

@@ -149,8 +149,8 @@ func TestNewGame(t *testing.T) {
 		assert.Equal(t, "1001", gs.MatchMode)
 	})
 
-	t.Run("phase is bidding", func(t *testing.T) {
-		assert.Equal(t, game.PhaseBidding, gs.Phase)
+	t.Run("phase is dealing", func(t *testing.T) {
+		assert.Equal(t, game.PhaseDealing, gs.Phase)
 	})
 
 	t.Run("dealer is seat 0 for first hand", func(t *testing.T) {

@@ -83,7 +83,15 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 
 	slog.Info("session: game started", "roomID", roomID, "players", playerIDs)
 
+	// Broadcast dealing-phase state (client shows deal animation)
 	m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventGameState, gs))
+
+	// Auto-transition to bidding phase (client's DealAnimation handles visual timing)
+	if gs.Phase == game.PhaseDealing {
+		gs.Phase = game.PhaseBidding
+		m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventGameState, gs))
+	}
+
 	return nil
 }
 
@@ -336,8 +344,15 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 					})
 				}
 			}
+			// Determine declaration winner from points
+			var declWinnerTeam interface{} = nil
+			if newState.DeclarationPoints[game.TeamRed] > 0 {
+				declWinnerTeam = game.TeamRed
+			} else if newState.DeclarationPoints[game.TeamBlue] > 0 {
+				declWinnerTeam = game.TeamBlue
+			}
 			declResolved := map[string]interface{}{
-				"winnerTeam":   nil,
+				"winnerTeam":   declWinnerTeam,
 				"declarations": decls,
 			}
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventDeclarationsResolved, declResolved))
@@ -358,6 +373,16 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 
 	default:
 		// For any other action, broadcast full state
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+	}
+
+	// Auto-transition from dealing phase to bidding — the dealing phase is
+	// a visual-only state for the client's deal animation. The server
+	// broadcasts the dealing state first, then immediately transitions to
+	// bidding so the client sees dealing→bidding in sequence.
+	// Note: session.gameState is updated by HandleAction after this returns.
+	if newState.Phase == game.PhaseDealing {
+		newState.Phase = game.PhaseBidding
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 	}
 }

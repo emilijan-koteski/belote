@@ -98,7 +98,7 @@ func NewGame(playerIDs [4]uint, variant Variant, matchMode string, roomID uint) 
 		RoomID:           roomID,
 		Variant:          variant,
 		MatchMode:        matchMode,
-		Phase:            PhaseBidding,
+		Phase:            PhaseDealing,
 		HandNumber:       1,
 		DealerSeat:       0,
 		ActivePlayerSeat: 1, // player after dealer (counter-clockwise)

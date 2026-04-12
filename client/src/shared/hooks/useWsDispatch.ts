@@ -5,14 +5,18 @@ import { useGameStore } from "@/shared/stores/gameStore";
 import type { GameState } from "@/shared/types/gameTypes";
 import type {
   CardPlayedPayload,
+  DeclarationsResolvedPayload,
   HandScoredPayload,
   MatchEndPayload,
   TrickResolvedPayload,
-  TrumpSelectedPayload,
   WsMessage,
 } from "@/shared/types/wsEvents";
 import {
   ERROR_AUTH_FAILED,
+  ERROR_ILLEGAL_PLAY,
+  ERROR_INVALID_ACTION,
+  ERROR_NOT_YOUR_TURN,
+  ERROR_WRONG_PHASE,
   EVENT_BELOT_ANNOUNCED,
   EVENT_CARD_PLAYED,
   EVENT_DECLARATIONS_RESOLVED,
@@ -132,21 +136,20 @@ function dispatchGameEvent(message: WsMessage): void {
   }
 
   if (type === EVENT_TRUMP_SELECTED) {
-    const payload = message.payload as TrumpSelectedPayload;
-    const current = store.gameState;
-    if (current) {
-      store.setGameState({
-        ...current,
-        trumpSuit: payload.trumpSuit as GameState["trumpSuit"],
-        phase: "playing",
-      });
-    }
+    // Informational only — the full event:game_state that follows carries all updated fields
+    // (activePlayerSeat, trumpSuit, phase, trumpCallerSeat, etc.)
     return;
   }
 
-  if (type === EVENT_DECLARATIONS_RESOLVED || type === EVENT_BELOT_ANNOUNCED) {
-    // For complex state transitions, wait for full state snapshot
-    // These events are informational — the next event:game_state will have the full picture
+  if (type === EVENT_DECLARATIONS_RESOLVED) {
+    const payload = message.payload as DeclarationsResolvedPayload;
+    store.setDeclarationReveal(payload);
+    // Full game state update follows via event:game_state
+    return;
+  }
+
+  if (type === EVENT_BELOT_ANNOUNCED) {
+    // Informational — the next event:game_state will have the full picture
     return;
   }
 }
@@ -172,7 +175,18 @@ function dispatchSystemEvent(message: WsMessage): void {
   }
 }
 
+// Game error types that should trigger a user-visible toast
+const GAME_ERROR_TYPES = new Set([
+  ERROR_WRONG_PHASE,
+  ERROR_NOT_YOUR_TURN,
+  ERROR_INVALID_ACTION,
+  ERROR_ILLEGAL_PLAY,
+]);
+
 function dispatchErrorEvent(message: WsMessage): void {
   const payload = message.payload as { code?: string; message?: string };
+  if (GAME_ERROR_TYPES.has(message.type)) {
+    useGameStore.getState().setLastError(message.type);
+  }
   console.warn("WS error:", message.type, payload.message ?? "");
 }

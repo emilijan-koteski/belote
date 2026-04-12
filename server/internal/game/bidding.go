@@ -116,6 +116,7 @@ func reshuffleAndRedeal(state *GameState) *GameState {
 	}
 
 	// Reset bidding state
+	state.Phase = PhaseDealing
 	state.BiddingRound = 1
 	state.BiddingPassCount = 0
 	state.TrumpSuit = nil

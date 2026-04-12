@@ -1,16 +1,21 @@
 import { create } from "zustand";
 
 import type { GameState } from "@/shared/types/gameTypes";
+import type { DeclarationsResolvedPayload } from "@/shared/types/wsEvents";
 
 interface GameStoreState {
   gameState: GameState | null;
   myPlayerSeat: number | null;
   roomId: number | null;
   isLoading: boolean;
+  lastError: string | null;
+  declarationReveal: DeclarationsResolvedPayload | null;
 
   setGameState: (state: GameState) => void;
   setMyPlayerSeat: (seat: number) => void;
   setLoading: (loading: boolean) => void;
+  setLastError: (error: string | null) => void;
+  setDeclarationReveal: (payload: DeclarationsResolvedPayload | null) => void;
   clearGame: () => void;
   reset: () => void;
 }
@@ -20,6 +25,8 @@ const initialState = {
   myPlayerSeat: null,
   roomId: null,
   isLoading: false,
+  lastError: null,
+  declarationReveal: null,
 };
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -31,6 +38,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setMyPlayerSeat: (myPlayerSeat) => set({ myPlayerSeat }),
 
   setLoading: (isLoading) => set({ isLoading }),
+
+  setLastError: (lastError) => set({ lastError }),
+
+  setDeclarationReveal: (declarationReveal) => set({ declarationReveal }),
 
   clearGame: () => set(initialState),
 

@@ -1,0 +1,90 @@
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import type { Card } from "@/shared/types/gameTypes";
+
+import { PlayingCard } from "./PlayingCard";
+
+interface DealAnimationProps {
+  trumpCandidate: Card | null;
+}
+
+const COMPASS_LABELS = ["south", "west", "north", "east"] as const;
+
+// Positions for card deal targets (relative to center)
+const DEAL_TARGETS: Record<string, string> = {
+  south: "translate-y-[120px]",
+  west: "-translate-x-[120px]",
+  north: "-translate-y-[120px]",
+  east: "translate-x-[120px]",
+};
+
+export function DealAnimation({ trumpCandidate }: DealAnimationProps) {
+  const { t } = useTranslation();
+  const [dealPhase, setDealPhase] = useState<"dealing" | "revealing" | "done">("dealing");
+
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    [],
+  );
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setDealPhase("done");
+      return;
+    }
+
+    // Phase 1: dealing cards (3+2 sequence) — show for 800ms
+    const dealTimer = setTimeout(() => {
+      setDealPhase("revealing");
+    }, 800);
+
+    // Phase 2: reveal trump candidate — after 1200ms total
+    const revealTimer = setTimeout(() => {
+      setDealPhase("done");
+    }, 1200);
+
+    return () => {
+      clearTimeout(dealTimer);
+      clearTimeout(revealTimer);
+    };
+  }, [prefersReducedMotion]);
+
+  // Skip rendering once animation is complete
+  if (dealPhase === "done" && !trumpCandidate) return null;
+
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+      data-testid="deal-animation"
+      aria-label={t("game.deal.dealing")}
+    >
+      {/* Deal card indicators flying to each seat */}
+      {dealPhase === "dealing" && (
+        <>
+          {COMPASS_LABELS.map((dir, i) => (
+            <div
+              key={dir}
+              className={`absolute motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-in ${DEAL_TARGETS[dir]}`}
+              style={{ transitionDelay: `${i * 80}ms` }}
+            >
+              <div className="w-8 h-12 rounded bg-surface-elevated border border-border" />
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* Trump candidate reveal in center */}
+      {(dealPhase === "revealing" || dealPhase === "done") && trumpCandidate && (
+        <div className="motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150">
+          <PlayingCard
+            card={trumpCandidate}
+            state="default"
+            size="lg"
+            withTransition={false}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

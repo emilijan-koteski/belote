@@ -137,7 +137,53 @@
     },
     "trump": "Adut: {{suit}}",
     "loading": "Povezivanje na igru...",
-    "leaveConfirm": "Napusti igru? Mo\u017ee\u0161 izgubiti napredak."
+    "leaveConfirm": "Napusti igru? Mo\u017ee\u0161 izgubiti napredak.",
+    "suits": {
+      "spades": "Pik",
+      "hearts": "Herc",
+      "diamonds": "Karo",
+      "clubs": "Tref"
+    },
+    "trumpIndicator": {
+      "trump": "Adut",
+      "label": "Adut: {{suit}}"
+    },
+    "trumpPrompt": {
+      "titleRound1": "Kandidat za adut",
+      "titleRound2": "Izaberi adut",
+      "pick": "Uzmi",
+      "pass": "Dalje",
+      "waiting": "\u010cekanje na licitanta..."
+    },
+    "deal": {
+      "dealing": "Deljenje karata..."
+    },
+    "reshuffle": {
+      "message": "Ponovno me\u0161anje \u0161pila..."
+    },
+    "declaration": {
+      "title": "Ima\u0161 zvanja!",
+      "declare": "Zvanje",
+      "skip": "Presko\u010di",
+      "pts": "poena",
+      "sequence": "Niz od {{count}} \u2014 {{points}} poena",
+      "fourOfAKind": "\u010cetvorka \u2014 {{points}} poena",
+      "resolved": "Zvanja",
+      "teamRed": "Crveni tim",
+      "teamBlue": "Plavi tim"
+    },
+    "belot": {
+      "title": "Objavi belot?",
+      "description": "Ima\u0161 kralja i damu aduta (+20 poena)",
+      "announce": "Objavi",
+      "decline": "Presko\u010di"
+    },
+    "errors": {
+      "wrongPhase": "Akcija nije dostupna u ovoj fazi",
+      "notYourTurn": "Nije tvoj red",
+      "invalidAction": "Neva\u017ee\u0107a akcija",
+      "illegalPlay": "Ta karta ne mo\u017ee da se odigra"
+    }
   },
   "ws": {
     "connecting": "Povezivanje...",

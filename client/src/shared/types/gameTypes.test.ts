@@ -55,19 +55,21 @@ describe("gameTypes", () => {
   });
 
   describe("ActionType", () => {
-    it("covers all 8 action types", () => {
+    it("covers all 10 action types", () => {
       const actions: ActionType[] = [
         "play_card",
         "pick_trump",
         "pass_trump",
         "declare",
         "skip_declare",
+        "announce_belot",
+        "decline_belot",
         "pause",
         "unpause",
         "owner_unpause",
       ];
 
-      expect(actions).toHaveLength(8);
+      expect(actions).toHaveLength(10);
     });
   });
 
@@ -91,6 +93,8 @@ describe("gameTypes", () => {
         currentTrick: [],
         leadSuit: null,
         trickWinnerSeat: null,
+        awaitingDeclaration: false,
+        declarationsResolved: false,
         players: [
           { hand: [], seat: 0, userId: 10, username: "Alice", team: "red", declarations: [], connected: true },
           { hand: [], seat: 1, userId: 20, username: "Bob", team: "blue", declarations: [], connected: true },
@@ -101,6 +105,9 @@ describe("gameTypes", () => {
         handPoints: [0, 0],
         declarationPoints: [0, 0],
         tricksWon: [0, 0],
+        pendingBelotSeat: null,
+        belotAnnounced: false,
+        winnerTeam: null,
         turnExpiresAt: null,
       };
 
