@@ -89,3 +89,48 @@ func allRanksOfSuit(suit game.Suit) []game.Card {
 	}
 	return cards
 }
+
+// NewGameMidBidding returns a GameState with the specified number of passes
+// already recorded. Correctly tracks BiddingRound and ActivePlayerSeat.
+//
+// passCount 0: same as NewGameJustDealt (round 1, seat 1 active)
+// passCount 1-3: round 1 with passes applied
+// passCount 4: round 2 just started (0 passes in round 2, seat 1 active)
+// passCount 5-7: round 2 with passes applied
+//
+// Dealer is always seat 0. First bidder is seat 1.
+func NewGameMidBidding(passCount int) *game.GameState {
+	gs := NewGameJustDealt()
+
+	if passCount <= 0 {
+		return gs
+	}
+
+	// Clamp to valid range: max 7 (round 2 with 3 passes).
+	// passCount 8 would trigger a reshuffle, not a mid-bidding state.
+	if passCount > 7 {
+		passCount = 7
+	}
+
+	if passCount <= 4 {
+		// Round 1 passes
+		passesInRound := passCount
+		if passesInRound == 4 {
+			// All 4 passed in round 1 — transition to round 2
+			gs.BiddingRound = 2
+			gs.BiddingPassCount = 0
+			gs.ActivePlayerSeat = (gs.DealerSeat + 1) % 4 // reset to first bidder
+		} else {
+			gs.BiddingPassCount = passesInRound
+			gs.ActivePlayerSeat = (1 + passesInRound) % 4 // seat 1 is first bidder
+		}
+	} else {
+		// Round 2 passes (passCount 5-7)
+		passesInRound2 := passCount - 4
+		gs.BiddingRound = 2
+		gs.BiddingPassCount = passesInRound2
+		gs.ActivePlayerSeat = (1 + passesInRound2) % 4 // seat 1 is first bidder in round 2
+	}
+
+	return gs
+}

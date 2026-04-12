@@ -9,6 +9,87 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewGameMidBidding(t *testing.T) {
+	tests := []struct {
+		name              string
+		passCount         int
+		expectedRound     int
+		expectedPassCount int
+		expectedActive    int
+	}{
+		{
+			name:              "passCount 0 matches NewGameJustDealt",
+			passCount:         0,
+			expectedRound:     1,
+			expectedPassCount: 0,
+			expectedActive:    1,
+		},
+		{
+			name:              "passCount 1 - round 1 with 1 pass",
+			passCount:         1,
+			expectedRound:     1,
+			expectedPassCount: 1,
+			expectedActive:    2,
+		},
+		{
+			name:              "passCount 3 - round 1 with 3 passes",
+			passCount:         3,
+			expectedRound:     1,
+			expectedPassCount: 3,
+			expectedActive:    0,
+		},
+		{
+			name:              "passCount 4 - round 2 just started",
+			passCount:         4,
+			expectedRound:     2,
+			expectedPassCount: 0,
+			expectedActive:    1,
+		},
+		{
+			name:              "passCount 5 - round 2 with 1 pass",
+			passCount:         5,
+			expectedRound:     2,
+			expectedPassCount: 1,
+			expectedActive:    2,
+		},
+		{
+			name:              "passCount 7 - round 2 with 3 passes",
+			passCount:         7,
+			expectedRound:     2,
+			expectedPassCount: 3,
+			expectedActive:    0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gs := testfixtures.NewGameMidBidding(tc.passCount)
+
+			assert.Equal(t, game.PhaseBidding, gs.Phase)
+			assert.Equal(t, tc.expectedRound, gs.BiddingRound, "BiddingRound")
+			assert.Equal(t, tc.expectedPassCount, gs.BiddingPassCount, "BiddingPassCount")
+			assert.Equal(t, tc.expectedActive, gs.ActivePlayerSeat, "ActivePlayerSeat")
+			assert.Equal(t, 0, gs.DealerSeat, "DealerSeat should always be 0")
+
+			// Every fixture should have valid card distribution
+			for i, p := range gs.Players {
+				assert.Len(t, p.Hand, 8, "player at seat %d should have 8 cards", i)
+			}
+			require.NotNil(t, gs.TrumpCandidate)
+		})
+	}
+
+	t.Run("passCount 0 equals NewGameJustDealt", func(t *testing.T) {
+		mid := testfixtures.NewGameMidBidding(0)
+		fresh := testfixtures.NewGameJustDealt()
+		assert.Equal(t, fresh.BiddingRound, mid.BiddingRound)
+		assert.Equal(t, fresh.BiddingPassCount, mid.BiddingPassCount)
+		assert.Equal(t, fresh.ActivePlayerSeat, mid.ActivePlayerSeat)
+		assert.Equal(t, fresh.DealerSeat, mid.DealerSeat)
+		assert.Equal(t, fresh.Phase, mid.Phase)
+	})
+}
+
 func TestNewGameJustDealt(t *testing.T) {
 	gs := testfixtures.NewGameJustDealt()
 

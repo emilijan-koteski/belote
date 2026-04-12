@@ -10,16 +10,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestApplyActionStub(t *testing.T) {
-	gs := testfixtures.NewGameJustDealt()
-	action := game.Action{
-		Type:       game.ActionPickTrump,
-		PlayerSeat: 1,
-	}
+func TestApplyActionPhaseBidding(t *testing.T) {
+	t.Run("valid pick_trump in bidding phase succeeds", func(t *testing.T) {
+		gs := testfixtures.NewGameJustDealt()
+		action := game.Action{
+			Type:       game.ActionPickTrump,
+			PlayerSeat: 1,
+		}
 
-	result, err := game.ApplyAction(gs, action)
+		result, err := game.ApplyAction(gs, action)
 
-	require.Error(t, err)
-	assert.Nil(t, result)
-	assert.ErrorIs(t, err, apperr.ErrWrongPhase)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, game.PhasePlaying, result.Phase)
+	})
+
+	t.Run("non-bidding phase returns ErrWrongPhase", func(t *testing.T) {
+		gs := testfixtures.NewGameJustDealt()
+		gs.Phase = game.PhasePlaying
+		action := game.Action{
+			Type:       game.ActionPlayCard,
+			PlayerSeat: 1,
+		}
+
+		result, err := game.ApplyAction(gs, action)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, apperr.ErrWrongPhase)
+	})
 }

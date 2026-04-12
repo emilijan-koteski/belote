@@ -65,3 +65,7 @@
 
 - **D32: Duplicate playerID validation missing in `NewGame`** — `NewGame` accepts `[4]uint{10, 10, 20, 30}` silently. Validation is the session manager's responsibility (Epic 4), not the pure game layer. Pre-existing design pattern.
 - **D33: Zero UserID (uint 0) accepted silently in `NewGame`** — GORM auto-increment starts at 1 so DB ID=0 is impossible, but the game layer doesn't enforce. Session manager will validate. Pre-existing pattern.
+
+## Deferred from: code review of 3-2-trump-bidding-bitola-variant (2026-04-12)
+
+- **D34: cloneGameState does not deep-copy pointer fields (TrumpCandidate, TrumpSuit, TrumpCallerSeat, etc.)** — After shallow struct copy, pointer fields like `*Card`, `*Suit`, `*int` are shared aliases between original and clone. Currently safe because code always assigns new pointers rather than writing through existing ones. Will become a real aliasing bug when play-phase handlers (Stories 3.3-3.6) are added if they write through pointer fields. Fix by deep-copying pointer fields in cloneGameState when adding card play logic.
