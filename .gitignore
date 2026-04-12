@@ -23,6 +23,7 @@ lerna-debug.log*
 .idea/
 .vscode/
 .claude/settings.json
+.claude/settings.local.json
 *.swp
 *.swo
 *.suo

@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"github.com/emilijan/belote/server/internal/apperr"
 )
 
@@ -15,14 +17,30 @@ func handlePlaying(state *GameState, action Action) (*GameState, error) {
 	switch action.Type {
 	case ActionPlayCard:
 		return handlePlayCard(state, action)
+	case ActionDeclare:
+		return handleDeclare(state, action)
+	case ActionSkipDeclare:
+		return handleSkipDeclare(state, action)
+	case ActionAnnounceBelot:
+		return handleAnnounceBelot(state, action)
+	case ActionSkipBelot:
+		return handleSkipBelot(state, action)
 	default:
-		// ActionDeclare, ActionSkipDeclare handled in Story 3.4
 		return nil, apperr.ErrWrongPhase
 	}
 }
 
 // handlePlayCard validates and processes a play_card action.
 func handlePlayCard(state *GameState, action Action) (*GameState, error) {
+	// Guard: must resolve pending declaration first
+	if state.AwaitingDeclaration {
+		return nil, apperr.ErrActionRequired
+	}
+	// Guard: must resolve pending Belot announcement first
+	if state.PendingBelotSeat != nil {
+		return nil, apperr.ErrActionRequired
+	}
+
 	// Validate turn
 	if action.PlayerSeat != state.ActivePlayerSeat {
 		return nil, apperr.ErrNotYourTurn
@@ -45,6 +63,9 @@ func handlePlayCard(state *GameState, action Action) (*GameState, error) {
 	newState := cloneGameState(state)
 	card := *action.Card
 
+	// Save hand before removal for Belot detection (explicit copy to avoid aliasing)
+	handBeforePlay := slices.Clone(newState.Players[action.PlayerSeat].Hand)
+
 	// Remove card from player's hand
 	newState.Players[action.PlayerSeat].Hand = removeCard(
 		newState.Players[action.PlayerSeat].Hand, card,
@@ -62,12 +83,25 @@ func handlePlayCard(state *GameState, action Action) (*GameState, error) {
 		newState.LeadSuit = &suit
 	}
 
+	// Check for Belot prompt before advancing turn
+	if shouldPromptBelot(newState, card, handBeforePlay) {
+		seat := action.PlayerSeat
+		newState.PendingBelotSeat = &seat
+		// Do NOT advance turn or resolve trick — wait for Belot resolution
+		return newState, nil
+	}
+
 	// Advance active player
 	newState.ActivePlayerSeat = (newState.ActivePlayerSeat + 1) % 4
 
+	// Check declaration prompt for next player at trick 1
+	if newState.TrickNumber == 1 && len(newState.CurrentTrick) < 4 {
+		checkDeclarationPrompt(newState)
+	}
+
 	// Resolve trick if 4 cards have been played
 	if len(newState.CurrentTrick) == 4 {
-		resolveTrick(newState)
+		resolveTrickWithDeclarations(newState)
 	}
 
 	return newState, nil

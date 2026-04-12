@@ -85,6 +85,9 @@ func handlePickTrump(state *GameState, action Action) (*GameState, error) {
 	newState.TrickNumber = 1
 	newState.CurrentTrick = []TrickCard{}
 
+	// Check if first player has declarable combinations
+	checkDeclarationPrompt(newState)
+
 	return newState, nil
 }
 
@@ -145,6 +148,10 @@ func cloneGameState(state *GameState) *GameState {
 		v := *state.TurnExpiresAt
 		newState.TurnExpiresAt = &v
 	}
+	if state.PendingBelotSeat != nil {
+		v := *state.PendingBelotSeat
+		newState.PendingBelotSeat = &v
+	}
 
 	// Deep clone slice fields
 	newState.CurrentTrick = slices.Clone(state.CurrentTrick)
@@ -152,7 +159,11 @@ func cloneGameState(state *GameState) *GameState {
 	// Deep clone player hands and declarations
 	for i := range newState.Players {
 		newState.Players[i].Hand = slices.Clone(state.Players[i].Hand)
-		newState.Players[i].Declarations = slices.Clone(state.Players[i].Declarations)
+		newDecls := slices.Clone(state.Players[i].Declarations)
+		for j := range newDecls {
+			newDecls[j].Cards = slices.Clone(newDecls[j].Cards)
+		}
+		newState.Players[i].Declarations = newDecls
 	}
 
 	return &newState

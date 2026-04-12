@@ -118,17 +118,19 @@ func NewGameMidPlay(trickNum int) *game.GameState {
 	callerSeat := 1
 
 	gs := &game.GameState{
-		RoomID:          1,
-		Variant:         game.VariantBitola,
-		MatchMode:       "1001",
-		Phase:           game.PhasePlaying,
-		HandNumber:      1,
-		DealerSeat:      0,
-		TrumpSuit:       &trumpSuit,
-		TrumpCallerSeat: &callerSeat,
-		BiddingRound:    1,
-		TrickNumber:     trickNum,
-		CurrentTrick:    []game.TrickCard{},
+		RoomID:               1,
+		Variant:              game.VariantBitola,
+		MatchMode:            "1001",
+		Phase:                game.PhasePlaying,
+		HandNumber:           1,
+		DealerSeat:           0,
+		TrumpSuit:            &trumpSuit,
+		TrumpCallerSeat:      &callerSeat,
+		BiddingRound:         1,
+		TrickNumber:          trickNum,
+		CurrentTrick:         []game.TrickCard{},
+		DeclarationsResolved: true, // declarations already handled (for card play testing)
+		BelotAnnounced:       true, // Belot already handled (for card play testing)
 		Players: [4]game.PlayerState{
 			{Seat: 0, UserID: 10, Team: "red", Declarations: []game.Declaration{}, Connected: true},
 			{Seat: 1, UserID: 20, Team: "blue", Declarations: []game.Declaration{}, Connected: true},
@@ -198,6 +200,123 @@ func NewGameMidPlay(trickNum int) *game.GameState {
 	if trickNum > 1 {
 		gs.HandPoints = [2]int{10 * (trickNum - 1), 5 * (trickNum - 1)}
 		gs.TricksWon = [2]int{(trickNum - 1 + 1) / 2, (trickNum - 1) / 2}
+	}
+
+	return gs
+}
+
+// NewGameFirstTrick returns a GameState at trick 1 designed for testing
+// declarations and Belot bonus. DeclarationsResolved and BelotAnnounced
+// are false. AwaitingDeclaration is NOT pre-set (caller controls flow).
+//
+// Hand distribution (trump = Hearts always, parameter reserved for future use):
+//
+//	Seat 0 (Red):  KH QH 7S 8S 9S 7C 8C 9C   → Belot (KH+QH), tierce 7S-8S-9S (20pts), tierce 7C-8C-9C (20pts)
+//	Seat 1 (Blue): JD QD KD AD QS 8D 9D TC    → quarte JD-QD-KD-AD (50pts)
+//	Seat 2 (Red):  JH 9H AH TH KS AS QC JC   → tierce 9H-TH-JH in trump (20pts)
+//	Seat 3 (Blue): 7H 8H TD 7D TS AC KC       → no declarations (max 2 consecutive per suit, no four-of-a-kind)
+//
+// Wait - seat 3 has 7 cards above. Let me add JS... no that's at seat 2.
+// Corrected seat 3: 7H 8H TD 7D TS JS AC KC = 8 cards. JS(4),TS(3) = 2 consecutive spades.
+//
+// All 32 cards verified: H(KH QH JH 9H AH TH 7H 8H) S(7S 8S 9S QS JS KS AS TS)
+// D(JD QD KD AD 8D 9D TD 7D) C(7C 8C 9C TC AC KC QC JC)... wait, QC and JC are missing.
+//
+// FINAL verified distribution (all 32 unique cards, 8 per player):
+//
+//	Seat 0 (Red):  KH QH 7S 8S 9S 7C 8C 9C   → Belot, tierce 7S-8S-9S, tierce 7C-8C-9C
+//	Seat 1 (Blue): JD QD KD AD QS 8D 9D TC    → quarte JD-QD-KD-AD
+//	Seat 2 (Red):  JH 9H AH TH KS AS JC QC   → tierce 9H-TH-JH (trump, 20pts)
+//	Seat 3 (Blue): 7H 8H TD 7D TS JS AC KC   → no declarations
+//
+// Active player: seat 1 (player after dealer). Dealer: seat 0.
+func NewGameFirstTrick(trump game.Suit) *game.GameState {
+	trumpSuit := trump
+	callerSeat := 1
+
+	gs := &game.GameState{
+		RoomID:           1,
+		Variant:          game.VariantBitola,
+		MatchMode:        "1001",
+		Phase:            game.PhasePlaying,
+		HandNumber:       1,
+		DealerSeat:       0,
+		TrumpSuit:        &trumpSuit,
+		TrumpCallerSeat:  &callerSeat,
+		BiddingRound:     1,
+		TrickNumber:      1,
+		CurrentTrick:     []game.TrickCard{},
+		ActivePlayerSeat: 1, // player after dealer
+		Players: [4]game.PlayerState{
+			{ // Seat 0 (Red): KH QH 7S 8S 9S 7C 8C 9C → Belot + 2 tierces
+				Hand: []game.Card{
+					{Rank: game.RankKing, Suit: game.SuitHearts},
+					{Rank: game.RankQueen, Suit: game.SuitHearts},
+					{Rank: game.Rank7, Suit: game.SuitSpades},
+					{Rank: game.Rank8, Suit: game.SuitSpades},
+					{Rank: game.Rank9, Suit: game.SuitSpades},
+					{Rank: game.Rank7, Suit: game.SuitClubs},
+					{Rank: game.Rank8, Suit: game.SuitClubs},
+					{Rank: game.Rank9, Suit: game.SuitClubs},
+				},
+				Seat: 0, UserID: 10, Team: "red", Declarations: []game.Declaration{}, Connected: true,
+			},
+			{ // Seat 1 (Blue): JD QD KD AD QS 8D 9D TC → quarte JD-QD-KD-AD
+				Hand: []game.Card{
+					{Rank: game.RankJack, Suit: game.SuitDiamonds},
+					{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+					{Rank: game.RankKing, Suit: game.SuitDiamonds},
+					{Rank: game.RankAce, Suit: game.SuitDiamonds},
+					{Rank: game.RankQueen, Suit: game.SuitSpades},
+					{Rank: game.Rank8, Suit: game.SuitDiamonds},
+					{Rank: game.Rank9, Suit: game.SuitDiamonds},
+					{Rank: game.RankTen, Suit: game.SuitClubs},
+				},
+				Seat: 1, UserID: 20, Team: "blue", Declarations: []game.Declaration{}, Connected: true,
+			},
+			{ // Seat 2 (Red): JH 9H AH TH KS AS QC JC → tierce 9H-TH-JH (trump)
+				Hand: []game.Card{
+					{Rank: game.RankJack, Suit: game.SuitHearts},
+					{Rank: game.Rank9, Suit: game.SuitHearts},
+					{Rank: game.RankAce, Suit: game.SuitHearts},
+					{Rank: game.RankTen, Suit: game.SuitHearts},
+					{Rank: game.RankKing, Suit: game.SuitSpades},
+					{Rank: game.RankAce, Suit: game.SuitSpades},
+					{Rank: game.RankQueen, Suit: game.SuitClubs},
+					{Rank: game.RankJack, Suit: game.SuitClubs},
+				},
+				Seat: 2, UserID: 30, Team: "red", Declarations: []game.Declaration{}, Connected: true,
+			},
+			{ // Seat 3 (Blue): 7H 8H TD 7D TS JS AC KC → no declarations
+				Hand: []game.Card{
+					{Rank: game.Rank7, Suit: game.SuitHearts},
+					{Rank: game.Rank8, Suit: game.SuitHearts},
+					{Rank: game.RankTen, Suit: game.SuitDiamonds},
+					{Rank: game.Rank7, Suit: game.SuitDiamonds},
+					{Rank: game.RankTen, Suit: game.SuitSpades},
+					{Rank: game.RankJack, Suit: game.SuitSpades},
+					{Rank: game.RankAce, Suit: game.SuitClubs},
+					{Rank: game.RankKing, Suit: game.SuitClubs},
+				},
+				Seat: 3, UserID: 40, Team: "blue", Declarations: []game.Declaration{}, Connected: true,
+			},
+		},
+	}
+
+	return gs
+}
+
+// NewGameWithDeclarations returns a GameState at trick 1 with pre-populated
+// declarations on the given player seats. Used for testing resolveDeclarations
+// without going through the full declare flow.
+func NewGameWithDeclarations(decls []game.Declaration) *game.GameState {
+	gs := NewGameFirstTrick(game.SuitHearts)
+
+	// Store declarations on respective player seats
+	for _, d := range decls {
+		gs.Players[d.PlayerSeat].Declarations = append(
+			gs.Players[d.PlayerSeat].Declarations, d,
+		)
 	}
 
 	return gs

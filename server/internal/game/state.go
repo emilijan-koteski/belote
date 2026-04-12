@@ -48,10 +48,12 @@ type GameState struct {
 	BiddingPassCount int   `json:"biddingPassCount"`
 
 	// Current trick state
-	TrickNumber     int         `json:"trickNumber"`
-	CurrentTrick    []TrickCard `json:"currentTrick"`
-	LeadSuit        *Suit       `json:"leadSuit"`
-	TrickWinnerSeat *int        `json:"trickWinnerSeat"`
+	TrickNumber          int         `json:"trickNumber"`
+	CurrentTrick         []TrickCard `json:"currentTrick"`
+	LeadSuit             *Suit       `json:"leadSuit"`
+	TrickWinnerSeat      *int        `json:"trickWinnerSeat"`
+	AwaitingDeclaration  bool        `json:"awaitingDeclaration"`
+	DeclarationsResolved bool        `json:"declarationsResolved"`
 
 	// Player states
 	Players [4]PlayerState `json:"players"`
@@ -61,6 +63,8 @@ type GameState struct {
 	HandPoints        [2]int `json:"handPoints"`
 	DeclarationPoints [2]int `json:"declarationPoints"`
 	TricksWon         [2]int `json:"tricksWon"`
+	PendingBelotSeat  *int   `json:"pendingBelotSeat"`
+	BelotAnnounced    bool   `json:"belotAnnounced"`
 
 	// Timer state
 	ActivePlayerSeat int        `json:"activePlayerSeat"`
