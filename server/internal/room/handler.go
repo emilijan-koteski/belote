@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -36,12 +37,34 @@ type CreateRoomRequest struct {
 	TimerDurationSeconds *int   `json:"timerDurationSeconds"`
 }
 
-type RoomHandler struct {
-	repo RoomRepository
+// GameStarter is the interface the room handler uses to start a game session.
+type GameStarter interface {
+	StartGame(roomID uint, variant string, matchMode string, players [4]PlayerSeatInfo) error
 }
 
-func NewRoomHandler(repo RoomRepository) *RoomHandler {
-	return &RoomHandler{repo: repo}
+// PlayerSeatInfo holds the player info needed for game session initialization.
+type PlayerSeatInfo struct {
+	UserID uint
+	Seat   int
+}
+
+// RoomStatusAdapter implements session.RoomStatusUpdater using the room repository.
+type RoomStatusAdapter struct {
+	Repo RoomRepository
+}
+
+// UpdateRoomStatus updates a room's status in the database.
+func (a *RoomStatusAdapter) UpdateRoomStatus(roomID uint, status string) error {
+	return a.Repo.UpdateStatus(roomID, status)
+}
+
+type RoomHandler struct {
+	repo        RoomRepository
+	gameStarter GameStarter
+}
+
+func NewRoomHandler(repo RoomRepository, gameStarter GameStarter) *RoomHandler {
+	return &RoomHandler{repo: repo, gameStarter: gameStarter}
 }
 
 func (h *RoomHandler) CreateRoom(c echo.Context) error {
@@ -546,7 +569,26 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 		return fmt.Errorf("starting game: %w", err)
 	}
 
-	// TODO: broadcast system:game_started to room participants + system:room_updated to lobby (WS hub not yet wired)
+	// Start game session via session manager
+	if h.gameStarter != nil {
+		players, err := h.repo.FindPlayersByRoomID(uint(roomID))
+		if err != nil {
+			slog.Error("failed to load players for game start", "roomID", roomID, "error", err)
+		} else {
+			var seatInfo [4]PlayerSeatInfo
+			for _, p := range players {
+				if p.Seat != nil {
+					seatInfo[*p.Seat] = PlayerSeatInfo{
+						UserID: p.UserID,
+						Seat:   *p.Seat,
+					}
+				}
+			}
+			if err := h.gameStarter.StartGame(uint(roomID), updatedRoom.Variant, updatedRoom.MatchMode, seatInfo); err != nil {
+				slog.Error("failed to start game session", "roomID", roomID, "error", err)
+			}
+		}
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": updatedRoom})
 }

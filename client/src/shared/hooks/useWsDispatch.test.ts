@@ -1,10 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useGameStore } from "@/shared/stores/gameStore";
 import { useLobbyStore } from "@/shared/stores/lobbyStore";
+import type { GameState } from "@/shared/types/gameTypes";
 import type { WsMessage } from "@/shared/types/wsEvents";
 
 import { useWsDispatch } from "./useWsDispatch";
 import { renderHook } from "@testing-library/react";
+
+const mockGameState: GameState = {
+  id: 1,
+  roomId: 100,
+  variant: "bitola",
+  matchMode: "1001",
+  phase: "playing",
+  handNumber: 1,
+  dealerSeat: 0,
+  trumpSuit: "S",
+  trumpCallerSeat: 0,
+  trumpCandidate: null,
+  biddingRound: 1,
+  biddingPassCount: 0,
+  activePlayerSeat: 1,
+  trickNumber: 1,
+  currentTrick: [],
+  leadSuit: null,
+  trickWinnerSeat: null,
+  players: [
+    { hand: [{ rank: "K", suit: "S" }], seat: 0, userId: 10, team: "red", declarations: [], connected: true },
+    { hand: [{ rank: "7", suit: "H" }], seat: 1, userId: 20, team: "blue", declarations: [], connected: true },
+    { hand: [{ rank: "A", suit: "D" }], seat: 2, userId: 30, team: "red", declarations: [], connected: true },
+    { hand: [{ rank: "9", suit: "C" }], seat: 3, userId: 40, team: "blue", declarations: [], connected: true },
+  ],
+  teamScores: [0, 0],
+  handPoints: [0, 0],
+  declarationPoints: [0, 0],
+  tricksWon: [0, 0],
+  turnExpiresAt: null,
+};
 
 describe("useWsDispatch", () => {
   beforeEach(() => {
@@ -13,6 +46,7 @@ describe("useWsDispatch", () => {
       isLoading: false,
       searchQuery: "",
     });
+    useGameStore.getState().reset();
     vi.restoreAllMocks();
   });
 
@@ -171,5 +205,54 @@ describe("useWsDispatch", () => {
 
     // No rooms added
     expect(useLobbyStore.getState().rooms).toHaveLength(0);
+  });
+
+  it("dispatches event:game_state to gameStore", () => {
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:game_state",
+      payload: mockGameState,
+    });
+
+    const state = useGameStore.getState();
+    expect(state.gameState).not.toBeNull();
+    expect(state.gameState?.phase).toBe("playing");
+    expect(state.gameState?.roomId).toBe(100);
+    expect(state.roomId).toBe(100);
+  });
+
+  it("dispatches event:card_played to gameStore", () => {
+    useGameStore.getState().setGameState(mockGameState);
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:card_played",
+      payload: { playerSeat: 1, cardId: "7H", autoPlayed: false },
+    });
+
+    const state = useGameStore.getState();
+    expect(state.gameState?.currentTrick).toHaveLength(1);
+    expect(state.gameState?.currentTrick[0].playerSeat).toBe(1);
+  });
+
+  it("dispatches event:match_end to gameStore", () => {
+    useGameStore.getState().setGameState(mockGameState);
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:match_end",
+      payload: { winnerTeam: 0, redFinalScore: 1020, blueFinalScore: 850 },
+    });
+
+    const state = useGameStore.getState();
+    expect(state.gameState?.phase).toBe("match_end");
+    expect(state.gameState?.teamScores[0]).toBe(1020);
+    expect(state.gameState?.teamScores[1]).toBe(850);
   });
 });

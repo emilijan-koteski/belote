@@ -16,5 +16,6 @@ type RoomRepository interface {
 	ClearPlayerSeat(roomID uint, userID uint) error
 	FindPlayerBySeat(roomID uint, seat int) (*RoomPlayer, error)
 	FindQuickPlayRoom() (*Room, error)
+	UpdateStatus(roomID uint, status string) error
 	RunInTransaction(fn func(RoomRepository) error) error
 }

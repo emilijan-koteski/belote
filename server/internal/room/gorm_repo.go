@@ -73,6 +73,13 @@ func (r *GormRepository) Update(room *Room) error {
 	return nil
 }
 
+func (r *GormRepository) UpdateStatus(roomID uint, status string) error {
+	if err := r.db.Model(&Room{}).Where("id = ?", roomID).Update("status", status).Error; err != nil {
+		return fmt.Errorf("updating room status: %w", err)
+	}
+	return nil
+}
+
 func (r *GormRepository) AddPlayer(roomPlayer *RoomPlayer) error {
 	if err := r.db.Create(roomPlayer).Error; err != nil {
 		var pgErr *pgconn.PgError

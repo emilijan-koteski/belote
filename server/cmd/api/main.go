@@ -18,7 +18,9 @@ import (
 	"github.com/emilijan/belote/server/internal/apperr"
 	"github.com/emilijan/belote/server/internal/auth"
 	"github.com/emilijan/belote/server/internal/config"
+	"github.com/emilijan/belote/server/internal/match"
 	"github.com/emilijan/belote/server/internal/room"
+	"github.com/emilijan/belote/server/internal/session"
 	"github.com/emilijan/belote/server/internal/user"
 	"github.com/emilijan/belote/server/internal/ws"
 )
@@ -80,19 +82,6 @@ func main() {
 	api.GET("/users/:id/profile", userHandler.GetProfile)
 	api.PATCH("/users/:id/preferences", userHandler.UpdatePreferences)
 
-	// Room routes
-	roomRepo := room.NewGormRepository(db)
-	roomHandler := room.NewRoomHandler(roomRepo)
-	api.POST("/rooms", roomHandler.CreateRoom)
-	api.GET("/rooms", roomHandler.ListRooms)
-	api.POST("/rooms/quick-play", roomHandler.QuickPlay)
-	api.GET("/rooms/code/:code", roomHandler.GetRoomByCode)
-	api.GET("/rooms/:id", roomHandler.GetRoom)
-	api.POST("/rooms/:id/join", roomHandler.JoinRoom)
-	api.POST("/rooms/:id/leave", roomHandler.LeaveRoom)
-	api.POST("/rooms/:id/seat", roomHandler.SelectSeat)
-	api.POST("/rooms/:id/start", roomHandler.StartGame)
-
 	// WebSocket hub and endpoint
 	hub := ws.NewHub()
 	go hub.Run()
@@ -102,6 +91,25 @@ func main() {
 		AcceptedOrigins: cfg.CORSOrigins,
 	}
 	e.GET("/ws", wsHandler.HandleWS)
+
+	// Session manager
+	matchRepo := match.NewGormMatchRepository(db)
+	sessionManager := session.NewManager(hub, matchRepo)
+	hub.SetActionHandler(sessionManager.HandleAction)
+
+	// Room routes
+	roomRepo := room.NewGormRepository(db)
+	sessionManager.SetRoomUpdater(&room.RoomStatusAdapter{Repo: roomRepo})
+	roomHandler := room.NewRoomHandler(roomRepo, sessionManager)
+	api.POST("/rooms", roomHandler.CreateRoom)
+	api.GET("/rooms", roomHandler.ListRooms)
+	api.POST("/rooms/quick-play", roomHandler.QuickPlay)
+	api.GET("/rooms/code/:code", roomHandler.GetRoomByCode)
+	api.GET("/rooms/:id", roomHandler.GetRoom)
+	api.POST("/rooms/:id/join", roomHandler.JoinRoom)
+	api.POST("/rooms/:id/leave", roomHandler.LeaveRoom)
+	api.POST("/rooms/:id/seat", roomHandler.SelectSeat)
+	api.POST("/rooms/:id/start", roomHandler.StartGame)
 
 	// Graceful shutdown
 	go func() {

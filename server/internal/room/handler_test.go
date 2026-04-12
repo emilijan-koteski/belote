@@ -193,6 +193,16 @@ func (m *mockRoomRepo) FindQuickPlayRoom() (*room.Room, error) {
 	return nil, nil
 }
 
+func (m *mockRoomRepo) UpdateStatus(roomID uint, status string) error {
+	for _, r := range m.rooms {
+		if r.ID == roomID {
+			r.Status = status
+			return nil
+		}
+	}
+	return nil
+}
+
 func (m *mockRoomRepo) RunInTransaction(fn func(room.RoomRepository) error) error {
 	return fn(m)
 }
@@ -225,7 +235,7 @@ func testErrorHandler(err error, c echo.Context) {
 
 func setupTest() (*echo.Echo, *mockRoomRepo) {
 	repo := newMockRoomRepo()
-	handler := room.NewRoomHandler(repo)
+	handler := room.NewRoomHandler(repo, nil)
 
 	e := echo.New()
 	e.HTTPErrorHandler = testErrorHandler
