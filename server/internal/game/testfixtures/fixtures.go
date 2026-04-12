@@ -90,6 +90,119 @@ func allRanksOfSuit(suit game.Suit) []game.Card {
 	return cards
 }
 
+// NewGameMidPlay returns a GameState in the playing phase at the specified
+// trick number. Trump is Hearts, trump caller is seat 1. Hands contain mixed
+// suits for testing suit-following, trump obligation, and partner exemption.
+//
+// trickNum 1: 8 cards per player (fresh playing state)
+// trickNum 2-7: reduced hand sizes (8 - (trickNum-1) cards each)
+// trickNum 8: 1 card per player (final trick)
+//
+// Hand distribution for trickNum=1 (trump=Hearts):
+//
+//	Seat 0 (Red):  AS TS KS QS AH TH KD 7C  (4S, 2H-trump, 1D, 1C)
+//	Seat 1 (Blue): JS 9S 8S 7S JH 9H QD 8C  (4S, 2H-trump, 1D, 1C)
+//	Seat 2 (Red):  AD TD KH QH 8H 7H AC TC  (2D, 4H-trump, 2C)
+//	Seat 3 (Blue): JD 9D 8D 7D KC QC JC 9C  (4D, 0H-trump, 4C)
+//
+// Active player: seat 0, dealer: seat 0.
+func NewGameMidPlay(trickNum int) *game.GameState {
+	if trickNum < 1 {
+		trickNum = 1
+	}
+	if trickNum > 8 {
+		trickNum = 8
+	}
+
+	trumpSuit := game.SuitHearts
+	callerSeat := 1
+
+	gs := &game.GameState{
+		RoomID:          1,
+		Variant:         game.VariantBitola,
+		MatchMode:       "1001",
+		Phase:           game.PhasePlaying,
+		HandNumber:      1,
+		DealerSeat:      0,
+		TrumpSuit:       &trumpSuit,
+		TrumpCallerSeat: &callerSeat,
+		BiddingRound:    1,
+		TrickNumber:     trickNum,
+		CurrentTrick:    []game.TrickCard{},
+		Players: [4]game.PlayerState{
+			{Seat: 0, UserID: 10, Team: "red", Declarations: []game.Declaration{}, Connected: true},
+			{Seat: 1, UserID: 20, Team: "blue", Declarations: []game.Declaration{}, Connected: true},
+			{Seat: 2, UserID: 30, Team: "red", Declarations: []game.Declaration{}, Connected: true},
+			{Seat: 3, UserID: 40, Team: "blue", Declarations: []game.Declaration{}, Connected: true},
+		},
+		ActivePlayerSeat: 0,
+	}
+
+	// Full hands for trick 1 — mixed suits for rule testing
+	fullHands := [4][]game.Card{
+		{ // Seat 0: 4 Spades, 2 trump Hearts, 1 Diamond, 1 Club
+			{Rank: game.RankAce, Suit: game.SuitSpades},
+			{Rank: game.RankTen, Suit: game.SuitSpades},
+			{Rank: game.RankKing, Suit: game.SuitSpades},
+			{Rank: game.RankQueen, Suit: game.SuitSpades},
+			{Rank: game.RankAce, Suit: game.SuitHearts},
+			{Rank: game.RankTen, Suit: game.SuitHearts},
+			{Rank: game.RankKing, Suit: game.SuitDiamonds},
+			{Rank: game.Rank7, Suit: game.SuitClubs},
+		},
+		{ // Seat 1: 4 Spades, 2 trump Hearts, 1 Diamond, 1 Club
+			{Rank: game.RankJack, Suit: game.SuitSpades},
+			{Rank: game.Rank9, Suit: game.SuitSpades},
+			{Rank: game.Rank8, Suit: game.SuitSpades},
+			{Rank: game.Rank7, Suit: game.SuitSpades},
+			{Rank: game.RankJack, Suit: game.SuitHearts},
+			{Rank: game.Rank9, Suit: game.SuitHearts},
+			{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+			{Rank: game.Rank8, Suit: game.SuitClubs},
+		},
+		{ // Seat 2: 2 Diamonds, 4 trump Hearts, 2 Clubs
+			{Rank: game.RankAce, Suit: game.SuitDiamonds},
+			{Rank: game.RankTen, Suit: game.SuitDiamonds},
+			{Rank: game.RankKing, Suit: game.SuitHearts},
+			{Rank: game.RankQueen, Suit: game.SuitHearts},
+			{Rank: game.Rank8, Suit: game.SuitHearts},
+			{Rank: game.Rank7, Suit: game.SuitHearts},
+			{Rank: game.RankAce, Suit: game.SuitClubs},
+			{Rank: game.RankTen, Suit: game.SuitClubs},
+		},
+		{ // Seat 3: 4 Diamonds, 0 trump Hearts, 4 Clubs
+			{Rank: game.RankJack, Suit: game.SuitDiamonds},
+			{Rank: game.Rank9, Suit: game.SuitDiamonds},
+			{Rank: game.Rank8, Suit: game.SuitDiamonds},
+			{Rank: game.Rank7, Suit: game.SuitDiamonds},
+			{Rank: game.RankKing, Suit: game.SuitClubs},
+			{Rank: game.RankQueen, Suit: game.SuitClubs},
+			{Rank: game.RankJack, Suit: game.SuitClubs},
+			{Rank: game.Rank9, Suit: game.SuitClubs},
+		},
+	}
+
+	// For trickNum > 1, trim hands from the end to simulate previous tricks
+	cardsPerPlayer := 8 - (trickNum - 1)
+	for i := range gs.Players {
+		if cardsPerPlayer < len(fullHands[i]) {
+			gs.Players[i].Hand = make([]game.Card, cardsPerPlayer)
+			copy(gs.Players[i].Hand, fullHands[i][:cardsPerPlayer])
+		} else {
+			gs.Players[i].Hand = make([]game.Card, len(fullHands[i]))
+			copy(gs.Players[i].Hand, fullHands[i])
+		}
+	}
+
+	// Simulate accumulated scores from previous tricks
+	if trickNum > 1 {
+		gs.HandPoints = [2]int{10 * (trickNum - 1), 5 * (trickNum - 1)}
+		gs.TricksWon = [2]int{(trickNum - 1 + 1) / 2, (trickNum - 1) / 2}
+	}
+
+	return gs
+}
+
 // NewGameMidBidding returns a GameState with the specified number of passes
 // already recorded. Correctly tracks BiddingRound and ActivePlayerSeat.
 //

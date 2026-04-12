@@ -120,6 +120,32 @@ func reshuffleAndRedeal(state *GameState) *GameState {
 func cloneGameState(state *GameState) *GameState {
 	newState := *state // shallow copy of struct
 
+	// Deep-copy pointer fields to break aliasing (D34 fix)
+	if state.TrumpSuit != nil {
+		v := *state.TrumpSuit
+		newState.TrumpSuit = &v
+	}
+	if state.TrumpCallerSeat != nil {
+		v := *state.TrumpCallerSeat
+		newState.TrumpCallerSeat = &v
+	}
+	if state.TrumpCandidate != nil {
+		v := *state.TrumpCandidate
+		newState.TrumpCandidate = &v
+	}
+	if state.LeadSuit != nil {
+		v := *state.LeadSuit
+		newState.LeadSuit = &v
+	}
+	if state.TrickWinnerSeat != nil {
+		v := *state.TrickWinnerSeat
+		newState.TrickWinnerSeat = &v
+	}
+	if state.TurnExpiresAt != nil {
+		v := *state.TurnExpiresAt
+		newState.TurnExpiresAt = &v
+	}
+
 	// Deep clone slice fields
 	newState.CurrentTrick = slices.Clone(state.CurrentTrick)
 

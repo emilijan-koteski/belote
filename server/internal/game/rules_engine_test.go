@@ -25,9 +25,9 @@ func TestApplyActionPhaseBidding(t *testing.T) {
 		assert.Equal(t, game.PhasePlaying, result.Phase)
 	})
 
-	t.Run("non-bidding phase returns ErrWrongPhase", func(t *testing.T) {
+	t.Run("unhandled phase returns ErrWrongPhase", func(t *testing.T) {
 		gs := testfixtures.NewGameJustDealt()
-		gs.Phase = game.PhasePlaying
+		gs.Phase = game.PhaseMatchEnd
 		action := game.Action{
 			Type:       game.ActionPlayCard,
 			PlayerSeat: 1,

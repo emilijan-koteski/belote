@@ -153,6 +153,32 @@ var NonTrumpCardPoints = map[Rank]int{
 	Rank7:     0,
 }
 
+// TrumpRankOrder maps ranks to their strength ordering when the suit is trump.
+// Higher value wins. J is strongest (7), 7 is weakest (0).
+var TrumpRankOrder = map[Rank]int{
+	RankJack:  7,
+	Rank9:     6,
+	RankAce:   5,
+	RankTen:   4,
+	RankKing:  3,
+	RankQueen: 2,
+	Rank8:     1,
+	Rank7:     0,
+}
+
+// NonTrumpRankOrder maps ranks to their strength ordering when the suit is not trump.
+// Higher value wins. A is strongest (7), 7 is weakest (0).
+var NonTrumpRankOrder = map[Rank]int{
+	RankAce:   7,
+	RankTen:   6,
+	RankKing:  5,
+	RankQueen: 4,
+	RankJack:  3,
+	Rank9:     2,
+	Rank8:     1,
+	Rank7:     0,
+}
+
 // NewDeck returns a full 32-card deck (7 through Ace in all 4 suits).
 func NewDeck() []Card {
 	deck := make([]Card, 0, 32)

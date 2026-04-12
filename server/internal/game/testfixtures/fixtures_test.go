@@ -90,6 +90,85 @@ func TestNewGameMidBidding(t *testing.T) {
 	})
 }
 
+func TestNewGameMidPlay(t *testing.T) {
+	tests := []struct {
+		name             string
+		trickNum         int
+		expectedCards    int
+		expectedTrickNum int
+	}{
+		{"trickNum 1 - full hands", 1, 8, 1},
+		{"trickNum 2 - 7 cards each", 2, 7, 2},
+		{"trickNum 4 - 5 cards each", 4, 5, 4},
+		{"trickNum 8 - 1 card each", 8, 1, 8},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gs := testfixtures.NewGameMidPlay(tc.trickNum)
+
+			assert.Equal(t, game.PhasePlaying, gs.Phase)
+			assert.Equal(t, tc.expectedTrickNum, gs.TrickNumber)
+			require.NotNil(t, gs.TrumpSuit)
+			assert.Equal(t, game.SuitHearts, *gs.TrumpSuit)
+			require.NotNil(t, gs.TrumpCallerSeat)
+			assert.Equal(t, 0, gs.ActivePlayerSeat)
+			assert.Empty(t, gs.CurrentTrick)
+			assert.Nil(t, gs.LeadSuit)
+
+			for i, p := range gs.Players {
+				assert.Len(t, p.Hand, tc.expectedCards, "player at seat %d should have %d cards", i, tc.expectedCards)
+			}
+		})
+	}
+
+	t.Run("all 32 cards accounted for at trick 1", func(t *testing.T) {
+		gs := testfixtures.NewGameMidPlay(1)
+		seen := make(map[string]bool)
+		for _, p := range gs.Players {
+			for _, card := range p.Hand {
+				id := card.String()
+				assert.False(t, seen[id], "duplicate card: %s", id)
+				seen[id] = true
+			}
+		}
+		assert.Len(t, seen, 32)
+	})
+
+	t.Run("clamping - below 1 becomes 1", func(t *testing.T) {
+		gs := testfixtures.NewGameMidPlay(0)
+		assert.Equal(t, 1, gs.TrickNumber)
+		for i, p := range gs.Players {
+			assert.Len(t, p.Hand, 8, "player at seat %d", i)
+		}
+	})
+
+	t.Run("clamping - above 8 becomes 8", func(t *testing.T) {
+		gs := testfixtures.NewGameMidPlay(10)
+		assert.Equal(t, 8, gs.TrickNumber)
+		for i, p := range gs.Players {
+			assert.Len(t, p.Hand, 1, "player at seat %d", i)
+		}
+	})
+
+	t.Run("mixed suits for rule testing", func(t *testing.T) {
+		gs := testfixtures.NewGameMidPlay(1)
+		// Seat 0 should have spades AND hearts AND others
+		hasSuit := func(hand []game.Card, suit game.Suit) bool {
+			for _, c := range hand {
+				if c.Suit == suit {
+					return true
+				}
+			}
+			return false
+		}
+		assert.True(t, hasSuit(gs.Players[0].Hand, game.SuitSpades), "seat 0 should have spades")
+		assert.True(t, hasSuit(gs.Players[0].Hand, game.SuitHearts), "seat 0 should have hearts (trump)")
+		// Seat 3 should have NO trump hearts
+		assert.False(t, hasSuit(gs.Players[3].Hand, game.SuitHearts), "seat 3 should have no trump")
+	})
+}
+
 func TestNewGameJustDealt(t *testing.T) {
 	gs := testfixtures.NewGameJustDealt()
 
