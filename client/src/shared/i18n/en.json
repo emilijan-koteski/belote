@@ -66,6 +66,12 @@
         "unexpected": "An unexpected error occurred"
       }
     },
+    "roomDetail": {
+      "emptySlot": "Empty",
+      "notSeated": "Not seated",
+      "teamRed": "Red",
+      "teamBlue": "Blue"
+    },
     "roomList": {
       "searchPlaceholder": "Search rooms by name or code...",
       "backToOptions": "Back",

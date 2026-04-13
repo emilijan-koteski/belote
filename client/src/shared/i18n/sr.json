@@ -66,6 +66,12 @@
         "unexpected": "Došlo je do neočekivane greške"
       }
     },
+    "roomDetail": {
+      "emptySlot": "Prazno",
+      "notSeated": "Nije seo",
+      "teamRed": "Crveni",
+      "teamBlue": "Plavi"
+    },
     "roomList": {
       "searchPlaceholder": "Pretra\u017ei sobe po imenu ili kodu...",
       "backToOptions": "Nazad",

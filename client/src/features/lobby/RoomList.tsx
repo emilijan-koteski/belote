@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { RoomCard } from "@/features/lobby/RoomCard";
@@ -12,6 +12,7 @@ interface RoomListProps {
 
 export function RoomList({ onJoinRoom }: RoomListProps) {
   const { t } = useTranslation();
+  const [expandedRoomId, setExpandedRoomId] = useState<number | null>(null);
 
   // WS room update listener — scoped to browse view lifecycle (WS hub not yet wired)
   useRoomUpdates();
@@ -27,6 +28,10 @@ export function RoomList({ onJoinRoom }: RoomListProps) {
       (room) => room.name.toLowerCase().includes(query) || room.code.toLowerCase().includes(query),
     );
   }, [rooms, searchQuery]);
+
+  function handleToggle(roomId: number) {
+    setExpandedRoomId((prev) => (prev === roomId ? null : roomId));
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -70,7 +75,13 @@ export function RoomList({ onJoinRoom }: RoomListProps) {
       {!isLoading && filteredRooms.length > 0 && (
         <div className="flex flex-col gap-2">
           {filteredRooms.map((room) => (
-            <RoomCard key={room.id} room={room} onJoin={onJoinRoom} />
+            <RoomCard
+              key={room.id}
+              room={room}
+              onJoin={onJoinRoom}
+              isExpanded={expandedRoomId === room.id}
+              onToggle={() => handleToggle(room.id)}
+            />
           ))}
         </div>
       )}

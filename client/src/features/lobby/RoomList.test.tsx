@@ -10,6 +10,13 @@ import type { Room } from "@/shared/types/apiTypes";
 
 import { RoomList } from "./RoomList";
 
+// Mock RoomDetailPreview to avoid API calls
+vi.mock("@/features/lobby/RoomDetailPreview", () => ({
+  RoomDetailPreview: ({ roomId }: { roomId: number }) => (
+    <div data-testid="room-detail-preview">Preview for room {roomId}</div>
+  ),
+}));
+
 function makeRoom(overrides: Partial<Room> = {}): Room {
   return {
     id: 1,
@@ -22,6 +29,7 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
     timerDurationSeconds: null,
     status: "waiting",
     playerCount: 2,
+    isQuickPlay: false,
     createdAt: "2026-04-11T14:00:00Z",
     updatedAt: "2026-04-11T14:00:00Z",
     ...overrides,
@@ -142,5 +150,69 @@ describe("RoomList", () => {
     renderRoomList();
 
     expect(screen.getByTestId("room-list-loading")).toBeInTheDocument();
+  });
+
+  // --- Accordion behavior ---
+
+  it("expands room detail when clicking a room card", async () => {
+    const user = userEvent.setup();
+    useLobbyStore.setState({
+      rooms: [makeRoom({ id: 1, name: "Room Alpha" })],
+    });
+
+    renderRoomList();
+
+    // Initially no preview
+    expect(screen.queryByTestId("room-detail-preview")).not.toBeInTheDocument();
+
+    // Click the card toggle area
+    await user.click(screen.getByTestId("room-card-toggle"));
+
+    // Preview should now be visible
+    expect(screen.getByTestId("room-detail-preview")).toBeInTheDocument();
+    expect(screen.getByTestId("room-detail-preview")).toHaveTextContent("Preview for room 1");
+  });
+
+  it("collapses room detail when clicking the same room card again", async () => {
+    const user = userEvent.setup();
+    useLobbyStore.setState({
+      rooms: [makeRoom({ id: 1, name: "Room Alpha" })],
+    });
+
+    renderRoomList();
+
+    const toggle = screen.getByTestId("room-card-toggle");
+
+    // First click — expand
+    await user.click(toggle);
+    expect(screen.getByTestId("room-detail-preview")).toBeInTheDocument();
+
+    // Second click — collapse
+    await user.click(toggle);
+    expect(screen.queryByTestId("room-detail-preview")).not.toBeInTheDocument();
+  });
+
+  it("only one room is expanded at a time (accordion)", async () => {
+    const user = userEvent.setup();
+    useLobbyStore.setState({
+      rooms: [
+        makeRoom({ id: 1, name: "Room Alpha" }),
+        makeRoom({ id: 2, name: "Room Beta" }),
+      ],
+    });
+
+    renderRoomList();
+
+    const toggles = screen.getAllByTestId("room-card-toggle");
+
+    // Expand first room
+    await user.click(toggles[0]);
+    expect(screen.getByTestId("room-detail-preview")).toHaveTextContent("Preview for room 1");
+
+    // Expand second room — first should close
+    await user.click(toggles[1]);
+    const previews = screen.getAllByTestId("room-detail-preview");
+    expect(previews).toHaveLength(1);
+    expect(previews[0]).toHaveTextContent("Preview for room 2");
   });
 });
