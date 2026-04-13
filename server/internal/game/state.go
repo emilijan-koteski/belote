@@ -22,6 +22,25 @@ type TrickCard struct {
 	PlayerSeat int  `json:"playerSeat"`
 }
 
+// HandResult captures the scoring breakdown for a completed hand.
+// Populated by scoreHand() before startNewHand() or PhaseMatchEnd,
+// so the session manager can broadcast the full breakdown to clients.
+type HandResult struct {
+	RedCardPoints   int  `json:"redCardPoints"`   // Trick-taking card points (Red) before bonus
+	BlueCardPoints  int  `json:"blueCardPoints"`  // Trick-taking card points (Blue) before bonus
+	RedDeclPoints   int  `json:"redDeclPoints"`   // Declaration points (Red)
+	BlueDeclPoints  int  `json:"blueDeclPoints"`  // Declaration points (Blue)
+	LastTrickTeam   int  `json:"lastTrickTeam"`   // Team that won last trick (0=Red, 1=Blue)
+	LastTrickBonus  int  `json:"lastTrickBonus"`  // 10 (normal) or 0 (capot replaces it)
+	Capot           bool `json:"capot"`           // One team took all 8 tricks
+	CapotTeam       *int `json:"capotTeam"`       // Team with capot (nil if no capot)
+	CapotBonus      int  `json:"capotBonus"`      // 100 or 0
+	FailedContract  bool `json:"failedContract"`  // Contracting team lost the hand
+	ContractingTeam int  `json:"contractingTeam"` // Team that called trump (0=Red, 1=Blue)
+	RedHandTotal    int  `json:"redHandTotal"`    // Points actually awarded to Red this hand
+	BlueHandTotal   int  `json:"blueHandTotal"`   // Points actually awarded to Blue this hand
+}
+
 // GameState is the complete, serializable game state.
 // Fields are ordered per Architecture spec:
 // 1. Match metadata
@@ -59,18 +78,19 @@ type GameState struct {
 	Players [4]PlayerState `json:"players"`
 
 	// Scoring (index 0=Red team, 1=Blue team)
-	TeamScores        [2]int `json:"teamScores"`
-	HandPoints        [2]int `json:"handPoints"`
-	DeclarationPoints [2]int `json:"declarationPoints"`
-	TricksWon         [2]int `json:"tricksWon"`
-	PendingBelotSeat  *int   `json:"pendingBelotSeat"`
-	BelotAnnounced    bool   `json:"belotAnnounced"`
-	WinnerTeam        *int   `json:"winnerTeam"`
+	TeamScores        [2]int      `json:"teamScores"`
+	HandPoints        [2]int      `json:"handPoints"`
+	DeclarationPoints [2]int      `json:"declarationPoints"`
+	TricksWon         [2]int      `json:"tricksWon"`
+	PendingBelotSeat  *int        `json:"pendingBelotSeat"`
+	BelotAnnounced    bool        `json:"belotAnnounced"`
+	WinnerTeam        *int        `json:"winnerTeam"`
+	LastHandResult    *HandResult `json:"lastHandResult"`
 
 	// Timer state
-	ActivePlayerSeat   int        `json:"activePlayerSeat"`
-	TurnExpiresAt      *time.Time `json:"turnExpiresAt"`
-	TimerDurationSec   int        `json:"timerDurationSec"`
+	ActivePlayerSeat int        `json:"activePlayerSeat"`
+	TurnExpiresAt    *time.Time `json:"turnExpiresAt"`
+	TimerDurationSec int        `json:"timerDurationSec"`
 }
 
 // TeamRed is the index for the Red team (seats 0, 2) in score arrays.

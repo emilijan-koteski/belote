@@ -163,10 +163,11 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 	session.gameState = newState
 	// Capture immutable values for use after unlock
 	playerIDs := session.playerIDs
+	startedAt := session.startedAt
 	session.mu.Unlock()
 
 	// Broadcast the result using captured local variables (not session.gameState)
-	m.broadcastActionResult(playerIDs, oldState, newState, action, false)
+	m.broadcastActionResult(playerIDs, oldState, newState, action, false, startedAt)
 
 	// Check for match completion
 	if newState.Phase == game.PhaseMatchEnd {
@@ -278,7 +279,8 @@ func (m *Manager) parseAction(userID uint, session *Session, msg ws.WSMessage) (
 // broadcastActionResult sends the appropriate event(s) after a successful action.
 // All parameters are local values — no session.gameState reads (avoids data races).
 // autoPlayed indicates whether the card was played by the timer auto-play system.
-func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *game.GameState, action game.Action, autoPlayed bool) {
+// startedAt is the session start time, used to compute match duration on match_end.
+func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *game.GameState, action game.Action, autoPlayed bool, startedAt time.Time) {
 	userIDs := playerIDs[:]
 
 	switch action.Type {
@@ -323,25 +325,24 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		}
 
 		// Check if hand was scored (hand number incremented or match ended)
-		if oldState.HandNumber < newState.HandNumber || newState.Phase == game.PhaseMatchEnd {
-			// Determine if failed contract occurred by comparing expected vs actual scores
-			contractFailed := false
-			if oldState.TrumpCallerSeat != nil {
-				callerTeam := game.TeamForSeat(*oldState.TrumpCallerSeat)
-				otherTeam := 1 - callerTeam
-				// Failed contract: calling team gets 0, opponent gets all points
-				if newState.HandPoints[callerTeam] == 0 && newState.HandPoints[otherTeam] > 0 {
-					contractFailed = true
-				}
-			}
-
+		if (oldState.HandNumber < newState.HandNumber || newState.Phase == game.PhaseMatchEnd) && newState.LastHandResult != nil {
+			hr := newState.LastHandResult
 			handScored := map[string]interface{}{
-				"redHandPoints":  newState.HandPoints[game.TeamRed],
-				"blueHandPoints": newState.HandPoints[game.TeamBlue],
-				"redMatchScore":  newState.TeamScores[game.TeamRed],
-				"blueMatchScore": newState.TeamScores[game.TeamBlue],
-				"failedContract": contractFailed,
-				"capot":          newState.TricksWon[game.TeamRed] == 8 || newState.TricksWon[game.TeamBlue] == 8,
+				"redCardPoints":   hr.RedCardPoints,
+				"blueCardPoints":  hr.BlueCardPoints,
+				"redDeclPoints":   hr.RedDeclPoints,
+				"blueDeclPoints":  hr.BlueDeclPoints,
+				"lastTrickTeam":   hr.LastTrickTeam,
+				"lastTrickBonus":  hr.LastTrickBonus,
+				"capot":           hr.Capot,
+				"capotTeam":       hr.CapotTeam,
+				"capotBonus":      hr.CapotBonus,
+				"failedContract":  hr.FailedContract,
+				"contractingTeam": hr.ContractingTeam,
+				"redHandTotal":    hr.RedHandTotal,
+				"blueHandTotal":   hr.BlueHandTotal,
+				"redMatchScore":   newState.TeamScores[game.TeamRed],
+				"blueMatchScore":  newState.TeamScores[game.TeamBlue],
 			}
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventHandScored, handScored))
 		}
@@ -349,9 +350,10 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		// Check if match ended
 		if newState.Phase == game.PhaseMatchEnd {
 			matchEnd := map[string]interface{}{
-				"winnerTeam":     safeDerefInt(newState.WinnerTeam),
-				"redFinalScore":  newState.TeamScores[game.TeamRed],
-				"blueFinalScore": newState.TeamScores[game.TeamBlue],
+				"winnerTeam":       safeDerefInt(newState.WinnerTeam),
+				"redFinalScore":    newState.TeamScores[game.TeamRed],
+				"blueFinalScore":   newState.TeamScores[game.TeamBlue],
+				"matchDurationSec": int(time.Since(startedAt).Seconds()),
 			}
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchEnd, matchEnd))
 		}
@@ -610,11 +612,12 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 
 	session.gameState = newState
 	playerIDs := session.playerIDs
+	startedAt := session.startedAt
 	session.mu.Unlock()
 
 	// Broadcast result
 	isAutoPlayedCard := action.Type == game.ActionPlayCard
-	m.broadcastActionResult(playerIDs, oldState, newState, action, isAutoPlayedCard)
+	m.broadcastActionResult(playerIDs, oldState, newState, action, isAutoPlayedCard, startedAt)
 
 	// Check for match completion
 	if newState.Phase == game.PhaseMatchEnd {

@@ -186,6 +186,33 @@
     },
     "timer": {
       "autoPlayed": "Automatski odigrano: {{card}}"
+    },
+    "score": {
+      "red": "Crveni",
+      "blue": "Plavi",
+      "tricks": "Ruke",
+      "lastTrickBonus": "+{{amount}}"
+    },
+    "scoreReveal": {
+      "title": "Rezultat ruke",
+      "cardPoints": "Bodovi karata",
+      "declarationPoints": "Zvanja",
+      "lastTrickBonus": "Bonus poslednje ruke",
+      "capotBonus": "Kapot bonus",
+      "failedContract": "Pao ugovor",
+      "failedContractDesc": "{{team}} pao \u2014 svi bodovi za {{otherTeam}}",
+      "handTotal": "Ukupno ruka",
+      "matchTotal": "Ukupno me\u010d",
+      "continue": "Nastavi"
+    },
+    "capot": {
+      "title": "KAPOT!"
+    },
+    "matchResult": {
+      "title": "Me\u010d zavr\u0161en",
+      "winner": "{{team}} pobe\u0111uje!",
+      "duration": "Trajanje me\u010da",
+      "returnToLobby": "Nazad u lobi"
     }
   },
   "ws": {

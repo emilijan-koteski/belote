@@ -18,12 +18,16 @@ import {
 } from "@/shared/types/wsEvents";
 
 import { BelotPrompt } from "./components/BelotPrompt";
+import { CapotAnimation } from "./components/CapotAnimation";
 import { DealAnimation } from "./components/DealAnimation";
 import { DeclarationPrompt } from "./components/DeclarationPrompt";
 import { DeclarationReveal } from "./components/DeclarationReveal";
 import { HandCards } from "./components/HandCards";
+import { MatchResult } from "./components/MatchResult";
 import { PlayerSeat } from "./components/PlayerSeat";
 import { ReshuffleAnimation } from "./components/ReshuffleAnimation";
+import { ScorePanel } from "./components/ScorePanel";
+import { ScoreReveal } from "./components/ScoreReveal";
 import { TrickArea } from "./components/TrickArea";
 import { TrumpIndicator } from "./components/TrumpIndicator";
 import { TrumpPrompt } from "./components/TrumpPrompt";
@@ -60,10 +64,29 @@ export function GamePage() {
   const setLastError = useGameStore((s) => s.setLastError);
   const declarationReveal = useGameStore((s) => s.declarationReveal);
   const setDeclarationReveal = useGameStore((s) => s.setDeclarationReveal);
+  const scoreRevealData = useGameStore((s) => s.scoreRevealData);
+  const setScoreRevealData = useGameStore((s) => s.setScoreRevealData);
+  const matchEndData = useGameStore((s) => s.matchEndData);
+  const setMatchEndData = useGameStore((s) => s.setMatchEndData);
 
   const [chatOpen, setChatOpen] = useState(false);
   const [showReshuffle, setShowReshuffle] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
+
+  // Overlay flow state: normal → capot_animation → score_reveal → normal/match_result
+  type OverlayPhase = "normal" | "capot_animation" | "score_reveal" | "match_result";
+  const [overlayPhase, setOverlayPhase] = useState<OverlayPhase>("normal");
+
+  // Trigger overlay flow when score reveal data arrives
+  useEffect(() => {
+    if (scoreRevealData !== null && overlayPhase === "normal") {
+      if (scoreRevealData.capot) {
+        setOverlayPhase("capot_animation");
+      } else {
+        setOverlayPhase("score_reveal");
+      }
+    }
+  }, [scoreRevealData, overlayPhase]);
 
   // Track previous phase to detect bidding→dealing transition (reshuffle)
   const prevPhaseRef = useRef<string | null>(null);
@@ -78,16 +101,12 @@ export function GamePage() {
     }
   }, [gameState, user, myPlayerSeat, setMyPlayerSeat]);
 
-  // Navigate to lobby on match end
+  // Transition to match result after score reveal is dismissed (if match ended)
   useEffect(() => {
-    if (gameState?.phase === "match_end") {
-      const timer = setTimeout(() => {
-        clearGame();
-        navigate("/lobby");
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (matchEndData !== null && overlayPhase === "normal") {
+      setOverlayPhase("match_result");
     }
-  }, [gameState?.phase, clearGame, navigate]);
+  }, [matchEndData, overlayPhase]);
 
   // Detect reshuffle: bidding → dealing transition within same match
   const currentPhase = gameState?.phase;
@@ -177,6 +196,25 @@ export function GamePage() {
     setDeclarationReveal(null);
   }, [setDeclarationReveal]);
 
+  const handleCapotComplete = useCallback(() => {
+    setOverlayPhase("score_reveal");
+  }, []);
+
+  const handleScoreRevealContinue = useCallback(() => {
+    setScoreRevealData(null);
+    if (matchEndData !== null) {
+      setOverlayPhase("match_result");
+    } else {
+      setOverlayPhase("normal");
+    }
+  }, [matchEndData, setScoreRevealData]);
+
+  const handleReturnToLobby = useCallback(() => {
+    setMatchEndData(null);
+    clearGame();
+    navigate("/lobby");
+  }, [clearGame, navigate, setMatchEndData]);
+
   // Loading state
   if (!gameState || myPlayerSeat === null) {
     return (
@@ -223,11 +261,14 @@ export function GamePage() {
       data-testid="game-page"
     >
       {/* Score panel - top left */}
-      <div className="absolute top-4 left-4 text-text-secondary font-display text-sm z-10">
-        <span className="text-team-red">{gameState.teamScores[0]}</span>
-        <span className="text-text-secondary mx-1">:</span>
-        <span className="text-team-blue">{gameState.teamScores[1]}</span>
-      </div>
+      <ScorePanel
+        redScore={gameState.teamScores[0]}
+        blueScore={gameState.teamScores[1]}
+        redTricks={gameState.tricksWon[0]}
+        blueTricks={gameState.tricksWon[1]}
+        lastTrickBonus={scoreRevealData?.lastTrickBonus}
+        lastTrickTeam={scoreRevealData?.lastTrickTeam}
+      />
 
       {/* Trump indicator - top right, visible only during play and later (AC 4.4.5) */}
       <div className="absolute top-4 right-16 z-10">
@@ -369,6 +410,30 @@ export function GamePage() {
             {t("game.chat.placeholder")}
           </p>
         </aside>
+      )}
+
+      {/* Capot animation overlay */}
+      {overlayPhase === "capot_animation" && scoreRevealData?.capotTeam !== null && scoreRevealData?.capotTeam !== undefined && (
+        <CapotAnimation
+          capotTeam={scoreRevealData.capotTeam}
+          onComplete={handleCapotComplete}
+        />
+      )}
+
+      {/* Score reveal overlay */}
+      {overlayPhase === "score_reveal" && scoreRevealData !== null && (
+        <ScoreReveal
+          data={scoreRevealData}
+          onContinue={handleScoreRevealContinue}
+        />
+      )}
+
+      {/* Match result overlay */}
+      {overlayPhase === "match_result" && matchEndData !== null && (
+        <MatchResult
+          data={matchEndData}
+          onReturnToLobby={handleReturnToLobby}
+        />
       )}
 
       {/* Error toast */}

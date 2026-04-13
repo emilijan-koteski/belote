@@ -394,6 +394,110 @@ func TestInstantWin_NotTriggered_PartialTrump(t *testing.T) {
 	assert.Nil(t, result.WinnerTeam)
 }
 
+// --- LastHandResult Tests (Story 4.6) ---
+
+func TestLastHandResult_NormalHand(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+
+	result := playTrick8(t, gs)
+
+	require.NotNil(t, result.LastHandResult, "LastHandResult must be populated after hand scoring")
+	hr := result.LastHandResult
+
+	// Blue (seat 3) wins trick 8 with 7H trump
+	// Card points before bonus: Red=70, Blue=61+21=82
+	assert.Equal(t, 70, hr.RedCardPoints, "Red card points before bonus")
+	assert.Equal(t, 82, hr.BlueCardPoints, "Blue card points before bonus")
+	assert.Equal(t, 0, hr.RedDeclPoints, "Red declaration points")
+	assert.Equal(t, 0, hr.BlueDeclPoints, "Blue declaration points")
+	assert.Equal(t, game.TeamBlue, hr.LastTrickTeam, "Blue won last trick")
+	assert.Equal(t, 10, hr.LastTrickBonus, "last-trick bonus is +10")
+	assert.False(t, hr.Capot, "not a capot")
+	assert.Nil(t, hr.CapotTeam, "no capot team")
+	assert.Equal(t, 0, hr.CapotBonus, "no capot bonus")
+	assert.False(t, hr.FailedContract, "not a failed contract")
+	assert.Equal(t, game.TeamBlue, hr.ContractingTeam, "Blue (seat 1) called trump")
+
+	// Verify totals match TeamScores delta
+	assert.Equal(t, hr.RedHandTotal+hr.BlueHandTotal,
+		result.TeamScores[game.TeamRed]+result.TeamScores[game.TeamBlue],
+		"hand totals should equal team scores (starting from 0)")
+}
+
+func TestLastHandResult_Capot(t *testing.T) {
+	gs := testfixtures.NewGameCapotInProgress()
+
+	result := playTrick8(t, gs)
+
+	require.NotNil(t, result.LastHandResult)
+	hr := result.LastHandResult
+
+	assert.True(t, hr.Capot, "should be capot")
+	require.NotNil(t, hr.CapotTeam, "capot team must be set")
+	assert.Equal(t, game.TeamRed, *hr.CapotTeam, "Red team got capot")
+	assert.Equal(t, 100, hr.CapotBonus, "capot bonus is 100")
+	assert.Equal(t, 0, hr.LastTrickBonus, "last-trick bonus is 0 when capot")
+	assert.False(t, hr.FailedContract, "capot team is also contracting, so not a failed contract")
+	assert.Equal(t, 252, hr.RedHandTotal, "Red gets all 152 card points + 100 capot bonus")
+	assert.Equal(t, 0, hr.BlueHandTotal, "Blue gets nothing")
+}
+
+func TestLastHandResult_FailedContract(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	gs.HandPoints = [2]int{100, 20}
+
+	result := playTrick8(t, gs)
+
+	require.NotNil(t, result.LastHandResult)
+	hr := result.LastHandResult
+
+	assert.True(t, hr.FailedContract, "should be a failed contract")
+	assert.Equal(t, game.TeamBlue, hr.ContractingTeam, "Blue (seat 1) called trump")
+	assert.Equal(t, 0, hr.BlueHandTotal, "contracting team gets 0 on failed contract")
+	assert.Equal(t, 151, hr.RedHandTotal, "opposing team gets all points")
+}
+
+func TestLastHandResult_WithDeclarations(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	gs.DeclarationPoints = [2]int{50, 20}
+	gs.TeamScores = [2]int{0, 0}
+
+	result := playTrick8(t, gs)
+
+	require.NotNil(t, result.LastHandResult)
+	hr := result.LastHandResult
+
+	assert.Equal(t, 50, hr.RedDeclPoints, "Red declaration points")
+	assert.Equal(t, 20, hr.BlueDeclPoints, "Blue declaration points")
+}
+
+func TestLastHandResult_MatchEnd(t *testing.T) {
+	gs := testfixtures.NewGameNearEnd(950, 0)
+
+	result := playTrick8(t, gs)
+
+	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
+	require.NotNil(t, result.LastHandResult, "LastHandResult must persist on match end (no startNewHand)")
+	assert.Equal(t, result.LastHandResult.RedHandTotal,
+		result.TeamScores[game.TeamRed]-950,
+		"hand total should equal the score delta from match start")
+}
+
+func TestLastHandResult_TotalsMatchTeamScoreDelta(t *testing.T) {
+	gs := testfixtures.NewGameLastTrick()
+	gs.TeamScores = [2]int{200, 300}
+
+	result := playTrick8(t, gs)
+
+	require.NotNil(t, result.LastHandResult)
+	hr := result.LastHandResult
+
+	redDelta := result.TeamScores[game.TeamRed] - 200
+	blueDelta := result.TeamScores[game.TeamBlue] - 300
+	assert.Equal(t, hr.RedHandTotal, redDelta, "RedHandTotal matches actual Red score increase")
+	assert.Equal(t, hr.BlueHandTotal, blueDelta, "BlueHandTotal matches actual Blue score increase")
+}
+
 func TestInstantWin_FirstHand(t *testing.T) {
 	// NewGame uses random shuffle — verify it always returns a valid state.
 	// IF instant-win triggers (astronomically unlikely), WinnerTeam must be set.

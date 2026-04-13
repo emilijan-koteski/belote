@@ -94,18 +94,28 @@ export interface TrickResolvedPayload {
 }
 
 export interface HandScoredPayload {
-  redHandPoints: number;
-  blueHandPoints: number;
+  redCardPoints: number;
+  blueCardPoints: number;
+  redDeclPoints: number;
+  blueDeclPoints: number;
+  lastTrickTeam: number;
+  lastTrickBonus: number;
+  capot: boolean;
+  capotTeam: number | null;
+  capotBonus: number;
+  failedContract: boolean;
+  contractingTeam: number;
+  redHandTotal: number;
+  blueHandTotal: number;
   redMatchScore: number;
   blueMatchScore: number;
-  failedContract: boolean;
-  capot: boolean;
 }
 
 export interface MatchEndPayload {
   winnerTeam: number;
   redFinalScore: number;
   blueFinalScore: number;
+  matchDurationSec: number;
 }
 
 export interface TrumpSelectedPayload {

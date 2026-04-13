@@ -41,6 +41,7 @@ const mockGameState: GameState = {
   pendingBelotSeat: null,
   belotAnnounced: false,
   winnerTeam: null,
+  lastHandResult: null,
   turnExpiresAt: null,
   timerDurationSec: 0,
 };
@@ -245,6 +246,33 @@ describe("useWsDispatch", () => {
     expect(state.gameState?.currentTrick[0].playerSeat).toBe(1);
   });
 
+  it("dispatches event:hand_scored to gameStore and sets scoreRevealData", () => {
+    useGameStore.getState().setGameState(mockGameState);
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:hand_scored",
+      payload: {
+        redCardPoints: 70, blueCardPoints: 82,
+        redDeclPoints: 0, blueDeclPoints: 0,
+        lastTrickTeam: 1, lastTrickBonus: 10,
+        capot: false, capotTeam: null, capotBonus: 0,
+        failedContract: false, contractingTeam: 1,
+        redHandTotal: 70, blueHandTotal: 92,
+        redMatchScore: 70, blueMatchScore: 92,
+      },
+    });
+
+    const state = useGameStore.getState();
+    expect(state.gameState?.teamScores[0]).toBe(70);
+    expect(state.gameState?.teamScores[1]).toBe(92);
+    expect(state.scoreRevealData).not.toBeNull();
+    expect(state.scoreRevealData?.redCardPoints).toBe(70);
+    expect(state.scoreRevealData?.capot).toBe(false);
+  });
+
   it("dispatches event:match_end to gameStore", () => {
     useGameStore.getState().setGameState(mockGameState);
 
@@ -253,12 +281,13 @@ describe("useWsDispatch", () => {
 
     dispatch({
       type: "event:match_end",
-      payload: { winnerTeam: 0, redFinalScore: 1020, blueFinalScore: 850 },
+      payload: { winnerTeam: 0, redFinalScore: 1020, blueFinalScore: 850, matchDurationSec: 300 },
     });
 
     const state = useGameStore.getState();
     expect(state.gameState?.phase).toBe("match_end");
     expect(state.gameState?.teamScores[0]).toBe(1020);
     expect(state.gameState?.teamScores[1]).toBe(850);
+    expect(state.matchEndData?.matchDurationSec).toBe(300);
   });
 });

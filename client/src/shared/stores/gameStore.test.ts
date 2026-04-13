@@ -37,6 +37,7 @@ const mockGameState: GameState = {
   pendingBelotSeat: null,
   belotAnnounced: false,
   winnerTeam: null,
+  lastHandResult: null,
   turnExpiresAt: null,
   timerDurationSec: 0,
 };
@@ -66,9 +67,18 @@ describe("gameStore", () => {
     expect(useGameStore.getState().myPlayerSeat).toBe(2);
   });
 
-  it("clears all game data via clearGame", () => {
+  it("clears all game data via clearGame including scoreRevealData and matchEndData", () => {
     useGameStore.getState().setGameState(mockGameState);
     useGameStore.getState().setMyPlayerSeat(1);
+    useGameStore.getState().setScoreRevealData({
+      redCardPoints: 70, blueCardPoints: 82, redDeclPoints: 0, blueDeclPoints: 0,
+      lastTrickTeam: 1, lastTrickBonus: 10, capot: false, capotTeam: null, capotBonus: 0,
+      failedContract: false, contractingTeam: 1, redHandTotal: 70, blueHandTotal: 92,
+      redMatchScore: 70, blueMatchScore: 92,
+    });
+    useGameStore.getState().setMatchEndData({
+      winnerTeam: 0, redFinalScore: 1020, blueFinalScore: 850, matchDurationSec: 300,
+    });
 
     useGameStore.getState().clearGame();
 
@@ -76,6 +86,8 @@ describe("gameStore", () => {
     expect(state.gameState).toBeNull();
     expect(state.myPlayerSeat).toBeNull();
     expect(state.roomId).toBeNull();
+    expect(state.scoreRevealData).toBeNull();
+    expect(state.matchEndData).toBeNull();
   });
 
   it("resets to initial state via reset", () => {

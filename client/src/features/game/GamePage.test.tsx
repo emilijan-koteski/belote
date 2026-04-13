@@ -56,6 +56,7 @@ const mockGameState: GameState = {
   pendingBelotSeat: null,
   belotAnnounced: false,
   winnerTeam: null,
+  lastHandResult: null,
   turnExpiresAt: null,
   timerDurationSec: 0,
 };
@@ -137,26 +138,26 @@ describe("GamePage", () => {
     expect(screen.getByTestId("hand-cards")).toBeInTheDocument();
   });
 
-  it("navigates to lobby on match_end phase after 2s delay", () => {
+  it("shows match result overlay on match_end phase with matchEndData", () => {
     useGameStore.getState().setGameState(mockGameState);
     useGameStore.getState().setMyPlayerSeat(0);
 
     renderGamePage();
 
-    // Transition to match_end
+    // Set match end data and transition to match_end phase
     act(() => {
       useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
+      useGameStore.getState().setMatchEndData({
+        winnerTeam: 0,
+        redFinalScore: 1020,
+        blueFinalScore: 850,
+        matchDurationSec: 300,
+      });
     });
 
-    // Before timeout: still on game page
-    expect(screen.getByTestId("game-page")).toBeInTheDocument();
-
-    // After 2s: clearGame should have been called
-    act(() => {
-      vi.advanceTimersByTime(2100);
-    });
-
-    expect(useGameStore.getState().gameState).toBeNull();
+    // Match result overlay should appear
+    expect(screen.getByTestId("match-result")).toBeInTheDocument();
+    expect(screen.getByTestId("match-result-red-score")).toHaveTextContent("1020");
   });
 
   it("shows confirm dialog on browser back button and stays if declined", () => {

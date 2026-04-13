@@ -186,6 +186,33 @@
     },
     "timer": {
       "autoPlayed": "Auto-played: {{card}}"
+    },
+    "score": {
+      "red": "Red",
+      "blue": "Blue",
+      "tricks": "Tricks",
+      "lastTrickBonus": "+{{amount}}"
+    },
+    "scoreReveal": {
+      "title": "Hand Score",
+      "cardPoints": "Card Points",
+      "declarationPoints": "Declarations",
+      "lastTrickBonus": "Last Trick Bonus",
+      "capotBonus": "Capot Bonus",
+      "failedContract": "Failed Contract",
+      "failedContractDesc": "{{team}} failed — all points to {{otherTeam}}",
+      "handTotal": "Hand Total",
+      "matchTotal": "Match Total",
+      "continue": "Continue"
+    },
+    "capot": {
+      "title": "CAPOT!"
+    },
+    "matchResult": {
+      "title": "Match Complete",
+      "winner": "{{team}} Wins!",
+      "duration": "Match Duration",
+      "returnToLobby": "Return to Lobby"
     }
   },
   "ws": {

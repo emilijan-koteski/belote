@@ -3,18 +3,37 @@ package game
 // scoreHand calculates the final hand score after all 8 tricks are resolved.
 // It applies last-trick bonus (or Capot bonus), checks for failed contracts,
 // updates match scores, and either starts a new hand or ends the match.
+// Populates LastHandResult with the full scoring breakdown for client broadcast.
 // Mutates an already-cloned state (called from within resolveTrickWithDeclarations).
 func scoreHand(state *GameState) {
 	// Step 1: Determine last-trick winner's team
 	lastTrickTeam := TeamForSeat(*state.TrickWinnerSeat)
 
+	// Capture raw card points BEFORE bonus application
+	rawRedCardPoints := state.HandPoints[TeamRed]
+	rawBlueCardPoints := state.HandPoints[TeamBlue]
+
 	// Step 2: Apply Capot bonus (+100) or last-trick bonus (+10)
+	isCapot := false
+	var capotTeam *int
+	capotBonus := 0
+	lastTrickBonus := 0
+
 	if state.TricksWon[TeamRed] == 8 {
 		state.HandPoints[TeamRed] += 100
+		isCapot = true
+		t := TeamRed
+		capotTeam = &t
+		capotBonus = 100
 	} else if state.TricksWon[TeamBlue] == 8 {
 		state.HandPoints[TeamBlue] += 100
+		isCapot = true
+		t := TeamBlue
+		capotTeam = &t
+		capotBonus = 100
 	} else {
 		state.HandPoints[lastTrickTeam] += 10
+		lastTrickBonus = 10
 	}
 
 	// Step 3: Calculate total hand score per team
@@ -35,16 +54,45 @@ func scoreHand(state *GameState) {
 	}
 
 	// Step 5: Award points — failed contract or normal scoring
-	if contractingTotal < opposingTotal {
+	failedContract := contractingTotal < opposingTotal
+	var redAwarded, blueAwarded int
+	if failedContract {
 		// Failed contract: contracting team gets 0, opponent gets ALL points
-		state.TeamScores[opposingTeam] += redTotal + blueTotal
+		allPoints := redTotal + blueTotal
+		state.TeamScores[opposingTeam] += allPoints
+		if opposingTeam == TeamRed {
+			redAwarded = allPoints
+			blueAwarded = 0
+		} else {
+			redAwarded = 0
+			blueAwarded = allPoints
+		}
 	} else {
 		// Normal scoring: each team keeps their own points
 		state.TeamScores[TeamRed] += redTotal
 		state.TeamScores[TeamBlue] += blueTotal
+		redAwarded = redTotal
+		blueAwarded = blueTotal
 	}
 
-	// Step 6: Check match-end condition with tiebreaker logic
+	// Step 6: Populate LastHandResult for broadcast
+	state.LastHandResult = &HandResult{
+		RedCardPoints:   rawRedCardPoints,
+		BlueCardPoints:  rawBlueCardPoints,
+		RedDeclPoints:   state.DeclarationPoints[TeamRed],
+		BlueDeclPoints:  state.DeclarationPoints[TeamBlue],
+		LastTrickTeam:   lastTrickTeam,
+		LastTrickBonus:  lastTrickBonus,
+		Capot:           isCapot,
+		CapotTeam:       capotTeam,
+		CapotBonus:      capotBonus,
+		FailedContract:  failedContract,
+		ContractingTeam: contractingTeam,
+		RedHandTotal:    redAwarded,
+		BlueHandTotal:   blueAwarded,
+	}
+
+	// Step 7: Check match-end condition with tiebreaker logic
 	target := matchTarget(state.MatchMode)
 	redOver := state.TeamScores[TeamRed] >= target
 	blueOver := state.TeamScores[TeamBlue] >= target
@@ -56,7 +104,7 @@ func scoreHand(state *GameState) {
 		return
 	}
 
-	// Step 7: Start new hand
+	// Step 8: Start new hand
 	startNewHand(state)
 }
 

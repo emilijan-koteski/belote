@@ -60,6 +60,22 @@ export interface PlayerState {
   connected: boolean;
 }
 
+export interface HandResult {
+  redCardPoints: number;
+  blueCardPoints: number;
+  redDeclPoints: number;
+  blueDeclPoints: number;
+  lastTrickTeam: number;
+  lastTrickBonus: number;
+  capot: boolean;
+  capotTeam: number | null;
+  capotBonus: number;
+  failedContract: boolean;
+  contractingTeam: number;
+  redHandTotal: number;
+  blueHandTotal: number;
+}
+
 export interface GameState {
   id: number;
   roomId: number;
@@ -88,6 +104,7 @@ export interface GameState {
   pendingBelotSeat: number | null;
   belotAnnounced: boolean;
   winnerTeam: number | null;
+  lastHandResult: HandResult | null;
   turnExpiresAt: string | null;
   timerDurationSec: number;
 }

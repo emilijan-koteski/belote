@@ -108,6 +108,7 @@ describe("gameTypes", () => {
         pendingBelotSeat: null,
         belotAnnounced: false,
         winnerTeam: null,
+        lastHandResult: null,
         turnExpiresAt: null,
         timerDurationSec: 0,
       };

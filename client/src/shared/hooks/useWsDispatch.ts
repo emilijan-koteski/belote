@@ -125,9 +125,9 @@ function dispatchGameEvent(message: WsMessage): void {
       store.setGameState({
         ...current,
         teamScores: [payload.redMatchScore, payload.blueMatchScore],
-        handPoints: [payload.redHandPoints, payload.blueHandPoints],
       });
     }
+    store.setScoreRevealData(payload);
     return;
   }
 
@@ -141,6 +141,7 @@ function dispatchGameEvent(message: WsMessage): void {
         teamScores: [payload.redFinalScore, payload.blueFinalScore],
       });
     }
+    store.setMatchEndData(payload);
     return;
   }
 
