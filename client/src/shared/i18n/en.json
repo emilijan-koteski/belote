@@ -183,6 +183,9 @@
       "notYourTurn": "It's not your turn",
       "invalidAction": "Invalid action",
       "illegalPlay": "That card cannot be played"
+    },
+    "timer": {
+      "autoPlayed": "Auto-played: {{card}}"
     }
   },
   "ws": {

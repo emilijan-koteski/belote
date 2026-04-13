@@ -183,6 +183,9 @@
       "notYourTurn": "Nije tvoj red",
       "invalidAction": "Neva\u017ee\u0107a akcija",
       "illegalPlay": "Ta karta ne mo\u017ee da se odigra"
+    },
+    "timer": {
+      "autoPlayed": "Automatski odigrano: {{card}}"
     }
   },
   "ws": {

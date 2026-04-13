@@ -32,6 +32,15 @@ const EventTrumpSelected = "event:trump_selected"
 const EventDeclarationsResolved = "event:declarations_resolved"
 const EventBelotAnnounced = "event:belot_announced"
 
+// --- Game event payload structs ---
+
+// CardPlayedPayload is the typed payload for EventCardPlayed events.
+type CardPlayedPayload struct {
+	PlayerSeat int    `json:"playerSeat"`
+	CardID     string `json:"cardId"`
+	AutoPlayed bool   `json:"autoPlayed"`
+}
+
 // --- Game error events (server -> client) ---
 const ErrorInvalidAction = "error:invalid_action"
 const ErrorNotYourTurn = "error:not_your_turn"

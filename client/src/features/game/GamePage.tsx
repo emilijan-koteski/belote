@@ -256,6 +256,8 @@ export function GamePage() {
               isActive={isActive}
               teamColor={teamColor(player.seat)}
               cardCount={isSelf ? undefined : player.hand.length}
+              turnExpiresAt={isActive ? gameState.turnExpiresAt : null}
+              timerDuration={gameState.timerDurationSec}
             />
           </div>
         );

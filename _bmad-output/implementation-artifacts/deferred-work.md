@@ -95,3 +95,9 @@
 - **D43: `PlayerState.username` missing from server Go `PlayerState` struct** — Client `gameTypes.ts` declares `username: string` but server `state.go` `PlayerState` has no `Username` field. Players may display as undefined. Pre-existing from Story 4.3 when field was added to client type.
 - **D44: `TrumpSelectedPayload.trumpSuit` unsafe `as` cast from `string` to `Suit | null`** — `useWsDispatch.ts:143` casts without runtime validation. If server sends unexpected value, it silently enters GameState. Pre-existing from Story 4.2.
 - **D45: `window.confirm()` for back-button interception** — Blocking synchronous API, not styleable, may not render i18n correctly on all platforms. Pre-existing from Story 4.3.
+
+## Deferred from: code review of 4-5-per-move-timer-and-auto-play (2026-04-12)
+
+- **D46: GetStateSnapshot returns mutable pointer** — `manager.go:172-174` returns `session.gameState` directly under RLock. Callers hold a raw pointer that can observe concurrent mutations after the lock is released. Pre-existing design pattern, not introduced by timer changes.
+- **D47: legalCards dereferences TrumpSuit without nil check** — `validation.go:18` dereferences `*state.TrumpSuit` unconditionally when `CurrentTrick` is non-empty. Safe through current call chain (PhasePlaying guarantees TrumpSuit non-nil). Pre-existing (also tracked as D35).
+- **D48: Client clock skew — no server-client time sync** — TimerRing computes remaining time as `new Date(turnExpiresAt).getTime() - Date.now()`. If client clock differs from server, countdown may be off. Spec accepts ±1s. Future enhancement to send serverTimeMs alongside turnExpiresAt.

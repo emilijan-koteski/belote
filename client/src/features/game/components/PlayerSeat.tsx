@@ -2,15 +2,19 @@ import { useTranslation } from "react-i18next";
 
 import type { PlayerState } from "@/shared/types/gameTypes";
 
+import { TimerRing } from "./TimerRing";
+
 interface PlayerSeatProps {
   player: PlayerState | null;
   isSelf: boolean;
   isActive: boolean;
   teamColor: "red" | "blue";
   cardCount?: number;
+  turnExpiresAt?: string | null;
+  timerDuration?: number;
 }
 
-export function PlayerSeat({ player, isSelf, isActive, teamColor, cardCount }: PlayerSeatProps) {
+export function PlayerSeat({ player, isSelf, isActive, teamColor, cardCount, turnExpiresAt, timerDuration }: PlayerSeatProps) {
   const { t } = useTranslation();
 
   const borderColor = teamColor === "red" ? "border-team-red" : "border-team-blue";
@@ -45,8 +49,13 @@ export function PlayerSeat({ player, isSelf, isActive, teamColor, cardCount }: P
       className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 ${activeClasses} ${scaleClass}`}
       aria-label={`${displayName}, ${teamLabel} team, ${statusLabel}`}
     >
-      <div className="w-10 h-10 rounded-full bg-surface-elevated flex items-center justify-center">
-        <span className="text-text-primary text-sm font-body font-semibold">{initial}</span>
+      <div className="relative w-12 h-12 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full bg-surface-elevated flex items-center justify-center">
+          <span className="text-text-primary text-sm font-body font-semibold">{initial}</span>
+        </div>
+        {isActive && turnExpiresAt != null && timerDuration !== undefined && timerDuration > 0 && (
+          <TimerRing turnExpiresAt={turnExpiresAt} totalDuration={timerDuration} />
+        )}
       </div>
       <span className="font-body text-sm text-text-primary">{displayName}</span>
       {isSelf && (

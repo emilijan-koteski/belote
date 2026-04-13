@@ -89,4 +89,5 @@ export interface GameState {
   belotAnnounced: boolean;
   winnerTeam: number | null;
   turnExpiresAt: string | null;
+  timerDurationSec: number;
 }

@@ -109,6 +109,7 @@ describe("gameTypes", () => {
         belotAnnounced: false,
         winnerTeam: null,
         turnExpiresAt: null,
+        timerDurationSec: 0,
       };
 
       expect(state.phase).toBe("bidding");

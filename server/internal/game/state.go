@@ -68,8 +68,9 @@ type GameState struct {
 	WinnerTeam        *int   `json:"winnerTeam"`
 
 	// Timer state
-	ActivePlayerSeat int        `json:"activePlayerSeat"`
-	TurnExpiresAt    *time.Time `json:"turnExpiresAt"`
+	ActivePlayerSeat   int        `json:"activePlayerSeat"`
+	TurnExpiresAt      *time.Time `json:"turnExpiresAt"`
+	TimerDurationSec   int        `json:"timerDurationSec"`
 }
 
 // TeamRed is the index for the Red team (seats 0, 2) in score arrays.

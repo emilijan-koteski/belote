@@ -42,6 +42,7 @@ const mockGameState: GameState = {
   belotAnnounced: false,
   winnerTeam: null,
   turnExpiresAt: null,
+  timerDurationSec: 0,
 };
 
 describe("useWsDispatch", () => {

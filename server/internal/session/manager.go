@@ -15,11 +15,16 @@ import (
 
 // Session holds the live game state and player mapping for one active game.
 type Session struct {
-	gameState *game.GameState
-	playerIDs [4]uint // index = seat
-	roomID    uint
-	startedAt time.Time
-	mu        sync.RWMutex
+	gameState        *game.GameState
+	playerIDs        [4]uint // index = seat
+	roomID           uint
+	startedAt        time.Time
+	timerStyle       string      // "relaxed" or "per-move"
+	timerDurationSec int         // seconds per move (only used when timerStyle == "per-move")
+	turnTimer        *time.Timer // current per-move timer (nil when inactive)
+	timerGeneration  uint64      // incremented on each turn; timer callback checks staleness
+	closed           bool        // set when session is being removed
+	mu               sync.RWMutex
 }
 
 // RoomStatusUpdater updates a room's status in the database.
@@ -54,7 +59,7 @@ func (m *Manager) SetRoomUpdater(updater RoomStatusUpdater) {
 }
 
 // StartGame creates a new game session from room data and broadcasts the initial state.
-func (m *Manager) StartGame(roomID uint, variant string, matchMode string, players [4]room.PlayerSeatInfo) error {
+func (m *Manager) StartGame(roomID uint, variant string, matchMode string, players [4]room.PlayerSeatInfo, timerStyle string, timerDurationSec int) error {
 	m.mu.Lock()
 	if _, exists := m.sessions[roomID]; exists {
 		m.mu.Unlock()
@@ -69,10 +74,12 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 	gs := game.NewGame(playerIDs, game.Variant(variant), matchMode, roomID)
 
 	session := &Session{
-		gameState: gs,
-		playerIDs: playerIDs,
-		roomID:    roomID,
-		startedAt: time.Now(),
+		gameState:        gs,
+		playerIDs:        playerIDs,
+		roomID:           roomID,
+		startedAt:        time.Now(),
+		timerStyle:       timerStyle,
+		timerDurationSec: timerDurationSec,
 	}
 
 	m.sessions[roomID] = session
@@ -88,7 +95,11 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 
 	// Auto-transition to bidding phase (client's DealAnimation handles visual timing)
 	if gs.Phase == game.PhaseDealing {
+		session.mu.Lock()
 		gs.Phase = game.PhaseBidding
+		m.setTurnExpiry(session, gs)
+		m.startTimerLocked(session)
+		session.mu.Unlock()
 		m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventGameState, gs))
 	}
 
@@ -119,20 +130,43 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 		return
 	}
 
-	// Lock the session for state mutation
+	// Lock the session for state mutation — cancel timer first to prevent race
 	session.mu.Lock()
+	if session.closed {
+		session.mu.Unlock()
+		return
+	}
+	session.cancelTurnTimer()
+
 	oldState := session.gameState
 	newState, err := game.ApplyAction(oldState, action)
 	if err != nil {
+		// Restart timer since we cancelled it but the action failed
+		m.setTurnExpiry(session, oldState)
+		m.startTimerLocked(session)
 		session.mu.Unlock()
 		m.sendGameError(client.UserID, err)
 		return
 	}
+
+	// Handle dealing→bidding auto-transition inside the lock (prevents data race)
+	if newState.Phase == game.PhaseDealing {
+		newState.Phase = game.PhaseBidding
+	}
+
+	// Set expiry and start timer for next player's turn (inside lock)
+	if newState.Phase == game.PhasePlaying || newState.Phase == game.PhaseBidding {
+		m.setTurnExpiry(session, newState)
+		m.startTimerLocked(session)
+	}
+
 	session.gameState = newState
+	// Capture immutable values for use after unlock
+	playerIDs := session.playerIDs
 	session.mu.Unlock()
 
 	// Broadcast the result using captured local variables (not session.gameState)
-	m.broadcastActionResult(session.playerIDs, oldState, newState, action)
+	m.broadcastActionResult(playerIDs, oldState, newState, action, false)
 
 	// Check for match completion
 	if newState.Phase == game.PhaseMatchEnd {
@@ -153,11 +187,15 @@ func (m *Manager) GetStateSnapshot(roomID uint) *game.GameState {
 	return session.gameState
 }
 
-// RemoveSession cleans up a game session.
+// RemoveSession cleans up a game session, cancelling any active timer.
 func (m *Manager) RemoveSession(roomID uint) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if session, ok := m.sessions[roomID]; ok {
+		session.mu.Lock()
+		session.closed = true
+		session.cancelTurnTimer()
+		session.mu.Unlock()
 		for _, uid := range session.playerIDs {
 			delete(m.userToRoom, uid)
 		}
@@ -239,7 +277,8 @@ func (m *Manager) parseAction(userID uint, session *Session, msg ws.WSMessage) (
 
 // broadcastActionResult sends the appropriate event(s) after a successful action.
 // All parameters are local values — no session.gameState reads (avoids data races).
-func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *game.GameState, action game.Action) {
+// autoPlayed indicates whether the card was played by the timer auto-play system.
+func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *game.GameState, action game.Action, autoPlayed bool) {
 	userIDs := playerIDs[:]
 
 	switch action.Type {
@@ -248,7 +287,7 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		cardPlayed := map[string]interface{}{
 			"playerSeat": action.PlayerSeat,
 			"cardId":     action.Card.String(),
-			"autoPlayed": false,
+			"autoPlayed": autoPlayed,
 		}
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventCardPlayed, cardPlayed))
 
@@ -376,13 +415,11 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 	}
 
-	// Auto-transition from dealing phase to bidding — the dealing phase is
-	// a visual-only state for the client's deal animation. The server
-	// broadcasts the dealing state first, then immediately transitions to
-	// bidding so the client sees dealing→bidding in sequence.
-	// Note: session.gameState is updated by HandleAction after this returns.
-	if newState.Phase == game.PhaseDealing {
-		newState.Phase = game.PhaseBidding
+	// If the phase transitioned to dealing→bidding (handled inside the lock before
+	// this function was called), broadcast the bidding state for the client to see
+	// the dealing→bidding sequence.
+	if newState.Phase == game.PhaseBidding && oldState.Phase != game.PhaseBidding &&
+		(action.Type == game.ActionPassTrump || action.Type == game.ActionPlayCard) {
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 	}
 }
@@ -453,6 +490,136 @@ func buildMessage(eventType string, payload interface{}) []byte {
 		return nil
 	}
 	return msg
+}
+
+// setTurnExpiry sets TurnExpiresAt on the game state based on timer config.
+// For "per-move" style, sets an absolute expiry timestamp. For "relaxed", sets nil.
+// Must be called under session.mu.Lock().
+func (m *Manager) setTurnExpiry(session *Session, gs *game.GameState) {
+	if session.timerStyle == "per-move" && session.timerDurationSec > 0 {
+		expiry := time.Now().Add(time.Duration(session.timerDurationSec) * time.Second)
+		gs.TurnExpiresAt = &expiry
+		gs.TimerDurationSec = session.timerDurationSec
+	} else {
+		gs.TurnExpiresAt = nil
+		gs.TimerDurationSec = 0
+	}
+}
+
+// startTimerLocked starts the per-move turn timer for the current session.
+// Must be called under session.mu.Lock(). The timer callback will acquire
+// session.mu.Lock() when it fires (safe — fires in a separate goroutine later).
+func (m *Manager) startTimerLocked(session *Session) {
+	if session.timerStyle != "per-move" || session.timerDurationSec <= 0 {
+		return
+	}
+	session.cancelTurnTimer()
+	session.timerGeneration++
+	gen := session.timerGeneration
+	expectedSeat := session.gameState.ActivePlayerSeat
+
+	duration := time.Duration(session.timerDurationSec) * time.Second
+	session.turnTimer = time.AfterFunc(duration, func() {
+		m.handleTimerExpiry(session, gen, expectedSeat)
+	})
+}
+
+// handleTimerExpiry is called when a per-move timer fires. It auto-plays for the
+// active player and broadcasts the result. The generation counter prevents stale
+// timer callbacks from acting on the wrong turn.
+func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expectedSeat int) {
+	session.mu.Lock()
+
+	// Guard: session closed or timer is stale (turn already advanced)
+	if session.closed || session.timerGeneration != generation {
+		session.mu.Unlock()
+		return
+	}
+
+	gs := session.gameState
+
+	// Determine what action to auto-take based on game phase and state
+	var action game.Action
+	switch {
+	case gs.Phase == game.PhaseBidding:
+		// Auto-pass trump on bidding timeout
+		action = game.Action{
+			Type:       game.ActionPassTrump,
+			PlayerSeat: expectedSeat,
+		}
+	case gs.Phase == game.PhasePlaying && gs.AwaitingDeclaration:
+		// Auto-skip declaration on timer expiry
+		action = game.Action{
+			Type:       game.ActionSkipDeclare,
+			PlayerSeat: expectedSeat,
+		}
+	case gs.Phase == game.PhasePlaying && gs.PendingBelotSeat != nil && *gs.PendingBelotSeat == expectedSeat:
+		// Auto-skip belot announcement on timer expiry
+		action = game.Action{
+			Type:       game.ActionSkipBelot,
+			PlayerSeat: expectedSeat,
+		}
+	case gs.Phase == game.PhasePlaying:
+		// Auto-play a card
+		cardID, err := game.AutoPlay(gs)
+		if err != nil {
+			slog.Error("session: auto-play failed", "roomID", session.roomID, "error", err)
+			// Restart timer so the game doesn't stall
+			m.startTimerLocked(session)
+			session.mu.Unlock()
+			return
+		}
+		card, err := game.ParseCard(cardID)
+		if err != nil {
+			slog.Error("session: auto-play card parse failed", "roomID", session.roomID, "cardID", cardID, "error", err)
+			m.startTimerLocked(session)
+			session.mu.Unlock()
+			return
+		}
+		action = game.Action{
+			Type:       game.ActionPlayCard,
+			PlayerSeat: expectedSeat,
+			Card:       &card,
+		}
+	default:
+		// Phase doesn't support auto-play (e.g., match_end, paused)
+		session.mu.Unlock()
+		return
+	}
+
+	oldState := gs
+	newState, err := game.ApplyAction(oldState, action)
+	if err != nil {
+		slog.Error("session: auto-play ApplyAction failed", "roomID", session.roomID, "error", err)
+		// Restart timer so the game doesn't stall permanently
+		m.startTimerLocked(session)
+		session.mu.Unlock()
+		return
+	}
+
+	// Handle dealing→bidding auto-transition inside the lock
+	if newState.Phase == game.PhaseDealing {
+		newState.Phase = game.PhaseBidding
+	}
+
+	// Set expiry and start timer for next player (inside lock)
+	if newState.Phase == game.PhasePlaying || newState.Phase == game.PhaseBidding {
+		m.setTurnExpiry(session, newState)
+		m.startTimerLocked(session)
+	}
+
+	session.gameState = newState
+	playerIDs := session.playerIDs
+	session.mu.Unlock()
+
+	// Broadcast result
+	isAutoPlayedCard := action.Type == game.ActionPlayCard
+	m.broadcastActionResult(playerIDs, oldState, newState, action, isAutoPlayedCard)
+
+	// Check for match completion
+	if newState.Phase == game.PhaseMatchEnd {
+		m.handleMatchEnd(session, newState)
+	}
 }
 
 func safeDerefInt(p *int) int {

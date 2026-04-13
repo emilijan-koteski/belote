@@ -1,4 +1,6 @@
+import i18n from "i18next";
 import { useCallback } from "react";
+import { toast } from "sonner";
 
 import { handleWsMessage as handleRoomListMessage } from "@/features/lobby/useRoomUpdates";
 import { useGameStore } from "@/shared/stores/gameStore";
@@ -90,6 +92,13 @@ function dispatchGameEvent(message: WsMessage): void {
           ...current.currentTrick,
           { card: { rank: rank as "7"|"8"|"9"|"T"|"J"|"Q"|"K"|"A", suit: suit as "S"|"H"|"D"|"C" }, playerSeat: payload.playerSeat },
         ],
+      });
+    }
+
+    // Auto-play toast notification
+    if (payload.autoPlayed) {
+      toast.info(i18n.t("game.timer.autoPlayed", { card: payload.cardId }), {
+        duration: 3000,
       });
     }
     return;
