@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
@@ -11,6 +12,30 @@ import (
 
 	"github.com/emilijan/belote/server/internal/apperr"
 )
+
+// roomPlayerRow is a scan-target struct without gorm:"-" on Username,
+// allowing GORM's Scan to populate the username from a JOIN query.
+type roomPlayerRow struct {
+	ID        uint      `gorm:"column:id"`
+	RoomID    uint      `gorm:"column:room_id"`
+	UserID    uint      `gorm:"column:user_id"`
+	Username  string    `gorm:"column:username"`
+	Seat      *int      `gorm:"column:seat"`
+	Team      *string   `gorm:"column:team"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+}
+
+func (r roomPlayerRow) toRoomPlayer() RoomPlayer {
+	return RoomPlayer{
+		ID:        r.ID,
+		RoomID:    r.RoomID,
+		UserID:    r.UserID,
+		Username:  r.Username,
+		Seat:      r.Seat,
+		Team:      r.Team,
+		CreatedAt: r.CreatedAt,
+	}
+}
 
 type GormRepository struct {
 	db *gorm.DB
@@ -105,18 +130,19 @@ func (r *GormRepository) RemovePlayer(roomID uint, userID uint) error {
 }
 
 func (r *GormRepository) FindPlayersByRoomID(roomID uint) ([]RoomPlayer, error) {
-	var players []RoomPlayer
+	var rows []roomPlayerRow
 	err := r.db.Table("room_players").
 		Select("room_players.*, users.username").
 		Joins("JOIN users ON users.id = room_players.user_id").
 		Where("room_players.room_id = ?", roomID).
 		Order("room_players.created_at ASC").
-		Scan(&players).Error
+		Scan(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("finding players for room %d: %w", roomID, err)
 	}
-	if players == nil {
-		players = []RoomPlayer{}
+	players := make([]RoomPlayer, len(rows))
+	for i, row := range rows {
+		players[i] = row.toRoomPlayer()
 	}
 	return players, nil
 }
@@ -163,18 +189,19 @@ func (r *GormRepository) ClearPlayerSeat(roomID uint, userID uint) error {
 }
 
 func (r *GormRepository) FindPlayerBySeat(roomID uint, seat int) (*RoomPlayer, error) {
-	var player RoomPlayer
+	var row roomPlayerRow
 	err := r.db.Table("room_players").
 		Select("room_players.*, users.username").
 		Joins("JOIN users ON users.id = room_players.user_id").
 		Where("room_players.room_id = ? AND room_players.seat = ?", roomID, seat).
-		Scan(&player).Error
+		Scan(&row).Error
 	if err != nil {
 		return nil, fmt.Errorf("finding player by seat: %w", err)
 	}
-	if player.ID == 0 {
+	if row.ID == 0 {
 		return nil, nil
 	}
+	player := row.toRoomPlayer()
 	return &player, nil
 }
 

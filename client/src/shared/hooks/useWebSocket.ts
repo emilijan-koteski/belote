@@ -66,7 +66,7 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
     wsRef.current = ws;
 
     ws.onopen = () => {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || wsRef.current !== ws) return;
       updateState("authenticating");
       ws.send(JSON.stringify({
         type: ACTION_AUTHENTICATE,
@@ -75,7 +75,7 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
     };
 
     ws.onmessage = (event: MessageEvent) => {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || wsRef.current !== ws) return;
 
       let message: WsMessage;
       try {
@@ -106,7 +106,7 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
     };
 
     ws.onclose = () => {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || wsRef.current !== ws) return;
       wsRef.current = null;
       updateState("disconnected");
       scheduleReconnect();
