@@ -18,6 +18,9 @@ type ActionHandler func(client *Client, msg WSMessage)
 // SystemHandler processes system: prefixed messages from clients.
 type SystemHandler func(client *Client, msg WSMessage)
 
+// DisconnectHandler is called when a client truly disconnects (not replaced by a new connection).
+type DisconnectHandler func(userID uint)
+
 // Hub manages all active WebSocket connections and routes messages.
 type Hub struct {
 	clients    map[uint]*Client
@@ -27,8 +30,9 @@ type Hub struct {
 	incoming   chan *IncomingMessage
 	done       chan struct{}
 
-	actionHandler ActionHandler
-	systemHandler SystemHandler
+	actionHandler     ActionHandler
+	systemHandler     SystemHandler
+	disconnectHandler DisconnectHandler
 }
 
 // NewHub creates a new Hub ready to run.
@@ -52,6 +56,12 @@ func (h *Hub) SetActionHandler(handler ActionHandler) {
 // This will be wired to lobby/chat handlers in future stories.
 func (h *Hub) SetSystemHandler(handler SystemHandler) {
 	h.systemHandler = handler
+}
+
+// SetDisconnectHandler registers a callback for true client disconnections.
+// Called when a client is unregistered and NOT replaced by a new connection.
+func (h *Hub) SetDisconnectHandler(handler DisconnectHandler) {
+	h.disconnectHandler = handler
 }
 
 // Run starts the hub's main event loop. Call as a goroutine.
@@ -79,6 +89,10 @@ func (h *Hub) Run() {
 				delete(h.clients, client.UserID)
 				client.markClosed()
 				slog.Info("ws: client unregistered", "userID", client.UserID)
+				// Fire disconnect handler only for true disconnects (not replacements)
+				if h.disconnectHandler != nil {
+					go h.disconnectHandler(client.UserID)
+				}
 			}
 			h.mu.Unlock()
 

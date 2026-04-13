@@ -94,10 +94,14 @@ type GameState struct {
 	TimerDurationSec int        `json:"timerDurationSec"`
 
 	// Pause state
-	PreviousPhase    Phase  `json:"previousPhase"`    // Phase before pause (for resume)
+	PreviousPhase    Phase  `json:"previousPhase"`    // Phase before pause/disconnect (for resume)
 	PausedPlayers    [4]bool `json:"pausedPlayers"`    // Which seats have active pauses
 	PauseUsed        [4]bool `json:"pauseUsed"`        // Which seats have used their one-time pause
-	TurnTimeRemaining int64  `json:"turnTimeRemaining"` // Milliseconds remaining on turn timer when paused
+	TurnTimeRemaining int64  `json:"turnTimeRemaining"` // Milliseconds remaining on turn timer when paused/disconnected
+
+	// Disconnect state
+	DisconnectedSeat   int        `json:"disconnectedSeat"`   // Seat index of disconnected player (-1 if none)
+	ReconnectExpiresAt *time.Time `json:"reconnectExpiresAt"` // Absolute timestamp when reconnect window closes
 }
 
 // TeamRed is the index for the Red team (seats 0, 2) in score arrays.
@@ -134,6 +138,7 @@ func NewGame(playerIDs [4]uint, variant Variant, matchMode string, roomID uint) 
 		BiddingPassCount: 0,
 		TrickNumber:      0,
 		CurrentTrick:     []TrickCard{},
+		DisconnectedSeat: -1,
 	}
 
 	// Assign players to seats and teams

@@ -7,6 +7,11 @@ import "github.com/emilijan/belote/server/internal/apperr"
 // a new game state (or an error if the action is invalid).
 // No side effects — session manager handles broadcasting, persistence, timers.
 func ApplyAction(state *GameState, action Action) (*GameState, error) {
+	// Disconnected phase blocks all actions — game is waiting for reconnection
+	if state.Phase == PhaseDisconnected {
+		return nil, apperr.ErrPlayerDisconnected
+	}
+
 	// Pause action is valid from playing, bidding, or already-paused (stacking)
 	if action.Type == ActionPause {
 		return handlePause(state, action)

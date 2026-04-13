@@ -529,6 +529,18 @@ func NewGamePausedWithOwner(pausedBySeat int, ownerSeat int) *game.GameState {
 	return gs
 }
 
+// NewGameDisconnected returns a GameState in PhaseDisconnected with the
+// specified seat disconnected. PreviousPhase is PhasePlaying. Used for
+// testing that all actions are rejected during the disconnected phase.
+func NewGameDisconnected(disconnectedSeat int) *game.GameState {
+	gs := NewGameMidPlay(1)
+	gs.Phase = game.PhaseDisconnected
+	gs.PreviousPhase = game.PhasePlaying
+	gs.DisconnectedSeat = disconnectedSeat
+	gs.Players[disconnectedSeat].Connected = false
+	return gs
+}
+
 // NewGameMidBidding returns a GameState with the specified number of passes
 // already recorded. Correctly tracks BiddingRound and ActivePlayerSeat.
 //

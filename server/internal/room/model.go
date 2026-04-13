@@ -15,6 +15,7 @@ type Room struct {
 	MatchMode            string         `gorm:"size:10;not null;default:1001" json:"matchMode"`
 	TimerStyle           string         `gorm:"size:20;not null;default:relaxed" json:"timerStyle"`
 	TimerDurationSeconds *int           `json:"timerDurationSeconds"`
+	ReconnectWindowSec   *int           `json:"reconnectWindowSec"`
 	Status               string         `gorm:"size:20;not null;default:waiting;index" json:"status"`
 	PlayerCount          int            `gorm:"not null;default:1" json:"playerCount"`
 	IsQuickPlay          bool           `gorm:"not null;default:false" json:"isQuickPlay"`

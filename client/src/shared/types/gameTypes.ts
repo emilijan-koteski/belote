@@ -112,4 +112,6 @@ export interface GameState {
   pausedPlayers: [boolean, boolean, boolean, boolean];
   pauseUsed: [boolean, boolean, boolean, boolean];
   turnTimeRemaining: number;
+  disconnectedSeat: number;
+  reconnectExpiresAt: string | null;
 }

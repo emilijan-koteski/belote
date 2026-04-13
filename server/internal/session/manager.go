@@ -15,16 +15,19 @@ import (
 
 // Session holds the live game state and player mapping for one active game.
 type Session struct {
-	gameState        *game.GameState
-	playerIDs        [4]uint // index = seat
-	roomID           uint
-	startedAt        time.Time
-	timerStyle       string      // "relaxed" or "per-move"
-	timerDurationSec int         // seconds per move (only used when timerStyle == "per-move")
-	turnTimer        *time.Timer // current per-move timer (nil when inactive)
-	timerGeneration  uint64      // incremented on each turn; timer callback checks staleness
-	closed           bool        // set when session is being removed
-	mu               sync.RWMutex
+	gameState            *game.GameState
+	playerIDs            [4]uint // index = seat
+	roomID               uint
+	startedAt            time.Time
+	timerStyle           string      // "relaxed" or "per-move"
+	timerDurationSec     int         // seconds per move (only used when timerStyle == "per-move")
+	turnTimer            *time.Timer // current per-move timer (nil when inactive)
+	timerGeneration      uint64      // incremented on each turn; timer callback checks staleness
+	reconnectWindowSec   int         // seconds to wait for disconnected player (default 120)
+	reconnectTimer       *time.Timer // reconnect countdown timer (nil when inactive)
+	reconnectGeneration  uint64      // incremented on each disconnect; timer callback checks staleness
+	closed               bool        // set when session is being removed
+	mu                   sync.RWMutex
 }
 
 // RoomStatusUpdater updates a room's status in the database.
@@ -59,7 +62,7 @@ func (m *Manager) SetRoomUpdater(updater RoomStatusUpdater) {
 }
 
 // StartGame creates a new game session from room data and broadcasts the initial state.
-func (m *Manager) StartGame(roomID uint, variant string, matchMode string, players [4]room.PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint) error {
+func (m *Manager) StartGame(roomID uint, variant string, matchMode string, players [4]room.PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint, reconnectWindowSec int) error {
 	m.mu.Lock()
 	if _, exists := m.sessions[roomID]; exists {
 		m.mu.Unlock()
@@ -84,12 +87,13 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 	}
 
 	session := &Session{
-		gameState:        gs,
-		playerIDs:        playerIDs,
-		roomID:           roomID,
-		startedAt:        time.Now(),
-		timerStyle:       timerStyle,
-		timerDurationSec: timerDurationSec,
+		gameState:          gs,
+		playerIDs:          playerIDs,
+		roomID:             roomID,
+		startedAt:          time.Now(),
+		timerStyle:         timerStyle,
+		timerDurationSec:   timerDurationSec,
+		reconnectWindowSec: reconnectWindowSec,
 	}
 
 	m.sessions[roomID] = session
@@ -245,6 +249,7 @@ func (m *Manager) RemoveSession(roomID uint) {
 		session.mu.Lock()
 		session.closed = true
 		session.cancelTurnTimer()
+		session.cancelReconnectTimer()
 		session.mu.Unlock()
 		for _, uid := range session.playerIDs {
 			delete(m.userToRoom, uid)

@@ -191,7 +191,8 @@
       "illegalPlay": "That card cannot be played",
       "pauseExhausted": "You have already used your pause",
       "noActivePause": "You don't have an active pause",
-      "notRoomOwner": "Only the room owner can do this"
+      "notRoomOwner": "Only the room owner can do this",
+      "playerDisconnected": "A player is disconnected"
     },
     "timer": {
       "autoPlayed": "Auto-played: {{card}}"
@@ -232,6 +233,13 @@
       "pauseUsed": "Pause Used",
       "resumeAll": "Resume All",
       "ownerResumedToast": "Room owner resumed the game"
+    },
+    "disconnect": {
+      "playerDisconnected": "{{player}} disconnected",
+      "playerReconnected": "{{player}} reconnected",
+      "reconnecting": "Reconnecting...",
+      "waitingMessage": "The game is on hold while we wait for {{player}} to reconnect.",
+      "countdownLabel": "Time remaining"
     }
   },
   "ws": {

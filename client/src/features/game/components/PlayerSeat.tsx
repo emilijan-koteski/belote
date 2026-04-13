@@ -34,19 +34,22 @@ export function PlayerSeat({ player, isSelf, isActive, teamColor, cardCount, tur
     );
   }
 
-  const activeClasses = isActive
+  const isDisconnected = player.connected === false;
+
+  const activeClasses = isActive && !isDisconnected
     ? "border-accent shadow-[0_0_16px_var(--color-accent-glow)] motion-safe:animate-pulse"
     : borderColor;
 
   const scaleClass = isSelf ? "scale-110" : "";
+  const disconnectedClass = isDisconnected ? "opacity-50 grayscale" : "";
 
-  const statusLabel = isActive ? "active" : "waiting";
+  const statusLabel = isDisconnected ? "disconnected" : isActive ? "active" : "waiting";
   const displayName = player.username || `P${player.seat + 1}`;
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <div
-      className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 ${activeClasses} ${scaleClass}`}
+      className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 ${activeClasses} ${scaleClass} ${disconnectedClass}`}
       aria-label={`${displayName}, ${teamLabel} team, ${statusLabel}`}
     >
       <div className="relative w-12 h-12 flex items-center justify-center">

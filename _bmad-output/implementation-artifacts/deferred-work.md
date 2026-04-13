@@ -125,3 +125,9 @@
 - **D56: Room ownership transfer during active game not synced to session** — If room ownership changes via `LeaveRoom` during an active game, `GameState.OwnerSeat` remains stale. Pre-existing design: OwnerSeat is fixed at game start. The new owner cannot use `owner_unpause`. Acceptable for Phase 1 (owner must be seated to start game, and leaving during game is not a normal flow).
 - **D57: No integration test for broadcast `OwnerOverride: true`** — `broadcastActionResult` sets `OwnerOverride: true` for `ActionOwnerUnpause` (implemented in Story 5.1), but no test asserts the broadcast payload contains this flag. Pre-existing from Story 5.1; broadcast code unchanged in this story.
 - **D58: No WS-layer test for `error:not_room_owner` event delivery** — Rules engine returns `ErrNotRoomOwner` correctly, but `sendGameError` routes all game errors as `error:invalid_action` (pre-existing D53). The typed `error:not_room_owner` constant is defined for future use when D53 is addressed.
+
+## Deferred from: code review of 5-3-disconnect-detection-and-reconnect-countdown (2026-04-13)
+
+- **D59: `username` field in `PlayerDisconnectedPayload` is always empty** — Server `PlayerState` has no `Username` field (pre-existing D43). `HandleDisconnect` sends `username: ""` in the disconnect payload. Client falls back to `Player N` via nullish coalescing. Fix when D43 is addressed (add Username to server-side PlayerState).
+- **D60: `ERROR_PLAYER_DISCONNECTED` unreachable on wire** — `sendGameError` routes all game errors as `error:invalid_action` (pre-existing D53). The typed `error:player_disconnected` constant is defined in both contract files for future use when D53 is addressed.
+- **D61: `startNewHand` does not reset disconnect fields** — `DisconnectedSeat`, `ReconnectExpiresAt`, and `Players[i].Connected` are not cleared when a new hand starts. Pre-existing design; Story 5.4/5.5 must handle reset on reconnection or match resumption.

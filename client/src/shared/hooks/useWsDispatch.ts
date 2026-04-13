@@ -13,8 +13,10 @@ import type {
   GameStartedPayload,
   HandScoredPayload,
   MatchEndPayload,
+  PlayerDisconnectedPayload,
   PlayerJoinedPayload,
   PlayerLeftPayload,
+  PlayerReconnectedPayload,
   SeatUpdatedPayload,
   TrickResolvedPayload,
   WsMessage,
@@ -27,6 +29,7 @@ import {
   ERROR_NOT_ROOM_OWNER,
   ERROR_NOT_YOUR_TURN,
   ERROR_PAUSE_EXHAUSTED,
+  ERROR_PLAYER_DISCONNECTED,
   ERROR_WRONG_PHASE,
   EVENT_BELOT_ANNOUNCED,
   EVENT_CARD_PLAYED,
@@ -36,6 +39,8 @@ import {
   EVENT_GAME_STATE,
   EVENT_HAND_SCORED,
   EVENT_MATCH_END,
+  EVENT_PLAYER_DISCONNECTED,
+  EVENT_PLAYER_RECONNECTED,
   EVENT_TRICK_RESOLVED,
   EVENT_TRUMP_SELECTED,
   SYSTEM_AUTHENTICATED,
@@ -187,6 +192,24 @@ function dispatchGameEvent(message: WsMessage): void {
     // Full state update follows via event:game_state
     return;
   }
+
+  if (type === EVENT_PLAYER_DISCONNECTED) {
+    const payload = message.payload as PlayerDisconnectedPayload;
+    const current = store.gameState;
+    const playerName = current?.players[payload.playerSeat]?.username ?? payload.username ?? `Player ${payload.playerSeat + 1}`;
+    toast.warning(i18n.t("game.disconnect.playerDisconnected", { player: playerName }), { duration: 5000 });
+    // Full state update follows via event:game_state
+    return;
+  }
+
+  if (type === EVENT_PLAYER_RECONNECTED) {
+    const payload = message.payload as PlayerReconnectedPayload;
+    const current = store.gameState;
+    const playerName = current?.players[payload.playerSeat]?.username ?? `Player ${payload.playerSeat + 1}`;
+    toast.success(i18n.t("game.disconnect.playerReconnected", { player: playerName }), { duration: 3000 });
+    // Full state update follows via event:game_state
+    return;
+  }
 }
 
 function dispatchSystemEvent(message: WsMessage): void {
@@ -257,6 +280,7 @@ const GAME_ERROR_TYPES = new Set([
   ERROR_PAUSE_EXHAUSTED,
   ERROR_NO_ACTIVE_PAUSE,
   ERROR_NOT_ROOM_OWNER,
+  ERROR_PLAYER_DISCONNECTED,
 ]);
 
 function dispatchErrorEvent(message: WsMessage): void {

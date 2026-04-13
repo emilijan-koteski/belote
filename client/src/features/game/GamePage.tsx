@@ -28,6 +28,7 @@ import { HandCards } from "./components/HandCards";
 import { MatchResult } from "./components/MatchResult";
 import { PauseOverlay } from "./components/PauseOverlay";
 import { PlayerSeat } from "./components/PlayerSeat";
+import { ReconnectOverlay } from "./components/ReconnectOverlay";
 import { ReshuffleAnimation } from "./components/ReshuffleAnimation";
 import { ScorePanel } from "./components/ScorePanel";
 import { ScoreReveal } from "./components/ScoreReveal";
@@ -373,6 +374,14 @@ export function GamePage() {
           onResume={handleUnpause}
           onPause={handlePause}
           onOwnerResume={handleOwnerUnpause}
+        />
+      )}
+
+      {/* Reconnect overlay */}
+      {gameState.phase === "disconnected" && gameState.disconnectedSeat !== -1 && gameState.reconnectExpiresAt && (
+        <ReconnectOverlay
+          disconnectedPlayerName={gameState.players[gameState.disconnectedSeat]?.username ?? `Player ${gameState.disconnectedSeat + 1}`}
+          reconnectExpiresAt={gameState.reconnectExpiresAt}
         />
       )}
 

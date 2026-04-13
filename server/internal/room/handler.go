@@ -37,11 +37,12 @@ type CreateRoomRequest struct {
 	MatchMode            string `json:"matchMode"`
 	TimerStyle           string `json:"timerStyle"`
 	TimerDurationSeconds *int   `json:"timerDurationSeconds"`
+	ReconnectWindowSec   *int   `json:"reconnectWindowSec"`
 }
 
 // GameStarter is the interface the room handler uses to start a game session.
 type GameStarter interface {
-	StartGame(roomID uint, variant string, matchMode string, players [4]PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint) error
+	StartGame(roomID uint, variant string, matchMode string, players [4]PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint, reconnectWindowSec int) error
 }
 
 // PlayerSeatInfo holds the player info needed for game session initialization.
@@ -202,6 +203,15 @@ func (h *RoomHandler) CreateRoom(c echo.Context) error {
 		timerDuration = req.TimerDurationSeconds
 	}
 
+	var reconnectWindow *int
+	if req.ReconnectWindowSec != nil {
+		rw := *req.ReconnectWindowSec
+		if rw < 30 || rw > 300 {
+			return apperr.ErrReconnectWindowOutOfRange
+		}
+		reconnectWindow = req.ReconnectWindowSec
+	}
+
 	code, err := generateRoomCode()
 	if err != nil {
 		return fmt.Errorf("generating room code: %w", err)
@@ -215,6 +225,7 @@ func (h *RoomHandler) CreateRoom(c echo.Context) error {
 		MatchMode:            matchMode,
 		TimerStyle:           timerStyle,
 		TimerDurationSeconds: timerDuration,
+		ReconnectWindowSec:   reconnectWindow,
 		Status:               "waiting",
 		PlayerCount:          1,
 	}
@@ -702,7 +713,8 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 			if autoStartRoom.TimerDurationSeconds != nil {
 				timerDuration = *autoStartRoom.TimerDurationSeconds
 			}
-			if err := h.gameStarter.StartGame(uint(roomID), autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration, autoStartRoom.OwnerID); err != nil {
+			reconnectWindow := resolveReconnectWindow(autoStartRoom.ReconnectWindowSec)
+			if err := h.gameStarter.StartGame(uint(roomID), autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration, autoStartRoom.OwnerID, reconnectWindow); err != nil {
 				slog.Error("failed to start game session for quick play", "roomID", roomID, "error", err)
 			}
 		}
@@ -806,7 +818,8 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 			if updatedRoom.TimerDurationSeconds != nil {
 				timerDuration = *updatedRoom.TimerDurationSeconds
 			}
-			if err := h.gameStarter.StartGame(uint(roomID), updatedRoom.Variant, updatedRoom.MatchMode, seatInfo, updatedRoom.TimerStyle, timerDuration, updatedRoom.OwnerID); err != nil {
+			reconnectWindow := resolveReconnectWindow(updatedRoom.ReconnectWindowSec)
+			if err := h.gameStarter.StartGame(uint(roomID), updatedRoom.Variant, updatedRoom.MatchMode, seatInfo, updatedRoom.TimerStyle, timerDuration, updatedRoom.OwnerID, reconnectWindow); err != nil {
 				slog.Error("failed to start game session", "roomID", roomID, "error", err)
 			}
 		}
@@ -927,6 +940,15 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": resultRoom})
+}
+
+// resolveReconnectWindow returns the reconnect window in seconds,
+// defaulting to 120 if the room has no explicit setting.
+func resolveReconnectWindow(roomSetting *int) int {
+	if roomSetting != nil {
+		return *roomSetting
+	}
+	return 120
 }
 
 func generateRoomCode() (string, error) {

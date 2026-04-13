@@ -191,7 +191,8 @@
       "illegalPlay": "Ta karta ne mo\u017ee da se odigra",
       "pauseExhausted": "Ve\u0107 ste iskoristili pauzu",
       "noActivePause": "Nemate aktivnu pauzu",
-      "notRoomOwner": "Samo vlasnik sobe mo\u017ee ovo da uradi"
+      "notRoomOwner": "Samo vlasnik sobe mo\u017ee ovo da uradi",
+      "playerDisconnected": "Igrac je diskonektovan"
     },
     "timer": {
       "autoPlayed": "Automatski odigrano: {{card}}"
@@ -232,6 +233,13 @@
       "pauseUsed": "Pauza iskori\u0161\u0107ena",
       "resumeAll": "Nastavi sve",
       "ownerResumedToast": "Vlasnik sobe je nastavio igru"
+    },
+    "disconnect": {
+      "playerDisconnected": "{{player}} se diskonektova",
+      "playerReconnected": "{{player}} se rekonektova",
+      "reconnecting": "Rekonektovanje...",
+      "waitingMessage": "Igra je pauzirana dok cekamo da se {{player}} vrati.",
+      "countdownLabel": "Preostalo vreme"
     }
   },
   "ws": {

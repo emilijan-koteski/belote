@@ -58,6 +58,22 @@ type GameResumedPayload struct {
 	OwnerOverride bool `json:"ownerOverride"`
 }
 
+// --- Disconnect/reconnect events (server -> client) ---
+const EventPlayerDisconnected = "event:player_disconnected"
+const EventPlayerReconnected = "event:player_reconnected"
+
+// PlayerDisconnectedPayload is the typed payload for EventPlayerDisconnected events.
+type PlayerDisconnectedPayload struct {
+	PlayerSeat         int    `json:"playerSeat"`
+	Username           string `json:"username"`
+	ReconnectExpiresAt string `json:"reconnectExpiresAt"` // ISO 8601 timestamp
+}
+
+// PlayerReconnectedPayload is the typed payload for EventPlayerReconnected events.
+type PlayerReconnectedPayload struct {
+	PlayerSeat int `json:"playerSeat"`
+}
+
 // --- Game error events (server -> client) ---
 const ErrorInvalidAction = "error:invalid_action"
 const ErrorNotYourTurn = "error:not_your_turn"
@@ -66,6 +82,7 @@ const ErrorIllegalPlay = "error:illegal_play"
 const ErrorPauseExhausted = "error:pause_exhausted"
 const ErrorNoActivePause = "error:no_active_pause"
 const ErrorNotRoomOwner = "error:not_room_owner"
+const ErrorPlayerDisconnected = "error:player_disconnected"
 
 // --- Room events ---
 const SystemRoomCreated = "system:room_created"

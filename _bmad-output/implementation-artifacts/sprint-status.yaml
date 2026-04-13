@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-06
-last_updated: "2026-04-13"  # Story 5.2 done after code review
+last_updated: "2026-04-13"  # Story 5.3 done after code review
 project: belote
 project_key: NOKEY
 tracking_system: file-system
@@ -85,7 +85,7 @@ development_status:
   epic-5: in-progress
   5-1-player-pause-system: done
   5-2-room-owner-pause-override: done
-  5-3-disconnect-detection-and-reconnect-countdown: backlog
+  5-3-disconnect-detection-and-reconnect-countdown: done
   5-4-reconnection-and-state-restoration: backlog
   5-5-match-abandonment-on-timeout: backlog
   epic-5-retrospective: optional

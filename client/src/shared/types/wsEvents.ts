@@ -153,6 +153,20 @@ export interface GameResumedPayload {
   ownerOverride: boolean;
 }
 
+// --- Disconnect/reconnect events (server -> client) ---
+export const EVENT_PLAYER_DISCONNECTED = "event:player_disconnected" as const;
+export const EVENT_PLAYER_RECONNECTED = "event:player_reconnected" as const;
+
+export interface PlayerDisconnectedPayload {
+  playerSeat: number;
+  username: string;
+  reconnectExpiresAt: string;
+}
+
+export interface PlayerReconnectedPayload {
+  playerSeat: number;
+}
+
 // --- Game error events (server -> client) ---
 export const ERROR_INVALID_ACTION = "error:invalid_action" as const;
 export const ERROR_NOT_YOUR_TURN = "error:not_your_turn" as const;
@@ -161,6 +175,7 @@ export const ERROR_ILLEGAL_PLAY = "error:illegal_play" as const;
 export const ERROR_PAUSE_EXHAUSTED = "error:pause_exhausted" as const;
 export const ERROR_NO_ACTIVE_PAUSE = "error:no_active_pause" as const;
 export const ERROR_NOT_ROOM_OWNER = "error:not_room_owner" as const;
+export const ERROR_PLAYER_DISCONNECTED = "error:player_disconnected" as const;
 
 export interface GameErrorPayload {
   code: string;
