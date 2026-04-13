@@ -8,6 +8,7 @@ import type { GameState } from "@/shared/types/gameTypes";
 import type {
   CardPlayedPayload,
   DeclarationsResolvedPayload,
+  GameResumedPayload,
   HandScoredPayload,
   MatchEndPayload,
   TrickResolvedPayload,
@@ -17,11 +18,15 @@ import {
   ERROR_AUTH_FAILED,
   ERROR_ILLEGAL_PLAY,
   ERROR_INVALID_ACTION,
+  ERROR_NO_ACTIVE_PAUSE,
   ERROR_NOT_YOUR_TURN,
+  ERROR_PAUSE_EXHAUSTED,
   ERROR_WRONG_PHASE,
   EVENT_BELOT_ANNOUNCED,
   EVENT_CARD_PLAYED,
   EVENT_DECLARATIONS_RESOLVED,
+  EVENT_GAME_PAUSED,
+  EVENT_GAME_RESUMED,
   EVENT_GAME_STATE,
   EVENT_HAND_SCORED,
   EVENT_MATCH_END,
@@ -162,6 +167,20 @@ function dispatchGameEvent(message: WsMessage): void {
     // Informational — the next event:game_state will have the full picture
     return;
   }
+
+  if (type === EVENT_GAME_PAUSED) {
+    // Informational — the full event:game_state that follows carries pause state
+    return;
+  }
+
+  if (type === EVENT_GAME_RESUMED) {
+    const payload = message.payload as GameResumedPayload;
+    if (payload.ownerOverride) {
+      toast.info(i18n.t("game.pause.ownerResumedToast"), { duration: 3000 });
+    }
+    // Full state update follows via event:game_state
+    return;
+  }
 }
 
 function dispatchSystemEvent(message: WsMessage): void {
@@ -191,6 +210,8 @@ const GAME_ERROR_TYPES = new Set([
   ERROR_NOT_YOUR_TURN,
   ERROR_INVALID_ACTION,
   ERROR_ILLEGAL_PLAY,
+  ERROR_PAUSE_EXHAUSTED,
+  ERROR_NO_ACTIVE_PAUSE,
 ]);
 
 function dispatchErrorEvent(message: WsMessage): void {

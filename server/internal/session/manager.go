@@ -142,8 +142,10 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 	newState, err := game.ApplyAction(oldState, action)
 	if err != nil {
 		// Restart timer since we cancelled it but the action failed
-		m.setTurnExpiry(session, oldState)
-		m.startTimerLocked(session)
+		if oldState.Phase != game.PhasePaused {
+			m.setTurnExpiry(session, oldState)
+			m.startTimerLocked(session)
+		}
 		session.mu.Unlock()
 		m.sendGameError(client.UserID, err)
 		return
@@ -154,8 +156,45 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 		newState.Phase = game.PhaseBidding
 	}
 
-	// Set expiry and start timer for next player's turn (inside lock)
-	if newState.Phase == game.PhasePlaying || newState.Phase == game.PhaseBidding {
+	// Timer management for pause/unpause
+	if action.Type == game.ActionPause && newState.Phase == game.PhasePaused {
+		// Capture remaining timer time before discarding it
+		if oldState.TurnExpiresAt != nil {
+			remaining := time.Until(*oldState.TurnExpiresAt)
+			if remaining > 0 {
+				newState.TurnTimeRemaining = remaining.Milliseconds()
+			}
+		}
+		newState.TurnExpiresAt = nil
+		// Do NOT start timer — game is paused
+	} else if (action.Type == game.ActionUnpause || action.Type == game.ActionOwnerUnpause) && newState.Phase != game.PhasePaused {
+		// Game resumed — restore timer from preserved remaining time
+		if session.timerStyle == "per-move" {
+			// Enforce a minimum floor of 3 seconds to give the player reaction time after unpause
+			const minResumeMs int64 = 3000
+			remaining := time.Duration(newState.TurnTimeRemaining) * time.Millisecond
+			if newState.TurnTimeRemaining > 0 && newState.TurnTimeRemaining < minResumeMs {
+				remaining = time.Duration(minResumeMs) * time.Millisecond
+			} else if newState.TurnTimeRemaining <= 0 {
+				// Timer had expired or was not active — give minimum floor, not a full reset
+				remaining = time.Duration(minResumeMs) * time.Millisecond
+			}
+			expiry := time.Now().Add(remaining)
+			newState.TurnExpiresAt = &expiry
+			newState.TurnTimeRemaining = 0
+			// Start timer with remaining duration
+			session.cancelTurnTimer()
+			session.timerGeneration++
+			gen := session.timerGeneration
+			expectedSeat := newState.ActivePlayerSeat
+			session.turnTimer = time.AfterFunc(remaining, func() {
+				m.handleTimerExpiry(session, gen, expectedSeat)
+			})
+		} else {
+			newState.TurnTimeRemaining = 0
+		}
+	} else if newState.Phase == game.PhasePlaying || newState.Phase == game.PhaseBidding {
+		// Normal turn — set expiry and start timer
 		m.setTurnExpiry(session, newState)
 		m.startTimerLocked(session)
 	}
@@ -411,6 +450,25 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		} else {
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 		}
+
+	case game.ActionPause:
+		paused := ws.GamePausedPayload{
+			PausedBy:      action.PlayerSeat,
+			PausedPlayers: newState.PausedPlayers,
+		}
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGamePaused, paused))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+
+	case game.ActionUnpause, game.ActionOwnerUnpause:
+		resumed := ws.GameResumedPayload{
+			ResumedBy:     action.PlayerSeat,
+			OwnerOverride: action.Type == game.ActionOwnerUnpause,
+		}
+		// Only send resumed event if game actually left paused phase
+		if newState.Phase != game.PhasePaused {
+			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameResumed, resumed))
+		}
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 
 	default:
 		// For any other action, broadcast full state

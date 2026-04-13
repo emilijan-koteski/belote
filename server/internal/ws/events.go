@@ -21,6 +21,9 @@ const ActionDeclare = "action:declare"
 const ActionSkipDeclare = "action:skip_declare"
 const ActionAnnounceBelot = "action:announce_belot"
 const ActionDeclineBelot = "action:decline_belot"
+const ActionPause = "action:pause"
+const ActionUnpause = "action:unpause"
+const ActionOwnerUnpause = "action:owner_unpause"
 
 // --- Game state events (server -> client) ---
 const EventGameState = "event:game_state"
@@ -31,6 +34,8 @@ const EventMatchEnd = "event:match_end"
 const EventTrumpSelected = "event:trump_selected"
 const EventDeclarationsResolved = "event:declarations_resolved"
 const EventBelotAnnounced = "event:belot_announced"
+const EventGamePaused = "event:game_paused"
+const EventGameResumed = "event:game_resumed"
 
 // --- Game event payload structs ---
 
@@ -41,11 +46,25 @@ type CardPlayedPayload struct {
 	AutoPlayed bool   `json:"autoPlayed"`
 }
 
+// GamePausedPayload is the typed payload for EventGamePaused events.
+type GamePausedPayload struct {
+	PausedBy      int     `json:"pausedBy"`
+	PausedPlayers [4]bool `json:"pausedPlayers"`
+}
+
+// GameResumedPayload is the typed payload for EventGameResumed events.
+type GameResumedPayload struct {
+	ResumedBy     int  `json:"resumedBy"`
+	OwnerOverride bool `json:"ownerOverride"`
+}
+
 // --- Game error events (server -> client) ---
 const ErrorInvalidAction = "error:invalid_action"
 const ErrorNotYourTurn = "error:not_your_turn"
 const ErrorWrongPhase = "error:wrong_phase"
 const ErrorIllegalPlay = "error:illegal_play"
+const ErrorPauseExhausted = "error:pause_exhausted"
+const ErrorNoActivePause = "error:no_active_pause"
 
 // --- Room events ---
 const SystemRoomCreated = "system:room_created"

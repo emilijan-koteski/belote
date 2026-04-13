@@ -508,6 +508,18 @@ func NewGameNearEnd(redScore, blueScore int) *game.GameState {
 	return gs
 }
 
+// NewGamePaused returns a GameState in PhasePaused, transitioned from PhasePlaying.
+// The specified seat has an active pause (PausedPlayers and PauseUsed set).
+// PreviousPhase is set to PhasePlaying so unpause restores to playing.
+func NewGamePaused(pausedBySeat int) *game.GameState {
+	gs := NewGameMidPlay(1)
+	gs.Phase = game.PhasePaused
+	gs.PreviousPhase = game.PhasePlaying
+	gs.PausedPlayers[pausedBySeat] = true
+	gs.PauseUsed[pausedBySeat] = true
+	return gs
+}
+
 // NewGameMidBidding returns a GameState with the specified number of passes
 // already recorded. Correctly tracks BiddingRound and ActivePlayerSeat.
 //

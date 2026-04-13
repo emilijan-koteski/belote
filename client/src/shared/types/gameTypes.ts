@@ -107,4 +107,8 @@ export interface GameState {
   lastHandResult: HandResult | null;
   turnExpiresAt: string | null;
   timerDurationSec: number;
+  previousPhase: Phase;
+  pausedPlayers: [boolean, boolean, boolean, boolean];
+  pauseUsed: [boolean, boolean, boolean, boolean];
+  turnTimeRemaining: number;
 }

@@ -102,6 +102,11 @@
 - **D47: legalCards dereferences TrumpSuit without nil check** — `validation.go:18` dereferences `*state.TrumpSuit` unconditionally when `CurrentTrick` is non-empty. Safe through current call chain (PhasePlaying guarantees TrumpSuit non-nil). Pre-existing (also tracked as D35).
 - **D48: Client clock skew — no server-client time sync** — TimerRing computes remaining time as `new Date(turnExpiresAt).getTime() - Date.now()`. If client clock differs from server, countdown may be off. Spec accepts ±1s. Future enhancement to send serverTimeMs alongside turnExpiresAt.
 
+## Deferred from: code review of 5-1-player-pause-system (2026-04-13)
+
+- **D53: `sendGameError` routes ALL game errors as `error:invalid_action`** — Pause-specific error types (`error:pause_exhausted`, `error:no_active_pause`) are defined in both WS contract files but never emitted by the session manager. The i18n mappings in GamePage for these types are unreachable. Pre-existing pattern across all game errors (not specific to pause). Fix by adding `errors.Is` dispatch in `sendGameError`.
+- **D54: Disconnect while paused leaves game frozen** — No mechanism auto-clears a disconnected player's active pause. If the pausing player's browser closes, the 3 remaining players see a permanent PauseOverlay with no way to resume. Covered by Stories 5.3/5.4 (Disconnect Detection & Reconnection).
+
 ## Deferred from: code review of 4-6-score-panel-score-reveal-and-match-flow (2026-04-13)
 
 - **D49: LastHandResult not cleared in startNewHand()** — After `scoreHand()` populates `LastHandResult` and calls `startNewHand()`, the field persists in the new hand's GameState. Reconnecting players mid-hand-2 receive a state snapshot containing hand-1's scoring breakdown. Cosmetic issue (client ignores `lastHandResult` outside score reveal flow) but structurally stale data in the wire format.

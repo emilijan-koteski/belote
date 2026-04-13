@@ -182,7 +182,9 @@
       "wrongPhase": "Akcija nije dostupna u ovoj fazi",
       "notYourTurn": "Nije tvoj red",
       "invalidAction": "Neva\u017ee\u0107a akcija",
-      "illegalPlay": "Ta karta ne mo\u017ee da se odigra"
+      "illegalPlay": "Ta karta ne mo\u017ee da se odigra",
+      "pauseExhausted": "Ve\u0107 ste iskoristili pauzu",
+      "noActivePause": "Nemate aktivnu pauzu"
     },
     "timer": {
       "autoPlayed": "Automatski odigrano: {{card}}"
@@ -213,6 +215,15 @@
       "winner": "{{team}} pobe\u0111uje!",
       "duration": "Trajanje me\u010da",
       "returnToLobby": "Nazad u lobi"
+    },
+    "pause": {
+      "title": "Igra pauzirana",
+      "pausedBy": "{{player}} je pauzirao igru",
+      "waitingToResume": "\u010cekanje da igra\u010di nastave...",
+      "resume": "Nastavi",
+      "pauseButton": "Pauza",
+      "pauseUsed": "Pauza iskori\u0161\u0107ena",
+      "ownerResumedToast": "Vlasnik sobe je nastavio igru"
     }
   },
   "ws": {

@@ -36,6 +36,9 @@ export const ACTION_DECLARE = "action:declare" as const;
 export const ACTION_SKIP_DECLARE = "action:skip_declare" as const;
 export const ACTION_ANNOUNCE_BELOT = "action:announce_belot" as const;
 export const ACTION_DECLINE_BELOT = "action:decline_belot" as const;
+export const ACTION_PAUSE = "action:pause" as const;
+export const ACTION_UNPAUSE = "action:unpause" as const;
+export const ACTION_OWNER_UNPAUSE = "action:owner_unpause" as const;
 
 export interface PlayCardPayload {
   cardId: string;
@@ -74,6 +77,8 @@ export const EVENT_MATCH_END = "event:match_end" as const;
 export const EVENT_TRUMP_SELECTED = "event:trump_selected" as const;
 export const EVENT_DECLARATIONS_RESOLVED = "event:declarations_resolved" as const;
 export const EVENT_BELOT_ANNOUNCED = "event:belot_announced" as const;
+export const EVENT_GAME_PAUSED = "event:game_paused" as const;
+export const EVENT_GAME_RESUMED = "event:game_resumed" as const;
 
 // Game state payload types will be expanded in Story 4.2 when the session manager
 // defines the exact shape of game state broadcasts. For now, typed as unknown.
@@ -138,11 +143,23 @@ export interface BelotAnnouncedPayload {
   team: number;
 }
 
+export interface GamePausedPayload {
+  pausedBy: number;
+  pausedPlayers: [boolean, boolean, boolean, boolean];
+}
+
+export interface GameResumedPayload {
+  resumedBy: number;
+  ownerOverride: boolean;
+}
+
 // --- Game error events (server -> client) ---
 export const ERROR_INVALID_ACTION = "error:invalid_action" as const;
 export const ERROR_NOT_YOUR_TURN = "error:not_your_turn" as const;
 export const ERROR_WRONG_PHASE = "error:wrong_phase" as const;
 export const ERROR_ILLEGAL_PLAY = "error:illegal_play" as const;
+export const ERROR_PAUSE_EXHAUSTED = "error:pause_exhausted" as const;
+export const ERROR_NO_ACTIVE_PAUSE = "error:no_active_pause" as const;
 
 export interface GameErrorPayload {
   code: string;

@@ -111,6 +111,10 @@ describe("gameTypes", () => {
         lastHandResult: null,
         turnExpiresAt: null,
         timerDurationSec: 0,
+        previousPhase: "" as const,
+        pausedPlayers: [false, false, false, false] as [boolean, boolean, boolean, boolean],
+        pauseUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
+        turnTimeRemaining: 0,
       };
 
       expect(state.phase).toBe("bidding");

@@ -182,7 +182,9 @@
       "wrongPhase": "Action not available in this phase",
       "notYourTurn": "It's not your turn",
       "invalidAction": "Invalid action",
-      "illegalPlay": "That card cannot be played"
+      "illegalPlay": "That card cannot be played",
+      "pauseExhausted": "You have already used your pause",
+      "noActivePause": "You don't have an active pause"
     },
     "timer": {
       "autoPlayed": "Auto-played: {{card}}"
@@ -213,6 +215,15 @@
       "winner": "{{team}} Wins!",
       "duration": "Match Duration",
       "returnToLobby": "Return to Lobby"
+    },
+    "pause": {
+      "title": "Game Paused",
+      "pausedBy": "{{player}} paused the game",
+      "waitingToResume": "Waiting for players to resume...",
+      "resume": "Resume",
+      "pauseButton": "Pause",
+      "pauseUsed": "Pause Used",
+      "ownerResumedToast": "Room owner resumed the game"
     }
   },
   "ws": {

@@ -12,9 +12,11 @@ import {
   ACTION_DECLARE,
   ACTION_DECLINE_BELOT,
   ACTION_PASS_TRUMP,
+  ACTION_PAUSE,
   ACTION_PICK_TRUMP,
   ACTION_PLAY_CARD,
   ACTION_SKIP_DECLARE,
+  ACTION_UNPAUSE,
 } from "@/shared/types/wsEvents";
 
 import { BelotPrompt } from "./components/BelotPrompt";
@@ -24,6 +26,7 @@ import { DeclarationPrompt } from "./components/DeclarationPrompt";
 import { DeclarationReveal } from "./components/DeclarationReveal";
 import { HandCards } from "./components/HandCards";
 import { MatchResult } from "./components/MatchResult";
+import { PauseOverlay } from "./components/PauseOverlay";
 import { PlayerSeat } from "./components/PlayerSeat";
 import { ReshuffleAnimation } from "./components/ReshuffleAnimation";
 import { ScorePanel } from "./components/ScorePanel";
@@ -127,6 +130,8 @@ export function GamePage() {
       "error:not_your_turn": "game.errors.notYourTurn",
       "error:invalid_action": "game.errors.invalidAction",
       "error:illegal_play": "game.errors.illegalPlay",
+      "error:pause_exhausted": "game.errors.pauseExhausted",
+      "error:no_active_pause": "game.errors.noActivePause",
     };
     const i18nKey = ERROR_I18N[lastError];
     setLastError(null);
@@ -188,6 +193,14 @@ export function GamePage() {
     sendMessage(ACTION_DECLINE_BELOT, {});
   }, [sendMessage]);
 
+  const handlePause = useCallback(() => {
+    sendMessage(ACTION_PAUSE, {});
+  }, [sendMessage]);
+
+  const handleUnpause = useCallback(() => {
+    sendMessage(ACTION_UNPAUSE, {});
+  }, [sendMessage]);
+
   const handleReshuffleComplete = useCallback(() => {
     setShowReshuffle(false);
   }, []);
@@ -227,7 +240,14 @@ export function GamePage() {
     );
   }
 
-  // Compute playable card IDs — block during prompts
+  // Pause state
+  const isPaused = gameState.phase === "paused";
+  const canPause = !isPaused &&
+    (gameState.phase === "playing" || gameState.phase === "bidding") &&
+    myPlayerSeat !== null &&
+    !gameState.pauseUsed?.[myPlayerSeat];
+
+  // Compute playable card IDs — block during prompts and pause
   const isMyTurn =
     gameState.activePlayerSeat === myPlayerSeat &&
     gameState.phase === "playing" &&
@@ -322,6 +342,32 @@ export function GamePage() {
           onPlayCard={handlePlayCard}
         />
       </div>
+
+      {/* Pause button - bottom left */}
+      {(gameState.phase === "playing" || gameState.phase === "bidding") && (
+        <button
+          className="absolute bottom-4 left-4 z-10 border border-border text-text-secondary font-body text-sm px-3 py-1.5 rounded-lg hover:text-text-primary hover:border-text-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={handlePause}
+          disabled={!canPause}
+          data-testid="pause-button"
+        >
+          {gameState.pauseUsed?.[myPlayerSeat]
+            ? t("game.pause.pauseUsed")
+            : t("game.pause.pauseButton")}
+        </button>
+      )}
+
+      {/* Pause overlay */}
+      {isPaused && (
+        <PauseOverlay
+          pausedPlayers={gameState.pausedPlayers}
+          pauseUsed={gameState.pauseUsed}
+          players={gameState.players}
+          myPlayerSeat={myPlayerSeat}
+          onResume={handleUnpause}
+          onPause={handlePause}
+        />
+      )}
 
       {/* Deal animation overlay */}
       {isDealingPhase && (

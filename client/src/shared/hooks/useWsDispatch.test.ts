@@ -1,3 +1,4 @@
+import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useGameStore } from "@/shared/stores/gameStore";
@@ -6,7 +7,6 @@ import type { GameState } from "@/shared/types/gameTypes";
 import type { WsMessage } from "@/shared/types/wsEvents";
 
 import { useWsDispatch } from "./useWsDispatch";
-import { renderHook } from "@testing-library/react";
 
 const mockGameState: GameState = {
   id: 1,
@@ -44,6 +44,10 @@ const mockGameState: GameState = {
   lastHandResult: null,
   turnExpiresAt: null,
   timerDurationSec: 0,
+  previousPhase: "" as const,
+  pausedPlayers: [false, false, false, false] as [boolean, boolean, boolean, boolean],
+  pauseUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
+  turnTimeRemaining: 0,
 };
 
 describe("useWsDispatch", () => {
