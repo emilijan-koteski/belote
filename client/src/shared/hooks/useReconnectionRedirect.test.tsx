@@ -1,0 +1,102 @@
+import { renderHook } from "@testing-library/react";
+import React from "react";
+import { MemoryRouter } from "react-router";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { useGameStore } from "@/shared/stores/gameStore";
+import type { GameState } from "@/shared/types/gameTypes";
+
+import { useReconnectionRedirect } from "./useReconnectionRedirect";
+
+const mockNavigate = vi.fn();
+let currentPathname = "/lobby";
+
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => ({ pathname: currentPathname }),
+  };
+});
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  return <MemoryRouter>{children}</MemoryRouter>;
+}
+
+const minimalGameState: GameState = {
+  roomId: 42,
+  variant: "bitola",
+  matchMode: "1001",
+  phase: "playing",
+  handNumber: 1,
+  dealerSeat: 0,
+  trumpCandidate: null,
+  trumpSuit: null,
+  trumpCallerSeat: null,
+  biddingRound: 1,
+  biddingPassCount: 0,
+  activePlayerSeat: 0,
+  trickNumber: 1,
+  currentTrick: [],
+  trickWinnerSeat: null,
+  declarationsResolved: false,
+  belotAnnounced: false,
+  awaitingDeclaration: false,
+  pendingBelotSeat: null,
+  leadSuit: null,
+  players: [],
+  teamScores: [0, 0],
+  handPoints: [0, 0],
+  tricksWon: [0, 0],
+  declarationPoints: [0, 0],
+  turnExpiresAt: null,
+  timerDurationSec: 0,
+  turnTimeRemaining: 0,
+  ownerSeat: -1,
+  pausedPlayers: [false, false, false, false],
+  pauseUsed: [false, false, false, false],
+  previousPhase: "",
+  disconnectedSeat: -1,
+  reconnectExpiresAt: null,
+};
+
+describe("useReconnectionRedirect", () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+    currentPathname = "/lobby";
+    useGameStore.setState({ gameState: null, roomId: null });
+  });
+
+  it("redirects to game page when game state arrives while on lobby", () => {
+    useGameStore.setState({ gameState: minimalGameState, roomId: 42 });
+
+    renderHook(() => useReconnectionRedirect(), { wrapper });
+
+    expect(mockNavigate).toHaveBeenCalledWith("/game/42", { replace: true });
+  });
+
+  it("does not redirect when already on game page", () => {
+    currentPathname = "/game/42";
+    useGameStore.setState({ gameState: minimalGameState, roomId: 42 });
+
+    renderHook(() => useReconnectionRedirect(), { wrapper });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("does not redirect when no game state", () => {
+    renderHook(() => useReconnectionRedirect(), { wrapper });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("does not redirect when game phase is match_end", () => {
+    const endedState = { ...minimalGameState, phase: "match_end" as const };
+    useGameStore.setState({ gameState: endedState, roomId: 42 });
+
+    renderHook(() => useReconnectionRedirect(), { wrapper });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});

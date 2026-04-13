@@ -131,3 +131,7 @@
 - **D59: `username` field in `PlayerDisconnectedPayload` is always empty** — Server `PlayerState` has no `Username` field (pre-existing D43). `HandleDisconnect` sends `username: ""` in the disconnect payload. Client falls back to `Player N` via nullish coalescing. Fix when D43 is addressed (add Username to server-side PlayerState).
 - **D60: `ERROR_PLAYER_DISCONNECTED` unreachable on wire** — `sendGameError` routes all game errors as `error:invalid_action` (pre-existing D53). The typed `error:player_disconnected` constant is defined in both contract files for future use when D53 is addressed.
 - **D61: `startNewHand` does not reset disconnect fields** — `DisconnectedSeat`, `ReconnectExpiresAt`, and `Players[i].Connected` are not cleared when a new hand starts. Pre-existing design; Story 5.4/5.5 must handle reset on reconnection or match resumption.
+
+## Deferred from: code review of 5-4-reconnection-and-state-restoration (2026-04-13)
+
+- **D62: `handleReconnectTimeout` stub leaves game in PhaseDisconnected after window expires** — When the reconnect countdown expires, the timeout handler logs a warning but takes no action. The game remains permanently in `PhaseDisconnected` with no recovery path for the remaining 3 players. Story 5.5 (Match Abandonment on Timeout) will implement: transition to `PhaseMatchEnd` with abandon status, persist match record, broadcast `event:match_abandoned`, redirect remaining players to lobby.

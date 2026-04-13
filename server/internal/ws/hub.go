@@ -18,6 +18,10 @@ type ActionHandler func(client *Client, msg WSMessage)
 // SystemHandler processes system: prefixed messages from clients.
 type SystemHandler func(client *Client, msg WSMessage)
 
+// ConnectHandler is called when a client registers (connects or reconnects).
+// Used by session manager to detect game reconnections.
+type ConnectHandler func(userID uint)
+
 // DisconnectHandler is called when a client truly disconnects (not replaced by a new connection).
 type DisconnectHandler func(userID uint)
 
@@ -32,6 +36,7 @@ type Hub struct {
 
 	actionHandler     ActionHandler
 	systemHandler     SystemHandler
+	connectHandler    ConnectHandler
 	disconnectHandler DisconnectHandler
 }
 
@@ -58,6 +63,12 @@ func (h *Hub) SetSystemHandler(handler SystemHandler) {
 	h.systemHandler = handler
 }
 
+// SetConnectHandler registers a callback for client registrations.
+// Called when any client connects (including reconnections).
+func (h *Hub) SetConnectHandler(handler ConnectHandler) {
+	h.connectHandler = handler
+}
+
 // SetDisconnectHandler registers a callback for true client disconnections.
 // Called when a client is unregistered and NOT replaced by a new connection.
 func (h *Hub) SetDisconnectHandler(handler DisconnectHandler) {
@@ -82,6 +93,10 @@ func (h *Hub) Run() {
 			h.clients[client.UserID] = client
 			h.mu.Unlock()
 			slog.Info("ws: client registered", "userID", client.UserID)
+			// Fire connect handler for reconnection detection
+			if h.connectHandler != nil {
+				go h.connectHandler(client.UserID)
+			}
 
 		case client := <-h.unregister:
 			h.mu.Lock()

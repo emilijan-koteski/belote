@@ -153,6 +153,99 @@ func (m *Manager) HandleDisconnect(userID uint) {
 	m.hub.BroadcastToUsers(remainingPlayers, stateMsg)
 }
 
+// HandleReconnect is called by the hub when a client registers (connects or reconnects).
+// If the user is in an active game session that is in PhaseDisconnected, this restores
+// the game state, cancels the reconnect timer, and broadcasts the reconnection to all players.
+// Safe to call for ALL connection registrations — returns immediately for non-game users.
+func (m *Manager) HandleReconnect(userID uint) {
+	m.mu.RLock()
+	roomID, ok := m.userToRoom[userID]
+	if !ok {
+		m.mu.RUnlock()
+		return // Not in a game session — lobby connection, no game impact
+	}
+	session, ok := m.sessions[roomID]
+	m.mu.RUnlock()
+	if !ok {
+		return
+	}
+
+	session.mu.Lock()
+	if session.closed {
+		session.mu.Unlock()
+		return
+	}
+
+	gs := session.gameState
+
+	// Only handle reconnection during PhaseDisconnected
+	if gs.Phase != game.PhaseDisconnected {
+		session.mu.Unlock()
+		return
+	}
+
+	// Validate the reconnecting user matches the disconnected seat.
+	// Silently return for non-matching users — ConnectHandler fires for ALL
+	// connections, including players legitimately connecting while another seat
+	// is disconnected. Sending an error here would confuse non-disconnected players.
+	seat := gs.DisconnectedSeat
+	if seat < 0 || seat >= 4 || session.playerIDs[seat] != userID {
+		session.mu.Unlock()
+		return
+	}
+
+	// Validate reconnect window has not expired
+	if gs.ReconnectExpiresAt == nil || !time.Now().Before(*gs.ReconnectExpiresAt) {
+		session.mu.Unlock()
+		m.sendError(userID, ws.ErrorInvalidAction, "reconnection rejected: reconnect window expired")
+		return
+	}
+
+	slog.Info("session: player reconnected", "roomID", roomID, "userID", userID, "seat", seat)
+
+	// Restore player state
+	gs.Players[seat].Connected = true
+	session.cancelReconnectTimer()
+	session.reconnectGeneration++ // Invalidate any in-flight reconnect timeout
+	gs.Phase = gs.PreviousPhase
+	gs.PreviousPhase = ""
+	gs.DisconnectedSeat = -1
+	gs.ReconnectExpiresAt = nil
+
+	// Restore turn timer (same pattern as unpause timer resume in HandleAction)
+	if session.timerStyle == "per-move" && (gs.Phase == game.PhasePlaying || gs.Phase == game.PhaseBidding) {
+		const minResumeMs int64 = 3000
+		remaining := time.Duration(gs.TurnTimeRemaining) * time.Millisecond
+		if gs.TurnTimeRemaining > 0 && gs.TurnTimeRemaining < minResumeMs {
+			remaining = time.Duration(minResumeMs) * time.Millisecond
+		} else if gs.TurnTimeRemaining <= 0 {
+			remaining = time.Duration(minResumeMs) * time.Millisecond
+		}
+		expiry := time.Now().Add(remaining)
+		gs.TurnExpiresAt = &expiry
+		gs.TurnTimeRemaining = 0
+		session.cancelTurnTimer()
+		session.timerGeneration++
+		gen := session.timerGeneration
+		expectedSeat := gs.ActivePlayerSeat
+		session.turnTimer = time.AfterFunc(remaining, func() {
+			m.handleTimerExpiry(session, gen, expectedSeat)
+		})
+	}
+
+	// Build messages BEFORE unlocking (data-race prevention — same pattern as HandleDisconnect)
+	playerIDs := session.playerIDs
+	reconnectPayload := ws.PlayerReconnectedPayload{PlayerSeat: seat}
+	reconnectMsg := buildMessage(ws.EventPlayerReconnected, reconnectPayload)
+	stateMsg := buildMessage(ws.EventGameState, gs)
+
+	session.mu.Unlock()
+
+	// Broadcast to ALL 4 players (reconnecting player needs the state too)
+	m.hub.BroadcastToUsers(playerIDs[:], reconnectMsg)
+	m.hub.BroadcastToUsers(playerIDs[:], stateMsg)
+}
+
 // handleReconnectTimeout is called when the reconnect countdown expires.
 // For now this is a placeholder — match abandonment is implemented in Story 5.5.
 func (m *Manager) handleReconnectTimeout(session *Session, generation uint64) {

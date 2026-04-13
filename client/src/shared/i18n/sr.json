@@ -239,7 +239,9 @@
       "playerReconnected": "{{player}} se rekonektova",
       "reconnecting": "Rekonektovanje...",
       "waitingMessage": "Igra je pauzirana dok cekamo da se {{player}} vrati.",
-      "countdownLabel": "Preostalo vreme"
+      "countdownLabel": "Preostalo vreme",
+      "reconnected": "Ponovo ste povezani",
+      "reconnectFailed": "Rekonektovanje neuspešno — meč je možda završen"
     }
   },
   "ws": {

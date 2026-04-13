@@ -1,6 +1,10 @@
 package testfixtures
 
-import "github.com/emilijan/belote/server/internal/game"
+import (
+	"time"
+
+	"github.com/emilijan/belote/server/internal/game"
+)
 
 // NewGameJustDealt returns a valid GameState in the bidding phase with all 4
 // players holding 8 cards. Uses a deterministic card distribution (no shuffle)
@@ -538,6 +542,23 @@ func NewGameDisconnected(disconnectedSeat int) *game.GameState {
 	gs.PreviousPhase = game.PhasePlaying
 	gs.DisconnectedSeat = disconnectedSeat
 	gs.Players[disconnectedSeat].Connected = false
+	return gs
+}
+
+// NewGameReconnecting returns a GameState in PhaseDisconnected suitable for
+// testing reconnection scenarios. The disconnected seat has Connected=false,
+// DisconnectedSeat set, ReconnectExpiresAt 2 minutes in the future,
+// PreviousPhase=PhasePlaying, and TurnTimeRemaining=15000ms.
+func NewGameReconnecting(disconnectedSeat int) *game.GameState {
+	gs := NewGameMidPlay(1)
+	gs.Phase = game.PhaseDisconnected
+	gs.PreviousPhase = game.PhasePlaying
+	gs.DisconnectedSeat = disconnectedSeat
+	gs.Players[disconnectedSeat].Connected = false
+	reconnectExpiry := time.Now().Add(2 * time.Minute)
+	gs.ReconnectExpiresAt = &reconnectExpiry
+	gs.TurnTimeRemaining = 15000 // 15 seconds preserved from disconnect
+	gs.TurnExpiresAt = nil       // Timer paused during disconnect
 	return gs
 }
 

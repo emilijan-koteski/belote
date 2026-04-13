@@ -96,6 +96,7 @@ func main() {
 	matchRepo := match.NewGormMatchRepository(db)
 	sessionManager := session.NewManager(hub, matchRepo)
 	hub.SetActionHandler(sessionManager.HandleAction)
+	hub.SetConnectHandler(sessionManager.HandleReconnect)
 	hub.SetDisconnectHandler(sessionManager.HandleDisconnect)
 
 	// Room routes
