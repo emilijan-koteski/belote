@@ -182,14 +182,121 @@ func TestUnpause(t *testing.T) {
 			wantErr: apperr.ErrNotPaused,
 		},
 		{
-			name: "owner_unpause clears the owner's own pause",
+			name: "owner_unpause by non-owner returns ErrNotRoomOwner",
 			setup: func() *game.GameState {
-				return testfixtures.NewGamePaused(0)
+				return testfixtures.NewGamePausedWithOwner(0, 2) // seat 0 paused, owner is seat 2
+			},
+			action:  game.Action{Type: game.ActionOwnerUnpause, PlayerSeat: 0},
+			wantErr: apperr.ErrNotRoomOwner,
+		},
+		{
+			name: "owner_unpause when not paused returns ErrNotPaused",
+			setup: func() *game.GameState {
+				gs := testfixtures.NewGameMidPlay(1)
+				gs.OwnerSeat = 0
+				return gs
+			},
+			action:  game.Action{Type: game.ActionOwnerUnpause, PlayerSeat: 0},
+			wantErr: apperr.ErrNotPaused,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := tt.setup()
+			newState, err := game.ApplyAction(state, tt.action)
+
+			if tt.wantErr != nil {
+				require.Error(t, err)
+				assert.True(t, errors.Is(err, tt.wantErr), "expected %v, got %v", tt.wantErr, err)
+				assert.Nil(t, newState)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, newState)
+			if tt.assertState != nil {
+				tt.assertState(t, newState)
+			}
+		})
+	}
+}
+
+func TestOwnerUnpause(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func() *game.GameState
+		action      game.Action
+		wantErr     *apperr.AppError
+		assertState func(t *testing.T, gs *game.GameState)
+	}{
+		{
+			name: "owner clears single pause",
+			setup: func() *game.GameState {
+				return testfixtures.NewGamePausedWithOwner(1, 0) // seat 1 paused, owner is seat 0
 			},
 			action: game.Action{Type: game.ActionOwnerUnpause, PlayerSeat: 0},
 			assertState: func(t *testing.T, gs *game.GameState) {
 				assert.Equal(t, game.PhasePlaying, gs.Phase)
+				assert.Equal(t, game.Phase(""), gs.PreviousPhase)
 				assert.False(t, gs.PausedPlayers[0])
+				assert.False(t, gs.PausedPlayers[1])
+			},
+		},
+		{
+			name: "owner clears stacked pauses from multiple players",
+			setup: func() *game.GameState {
+				gs := testfixtures.NewGamePausedWithOwner(0, 2) // seat 0 paused, owner is seat 2
+				gs.PausedPlayers[1] = true
+				gs.PauseUsed[1] = true
+				gs.PausedPlayers[3] = true
+				gs.PauseUsed[3] = true
+				return gs
+			},
+			action: game.Action{Type: game.ActionOwnerUnpause, PlayerSeat: 2},
+			assertState: func(t *testing.T, gs *game.GameState) {
+				assert.Equal(t, game.PhasePlaying, gs.Phase)
+				for i := 0; i < 4; i++ {
+					assert.False(t, gs.PausedPlayers[i], "seat %d should be unpaused", i)
+				}
+			},
+		},
+		{
+			name: "non-owner rejected",
+			setup: func() *game.GameState {
+				return testfixtures.NewGamePausedWithOwner(0, 2) // seat 0 paused, owner is seat 2
+			},
+			action:  game.Action{Type: game.ActionOwnerUnpause, PlayerSeat: 1},
+			wantErr: apperr.ErrNotRoomOwner,
+		},
+		{
+			name: "owner who did not pause can still override",
+			setup: func() *game.GameState {
+				gs := testfixtures.NewGamePausedWithOwner(1, 0) // seat 1 paused, owner is seat 0
+				// Owner (seat 0) has NOT used their pause
+				assert.False(t, gs.PausedPlayers[0])
+				assert.False(t, gs.PauseUsed[0])
+				return gs
+			},
+			action: game.Action{Type: game.ActionOwnerUnpause, PlayerSeat: 0},
+			assertState: func(t *testing.T, gs *game.GameState) {
+				assert.Equal(t, game.PhasePlaying, gs.Phase)
+				assert.False(t, gs.PausedPlayers[1])
+			},
+		},
+		{
+			name: "owner with active pause can use regular unpause for own pause only",
+			setup: func() *game.GameState {
+				gs := testfixtures.NewGamePausedWithOwner(0, 0) // seat 0 paused and is owner
+				gs.PausedPlayers[1] = true
+				gs.PauseUsed[1] = true
+				return gs
+			},
+			action: game.Action{Type: game.ActionUnpause, PlayerSeat: 0},
+			assertState: func(t *testing.T, gs *game.GameState) {
+				assert.Equal(t, game.PhasePaused, gs.Phase, "should still be paused because seat 1 has active pause")
+				assert.False(t, gs.PausedPlayers[0], "owner's pause cleared")
+				assert.True(t, gs.PausedPlayers[1], "seat 1 pause still active")
 			},
 		},
 	}

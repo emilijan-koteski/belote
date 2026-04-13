@@ -56,6 +56,7 @@ type GameState struct {
 	Variant   Variant `json:"variant"`
 	MatchMode string  `json:"matchMode"`
 	Phase     Phase   `json:"phase"`
+	OwnerSeat int     `json:"ownerSeat"` // Seat index of the room owner (for pause override)
 
 	// Current hand state
 	HandNumber       int   `json:"handNumber"`

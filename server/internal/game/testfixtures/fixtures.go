@@ -520,6 +520,15 @@ func NewGamePaused(pausedBySeat int) *game.GameState {
 	return gs
 }
 
+// NewGamePausedWithOwner returns a GameState in PhasePaused with the specified
+// seat having an active pause and the specified seat as room owner.
+// Used for testing owner unpause scenarios.
+func NewGamePausedWithOwner(pausedBySeat int, ownerSeat int) *game.GameState {
+	gs := NewGamePaused(pausedBySeat)
+	gs.OwnerSeat = ownerSeat
+	return gs
+}
+
 // NewGameMidBidding returns a GameState with the specified number of passes
 // already recorded. Correctly tracks BiddingRound and ActivePlayerSeat.
 //

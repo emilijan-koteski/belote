@@ -12,6 +12,7 @@ vi.mock("react-i18next", () => ({
         "game.pause.resume": "Resume",
         "game.pause.pauseButton": "Pause",
         "game.pause.waitingToResume": "Waiting for players to resume...",
+        "game.pause.resumeAll": "Resume All",
       };
       if (key === "game.pause.pausedBy" && opts?.player) {
         return `${opts.player} paused the game`;
@@ -40,8 +41,10 @@ describe("PauseOverlay", () => {
         pauseUsed={[true, false, false, false]}
         players={mockPlayers}
         myPlayerSeat={1}
+        isRoomOwner={false}
         onResume={vi.fn()}
         onPause={vi.fn()}
+        onOwnerResume={vi.fn()}
       />,
     );
     expect(screen.getByText("Alice paused the game")).toBeInTheDocument();
@@ -55,8 +58,10 @@ describe("PauseOverlay", () => {
         pauseUsed={[true, false, false, false]}
         players={mockPlayers}
         myPlayerSeat={0}
+        isRoomOwner={false}
         onResume={vi.fn()}
         onPause={vi.fn()}
+        onOwnerResume={vi.fn()}
       />,
     );
     expect(screen.getByTestId("pause-resume-button")).toBeInTheDocument();
@@ -69,8 +74,10 @@ describe("PauseOverlay", () => {
         pauseUsed={[true, false, false, false]}
         players={mockPlayers}
         myPlayerSeat={2}
+        isRoomOwner={false}
         onResume={vi.fn()}
         onPause={vi.fn()}
+        onOwnerResume={vi.fn()}
       />,
     );
     expect(screen.queryByTestId("pause-resume-button")).not.toBeInTheDocument();
@@ -84,8 +91,10 @@ describe("PauseOverlay", () => {
         pauseUsed={[true, false, true, false]}
         players={mockPlayers}
         myPlayerSeat={2}
+        isRoomOwner={false}
         onResume={vi.fn()}
         onPause={vi.fn()}
+        onOwnerResume={vi.fn()}
       />,
     );
     expect(screen.queryByTestId("pause-resume-button")).not.toBeInTheDocument();
@@ -101,8 +110,10 @@ describe("PauseOverlay", () => {
         pauseUsed={[true, false, false, false]}
         players={mockPlayers}
         myPlayerSeat={0}
+        isRoomOwner={false}
         onResume={onResume}
         onPause={vi.fn()}
+        onOwnerResume={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByTestId("pause-resume-button"));
@@ -117,8 +128,10 @@ describe("PauseOverlay", () => {
         pauseUsed={[true, false, false, false]}
         players={mockPlayers}
         myPlayerSeat={1}
+        isRoomOwner={false}
         onResume={vi.fn()}
         onPause={onPause}
+        onOwnerResume={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByTestId("pause-stack-button"));
@@ -132,11 +145,81 @@ describe("PauseOverlay", () => {
         pauseUsed={[true, false, true, false]}
         players={mockPlayers}
         myPlayerSeat={1}
+        isRoomOwner={false}
         onResume={vi.fn()}
         onPause={vi.fn()}
+        onOwnerResume={vi.fn()}
       />,
     );
     expect(screen.getByTestId("pause-player-0")).toBeInTheDocument();
     expect(screen.getByTestId("pause-player-2")).toBeInTheDocument();
+  });
+
+  it("shows Resume All button for room owner", () => {
+    render(
+      <PauseOverlay
+        pausedPlayers={[true, false, false, false]}
+        pauseUsed={[true, false, false, false]}
+        players={mockPlayers}
+        myPlayerSeat={1}
+        isRoomOwner={true}
+        onResume={vi.fn()}
+        onPause={vi.fn()}
+        onOwnerResume={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("pause-owner-resume-button")).toBeInTheDocument();
+    expect(screen.getByText("Resume All")).toBeInTheDocument();
+  });
+
+  it("does not show Resume All button for non-owner", () => {
+    render(
+      <PauseOverlay
+        pausedPlayers={[true, false, false, false]}
+        pauseUsed={[true, false, false, false]}
+        players={mockPlayers}
+        myPlayerSeat={1}
+        isRoomOwner={false}
+        onResume={vi.fn()}
+        onPause={vi.fn()}
+        onOwnerResume={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("pause-owner-resume-button")).not.toBeInTheDocument();
+  });
+
+  it("fires onOwnerResume on Resume All button click", () => {
+    const onOwnerResume = vi.fn();
+    render(
+      <PauseOverlay
+        pausedPlayers={[true, false, false, false]}
+        pauseUsed={[true, false, false, false]}
+        players={mockPlayers}
+        myPlayerSeat={1}
+        isRoomOwner={true}
+        onResume={vi.fn()}
+        onPause={vi.fn()}
+        onOwnerResume={onOwnerResume}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("pause-owner-resume-button"));
+    expect(onOwnerResume).toHaveBeenCalledOnce();
+  });
+
+  it("owner with active pause sees both Resume and Resume All buttons", () => {
+    render(
+      <PauseOverlay
+        pausedPlayers={[true, false, false, false]}
+        pauseUsed={[true, false, false, false]}
+        players={mockPlayers}
+        myPlayerSeat={0}
+        isRoomOwner={true}
+        onResume={vi.fn()}
+        onPause={vi.fn()}
+        onOwnerResume={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("pause-resume-button")).toBeInTheDocument();
+    expect(screen.getByTestId("pause-owner-resume-button")).toBeInTheDocument();
   });
 });

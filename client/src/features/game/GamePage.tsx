@@ -10,6 +10,7 @@ import {
   ACTION_ANNOUNCE_BELOT,
   ACTION_DECLARE,
   ACTION_DECLINE_BELOT,
+  ACTION_OWNER_UNPAUSE,
   ACTION_PASS_TRUMP,
   ACTION_PAUSE,
   ACTION_PICK_TRUMP,
@@ -130,6 +131,7 @@ export function GamePage() {
       "error:illegal_play": "game.errors.illegalPlay",
       "error:pause_exhausted": "game.errors.pauseExhausted",
       "error:no_active_pause": "game.errors.noActivePause",
+      "error:not_room_owner": "game.errors.notRoomOwner",
     };
     const i18nKey = ERROR_I18N[lastError];
     setLastError(null);
@@ -199,6 +201,10 @@ export function GamePage() {
     sendMessage(ACTION_UNPAUSE, {});
   }, [sendMessage]);
 
+  const handleOwnerUnpause = useCallback(() => {
+    sendMessage(ACTION_OWNER_UNPAUSE, {});
+  }, [sendMessage]);
+
   const handleReshuffleComplete = useCallback(() => {
     setShowReshuffle(false);
   }, []);
@@ -239,6 +245,7 @@ export function GamePage() {
   }
 
   // Pause state
+  const isRoomOwner = myPlayerSeat !== null && gameState.ownerSeat === myPlayerSeat;
   const isPaused = gameState.phase === "paused";
   const canPause = !isPaused &&
     (gameState.phase === "playing" || gameState.phase === "bidding") &&
@@ -362,8 +369,10 @@ export function GamePage() {
           pauseUsed={gameState.pauseUsed}
           players={gameState.players}
           myPlayerSeat={myPlayerSeat}
+          isRoomOwner={isRoomOwner}
           onResume={handleUnpause}
           onPause={handlePause}
+          onOwnerResume={handleOwnerUnpause}
         />
       )}
 

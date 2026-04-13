@@ -82,6 +82,7 @@ export interface GameState {
   variant: Variant;
   matchMode: string;
   phase: Phase;
+  ownerSeat: number;
   handNumber: number;
   dealerSeat: number;
   trumpSuit: Suit | null;

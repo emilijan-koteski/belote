@@ -118,7 +118,7 @@ func TestStartGame_CreatesSession(t *testing.T) {
 	repo := newMockMatchRepo()
 	mgr := session.NewManager(hub, repo)
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10)
 	require.NoError(t, err)
 
 	assert.True(t, mgr.HasSession(100))
@@ -143,7 +143,7 @@ func TestStartGame_BroadcastsInitialState(t *testing.T) {
 	repo := newMockMatchRepo()
 	mgr := session.NewManager(hub, repo)
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10)
 	require.NoError(t, err)
 
 	// Give broadcast time to process
@@ -185,7 +185,7 @@ func TestHandleAction_PlayCard_ParsesCorrectly(t *testing.T) {
 	repo := newMockMatchRepo()
 	mgr := session.NewManager(hub, repo)
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10)
 	require.NoError(t, err)
 
 	state := mgr.GetStateSnapshot(100)
@@ -220,7 +220,7 @@ func TestHandleAction_BiddingActions(t *testing.T) {
 	repo := newMockMatchRepo()
 	mgr := session.NewManager(hub, repo)
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10)
 	require.NoError(t, err)
 
 	state := mgr.GetStateSnapshot(100)
@@ -268,7 +268,7 @@ func TestRemoveSession(t *testing.T) {
 	repo := newMockMatchRepo()
 	mgr := session.NewManager(hub, repo)
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10)
 	require.NoError(t, err)
 	assert.True(t, mgr.HasSession(100))
 
@@ -287,7 +287,7 @@ func TestHasSession(t *testing.T) {
 
 	assert.False(t, mgr.HasSession(100))
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10)
 	require.NoError(t, err)
 
 	assert.True(t, mgr.HasSession(100))
@@ -303,7 +303,7 @@ func TestStartGame_PerMoveTimer_SetsTurnExpiresAt(t *testing.T) {
 	repo := newMockMatchRepo()
 	mgr := session.NewManager(hub, repo)
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10)
 	require.NoError(t, err)
 
 	state := mgr.GetStateSnapshot(100)
@@ -321,7 +321,7 @@ func TestStartGame_RelaxedTimer_NilTurnExpiresAt(t *testing.T) {
 	repo := newMockMatchRepo()
 	mgr := session.NewManager(hub, repo)
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10)
 	require.NoError(t, err)
 
 	state := mgr.GetStateSnapshot(100)
@@ -338,7 +338,7 @@ func TestHandleAction_PerMoveTimer_ResetsOnAction(t *testing.T) {
 	repo := newMockMatchRepo()
 	mgr := session.NewManager(hub, repo)
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10)
 	require.NoError(t, err)
 
 	state := mgr.GetStateSnapshot(100)
@@ -376,7 +376,7 @@ func TestPerMoveTimer_AutoPlayOnExpiry(t *testing.T) {
 	mgr := session.NewManager(hub, repo)
 
 	// Use a very short timer (1 second) so it expires quickly in the test
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 1)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 1, 10)
 	require.NoError(t, err)
 
 	state := mgr.GetStateSnapshot(100)
@@ -428,7 +428,7 @@ func TestPerMoveTimer_ConcurrentActionAndExpiry(t *testing.T) {
 	mgr := session.NewManager(hub, repo)
 
 	// Use 1-second timer
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 1)
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 1, 10)
 	require.NoError(t, err)
 
 	// Transition to playing phase

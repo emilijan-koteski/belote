@@ -7,8 +7,10 @@ interface PauseOverlayProps {
   pauseUsed: [boolean, boolean, boolean, boolean];
   players: [PlayerState, PlayerState, PlayerState, PlayerState];
   myPlayerSeat: number;
+  isRoomOwner: boolean;
   onResume: () => void;
   onPause: () => void;
+  onOwnerResume: () => void;
 }
 
 export function PauseOverlay({
@@ -16,8 +18,10 @@ export function PauseOverlay({
   pauseUsed,
   players,
   myPlayerSeat,
+  isRoomOwner,
   onResume,
   onPause,
+  onOwnerResume,
 }: PauseOverlayProps) {
   const { t } = useTranslation();
   const hasActivePause = pausedPlayers[myPlayerSeat];
@@ -51,30 +55,42 @@ export function PauseOverlay({
           )}
         </div>
 
-        <div className="flex items-center justify-center gap-3">
-          {hasActivePause ? (
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center justify-center gap-3">
+            {hasActivePause ? (
+              <button
+                onClick={onResume}
+                className="bg-accent text-background font-semibold px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
+                data-testid="pause-resume-button"
+              >
+                {t("game.pause.resume")}
+              </button>
+            ) : canStackPause ? (
+              <button
+                onClick={onPause}
+                className="border border-border text-text-secondary font-semibold px-6 py-3 rounded-lg hover:text-text-primary hover:border-text-secondary transition-colors"
+                data-testid="pause-stack-button"
+              >
+                {t("game.pause.pauseButton")}
+              </button>
+            ) : (
+              <p
+                className="text-text-secondary text-sm italic"
+                data-testid="pause-waiting"
+              >
+                {t("game.pause.waitingToResume")}
+              </p>
+            )}
+          </div>
+
+          {isRoomOwner && (
             <button
-              onClick={onResume}
-              className="bg-accent text-background font-semibold px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
-              data-testid="pause-resume-button"
+              onClick={onOwnerResume}
+              className="border border-red-500/50 text-red-400 font-semibold px-6 py-2 rounded-lg hover:bg-red-500/10 transition-colors text-sm"
+              data-testid="pause-owner-resume-button"
             >
-              {t("game.pause.resume")}
+              {t("game.pause.resumeAll")}
             </button>
-          ) : canStackPause ? (
-            <button
-              onClick={onPause}
-              className="border border-border text-text-secondary font-semibold px-6 py-3 rounded-lg hover:text-text-primary hover:border-text-secondary transition-colors"
-              data-testid="pause-stack-button"
-            >
-              {t("game.pause.pauseButton")}
-            </button>
-          ) : (
-            <p
-              className="text-text-secondary text-sm italic"
-              data-testid="pause-waiting"
-            >
-              {t("game.pause.waitingToResume")}
-            </p>
           )}
         </div>
       </div>

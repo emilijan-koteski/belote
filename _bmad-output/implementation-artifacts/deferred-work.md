@@ -119,3 +119,9 @@
 - **D53: `userId` used as `RoomPlayer.id` field in WS dispatch** — `useWsDispatch.ts:205` sets `id: payload.userId` when constructing `RoomPlayer` from `PlayerJoinedPayload`. The actual DB row ID is not available from the WS event. No current breakage since `id` is not used for API calls, but a latent misidentification if future features need the DB record ID.
 - **D54: Dead code `useRoomLobbyUpdates.ts` with known bugs** — The file (80 lines) is no longer invoked after `roomLobbyStore` replaced its dispatch role. Still contains `id: 0` hardcode (D24) and `as unknown as Room` unsafe cast (D25). Spec allows keeping it as utility; should be deleted in a cleanup pass.
 - **D55: `project-context.md` not updated for 5th Zustand store** — `roomLobbyStore` is a new lifecycle-partitioned store not documented in the "4 partitioned stores" list in project-context.md.
+
+## Deferred from: code review of 5-2-room-owner-pause-override (2026-04-13)
+
+- **D56: Room ownership transfer during active game not synced to session** — If room ownership changes via `LeaveRoom` during an active game, `GameState.OwnerSeat` remains stale. Pre-existing design: OwnerSeat is fixed at game start. The new owner cannot use `owner_unpause`. Acceptable for Phase 1 (owner must be seated to start game, and leaving during game is not a normal flow).
+- **D57: No integration test for broadcast `OwnerOverride: true`** — `broadcastActionResult` sets `OwnerOverride: true` for `ActionOwnerUnpause` (implemented in Story 5.1), but no test asserts the broadcast payload contains this flag. Pre-existing from Story 5.1; broadcast code unchanged in this story.
+- **D58: No WS-layer test for `error:not_room_owner` event delivery** — Rules engine returns `ErrNotRoomOwner` correctly, but `sendGameError` routes all game errors as `error:invalid_action` (pre-existing D53). The typed `error:not_room_owner` constant is defined for future use when D53 is addressed.

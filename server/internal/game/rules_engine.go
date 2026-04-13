@@ -13,8 +13,11 @@ func ApplyAction(state *GameState, action Action) (*GameState, error) {
 	}
 
 	// Unpause actions are only valid when paused — return ErrNotPaused otherwise
-	if action.Type == ActionUnpause || action.Type == ActionOwnerUnpause {
+	if action.Type == ActionUnpause {
 		return handleUnpause(state, action)
+	}
+	if action.Type == ActionOwnerUnpause {
+		return handleOwnerUnpause(state, action)
 	}
 
 	switch state.Phase {

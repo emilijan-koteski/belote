@@ -65,6 +65,7 @@ const ErrorWrongPhase = "error:wrong_phase"
 const ErrorIllegalPlay = "error:illegal_play"
 const ErrorPauseExhausted = "error:pause_exhausted"
 const ErrorNoActivePause = "error:no_active_pause"
+const ErrorNotRoomOwner = "error:not_room_owner"
 
 // --- Room events ---
 const SystemRoomCreated = "system:room_created"

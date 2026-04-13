@@ -190,7 +190,8 @@
       "invalidAction": "Invalid action",
       "illegalPlay": "That card cannot be played",
       "pauseExhausted": "You have already used your pause",
-      "noActivePause": "You don't have an active pause"
+      "noActivePause": "You don't have an active pause",
+      "notRoomOwner": "Only the room owner can do this"
     },
     "timer": {
       "autoPlayed": "Auto-played: {{card}}"
@@ -229,6 +230,7 @@
       "resume": "Resume",
       "pauseButton": "Pause",
       "pauseUsed": "Pause Used",
+      "resumeAll": "Resume All",
       "ownerResumedToast": "Room owner resumed the game"
     }
   },

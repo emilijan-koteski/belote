@@ -35,6 +35,27 @@ func handlePause(state *GameState, action Action) (*GameState, error) {
 	return newState, nil
 }
 
+// handleOwnerUnpause processes an owner_unpause action from the room owner.
+// Clears ALL active pauses regardless of who initiated them and resumes the game.
+// Only the room owner (identified by OwnerSeat) may use this action.
+func handleOwnerUnpause(state *GameState, action Action) (*GameState, error) {
+	if state.Phase != PhasePaused {
+		return nil, apperr.ErrNotPaused
+	}
+
+	if action.PlayerSeat != state.OwnerSeat {
+		return nil, apperr.ErrNotRoomOwner
+	}
+
+	newState := cloneGameState(state)
+	// Clear ALL active pauses
+	newState.PausedPlayers = [4]bool{}
+	newState.Phase = newState.PreviousPhase
+	newState.PreviousPhase = ""
+
+	return newState, nil
+}
+
 // handleUnpause processes an unpause action from a player.
 // Only the player who has an active pause can unpause (clears their own pause).
 // Game resumes to PreviousPhase only when ALL active pauses are cleared.

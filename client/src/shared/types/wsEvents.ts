@@ -160,6 +160,7 @@ export const ERROR_WRONG_PHASE = "error:wrong_phase" as const;
 export const ERROR_ILLEGAL_PLAY = "error:illegal_play" as const;
 export const ERROR_PAUSE_EXHAUSTED = "error:pause_exhausted" as const;
 export const ERROR_NO_ACTIVE_PAUSE = "error:no_active_pause" as const;
+export const ERROR_NOT_ROOM_OWNER = "error:not_room_owner" as const;
 
 export interface GameErrorPayload {
   code: string;

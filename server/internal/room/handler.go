@@ -41,7 +41,7 @@ type CreateRoomRequest struct {
 
 // GameStarter is the interface the room handler uses to start a game session.
 type GameStarter interface {
-	StartGame(roomID uint, variant string, matchMode string, players [4]PlayerSeatInfo, timerStyle string, timerDurationSec int) error
+	StartGame(roomID uint, variant string, matchMode string, players [4]PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint) error
 }
 
 // PlayerSeatInfo holds the player info needed for game session initialization.
@@ -702,7 +702,7 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 			if autoStartRoom.TimerDurationSeconds != nil {
 				timerDuration = *autoStartRoom.TimerDurationSeconds
 			}
-			if err := h.gameStarter.StartGame(uint(roomID), autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration); err != nil {
+			if err := h.gameStarter.StartGame(uint(roomID), autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration, autoStartRoom.OwnerID); err != nil {
 				slog.Error("failed to start game session for quick play", "roomID", roomID, "error", err)
 			}
 		}
@@ -806,7 +806,7 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 			if updatedRoom.TimerDurationSeconds != nil {
 				timerDuration = *updatedRoom.TimerDurationSeconds
 			}
-			if err := h.gameStarter.StartGame(uint(roomID), updatedRoom.Variant, updatedRoom.MatchMode, seatInfo, updatedRoom.TimerStyle, timerDuration); err != nil {
+			if err := h.gameStarter.StartGame(uint(roomID), updatedRoom.Variant, updatedRoom.MatchMode, seatInfo, updatedRoom.TimerStyle, timerDuration, updatedRoom.OwnerID); err != nil {
 				slog.Error("failed to start game session", "roomID", roomID, "error", err)
 			}
 		}

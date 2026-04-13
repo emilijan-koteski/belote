@@ -59,7 +59,7 @@ func (m *Manager) SetRoomUpdater(updater RoomStatusUpdater) {
 }
 
 // StartGame creates a new game session from room data and broadcasts the initial state.
-func (m *Manager) StartGame(roomID uint, variant string, matchMode string, players [4]room.PlayerSeatInfo, timerStyle string, timerDurationSec int) error {
+func (m *Manager) StartGame(roomID uint, variant string, matchMode string, players [4]room.PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint) error {
 	m.mu.Lock()
 	if _, exists := m.sessions[roomID]; exists {
 		m.mu.Unlock()
@@ -72,6 +72,16 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 	}
 
 	gs := game.NewGame(playerIDs, game.Variant(variant), matchMode, roomID)
+
+	// Map room owner to seat index for pause override validation.
+	// Default to -1 (no owner override available) if ownerID not found among players.
+	gs.OwnerSeat = -1
+	for i, uid := range playerIDs {
+		if uid == ownerID {
+			gs.OwnerSeat = i
+			break
+		}
+	}
 
 	session := &Session{
 		gameState:        gs,
