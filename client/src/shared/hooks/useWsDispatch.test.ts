@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useGameStore } from "@/shared/stores/gameStore";
 import { useLobbyStore } from "@/shared/stores/lobbyStore";
+import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { GameState } from "@/shared/types/gameTypes";
 import type { WsMessage } from "@/shared/types/wsEvents";
 
@@ -58,6 +59,7 @@ describe("useWsDispatch", () => {
       searchQuery: "",
     });
     useGameStore.getState().reset();
+    useRoomLobbyStore.getState().reset();
     vi.restoreAllMocks();
   });
 
@@ -293,5 +295,89 @@ describe("useWsDispatch", () => {
     expect(state.gameState?.teamScores[0]).toBe(1020);
     expect(state.gameState?.teamScores[1]).toBe(850);
     expect(state.matchEndData?.matchDurationSec).toBe(300);
+  });
+
+  // --- Room lobby event dispatch tests ---
+
+  it("dispatches system:player_joined to roomLobbyStore", () => {
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:player_joined",
+      payload: {
+        roomId: 10,
+        userId: 42,
+        username: "Alice",
+        playerCount: 2,
+      },
+    });
+
+    const state = useRoomLobbyStore.getState();
+    expect(state.players).toHaveLength(1);
+    expect(state.players[0].userId).toBe(42);
+    expect(state.players[0].username).toBe("Alice");
+    expect(state.players[0].id).toBe(42); // Uses userId, not hardcoded 0 (D24 fix)
+  });
+
+  it("dispatches system:player_left to roomLobbyStore", () => {
+    // Pre-populate a player
+    useRoomLobbyStore.getState().addPlayer(
+      { id: 42, roomId: 10, userId: 42, username: "Alice", seat: null, team: null, createdAt: "" },
+      2,
+    );
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:player_left",
+      payload: {
+        roomId: 10,
+        userId: 42,
+        username: "Alice",
+        playerCount: 1,
+      },
+    });
+
+    expect(useRoomLobbyStore.getState().players).toHaveLength(0);
+  });
+
+  it("dispatches system:seat_updated to roomLobbyStore", () => {
+    useRoomLobbyStore.getState().addPlayer(
+      { id: 42, roomId: 10, userId: 42, username: "Alice", seat: null, team: null, createdAt: "" },
+      1,
+    );
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:seat_updated",
+      payload: {
+        roomId: 10,
+        userId: 42,
+        username: "Alice",
+        seat: 2,
+        team: "red",
+        previousSeat: null,
+      },
+    });
+
+    const player = useRoomLobbyStore.getState().players[0];
+    expect(player.seat).toBe(2);
+    expect(player.team).toBe("red");
+  });
+
+  it("dispatches system:game_started to roomLobbyStore", () => {
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:game_started",
+      payload: { roomId: 10 },
+    });
+
+    expect(useRoomLobbyStore.getState().gameStarted).toBe(true);
   });
 });

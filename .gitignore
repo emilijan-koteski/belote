@@ -49,5 +49,8 @@ coverage/
 *.cover
 *.prof
 
+# Temp
+_review_diff.tmp
+
 #Playwright
 .playwright-mcp/

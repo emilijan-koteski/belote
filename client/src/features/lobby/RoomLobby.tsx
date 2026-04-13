@@ -7,6 +7,7 @@ import { FetchError } from "@/shared/api/fetchClient";
 import { getRoom, leaveRoom, selectSeat, startGame } from "@/shared/api/rooms";
 import { Button } from "@/shared/components/ui/button";
 import { useAuthStore } from "@/shared/stores/authStore";
+import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { Room, RoomPlayer } from "@/shared/types/apiTypes";
 
 const variantKeys: Record<string, string> = {
@@ -37,6 +38,11 @@ export function RoomLobby() {
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
 
+  // Read from the roomLobbyStore for real-time updates
+  const storeRoom = useRoomLobbyStore((s) => s.room);
+  const storePlayers = useRoomLobbyStore((s) => s.players);
+  const gameStarted = useRoomLobbyStore((s) => s.gameStarted);
+
   const [room, setRoom] = useState<Room | null>(null);
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,27 +53,57 @@ export function RoomLobby() {
 
   useEffect(() => {
     if (!id) return;
+    let stale = false;
 
     async function fetchRoom() {
       setIsLoading(true);
       setError(null);
       try {
         const data = await getRoom(Number(id));
+        if (stale) return; // Guard against stale fetch after unmount/remount
         setRoom(data.room);
         setPlayers(data.players);
+        // Initialize the store with REST data so WS updates build on top
+        const store = useRoomLobbyStore.getState();
+        store.setRoom(data.room);
+        store.setPlayers(data.players);
+        store.setCurrentRoomId(data.room.id);
         const userId = useAuthStore.getState().user?.id;
         if (userId && data.players.some((p) => p.userId === userId)) {
           hasJoinedRef.current = true;
         }
       } catch {
-        setError(t("lobby.roomLobby.notFound"));
+        if (!stale) setError(t("lobby.roomLobby.notFound"));
       } finally {
-        setIsLoading(false);
+        if (!stale) setIsLoading(false);
       }
     }
 
     fetchRoom();
+
+    // Reset store on unmount
+    return () => {
+      stale = true;
+      useRoomLobbyStore.getState().reset();
+    };
   }, [id, t]);
+
+  // Sync store changes into local state for rendering (no guards — allow clears)
+  useEffect(() => {
+    setRoom(storeRoom);
+  }, [storeRoom]);
+
+  useEffect(() => {
+    setPlayers(storePlayers);
+  }, [storePlayers]);
+
+  // Handle game_started from WebSocket — navigate all players to the game page
+  useEffect(() => {
+    if (gameStarted && id) {
+      hasLeftRef.current = true; // Prevent cleanup leave on navigation
+      navigate(`/game/${id}`);
+    }
+  }, [gameStarted, id, navigate]);
 
   useEffect(() => {
     return () => {

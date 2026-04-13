@@ -1,3 +1,4 @@
+import React from "react";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +9,10 @@ import { ProtectedRoute } from "./ProtectedRoute";
 
 vi.mock("@/shared/api/auth", () => ({
   logout: vi.fn(),
+}));
+
+vi.mock("@/shared/providers/WebSocketProvider", () => ({
+  WebSocketProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 function renderWithRouter(initialPath: string) {

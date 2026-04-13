@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 
-import { useWebSocket } from "@/shared/hooks/useWebSocket";
-import { useWsDispatch } from "@/shared/hooks/useWsDispatch";
+import { useWsSendMessage } from "@/shared/providers/WebSocketProvider";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 import type { Suit } from "@/shared/types/gameTypes";
@@ -55,8 +54,7 @@ export function GamePage() {
   const navigate = useNavigate();
   const { roomId: _roomIdParam } = useParams<{ roomId: string }>();
 
-  const dispatch = useWsDispatch();
-  const { sendMessage } = useWebSocket({ onMessage: dispatch });
+  const sendMessage = useWsSendMessage();
 
   const user = useAuthStore((s) => s.user);
   const gameState = useGameStore((s) => s.gameState);

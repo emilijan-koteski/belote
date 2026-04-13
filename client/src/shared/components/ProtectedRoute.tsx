@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router";
 
+import { WebSocketProvider } from "@/shared/providers/WebSocketProvider";
 import { useAuthStore } from "@/shared/stores/authStore";
 
 export function ProtectedRoute() {
@@ -14,5 +15,9 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <WebSocketProvider>
+      <Outlet />
+    </WebSocketProvider>
+  );
 }

@@ -100,7 +100,7 @@ func main() {
 	// Room routes
 	roomRepo := room.NewGormRepository(db)
 	sessionManager.SetRoomUpdater(&room.RoomStatusAdapter{Repo: roomRepo})
-	roomHandler := room.NewRoomHandler(roomRepo, sessionManager)
+	roomHandler := room.NewRoomHandler(roomRepo, sessionManager, hub)
 	api.POST("/rooms", roomHandler.CreateRoom)
 	api.GET("/rooms", roomHandler.ListRooms)
 	api.POST("/rooms/quick-play", roomHandler.QuickPlay)

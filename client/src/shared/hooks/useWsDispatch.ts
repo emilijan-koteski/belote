@@ -4,13 +4,18 @@ import { toast } from "sonner";
 
 import { handleWsMessage as handleRoomListMessage } from "@/features/lobby/useRoomUpdates";
 import { useGameStore } from "@/shared/stores/gameStore";
+import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { GameState } from "@/shared/types/gameTypes";
 import type {
   CardPlayedPayload,
   DeclarationsResolvedPayload,
   GameResumedPayload,
+  GameStartedPayload,
   HandScoredPayload,
   MatchEndPayload,
+  PlayerJoinedPayload,
+  PlayerLeftPayload,
+  SeatUpdatedPayload,
   TrickResolvedPayload,
   WsMessage,
 } from "@/shared/types/wsEvents";
@@ -192,9 +197,47 @@ function dispatchSystemEvent(message: WsMessage): void {
     return;
   }
 
-  // Room lobby updates — consumed by room lobby components directly
-  if (type === SYSTEM_PLAYER_JOINED || type === SYSTEM_PLAYER_LEFT ||
-      type === SYSTEM_SEAT_UPDATED || type === SYSTEM_GAME_STARTED) {
+  // Room lobby updates — dispatch to roomLobbyStore (only if event matches the currently viewed room)
+  if (type === SYSTEM_PLAYER_JOINED) {
+    const payload = message.payload as PlayerJoinedPayload;
+    const store = useRoomLobbyStore.getState();
+    if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
+    store.addPlayer(
+      {
+        id: payload.userId, // Use userId as a client-side ID (fixes D24: no longer hardcodes 0)
+        roomId: payload.roomId,
+        userId: payload.userId,
+        username: payload.username,
+        seat: null,
+        team: null,
+        createdAt: new Date().toISOString(),
+      },
+      payload.playerCount,
+    );
+    return;
+  }
+
+  if (type === SYSTEM_PLAYER_LEFT) {
+    const payload = message.payload as PlayerLeftPayload;
+    const store = useRoomLobbyStore.getState();
+    if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
+    store.removePlayer(payload.userId, payload.playerCount, payload.newOwnerId);
+    return;
+  }
+
+  if (type === SYSTEM_SEAT_UPDATED) {
+    const payload = message.payload as SeatUpdatedPayload;
+    const store = useRoomLobbyStore.getState();
+    if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
+    store.updatePlayerSeat(payload.userId, payload.seat, payload.team, payload.previousSeat);
+    return;
+  }
+
+  if (type === SYSTEM_GAME_STARTED) {
+    const payload = message.payload as GameStartedPayload;
+    const store = useRoomLobbyStore.getState();
+    if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
+    store.setGameStarted(true);
     return;
   }
 

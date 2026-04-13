@@ -152,6 +152,15 @@ func (h *Hub) BroadcastToUsers(userIDs []uint, msg []byte) {
 	}
 }
 
+// BroadcastAll sends a message to all connected clients.
+func (h *Hub) BroadcastAll(msg []byte) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, client := range h.clients {
+		client.Send(msg)
+	}
+}
+
 // ClientCount returns the number of connected clients.
 func (h *Hub) ClientCount() int {
 	h.mu.RLock()

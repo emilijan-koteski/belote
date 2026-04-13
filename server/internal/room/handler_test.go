@@ -207,6 +207,30 @@ func (m *mockRoomRepo) RunInTransaction(fn func(room.RoomRepository) error) erro
 	return fn(m)
 }
 
+// --- Mock Broadcaster ---
+
+type broadcastCall struct {
+	userIDs []uint
+	msg     []byte
+}
+
+type allBroadcastCall struct {
+	msg []byte
+}
+
+type mockBroadcaster struct {
+	calls    []broadcastCall
+	allCalls []allBroadcastCall
+}
+
+func (m *mockBroadcaster) BroadcastToUsers(userIDs []uint, msg []byte) {
+	m.calls = append(m.calls, broadcastCall{userIDs: userIDs, msg: msg})
+}
+
+func (m *mockBroadcaster) BroadcastAll(msg []byte) {
+	m.allCalls = append(m.allCalls, allBroadcastCall{msg: msg})
+}
+
 // --- Test Infrastructure ---
 
 func testErrorHandler(err error, c echo.Context) {
@@ -235,7 +259,7 @@ func testErrorHandler(err error, c echo.Context) {
 
 func setupTest() (*echo.Echo, *mockRoomRepo) {
 	repo := newMockRoomRepo()
-	handler := room.NewRoomHandler(repo, nil)
+	handler := room.NewRoomHandler(repo, nil, nil)
 
 	e := echo.New()
 	e.HTTPErrorHandler = testErrorHandler
@@ -251,6 +275,27 @@ func setupTest() (*echo.Echo, *mockRoomRepo) {
 	api.POST("/rooms/:id/start", handler.StartGame)
 
 	return e, repo
+}
+
+func setupTestWithBroadcast() (*echo.Echo, *mockRoomRepo, *mockBroadcaster) {
+	repo := newMockRoomRepo()
+	broadcaster := &mockBroadcaster{}
+	handler := room.NewRoomHandler(repo, nil, broadcaster)
+
+	e := echo.New()
+	e.HTTPErrorHandler = testErrorHandler
+	api := e.Group("/api/v1", auth.AuthMiddleware("test-jwt-secret"))
+	api.POST("/rooms", handler.CreateRoom)
+	api.GET("/rooms", handler.ListRooms)
+	api.POST("/rooms/quick-play", handler.QuickPlay)
+	api.GET("/rooms/code/:code", handler.GetRoomByCode)
+	api.GET("/rooms/:id", handler.GetRoom)
+	api.POST("/rooms/:id/join", handler.JoinRoom)
+	api.POST("/rooms/:id/leave", handler.LeaveRoom)
+	api.POST("/rooms/:id/seat", handler.SelectSeat)
+	api.POST("/rooms/:id/start", handler.StartGame)
+
+	return e, repo, broadcaster
 }
 
 func doCreateRoom(e *echo.Echo, body string, token string) *httptest.ResponseRecorder {
@@ -1676,4 +1721,240 @@ func TestSelectSeat_ManualRoomNoAutoStart(t *testing.T) {
 	// Room status should still be "waiting"
 	updatedRoom, _ := repo.FindByID(manualRoom.ID)
 	assert.Equal(t, "waiting", updatedRoom.Status)
+}
+
+// --- Broadcast Tests ---
+
+func TestJoinRoom_BroadcastsPlayerJoined(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+
+	ownerRoom := &room.Room{Name: "Broadcast Test", OwnerID: 100, Status: "waiting", PlayerCount: 1}
+	_ = repo.Create(ownerRoom)
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: ownerRoom.ID, UserID: 100, Username: "Owner"})
+
+	// Player 200 joins
+	token := validToken(200)
+	rec := doJoinRoom(e, "1", token)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	require.Len(t, broadcaster.calls, 1, "expected one BroadcastToUsers call")
+	call := broadcaster.calls[0]
+
+	// Broadcast should include both existing (100) and joining (200) player
+	assert.ElementsMatch(t, []uint{100, 200}, call.userIDs)
+
+	// Verify the message type is system:player_joined
+	var msg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(call.msg, &msg))
+	var msgType string
+	require.NoError(t, json.Unmarshal(msg["type"], &msgType))
+	assert.Equal(t, "system:player_joined", msgType)
+
+	// Verify payload
+	var payload map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msg["payload"], &payload))
+	var userId float64
+	require.NoError(t, json.Unmarshal(payload["userId"], &userId))
+	assert.Equal(t, float64(200), userId)
+	var playerCount float64
+	require.NoError(t, json.Unmarshal(payload["playerCount"], &playerCount))
+	assert.Equal(t, float64(2), playerCount)
+}
+
+func TestLeaveRoom_BroadcastsPlayerLeft(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+
+	ownerRoom := &room.Room{Name: "Leave Test", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	_ = repo.Create(ownerRoom)
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: ownerRoom.ID, UserID: 100, Username: "Owner"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: ownerRoom.ID, UserID: 200, Username: "Player2"})
+
+	// Player 200 leaves
+	token := validToken(200)
+	rec := doLeaveRoom(e, "1", token)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	require.Len(t, broadcaster.calls, 1, "expected one BroadcastToUsers call")
+	call := broadcaster.calls[0]
+
+	// Broadcast should only go to remaining player (100)
+	assert.ElementsMatch(t, []uint{100}, call.userIDs)
+
+	// Verify the message type is system:player_left
+	var msg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(call.msg, &msg))
+	var msgType string
+	require.NoError(t, json.Unmarshal(msg["type"], &msgType))
+	assert.Equal(t, "system:player_left", msgType)
+
+	// Verify payload contains leaving player's info
+	var payload map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msg["payload"], &payload))
+	var userId float64
+	require.NoError(t, json.Unmarshal(payload["userId"], &userId))
+	assert.Equal(t, float64(200), userId)
+}
+
+func TestLeaveRoom_OwnerTransfer_BroadcastsNewOwner(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+
+	ownerRoom := &room.Room{Name: "Owner Leave", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	_ = repo.Create(ownerRoom)
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: ownerRoom.ID, UserID: 100, Username: "Owner"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: ownerRoom.ID, UserID: 200, Username: "Player2"})
+
+	// Owner (100) leaves — ownership should transfer to 200
+	token := validToken(100)
+	rec := doLeaveRoom(e, "1", token)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	require.Len(t, broadcaster.calls, 1)
+	var msg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.calls[0].msg, &msg))
+	var payload map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msg["payload"], &payload))
+
+	// newOwnerId should be present
+	var newOwnerId float64
+	require.NoError(t, json.Unmarshal(payload["newOwnerId"], &newOwnerId))
+	assert.Equal(t, float64(200), newOwnerId)
+}
+
+func TestSelectSeat_BroadcastsSeatUpdated(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+
+	testRoom := &room.Room{Name: "Seat Test", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	_ = repo.Create(testRoom)
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 100, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 200, Username: "P2"})
+
+	token := validToken(200)
+	rec := doSelectSeat(e, "1", `{"seat": 2}`, token)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	require.Len(t, broadcaster.calls, 1, "expected one BroadcastToUsers call for seat_updated")
+	var msg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.calls[0].msg, &msg))
+	var msgType string
+	require.NoError(t, json.Unmarshal(msg["type"], &msgType))
+	assert.Equal(t, "system:seat_updated", msgType)
+
+	var payload map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msg["payload"], &payload))
+	var seatVal float64
+	require.NoError(t, json.Unmarshal(payload["seat"], &seatVal))
+	assert.Equal(t, float64(2), seatVal)
+	var team string
+	require.NoError(t, json.Unmarshal(payload["team"], &team))
+	assert.Equal(t, "red", team)
+}
+
+func TestStartGame_BroadcastsGameStarted(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+
+	testRoom := &room.Room{Name: "Start Test", OwnerID: 100, Status: "waiting", PlayerCount: 4}
+	_ = repo.Create(testRoom)
+
+	seat0 := 0
+	seat1 := 1
+	seat2 := 2
+	seat3 := 3
+	red := "red"
+	blue := "blue"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 100, Seat: &seat0, Team: &red, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 200, Seat: &seat1, Team: &blue, Username: "P2"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 300, Seat: &seat2, Team: &red, Username: "P3"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 400, Seat: &seat3, Team: &blue, Username: "P4"})
+
+	token := validToken(100)
+	rec := doStartGame(e, "1", token)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Should have at least one broadcast for game_started
+	require.GreaterOrEqual(t, len(broadcaster.calls), 1, "expected BroadcastToUsers call for game_started")
+
+	// Find the game_started message
+	found := false
+	for _, call := range broadcaster.calls {
+		var msg map[string]json.RawMessage
+		if err := json.Unmarshal(call.msg, &msg); err != nil {
+			continue
+		}
+		var msgType string
+		if err := json.Unmarshal(msg["type"], &msgType); err != nil {
+			continue
+		}
+		if msgType == "system:game_started" {
+			found = true
+			// All 4 players should receive the broadcast
+			assert.ElementsMatch(t, []uint{100, 200, 300, 400}, call.userIDs)
+			break
+		}
+	}
+	assert.True(t, found, "expected system:game_started broadcast")
+}
+
+func TestQuickPlayAutoStart_BroadcastsGameStarted(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+
+	qpRoom := &room.Room{Name: "QP Room", OwnerID: 100, Status: "waiting", PlayerCount: 4, IsQuickPlay: true}
+	_ = repo.Create(qpRoom)
+
+	seat0 := 0
+	seat1 := 1
+	seat2 := 2
+	red := "red"
+	blue := "blue"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 100, Seat: &seat0, Team: &red, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 200, Seat: &seat1, Team: &blue, Username: "P2"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 300, Seat: &seat2, Team: &red, Username: "P3"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 400, Username: "P4"})
+
+	// Player 400 selects seat 3 — all 4 seated, Quick Play auto-start should trigger
+	token := validToken(400)
+	rec := doSelectSeat(e, "1", `{"seat": 3}`, token)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Should have broadcasts for seat_updated AND game_started
+	require.GreaterOrEqual(t, len(broadcaster.calls), 2, "expected seat_updated + game_started broadcasts")
+
+	// Find the game_started message
+	found := false
+	for _, call := range broadcaster.calls {
+		var msg map[string]json.RawMessage
+		if err := json.Unmarshal(call.msg, &msg); err != nil {
+			continue
+		}
+		var msgType string
+		if err := json.Unmarshal(msg["type"], &msgType); err != nil {
+			continue
+		}
+		if msgType == "system:game_started" {
+			found = true
+			assert.ElementsMatch(t, []uint{100, 200, 300, 400}, call.userIDs)
+			break
+		}
+	}
+	assert.True(t, found, "expected system:game_started broadcast for quick play auto-start")
+}
+
+func TestCreateRoom_BroadcastsRoomCreated(t *testing.T) {
+	e, _, broadcaster := setupTestWithBroadcast()
+
+	token := validToken(1)
+	rec := doCreateRoom(e, `{"name":"Broadcast Room","variant":"bitola","matchMode":"1001","timerStyle":"relaxed"}`, token)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	require.Len(t, broadcaster.allCalls, 1, "expected one BroadcastAll call")
+	var msg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.allCalls[0].msg, &msg))
+	var msgType string
+	require.NoError(t, json.Unmarshal(msg["type"], &msgType))
+	assert.Equal(t, "system:room_created", msgType)
+
+	var payload map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msg["payload"], &payload))
+	var roomName string
+	require.NoError(t, json.Unmarshal(payload["name"], &roomName))
+	assert.Equal(t, "Broadcast Room", roomName)
 }

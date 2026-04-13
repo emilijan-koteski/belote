@@ -2,6 +2,7 @@ package room
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/emilijan/belote/server/internal/apperr"
 	"github.com/emilijan/belote/server/internal/auth"
+	"github.com/emilijan/belote/server/internal/ws"
 )
 
 var (
@@ -58,13 +60,91 @@ func (a *RoomStatusAdapter) UpdateRoomStatus(roomID uint, status string) error {
 	return a.Repo.UpdateStatus(roomID, status)
 }
 
+// Broadcaster abstracts WebSocket broadcast capabilities for testability.
+type Broadcaster interface {
+	BroadcastToUsers(userIDs []uint, msg []byte)
+	BroadcastAll(msg []byte)
+}
+
 type RoomHandler struct {
 	repo        RoomRepository
 	gameStarter GameStarter
+	hub         Broadcaster
 }
 
-func NewRoomHandler(repo RoomRepository, gameStarter GameStarter) *RoomHandler {
-	return &RoomHandler{repo: repo, gameStarter: gameStarter}
+func NewRoomHandler(repo RoomRepository, gameStarter GameStarter, hub Broadcaster) *RoomHandler {
+	return &RoomHandler{repo: repo, gameStarter: gameStarter, hub: hub}
+}
+
+// broadcastToRoom sends a WebSocket message to all players in a room.
+// Broadcast is best-effort — errors are logged but never fail the HTTP response.
+func (h *RoomHandler) broadcastToRoom(roomID uint, msgType string, payload interface{}) {
+	if h.hub == nil {
+		return
+	}
+	players, err := h.repo.FindPlayersByRoomID(roomID)
+	if err != nil {
+		slog.Error("broadcast: failed to find room players", "roomID", roomID, "error", err)
+		return
+	}
+	userIDs := make([]uint, 0, len(players))
+	for _, p := range players {
+		userIDs = append(userIDs, p.UserID)
+	}
+	h.broadcastToUsers(userIDs, msgType, payload)
+}
+
+// broadcastToUsers sends a WebSocket message to a specific set of users.
+func (h *RoomHandler) broadcastToUsers(userIDs []uint, msgType string, payload interface{}) {
+	if h.hub == nil {
+		return
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("broadcast: failed to marshal payload", "type", msgType, "error", err)
+		return
+	}
+	msg, err := json.Marshal(ws.WSMessage{Type: msgType, Payload: payloadBytes})
+	if err != nil {
+		slog.Error("broadcast: failed to marshal message", "type", msgType, "error", err)
+		return
+	}
+	h.hub.BroadcastToUsers(userIDs, msg)
+}
+
+// broadcastToAll sends a WebSocket message to all connected clients (lobby-wide).
+func (h *RoomHandler) broadcastToAll(msgType string, payload interface{}) {
+	if h.hub == nil {
+		return
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("broadcast: failed to marshal payload", "type", msgType, "error", err)
+		return
+	}
+	msg, err := json.Marshal(ws.WSMessage{Type: msgType, Payload: payloadBytes})
+	if err != nil {
+		slog.Error("broadcast: failed to marshal message", "type", msgType, "error", err)
+		return
+	}
+	h.hub.BroadcastAll(msg)
+}
+
+// broadcastRoomUpdated sends a system:room_updated event to all connected clients.
+func (h *RoomHandler) broadcastRoomUpdated(r *Room) {
+	h.broadcastToAll(ws.SystemRoomUpdated, map[string]interface{}{
+		"id":                   r.ID,
+		"name":                 r.Name,
+		"code":                 r.Code,
+		"ownerId":              r.OwnerID,
+		"variant":              r.Variant,
+		"matchMode":            r.MatchMode,
+		"timerStyle":           r.TimerStyle,
+		"timerDurationSeconds": r.TimerDurationSeconds,
+		"playerCount":          r.PlayerCount,
+		"status":               r.Status,
+		"isQuickPlay":          r.IsQuickPlay,
+	})
 }
 
 func (h *RoomHandler) CreateRoom(c echo.Context) error {
@@ -168,7 +248,20 @@ func (h *RoomHandler) CreateRoom(c echo.Context) error {
 		return createErr
 	}
 
-	// TODO: broadcast via WS hub when available (Story 2.2)
+	// Broadcast system:room_created to all connected clients (lobby-wide)
+	h.broadcastToAll(ws.SystemRoomCreated, map[string]interface{}{
+		"id":                   room.ID,
+		"name":                 room.Name,
+		"code":                 room.Code,
+		"ownerId":              room.OwnerID,
+		"variant":              room.Variant,
+		"matchMode":            room.MatchMode,
+		"timerStyle":           room.TimerStyle,
+		"timerDurationSeconds": room.TimerDurationSeconds,
+		"playerCount":          room.PlayerCount,
+		"status":               room.Status,
+		"isQuickPlay":          room.IsQuickPlay,
+	})
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{"data": room})
 }
@@ -307,7 +400,30 @@ func (h *RoomHandler) JoinRoom(c echo.Context) error {
 		return fmt.Errorf("joining room: %w", err)
 	}
 
-	// TODO: broadcast system:player_joined to room participants (WS hub not yet wired)
+	// Broadcast system:player_joined to room participants
+	players, broadcastErr := h.repo.FindPlayersByRoomID(uint(roomID))
+	if broadcastErr == nil {
+		var username string
+		for _, p := range players {
+			if p.UserID == userID {
+				username = p.Username
+				break
+			}
+		}
+		userIDs := make([]uint, 0, len(players))
+		for _, p := range players {
+			userIDs = append(userIDs, p.UserID)
+		}
+		h.broadcastToUsers(userIDs, ws.SystemPlayerJoined, map[string]interface{}{
+			"roomId":      roomID,
+			"userId":      userID,
+			"username":    username,
+			"playerCount": updatedRoom.PlayerCount,
+		})
+	}
+
+	// Broadcast system:room_updated to lobby browse page
+	h.broadcastRoomUpdated(updatedRoom)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": updatedRoom})
 }
@@ -331,6 +447,17 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 		return apperr.ErrRoomNotFound
 	}
 
+	// Capture the leaving player's username before the transaction removes them
+	var leavingUsername string
+	prePlayers, _ := h.repo.FindPlayersByRoomID(uint(roomID))
+	for _, p := range prePlayers {
+		if p.UserID == userID {
+			leavingUsername = p.Username
+			break
+		}
+	}
+
+	var newOwnerID *uint
 	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
 		if err := tx.RemovePlayer(uint(roomID), userID); err != nil {
 			return err
@@ -350,6 +477,7 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 			}
 			if len(players) > 0 {
 				freshRoom.OwnerID = players[0].UserID
+				newOwnerID = &players[0].UserID
 				if err := tx.Update(freshRoom); err != nil {
 					return fmt.Errorf("transferring room ownership: %w", err)
 				}
@@ -368,7 +496,35 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 		return fmt.Errorf("leaving room: %w", err)
 	}
 
-	// TODO: broadcast system:player_left to room participants (WS hub not yet wired)
+	// Broadcast system:player_left to remaining room participants (not the leaving player)
+	remainingPlayers, broadcastErr := h.repo.FindPlayersByRoomID(uint(roomID))
+	if broadcastErr == nil && len(remainingPlayers) > 0 {
+		// Re-fetch room after transaction to get accurate playerCount
+		postRoom, postErr := h.repo.FindByID(uint(roomID))
+		actualPlayerCount := len(remainingPlayers)
+		if postErr == nil && postRoom != nil {
+			actualPlayerCount = postRoom.PlayerCount
+		}
+		userIDs := make([]uint, 0, len(remainingPlayers))
+		for _, p := range remainingPlayers {
+			userIDs = append(userIDs, p.UserID)
+		}
+		payload := map[string]interface{}{
+			"roomId":      roomID,
+			"userId":      userID,
+			"username":    leavingUsername,
+			"playerCount": actualPlayerCount,
+		}
+		if newOwnerID != nil {
+			payload["newOwnerId"] = *newOwnerID
+		}
+		h.broadcastToUsers(userIDs, ws.SystemPlayerLeft, payload)
+
+		// Broadcast system:room_updated to lobby browse page
+		if postErr == nil && postRoom != nil {
+			h.broadcastRoomUpdated(postRoom)
+		}
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]string{"message": "left room"}})
 }
@@ -414,6 +570,8 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 
 	team := teamForSeat(seat)
 
+	var previousSeat *int
+	seatChanged := false
 	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
 		// Re-check room status inside transaction to prevent TOCTOU
 		room, err := tx.FindByID(uint(roomID))
@@ -449,7 +607,10 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 			return apperr.ErrNotInRoom
 		}
 
+		// Capture previous seat before clearing
 		if player.Seat != nil {
+			prev := *player.Seat
+			previousSeat = &prev
 			if err := tx.ClearPlayerSeat(uint(roomID), userID); err != nil {
 				return fmt.Errorf("clearing previous seat: %w", err)
 			}
@@ -459,6 +620,7 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 			return fmt.Errorf("updating player seat: %w", err)
 		}
 
+		seatChanged = true
 		return nil
 	}); err != nil {
 		if errors.Is(err, apperr.ErrSeatTaken) || errors.Is(err, apperr.ErrNotInRoom) ||
@@ -468,34 +630,90 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 		return fmt.Errorf("selecting seat: %w", err)
 	}
 
-	// TODO: broadcast system:seat_updated to room participants (WS hub not yet wired)
-
 	players, err := h.repo.FindPlayersByRoomID(uint(roomID))
 	if err != nil {
 		return fmt.Errorf("fetching players after seat update: %w", err)
 	}
 
-	// Check if Quick Play room should auto-start
-	room, err := h.repo.FindByID(uint(roomID))
-	if err != nil {
-		return fmt.Errorf("fetching room for auto-start check: %w", err)
+	// Broadcast system:seat_updated to room participants
+	if seatChanged {
+		var username string
+		for _, p := range players {
+			if p.UserID == userID {
+				username = p.Username
+				break
+			}
+		}
+		seatPayload := map[string]interface{}{
+			"roomId":       roomID,
+			"userId":       userID,
+			"username":     username,
+			"seat":         seat,
+			"team":         team,
+			"previousSeat": previousSeat,
+		}
+		h.broadcastToRoom(uint(roomID), ws.SystemSeatUpdated, seatPayload)
 	}
 
+	// Check if Quick Play room should auto-start (wrapped in transaction to prevent double-start)
 	gameStarted := false
-	if room != nil && room.IsQuickPlay && room.Status == "waiting" {
+	var autoStartRoom *Room
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		r, err := tx.FindByID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("fetching room for auto-start check: %w", err)
+		}
+		if r == nil || !r.IsQuickPlay || r.Status != "waiting" {
+			return nil
+		}
 		seatedCount := 0
 		for _, p := range players {
 			if p.Seat != nil {
 				seatedCount++
 			}
 		}
-		if seatedCount == 4 {
-			room.Status = "playing"
-			if err := h.repo.Update(room); err != nil {
-				return fmt.Errorf("auto-starting quick play room: %w", err)
-			}
-			gameStarted = true
+		if seatedCount < 4 {
+			return nil
 		}
+		r.Status = "playing"
+		if err := tx.Update(r); err != nil {
+			return fmt.Errorf("auto-starting quick play room: %w", err)
+		}
+		gameStarted = true
+		autoStartRoom = r
+		return nil
+	}); err != nil {
+		return fmt.Errorf("auto-start check: %w", err)
+	}
+
+	if gameStarted && autoStartRoom != nil {
+		// Wire gameStarter for Quick Play auto-start
+		if h.gameStarter != nil {
+			var seatInfo [4]PlayerSeatInfo
+			for _, p := range players {
+				if p.Seat != nil {
+					seatInfo[*p.Seat] = PlayerSeatInfo{
+						UserID: p.UserID,
+						Seat:   *p.Seat,
+					}
+				}
+			}
+			timerDuration := 0
+			if autoStartRoom.TimerDurationSeconds != nil {
+				timerDuration = *autoStartRoom.TimerDurationSeconds
+			}
+			if err := h.gameStarter.StartGame(uint(roomID), autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration); err != nil {
+				slog.Error("failed to start game session for quick play", "roomID", roomID, "error", err)
+			}
+		}
+
+		// Broadcast system:game_started to all room participants
+		h.broadcastToRoom(uint(roomID), ws.SystemGameStarted, map[string]interface{}{
+			"roomId": roomID,
+		})
+
+		// Broadcast system:room_updated to lobby browse page
+		h.broadcastRoomUpdated(autoStartRoom)
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -594,6 +812,14 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 		}
 	}
 
+	// Broadcast system:game_started to all room participants
+	h.broadcastToRoom(uint(roomID), ws.SystemGameStarted, map[string]interface{}{
+		"roomId": roomID,
+	})
+
+	// Broadcast system:room_updated to lobby browse page
+	h.broadcastRoomUpdated(updatedRoom)
+
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": updatedRoom})
 }
 
@@ -612,6 +838,7 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 	}
 
 	var resultRoom *Room
+	createdNew := false
 	var createErr error
 	for i := 0; i < maxRetries; i++ {
 		createErr = h.repo.RunInTransaction(func(tx RoomRepository) error {
@@ -633,6 +860,7 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 					return fmt.Errorf("re-fetching room after join: %w", err)
 				}
 				resultRoom = r
+				createdNew = false
 				return nil
 			}
 
@@ -660,6 +888,7 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 				return fmt.Errorf("adding creator to room players: %w", err)
 			}
 			resultRoom = newRoom
+			createdNew = true
 			return nil
 		})
 		if createErr == nil {
@@ -675,6 +904,26 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 	}
 	if createErr != nil {
 		return createErr
+	}
+
+	// Broadcast lobby-wide events for QuickPlay
+	if createdNew {
+		h.broadcastToAll(ws.SystemRoomCreated, map[string]interface{}{
+			"id":                   resultRoom.ID,
+			"name":                 resultRoom.Name,
+			"code":                 resultRoom.Code,
+			"ownerId":              resultRoom.OwnerID,
+			"variant":              resultRoom.Variant,
+			"matchMode":            resultRoom.MatchMode,
+			"timerStyle":           resultRoom.TimerStyle,
+			"timerDurationSeconds": resultRoom.TimerDurationSeconds,
+			"playerCount":          resultRoom.PlayerCount,
+			"status":               resultRoom.Status,
+			"isQuickPlay":          resultRoom.IsQuickPlay,
+		})
+	} else {
+		// Joined an existing room — broadcast updated player count
+		h.broadcastRoomUpdated(resultRoom)
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": resultRoom})

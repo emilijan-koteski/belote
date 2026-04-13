@@ -1,5 +1,6 @@
 import "@/shared/i18n/i18n";
 
+import React from "react";
 import { act, render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,17 +11,11 @@ import type { GameState } from "@/shared/types/gameTypes";
 
 import { GamePage } from "./GamePage";
 
-// Mock useWebSocket
-vi.mock("@/shared/hooks/useWebSocket", () => ({
-  useWebSocket: () => ({
-    state: "connected" as const,
-    sendMessage: vi.fn(),
-  }),
-}));
-
-// Mock useWsDispatch
-vi.mock("@/shared/hooks/useWsDispatch", () => ({
-  useWsDispatch: () => vi.fn(),
+// Mock WebSocketProvider context
+vi.mock("@/shared/providers/WebSocketProvider", () => ({
+  useWsSendMessage: () => vi.fn(),
+  useWsConnectionState: () => "connected" as const,
+  WebSocketProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 const mockGameState: GameState = {
