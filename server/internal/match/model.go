@@ -17,5 +17,7 @@ type Match struct {
 	MatchMode     string    `gorm:"size:10;not null" json:"matchMode"`
 	StartedAt     time.Time `gorm:"not null" json:"startedAt"`
 	CompletedAt   time.Time `gorm:"not null" json:"completedAt"`
+	Status        string    `gorm:"size:20;not null;default:completed" json:"status"`
+	AbandonedBy   *uint     `gorm:"index" json:"abandonedBy,omitempty"`
 	CreatedAt     time.Time `json:"createdAt"`
 }

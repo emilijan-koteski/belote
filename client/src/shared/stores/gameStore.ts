@@ -4,6 +4,7 @@ import type { GameState } from "@/shared/types/gameTypes";
 import type {
   DeclarationsResolvedPayload,
   HandScoredPayload,
+  MatchAbandonedPayload,
   MatchEndPayload,
 } from "@/shared/types/wsEvents";
 
@@ -16,6 +17,7 @@ interface GameStoreState {
   declarationReveal: DeclarationsResolvedPayload | null;
   scoreRevealData: HandScoredPayload | null;
   matchEndData: MatchEndPayload | null;
+  matchAbandonedData: MatchAbandonedPayload | null;
 
   setGameState: (state: GameState) => void;
   setMyPlayerSeat: (seat: number) => void;
@@ -24,6 +26,7 @@ interface GameStoreState {
   setDeclarationReveal: (payload: DeclarationsResolvedPayload | null) => void;
   setScoreRevealData: (data: HandScoredPayload | null) => void;
   setMatchEndData: (data: MatchEndPayload | null) => void;
+  setMatchAbandonedData: (data: MatchAbandonedPayload | null) => void;
   clearGame: () => void;
   reset: () => void;
 }
@@ -37,6 +40,7 @@ const initialState = {
   declarationReveal: null,
   scoreRevealData: null,
   matchEndData: null,
+  matchAbandonedData: null,
 };
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -56,6 +60,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setScoreRevealData: (scoreRevealData) => set({ scoreRevealData }),
 
   setMatchEndData: (matchEndData) => set({ matchEndData }),
+
+  setMatchAbandonedData: (matchAbandonedData) => set({ matchAbandonedData }),
 
   clearGame: () => set(initialState),
 

@@ -12,6 +12,7 @@ import type {
   GameResumedPayload,
   GameStartedPayload,
   HandScoredPayload,
+  MatchAbandonedPayload,
   MatchEndPayload,
   PlayerDisconnectedPayload,
   PlayerJoinedPayload,
@@ -38,6 +39,7 @@ import {
   EVENT_GAME_RESUMED,
   EVENT_GAME_STATE,
   EVENT_HAND_SCORED,
+  EVENT_MATCH_ABANDONED,
   EVENT_MATCH_END,
   EVENT_PLAYER_DISCONNECTED,
   EVENT_PLAYER_RECONNECTED,
@@ -208,6 +210,12 @@ function dispatchGameEvent(message: WsMessage): void {
     const playerName = current?.players[payload.playerSeat]?.username ?? `Player ${payload.playerSeat + 1}`;
     toast.success(i18n.t("game.disconnect.playerReconnected", { player: playerName }), { duration: 3000 });
     // Full state update follows via event:game_state
+    return;
+  }
+
+  if (type === EVENT_MATCH_ABANDONED) {
+    const payload = message.payload as MatchAbandonedPayload;
+    store.setMatchAbandonedData(payload);
     return;
   }
 }

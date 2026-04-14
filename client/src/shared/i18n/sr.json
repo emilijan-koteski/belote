@@ -241,7 +241,10 @@
       "waitingMessage": "Igra je pauzirana dok cekamo da se {{player}} vrati.",
       "countdownLabel": "Preostalo vreme",
       "reconnected": "Ponovo ste povezani",
-      "reconnectFailed": "Rekonektovanje neuspešno — meč je možda završen"
+      "reconnectFailed": "Rekonektovanje neuspešno — meč je možda završen",
+      "matchAbandoned": "{{player}} se diskonektovao — meč završen",
+      "matchAbandonedScores": "Rezultat: Crveni {{red}} : Plavi {{blue}}",
+      "returningToLobby": "Povratak u lobi..."
     }
   },
   "ws": {

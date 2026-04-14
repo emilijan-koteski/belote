@@ -134,4 +134,8 @@
 
 ## Deferred from: code review of 5-4-reconnection-and-state-restoration (2026-04-13)
 
-- **D62: `handleReconnectTimeout` stub leaves game in PhaseDisconnected after window expires** — When the reconnect countdown expires, the timeout handler logs a warning but takes no action. The game remains permanently in `PhaseDisconnected` with no recovery path for the remaining 3 players. Story 5.5 (Match Abandonment on Timeout) will implement: transition to `PhaseMatchEnd` with abandon status, persist match record, broadcast `event:match_abandoned`, redirect remaining players to lobby.
+- **D62: `handleReconnectTimeout` stub leaves game in PhaseDisconnected after window expires** — RESOLVED in Story 5.5: `handleReconnectTimeout` now fully implements match abandonment (transition to `PhaseMatchEnd`, persist match record, broadcast `event:match_abandoned`, remove session).
+
+## Deferred from: code review of 5-5-match-abandonment-on-timeout (2026-04-14)
+
+- **D63: Page refresh during/after abandonment shows blank game page** — `useReconnectionRedirect` suppresses lobby redirect when `phase === "match_end"`, but `matchAbandonedData` is not persisted in Zustand so the abandonment overlay never renders on refresh. Player sees frozen game board. Pre-existing limitation of the page-refresh recovery path from Story 5.4's `useReconnectionRedirect` hook.

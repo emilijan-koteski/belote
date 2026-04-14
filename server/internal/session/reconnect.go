@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/emilijan/belote/server/internal/game"
+	"github.com/emilijan/belote/server/internal/match"
 	"github.com/emilijan/belote/server/internal/ws"
 )
 
@@ -247,19 +248,99 @@ func (m *Manager) HandleReconnect(userID uint) {
 }
 
 // handleReconnectTimeout is called when the reconnect countdown expires.
-// For now this is a placeholder — match abandonment is implemented in Story 5.5.
+// It transitions the game to PhaseMatchEnd (abandoned), persists the match record,
+// broadcasts event:match_abandoned to all players, and cleans up the session.
 func (m *Manager) handleReconnectTimeout(session *Session, generation uint64) {
 	session.mu.Lock()
-	defer session.mu.Unlock()
 
 	// Guard: session closed or generation stale (player already reconnected)
 	if session.closed || session.reconnectGeneration != generation {
+		session.mu.Unlock()
 		return
 	}
 
-	slog.Warn("session: reconnect timeout expired — match abandonment not yet implemented (Story 5.5)",
-		"roomID", session.roomID,
+	gs := session.gameState
+
+	// Identify the abandoned player
+	abandonedSeat := gs.DisconnectedSeat
+	if abandonedSeat < 0 || abandonedSeat >= 4 {
+		session.mu.Unlock()
+		return
+	}
+	abandonedPlayerID := session.playerIDs[abandonedSeat]
+
+	// Transition game state to match_end (abandoned)
+	gs.Phase = game.PhaseMatchEnd
+	// WinnerTeam stays nil — no winner for abandoned match
+	// Clear disconnect fields
+	gs.DisconnectedSeat = -1
+	gs.ReconnectExpiresAt = nil
+
+	// Cancel any active timers
+	session.cancelReconnectTimer()
+	session.cancelTurnTimer()
+
+	// Capture data for broadcast BEFORE unlocking (data race prevention)
+	playerIDs := session.playerIDs
+	roomID := session.roomID
+	startedAt := session.startedAt
+	redScore := gs.TeamScores[game.TeamRed]
+	blueScore := gs.TeamScores[game.TeamBlue]
+	variant := string(gs.Variant)
+	matchMode := gs.MatchMode
+
+	abandonedPayload := ws.MatchAbandonedPayload{
+		AbandonedByPlayer: abandonedSeat,
+		RedFinalScore:     redScore,
+		BlueFinalScore:    blueScore,
+		MatchDurationSec:  int(time.Since(startedAt).Seconds()),
+	}
+	abandonedMsg := buildMessage(ws.EventMatchAbandoned, abandonedPayload)
+	stateMsg := buildMessage(ws.EventGameState, gs)
+
+	session.mu.Unlock()
+
+	// Broadcast to all 4 players (disconnected player gets it if they reconnect to WS later)
+	userIDs := playerIDs[:]
+	m.hub.BroadcastToUsers(userIDs, abandonedMsg)
+	m.hub.BroadcastToUsers(userIDs, stateMsg)
+
+	slog.Info("session: match abandoned due to reconnect timeout",
+		"roomID", roomID,
+		"abandonedBy", abandonedPlayerID,
+		"abandonedSeat", abandonedSeat,
 	)
-	// Story 5.5 will implement: transition to PhaseMatchEnd with abandon status,
-	// persist match record, broadcast event:match_abandoned, return players to lobby.
+
+	// Persist match record with abandoned status
+	matchRecord := &match.Match{
+		RoomID:        roomID,
+		Player1ID:     playerIDs[0],
+		Player2ID:     playerIDs[1],
+		Player3ID:     playerIDs[2],
+		Player4ID:     playerIDs[3],
+		TeamRedScore:  redScore,
+		TeamBlueScore: blueScore,
+		WinnerTeam:    0,
+		Variant:       variant,
+		MatchMode:     matchMode,
+		StartedAt:     startedAt,
+		CompletedAt:   time.Now(),
+		Status:        "abandoned",
+		AbandonedBy:   &abandonedPlayerID,
+	}
+
+	if err := m.matchRepo.Create(matchRecord); err != nil {
+		slog.Error("session: failed to persist abandoned match", "roomID", roomID, "error", err)
+	} else {
+		slog.Info("session: abandoned match persisted", "roomID", roomID, "matchID", matchRecord.ID)
+	}
+
+	// Update room status
+	if m.roomUpdater != nil {
+		if err := m.roomUpdater.UpdateRoomStatus(roomID, "completed"); err != nil {
+			slog.Error("session: failed to update room status", "roomID", roomID, "error", err)
+		}
+	}
+
+	m.RemoveSession(roomID)
 }

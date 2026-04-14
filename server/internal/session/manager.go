@@ -520,6 +520,7 @@ func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState) {
 		MatchMode:     finalState.MatchMode,
 		StartedAt:     session.startedAt,
 		CompletedAt:   time.Now(),
+		Status:        "completed",
 	}
 
 	if err := m.matchRepo.Create(matchRecord); err != nil {

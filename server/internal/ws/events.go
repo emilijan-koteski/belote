@@ -61,6 +61,7 @@ type GameResumedPayload struct {
 // --- Disconnect/reconnect events (server -> client) ---
 const EventPlayerDisconnected = "event:player_disconnected"
 const EventPlayerReconnected = "event:player_reconnected"
+const EventMatchAbandoned = "event:match_abandoned"
 
 // PlayerDisconnectedPayload is the typed payload for EventPlayerDisconnected events.
 type PlayerDisconnectedPayload struct {
@@ -72,6 +73,14 @@ type PlayerDisconnectedPayload struct {
 // PlayerReconnectedPayload is the typed payload for EventPlayerReconnected events.
 type PlayerReconnectedPayload struct {
 	PlayerSeat int `json:"playerSeat"`
+}
+
+// MatchAbandonedPayload is the typed payload for EventMatchAbandoned events.
+type MatchAbandonedPayload struct {
+	AbandonedByPlayer int `json:"abandonedByPlayer"`
+	RedFinalScore     int `json:"redFinalScore"`
+	BlueFinalScore    int `json:"blueFinalScore"`
+	MatchDurationSec  int `json:"matchDurationSec"`
 }
 
 // --- Game error events (server -> client) ---

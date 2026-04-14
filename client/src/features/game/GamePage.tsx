@@ -71,6 +71,8 @@ export function GamePage() {
   const setScoreRevealData = useGameStore((s) => s.setScoreRevealData);
   const matchEndData = useGameStore((s) => s.matchEndData);
   const setMatchEndData = useGameStore((s) => s.setMatchEndData);
+  const matchAbandonedData = useGameStore((s) => s.matchAbandonedData);
+  const setMatchAbandonedData = useGameStore((s) => s.setMatchAbandonedData);
 
   const [chatOpen, setChatOpen] = useState(false);
   const [showReshuffle, setShowReshuffle] = useState(false);
@@ -233,6 +235,12 @@ export function GamePage() {
     navigate("/lobby");
   }, [clearGame, navigate, setMatchEndData]);
 
+  const handleAbandonReturnToLobby = useCallback(() => {
+    setMatchAbandonedData(null);
+    clearGame();
+    navigate("/lobby");
+  }, [clearGame, navigate, setMatchAbandonedData]);
+
   // Loading state
   if (!gameState || myPlayerSeat === null) {
     return (
@@ -377,11 +385,17 @@ export function GamePage() {
         />
       )}
 
-      {/* Reconnect overlay */}
-      {gameState.phase === "disconnected" && gameState.disconnectedSeat !== -1 && gameState.reconnectExpiresAt && (
+      {/* Reconnect overlay — shown during disconnect countdown OR abandonment */}
+      {((gameState.phase === "disconnected" && gameState.disconnectedSeat !== -1 && gameState.reconnectExpiresAt) || matchAbandonedData) && (
         <ReconnectOverlay
-          disconnectedPlayerName={gameState.players[gameState.disconnectedSeat]?.username ?? `Player ${gameState.disconnectedSeat + 1}`}
-          reconnectExpiresAt={gameState.reconnectExpiresAt}
+          disconnectedPlayerName={
+            matchAbandonedData
+              ? (gameState.players[matchAbandonedData.abandonedByPlayer]?.username ?? `Player ${matchAbandonedData.abandonedByPlayer + 1}`)
+              : (gameState.players[gameState.disconnectedSeat]?.username ?? `Player ${gameState.disconnectedSeat + 1}`)
+          }
+          reconnectExpiresAt={gameState.reconnectExpiresAt ?? ""}
+          abandonedData={matchAbandonedData}
+          onReturnToLobby={handleAbandonReturnToLobby}
         />
       )}
 

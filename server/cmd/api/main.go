@@ -92,16 +92,25 @@ func main() {
 	}
 	e.GET("/ws", wsHandler.HandleWS)
 
-	// Session manager
+	// Session manager + room repo (repo needed before handler wiring)
 	matchRepo := match.NewGormMatchRepository(db)
+	roomRepo := room.NewGormRepository(db)
 	sessionManager := session.NewManager(hub, matchRepo)
+	sessionManager.SetRoomUpdater(&room.RoomStatusAdapter{Repo: roomRepo})
 	hub.SetActionHandler(sessionManager.HandleAction)
-	hub.SetConnectHandler(sessionManager.HandleReconnect)
-	hub.SetDisconnectHandler(sessionManager.HandleDisconnect)
+
+	// Lobby disconnect handler — frees seats after 10s when players disconnect in room lobby
+	lobbyDisconnectHandler := room.NewLobbyDisconnectHandler(roomRepo, hub)
+	hub.SetConnectHandler(func(userID uint) {
+		sessionManager.HandleReconnect(userID)
+		lobbyDisconnectHandler.HandleReconnect(userID)
+	})
+	hub.SetDisconnectHandler(func(userID uint) {
+		sessionManager.HandleDisconnect(userID)
+		lobbyDisconnectHandler.HandleDisconnect(userID)
+	})
 
 	// Room routes
-	roomRepo := room.NewGormRepository(db)
-	sessionManager.SetRoomUpdater(&room.RoomStatusAdapter{Repo: roomRepo})
 	roomHandler := room.NewRoomHandler(roomRepo, sessionManager, hub)
 	api.POST("/rooms", roomHandler.CreateRoom)
 	api.GET("/rooms", roomHandler.ListRooms)

@@ -156,6 +156,7 @@ export interface GameResumedPayload {
 // --- Disconnect/reconnect events (server -> client) ---
 export const EVENT_PLAYER_DISCONNECTED = "event:player_disconnected" as const;
 export const EVENT_PLAYER_RECONNECTED = "event:player_reconnected" as const;
+export const EVENT_MATCH_ABANDONED = "event:match_abandoned" as const;
 
 export interface PlayerDisconnectedPayload {
   playerSeat: number;
@@ -165,6 +166,13 @@ export interface PlayerDisconnectedPayload {
 
 export interface PlayerReconnectedPayload {
   playerSeat: number;
+}
+
+export interface MatchAbandonedPayload {
+  abandonedByPlayer: number;
+  redFinalScore: number;
+  blueFinalScore: number;
+  matchDurationSec: number;
 }
 
 // --- Game error events (server -> client) ---

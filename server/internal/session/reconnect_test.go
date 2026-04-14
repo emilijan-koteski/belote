@@ -142,18 +142,24 @@ func TestHandleReconnect_RejectsExpiredWindow(t *testing.T) {
 	state = mgr.GetStateSnapshot(100)
 	require.Equal(t, game.PhaseDisconnected, state.Phase)
 
-	// Wait for reconnect window to expire
-	time.Sleep(1200 * time.Millisecond)
+	// Wait for reconnect window to expire — handleReconnectTimeout fires and
+	// removes the session (Story 5.5 match abandonment)
+	time.Sleep(1500 * time.Millisecond)
 
-	// Attempt reconnect — should be rejected (window expired)
+	// Session is removed after timeout-triggered abandonment
+	assert.False(t, mgr.HasSession(100), "session should be removed after timeout")
+
+	// Attempt reconnect — HandleReconnect should be a no-op (user no longer in userToRoom)
 	mgr.HandleReconnect(uint(10))
 	time.Sleep(100 * time.Millisecond)
 
-	state = mgr.GetStateSnapshot(100)
-	require.NotNil(t, state)
-	// Still in disconnected phase — reconnect was rejected
-	assert.Equal(t, game.PhaseDisconnected, state.Phase)
-	assert.False(t, state.Players[0].Connected)
+	// Session still doesn't exist
+	assert.Nil(t, mgr.GetStateSnapshot(100))
+
+	// Match was persisted as abandoned
+	matches := repo.getMatches()
+	require.Len(t, matches, 1)
+	assert.Equal(t, "abandoned", matches[0].Status)
 }
 
 func TestHandleReconnect_RejectsWrongUser(t *testing.T) {
@@ -288,4 +294,121 @@ func TestNewGameReconnectingFixture(t *testing.T) {
 	assert.True(t, gs.Players[0].Connected)
 	assert.True(t, gs.Players[1].Connected)
 	assert.True(t, gs.Players[3].Connected)
+}
+
+// --- handleReconnectTimeout tests (Story 5.5) ---
+
+// setupDisconnectedGameShortWindow creates a game with a 1-second reconnect window
+// and disconnects the specified seat. The reconnect timer fires after ~1s.
+func setupDisconnectedGameShortWindow(t *testing.T, hub *ws.Hub, disconnectSeat int) (*session.Manager, *mockMatchRepo, uint) {
+	t.Helper()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	// Start game with 1-second reconnect window for fast timeout
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 1)
+	require.NoError(t, err)
+
+	state := mgr.GetStateSnapshot(100)
+	require.NotNil(t, state)
+
+	// Pick trump to reach playing phase
+	activeSeat := state.ActivePlayerSeat
+	activeUserID := state.Players[activeSeat].UserID
+	client := &ws.Client{UserID: activeUserID}
+	msg := ws.WSMessage{
+		Type:    "action:pick_trump",
+		Payload: []byte(`{}`),
+	}
+	mgr.HandleAction(client, msg)
+	time.Sleep(100 * time.Millisecond)
+
+	state = mgr.GetStateSnapshot(100)
+	require.Equal(t, game.PhasePlaying, state.Phase)
+
+	// Disconnect the specified player
+	disconnectedUserID := state.Players[disconnectSeat].UserID
+	mgr.HandleDisconnect(disconnectedUserID)
+	time.Sleep(100 * time.Millisecond)
+
+	state = mgr.GetStateSnapshot(100)
+	require.Equal(t, game.PhaseDisconnected, state.Phase)
+
+	return mgr, repo, disconnectedUserID
+}
+
+func TestReconnectTimeout_TransitionsToMatchEnd(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	mgr, _, _ := setupDisconnectedGameShortWindow(t, hub, 0)
+
+	// Wait for the 1-second reconnect window to expire
+	time.Sleep(1500 * time.Millisecond)
+
+	// Session should be removed after abandonment
+	assert.False(t, mgr.HasSession(100), "session should be removed after timeout")
+	assert.Nil(t, mgr.GetStateSnapshot(100), "state snapshot should be nil after session removed")
+}
+
+func TestReconnectTimeout_PersistsAbandonedMatch(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	_, repo, _ := setupDisconnectedGameShortWindow(t, hub, 2)
+
+	// Wait for the 1-second reconnect window to expire
+	time.Sleep(1500 * time.Millisecond)
+
+	// Match should be persisted with abandoned status
+	matches := repo.getMatches()
+	require.Len(t, matches, 1, "one match should be persisted")
+	m := matches[0]
+	assert.Equal(t, "abandoned", m.Status)
+	assert.NotNil(t, m.AbandonedBy)
+	assert.Equal(t, uint(30), *m.AbandonedBy) // seat 2 = userID 30
+	assert.Equal(t, uint(100), m.RoomID)
+	assert.Equal(t, "bitola", m.Variant)
+	assert.Equal(t, "1001", m.MatchMode)
+}
+
+func TestReconnectTimeout_NoOpWhenReconnected(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	mgr, repo, disconnectedUserID := setupDisconnectedGameShortWindow(t, hub, 0)
+
+	// Reconnect before timeout
+	mgr.HandleReconnect(disconnectedUserID)
+	time.Sleep(100 * time.Millisecond)
+
+	state := mgr.GetStateSnapshot(100)
+	require.NotNil(t, state)
+	assert.Equal(t, game.PhasePlaying, state.Phase)
+
+	// Wait past the original timeout window
+	time.Sleep(1500 * time.Millisecond)
+
+	// Session should still exist (timeout was cancelled by reconnection)
+	assert.True(t, mgr.HasSession(100), "session should still exist after reconnection")
+	matches := repo.getMatches()
+	assert.Len(t, matches, 0, "no match should be persisted when reconnected")
+}
+
+func TestReconnectTimeout_RemovesSession(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	mgr, _, _ := setupDisconnectedGameShortWindow(t, hub, 1)
+
+	// Wait for timeout
+	time.Sleep(1500 * time.Millisecond)
+
+	assert.False(t, mgr.HasSession(100))
+	assert.Nil(t, mgr.GetStateSnapshot(100))
 }
