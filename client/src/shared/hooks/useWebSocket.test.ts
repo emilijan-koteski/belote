@@ -66,6 +66,7 @@ let mockInstances: MockWebSocket[] = [];
 
 beforeEach(() => {
   mockInstances = [];
+  vi.useFakeTimers();
   vi.stubGlobal("WebSocket", MockWebSocket);
   useAuthStore.setState({ token: "test-jwt-token", user: null, isLoading: false });
 });
@@ -81,6 +82,9 @@ describe("useWebSocket", () => {
     const onMessage = vi.fn();
     const { result } = renderHook(() => useWebSocket({ onMessage }));
 
+    // Flush the deferred setTimeout(connect, 0)
+    act(() => vi.advanceTimersByTime(0));
+
     expect(result.current.state).toBe("connecting" as WsConnectionState);
     expect(mockInstances).toHaveLength(1);
   });
@@ -88,6 +92,7 @@ describe("useWebSocket", () => {
   it("sends auth message on connection open", () => {
     const onMessage = vi.fn();
     renderHook(() => useWebSocket({ onMessage }));
+    act(() => vi.advanceTimersByTime(0));
 
     const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
@@ -101,6 +106,7 @@ describe("useWebSocket", () => {
   it("transitions to connected on auth success", () => {
     const onMessage = vi.fn();
     const { result } = renderHook(() => useWebSocket({ onMessage }));
+    act(() => vi.advanceTimersByTime(0));
 
     const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
@@ -117,6 +123,7 @@ describe("useWebSocket", () => {
   it("forwards non-auth messages to onMessage callback", () => {
     const onMessage = vi.fn();
     renderHook(() => useWebSocket({ onMessage }));
+    act(() => vi.advanceTimersByTime(0));
 
     const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
@@ -140,9 +147,9 @@ describe("useWebSocket", () => {
   });
 
   it("transitions to disconnected on connection close", () => {
-    vi.useFakeTimers();
     const onMessage = vi.fn();
     const { result } = renderHook(() => useWebSocket({ onMessage }));
+    act(() => vi.advanceTimersByTime(0));
 
     const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
@@ -156,14 +163,12 @@ describe("useWebSocket", () => {
 
     act(() => ws.simulateClose());
     expect(result.current.state).toBe("disconnected" as WsConnectionState);
-
-    vi.useRealTimers();
   });
 
   it("attempts reconnection after disconnect", () => {
-    vi.useFakeTimers();
     const onMessage = vi.fn();
     renderHook(() => useWebSocket({ onMessage }));
+    act(() => vi.advanceTimersByTime(0));
 
     const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
@@ -180,13 +185,12 @@ describe("useWebSocket", () => {
     // Advance past reconnection delay (1 second base)
     act(() => vi.advanceTimersByTime(1100));
     expect(mockInstances).toHaveLength(2);
-
-    vi.useRealTimers();
   });
 
   it("sends messages when connected", () => {
     const onMessage = vi.fn();
     const { result } = renderHook(() => useWebSocket({ onMessage }));
+    act(() => vi.advanceTimersByTime(0));
 
     const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
@@ -210,6 +214,7 @@ describe("useWebSocket", () => {
     useAuthStore.setState({ token: null });
     const onMessage = vi.fn();
     const { result } = renderHook(() => useWebSocket({ onMessage }));
+    act(() => vi.advanceTimersByTime(0));
 
     expect(result.current.state).toBe("disconnected" as WsConnectionState);
     expect(mockInstances).toHaveLength(0);

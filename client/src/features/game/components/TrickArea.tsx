@@ -4,6 +4,8 @@ import type { TrickCard } from "@/shared/types/gameTypes";
 
 import { PlayingCard } from "./PlayingCard";
 
+const EMPTY_TRICK: TrickCard[] = [];
+
 interface TrickAreaProps {
   trick: TrickCard[] | null;
   winnerSeat: number | null;
@@ -30,7 +32,7 @@ const SWEEP_POSITIONS: Record<number, string> = {
 };
 
 export function TrickArea({ trick: rawTrick, winnerSeat, myPlayerSeat }: TrickAreaProps) {
-  const trick = rawTrick ?? [];
+  const trick = rawTrick ?? EMPTY_TRICK;
   const [displayTrick, setDisplayTrick] = useState<TrickCard[]>([]);
   const [resolving, setResolving] = useState(false);
   const [sweeping, setSweeping] = useState(false);
