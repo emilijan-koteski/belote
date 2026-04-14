@@ -72,7 +72,7 @@ func (c *Client) markClosed() {
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		c.conn.CloseNow()
+		_ = c.conn.CloseNow()
 	}()
 
 	// Concurrent ping loop — Ping must be called alongside Read
@@ -116,7 +116,7 @@ func (c *Client) pingLoop(ctx context.Context) {
 			if err := c.conn.Ping(pingCtx); err != nil {
 				cancel()
 				slog.Info("ws: ping failed", "userID", c.UserID, "error", err)
-				c.conn.CloseNow()
+				_ = c.conn.CloseNow()
 				return
 			}
 			cancel()
@@ -127,7 +127,7 @@ func (c *Client) pingLoop(ctx context.Context) {
 // writePump writes messages from the send channel to the WebSocket connection.
 // Only one goroutine should call writePump.
 func (c *Client) writePump() {
-	defer c.conn.CloseNow()
+	defer func() { _ = c.conn.CloseNow() }()
 
 	for msg := range c.send {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

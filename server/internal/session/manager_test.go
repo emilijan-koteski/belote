@@ -16,53 +16,6 @@ import (
 	"github.com/emilijan/belote/server/internal/ws"
 )
 
-// --- Mock Hub ---
-
-type sentMessage struct {
-	UserID uint
-	Data   []byte
-}
-
-type mockHub struct {
-	mu       sync.Mutex
-	sent     []sentMessage
-	broadcast []sentMessage
-}
-
-func newMockHub() *mockHub {
-	return &mockHub{}
-}
-
-func (h *mockHub) SendToUser(userID uint, msg []byte) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.sent = append(h.sent, sentMessage{UserID: userID, Data: msg})
-}
-
-func (h *mockHub) BroadcastToUsers(userIDs []uint, msg []byte) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	for _, uid := range userIDs {
-		h.broadcast = append(h.broadcast, sentMessage{UserID: uid, Data: msg})
-	}
-}
-
-func (h *mockHub) getSent() []sentMessage {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	result := make([]sentMessage, len(h.sent))
-	copy(result, h.sent)
-	return result
-}
-
-func (h *mockHub) getBroadcast() []sentMessage {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	result := make([]sentMessage, len(h.broadcast))
-	copy(result, h.broadcast)
-	return result
-}
-
 // --- Mock Match Repository ---
 
 type mockMatchRepo struct {

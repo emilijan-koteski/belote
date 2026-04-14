@@ -26,15 +26,7 @@ type roomPlayerRow struct {
 }
 
 func (r roomPlayerRow) toRoomPlayer() RoomPlayer {
-	return RoomPlayer{
-		ID:        r.ID,
-		RoomID:    r.RoomID,
-		UserID:    r.UserID,
-		Username:  r.Username,
-		Seat:      r.Seat,
-		Team:      r.Team,
-		CreatedAt: r.CreatedAt,
-	}
+	return RoomPlayer(r)
 }
 
 type GormRepository struct {

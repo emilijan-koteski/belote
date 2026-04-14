@@ -123,7 +123,7 @@ func TestWSMessage_ParseInvalid(t *testing.T) {
 func TestWSHandler_AuthSuccess(t *testing.T) {
 	server, hub := setupTestServer(t)
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	token := generateTestToken(t, 42)
 	sendAuthMessage(t, conn, token)
@@ -144,7 +144,7 @@ func TestWSHandler_AuthSuccess(t *testing.T) {
 func TestWSHandler_AuthFailed_InvalidToken(t *testing.T) {
 	server, _ := setupTestServer(t)
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	sendAuthMessage(t, conn, "totally-invalid-jwt-token")
 
@@ -160,7 +160,7 @@ func TestWSHandler_AuthFailed_InvalidToken(t *testing.T) {
 func TestWSHandler_AuthFailed_ExpiredToken(t *testing.T) {
 	server, _ := setupTestServer(t)
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	// Generate a token with a past expiry by using a different approach
 	// We'll sign a token manually with an already-expired timestamp
@@ -174,7 +174,7 @@ func TestWSHandler_AuthFailed_ExpiredToken(t *testing.T) {
 func TestWSHandler_AuthFailed_WrongMessageType(t *testing.T) {
 	server, _ := setupTestServer(t)
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	// Send a non-auth message as first message
 	msg := ws.WSMessage{
@@ -193,7 +193,7 @@ func TestWSHandler_AuthFailed_WrongMessageType(t *testing.T) {
 func TestWSHandler_AuthFailed_EmptyToken(t *testing.T) {
 	server, _ := setupTestServer(t)
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	sendAuthMessage(t, conn, "")
 
@@ -207,7 +207,7 @@ func TestHub_RegisterAndUnregister(t *testing.T) {
 	server, hub := setupTestServer(t)
 
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	token := generateTestToken(t, 100)
 	sendAuthMessage(t, conn, token)
@@ -228,7 +228,7 @@ func TestHub_SendToUser(t *testing.T) {
 	server, hub := setupTestServer(t)
 
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	token := generateTestToken(t, 200)
 	sendAuthMessage(t, conn, token)
@@ -252,12 +252,12 @@ func TestHub_BroadcastToUsers(t *testing.T) {
 
 	// Connect two users
 	conn1 := dialWS(t, server)
-	defer conn1.CloseNow()
+	defer func() { _ = conn1.CloseNow() }()
 	sendAuthMessage(t, conn1, generateTestToken(t, 301))
 	readMessage(t, conn1)
 
 	conn2 := dialWS(t, server)
-	defer conn2.CloseNow()
+	defer func() { _ = conn2.CloseNow() }()
 	sendAuthMessage(t, conn2, generateTestToken(t, 302))
 	readMessage(t, conn2)
 
@@ -283,7 +283,7 @@ func TestHub_DuplicateUserID(t *testing.T) {
 
 	// First connection for user 400
 	conn1 := dialWS(t, server)
-	defer conn1.CloseNow()
+	defer func() { _ = conn1.CloseNow() }()
 	sendAuthMessage(t, conn1, generateTestToken(t, 400))
 	readMessage(t, conn1)
 
@@ -292,7 +292,7 @@ func TestHub_DuplicateUserID(t *testing.T) {
 
 	// Second connection for same user 400 — should replace first
 	conn2 := dialWS(t, server)
-	defer conn2.CloseNow()
+	defer func() { _ = conn2.CloseNow() }()
 	sendAuthMessage(t, conn2, generateTestToken(t, 400))
 	readMessage(t, conn2)
 
@@ -322,7 +322,7 @@ func TestRouter_ActionPrefix(t *testing.T) {
 	})
 
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 	sendAuthMessage(t, conn, generateTestToken(t, 500))
 	readMessage(t, conn)
 
@@ -350,7 +350,7 @@ func TestRouter_UnknownPrefix(t *testing.T) {
 	server, _ := setupTestServer(t)
 
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 	sendAuthMessage(t, conn, generateTestToken(t, 600))
 	readMessage(t, conn)
 
@@ -386,7 +386,7 @@ func TestHub_MultipleConcurrentUsers(t *testing.T) {
 	conns := make([]*websocket.Conn, 4)
 	for i := range conns {
 		conns[i] = dialWS(t, server)
-		defer conns[i].CloseNow()
+		defer func() { _ = conns[i].CloseNow() }()
 		sendAuthMessage(t, conns[i], generateTestToken(t, uint(700+i)))
 		readMessage(t, conns[i])
 	}
@@ -434,7 +434,7 @@ func TestWSHandler_WithOriginPatterns(t *testing.T) {
 		t.Logf("Connection rejected (expected with origin check): %v", err)
 		return
 	}
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 	assert.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
 }
 
@@ -459,7 +459,7 @@ func TestWSHandler_AuthFailed_Timeout(t *testing.T) {
 	defer cancel()
 	conn, _, err := websocket.Dial(ctx, wsURL(server), nil)
 	require.NoError(t, err)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	// Do NOT send any message — wait for server to timeout and close
 	// The server has a 10s auth timeout, so we wait and expect a close
@@ -481,7 +481,7 @@ func TestRouter_SystemPrefix(t *testing.T) {
 	})
 
 	conn := dialWS(t, server)
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 	sendAuthMessage(t, conn, generateTestToken(t, 800))
 	readMessage(t, conn)
 

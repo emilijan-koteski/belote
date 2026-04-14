@@ -87,7 +87,7 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			if existing, ok := h.clients[client.UserID]; ok {
 				existing.markClosed()
-				existing.conn.CloseNow()
+				_ = existing.conn.CloseNow()
 				slog.Info("ws: replaced existing connection", "userID", client.UserID)
 			}
 			h.clients[client.UserID] = client
@@ -127,7 +127,7 @@ func (h *Hub) shutdownClients() {
 	defer h.mu.Unlock()
 	for _, client := range h.clients {
 		client.markClosed()
-		client.conn.CloseNow()
+		_ = client.conn.CloseNow()
 	}
 	h.clients = make(map[uint]*Client)
 }

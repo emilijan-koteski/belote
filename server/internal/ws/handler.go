@@ -41,7 +41,7 @@ func (h *WSHandler) HandleWS(c echo.Context) error {
 		slog.Error("ws: accept failed", "error", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "websocket upgrade failed"})
 	}
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	// Read first message as auth handshake with timeout
 	authCtx, cancel := context.WithTimeout(context.Background(), authTimeout)
