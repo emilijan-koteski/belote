@@ -21,8 +21,11 @@ export function useAuthInit(): void {
       return;
     }
 
-    refresh()
+    const abortController = new AbortController();
+
+    refresh(abortController.signal)
       .then((res) => {
+        if (abortController.signal.aborted) return;
         useAuthStore.getState().setToken(res.token);
         useAuthStore.getState().setUser({
           id: res.id,
@@ -34,11 +37,19 @@ export function useAuthInit(): void {
         i18n.changeLanguage(res.languagePreference);
       })
       .catch(() => {
-        useAuthStore.getState().logout();
+        if (abortController.signal.aborted) return;
+        // Clear local state only — don't call logout() which fires an API
+        // request to /api/v1/auth/logout when no session exists yet.
+        useAuthStore.getState().setToken(null);
       })
       .finally(() => {
+        if (abortController.signal.aborted) return;
         useAuthStore.getState().setLoading(false);
       });
+
+    return () => {
+      abortController.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

@@ -13,7 +13,7 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   user: null,
   isLoading: true,
@@ -21,7 +21,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user }),
   setLoading: (isLoading) => set({ isLoading }),
   logout: () => {
-    logoutApi();
-    set({ token: null, user: null });
+    if (get().token) {
+      logoutApi();
+    }
+    set({ token: null, user: null, isLoading: false });
   },
 }));

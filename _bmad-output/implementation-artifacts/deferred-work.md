@@ -139,3 +139,8 @@
 ## Deferred from: code review of 5-5-match-abandonment-on-timeout (2026-04-14)
 
 - **D63: Page refresh during/after abandonment shows blank game page** — **RESOLVED in mid-Phase 1 cleanup** — Added `useEffect` in `GamePage.tsx` that detects stale `match_end` phase with no overlay data and redirects to lobby.
+
+## Deferred from: auth init bug fix (2026-04-14)
+
+- **D64: `doRefresh()` in fetchClient does not pass AbortSignal to `refresh()`** — Pre-existing. The 401 retry path in `fetchClient` calls `refresh()` without an AbortSignal. Not related to StrictMode double-mount fix. Low risk at current scale.
+- **D65: GORM logger uses `log.New` (plain text) while app uses `slog` (JSON)** — Pre-existing. GORM's default logger already output plain text before configuration change. Creating a proper slog adapter is a Phase 2 observability improvement.

@@ -60,10 +60,11 @@ export async function login(data: LoginRequest): Promise<LoginResponse> {
   return body.data;
 }
 
-export async function refresh(): Promise<RefreshResponse> {
+export async function refresh(signal?: AbortSignal): Promise<RefreshResponse> {
   const response = await fetch("/api/v1/auth/refresh", {
     method: "POST",
     credentials: "include",
+    signal,
   });
 
   if (!response.ok) {
@@ -78,5 +79,5 @@ export function logout(): void {
   fetch("/api/v1/auth/logout", {
     method: "POST",
     credentials: "include",
-  });
+  }).catch(() => {});
 }
