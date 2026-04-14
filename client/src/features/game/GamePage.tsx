@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 
-import { useWsSendMessage } from "@/shared/providers/WebSocketProvider";
+import { useWsSendMessage } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 import type { Suit } from "@/shared/types/gameTypes";
@@ -54,7 +54,7 @@ const SEAT_POSITIONS: Record<number, string> = {
 export function GamePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { roomId: _roomIdParam } = useParams<{ roomId: string }>();
+  useParams<{ roomId: string }>();
 
   const sendMessage = useWsSendMessage();
 

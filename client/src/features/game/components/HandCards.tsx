@@ -1,7 +1,7 @@
 import type { Card } from "@/shared/types/gameTypes";
 
-import { PlayingCard } from "./PlayingCard";
 import type { CardState } from "./PlayingCard";
+import { PlayingCard } from "./PlayingCard";
 
 interface HandCardsProps {
   hand: Card[];

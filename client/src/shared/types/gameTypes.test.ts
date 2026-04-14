@@ -115,6 +115,9 @@ describe("gameTypes", () => {
         pausedPlayers: [false, false, false, false] as [boolean, boolean, boolean, boolean],
         pauseUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
         turnTimeRemaining: 0,
+        ownerSeat: 0,
+        disconnectedSeat: -1,
+        reconnectExpiresAt: null,
       };
 
       expect(state.phase).toBe("bidding");

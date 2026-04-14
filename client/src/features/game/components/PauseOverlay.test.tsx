@@ -31,8 +31,6 @@ const mockPlayers = [
 
 type PauseOverlayProps = Parameters<typeof PauseOverlay>[0];
 
-const defaultPauseUsed: [boolean, boolean, boolean, boolean] = [false, false, false, false];
-
 describe("PauseOverlay", () => {
   it("renders paused player names", () => {
     render(

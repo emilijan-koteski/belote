@@ -10,6 +10,7 @@ export type CardId = `${Rank}${Suit}`;
 export type Variant = "bitola";
 
 export type Phase =
+  | ""
   | "dealing"
   | "bidding"
   | "playing"

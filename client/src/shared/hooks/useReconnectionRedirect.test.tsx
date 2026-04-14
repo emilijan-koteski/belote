@@ -25,6 +25,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 }
 
 const minimalGameState: GameState = {
+  id: 1,
   roomId: 42,
   variant: "bitola",
   matchMode: "1001",
@@ -45,11 +46,18 @@ const minimalGameState: GameState = {
   awaitingDeclaration: false,
   pendingBelotSeat: null,
   leadSuit: null,
-  players: [],
+  players: [
+    { hand: [], seat: 0, userId: 1, username: "P1", team: "red", declarations: [], connected: true },
+    { hand: [], seat: 1, userId: 2, username: "P2", team: "blue", declarations: [], connected: true },
+    { hand: [], seat: 2, userId: 3, username: "P3", team: "red", declarations: [], connected: true },
+    { hand: [], seat: 3, userId: 4, username: "P4", team: "blue", declarations: [], connected: true },
+  ],
   teamScores: [0, 0],
   handPoints: [0, 0],
   tricksWon: [0, 0],
   declarationPoints: [0, 0],
+  winnerTeam: null,
+  lastHandResult: null,
   turnExpiresAt: null,
   timerDurationSec: 0,
   turnTimeRemaining: 0,

@@ -187,7 +187,7 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
       }
     });
     return unsub;
-  }, [connect]);
+  }, [connect, updateState]);
 
   return { state, sendMessage };
 }

@@ -206,13 +206,13 @@ describe("RoomList", () => {
     const toggles = screen.getAllByTestId("room-card-toggle");
 
     // Expand first room
-    await user.click(toggles[0]);
+    await user.click(toggles[0]!);
     expect(screen.getByTestId("room-detail-preview")).toHaveTextContent("Preview for room 1");
 
     // Expand second room — first should close
-    await user.click(toggles[1]);
+    await user.click(toggles[1]!);
     const previews = screen.getAllByTestId("room-detail-preview");
     expect(previews).toHaveLength(1);
-    expect(previews[0]).toHaveTextContent("Preview for room 2");
+    expect(previews[0]!).toHaveTextContent("Preview for room 2");
   });
 });

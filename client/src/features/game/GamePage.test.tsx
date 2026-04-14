@@ -1,7 +1,7 @@
 import "@/shared/i18n/i18n";
 
-import React from "react";
 import { act, render, screen } from "@testing-library/react";
+import React from "react";
 import { BrowserRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,10 +11,13 @@ import type { GameState } from "@/shared/types/gameTypes";
 
 import { GamePage } from "./GamePage";
 
-// Mock WebSocketProvider context
-vi.mock("@/shared/providers/WebSocketProvider", () => ({
+// Mock WebSocket context hooks
+vi.mock("@/shared/providers/WebSocketContext", () => ({
   useWsSendMessage: () => vi.fn(),
   useWsConnectionState: () => "connected" as const,
+}));
+
+vi.mock("@/shared/providers/WebSocketProvider", () => ({
   WebSocketProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
@@ -58,6 +61,9 @@ const mockGameState: GameState = {
   pausedPlayers: [false, false, false, false] as [boolean, boolean, boolean, boolean],
   pauseUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
   turnTimeRemaining: 0,
+  ownerSeat: 0,
+  disconnectedSeat: -1,
+  reconnectExpiresAt: null,
 };
 
 function renderGamePage() {

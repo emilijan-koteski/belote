@@ -22,7 +22,10 @@ class MockWebSocket {
 
   sent: string[] = [];
 
-  constructor(public url: string) {
+  url: string;
+
+  constructor(url: string) {
+    this.url = url;
     mockInstances.push(this);
   }
 
@@ -86,11 +89,11 @@ describe("useWebSocket", () => {
     const onMessage = vi.fn();
     renderHook(() => useWebSocket({ onMessage }));
 
-    const ws = mockInstances[0];
+    const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
 
     expect(ws.sent).toHaveLength(1);
-    const sent = JSON.parse(ws.sent[0]);
+    const sent = JSON.parse(ws.sent[0]!);
     expect(sent.type).toBe("action:authenticate");
     expect(sent.payload.token).toBe("test-jwt-token");
   });
@@ -99,7 +102,7 @@ describe("useWebSocket", () => {
     const onMessage = vi.fn();
     const { result } = renderHook(() => useWebSocket({ onMessage }));
 
-    const ws = mockInstances[0];
+    const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
     act(() =>
       ws.simulateMessage({
@@ -115,7 +118,7 @@ describe("useWebSocket", () => {
     const onMessage = vi.fn();
     renderHook(() => useWebSocket({ onMessage }));
 
-    const ws = mockInstances[0];
+    const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
     act(() =>
       ws.simulateMessage({
@@ -132,7 +135,7 @@ describe("useWebSocket", () => {
     );
 
     // onMessage called for both authenticated (with userId) and card_played
-    const calls = onMessage.mock.calls.map((c: [WsMessage]) => c[0].type);
+    const calls = onMessage.mock.calls.map((c) => (c[0] as WsMessage).type);
     expect(calls).toContain("event:card_played");
   });
 
@@ -141,7 +144,7 @@ describe("useWebSocket", () => {
     const onMessage = vi.fn();
     const { result } = renderHook(() => useWebSocket({ onMessage }));
 
-    const ws = mockInstances[0];
+    const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
     act(() =>
       ws.simulateMessage({
@@ -162,7 +165,7 @@ describe("useWebSocket", () => {
     const onMessage = vi.fn();
     renderHook(() => useWebSocket({ onMessage }));
 
-    const ws = mockInstances[0];
+    const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
     act(() =>
       ws.simulateMessage({
@@ -185,7 +188,7 @@ describe("useWebSocket", () => {
     const onMessage = vi.fn();
     const { result } = renderHook(() => useWebSocket({ onMessage }));
 
-    const ws = mockInstances[0];
+    const ws = mockInstances[0]!;
     act(() => ws.simulateOpen());
     act(() =>
       ws.simulateMessage({
@@ -198,7 +201,7 @@ describe("useWebSocket", () => {
 
     // The auth message + the play_card message
     expect(ws.sent).toHaveLength(2);
-    const sent = JSON.parse(ws.sent[1]);
+    const sent = JSON.parse(ws.sent[1]!);
     expect(sent.type).toBe("action:play_card");
     expect(sent.payload.cardId).toBe("KS");
   });

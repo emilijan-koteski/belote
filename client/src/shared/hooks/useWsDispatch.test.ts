@@ -49,6 +49,9 @@ const mockGameState: GameState = {
   pausedPlayers: [false, false, false, false] as [boolean, boolean, boolean, boolean],
   pauseUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
   turnTimeRemaining: 0,
+  ownerSeat: 0,
+  disconnectedSeat: -1,
+  reconnectExpiresAt: null,
 };
 
 describe("useWsDispatch", () => {
@@ -89,8 +92,8 @@ describe("useWsDispatch", () => {
 
     const rooms = useLobbyStore.getState().rooms;
     expect(rooms).toHaveLength(1);
-    expect(rooms[0].id).toBe(1);
-    expect(rooms[0].name).toBe("Test Room");
+    expect(rooms[0]!.id).toBe(1);
+    expect(rooms[0]!.name).toBe("Test Room");
   });
 
   it("routes system:room_updated to lobbyStore.updateRoom", () => {
@@ -134,8 +137,8 @@ describe("useWsDispatch", () => {
 
     const rooms = useLobbyStore.getState().rooms;
     expect(rooms).toHaveLength(1);
-    expect(rooms[0].name).toBe("Updated Name");
-    expect(rooms[0].playerCount).toBe(2);
+    expect(rooms[0]!.name).toBe("Updated Name");
+    expect(rooms[0]!.playerCount).toBe(2);
   });
 
   it("removes room from lobby when status is not waiting", () => {
@@ -249,7 +252,7 @@ describe("useWsDispatch", () => {
 
     const state = useGameStore.getState();
     expect(state.gameState?.currentTrick).toHaveLength(1);
-    expect(state.gameState?.currentTrick[0].playerSeat).toBe(1);
+    expect(state.gameState?.currentTrick[0]!.playerSeat).toBe(1);
   });
 
   it("dispatches event:hand_scored to gameStore and sets scoreRevealData", () => {
@@ -315,9 +318,9 @@ describe("useWsDispatch", () => {
 
     const state = useRoomLobbyStore.getState();
     expect(state.players).toHaveLength(1);
-    expect(state.players[0].userId).toBe(42);
-    expect(state.players[0].username).toBe("Alice");
-    expect(state.players[0].id).toBe(42); // Uses userId, not hardcoded 0 (D24 fix)
+    expect(state.players[0]!.userId).toBe(42);
+    expect(state.players[0]!.username).toBe("Alice");
+    expect(state.players[0]!.id).toBe(42); // Uses userId, not hardcoded 0 (D24 fix)
   });
 
   it("dispatches system:player_left to roomLobbyStore", () => {
@@ -364,7 +367,7 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const player = useRoomLobbyStore.getState().players[0];
+    const player = useRoomLobbyStore.getState().players[0]!;
     expect(player.seat).toBe(2);
     expect(player.team).toBe("red");
   });

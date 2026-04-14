@@ -281,7 +281,7 @@ function dispatchSystemEvent(message: WsMessage): void {
 }
 
 // Game error types that should trigger a user-visible toast
-const GAME_ERROR_TYPES = new Set([
+const GAME_ERROR_TYPES: Set<string> = new Set([
   ERROR_WRONG_PHASE,
   ERROR_NOT_YOUR_TURN,
   ERROR_INVALID_ACTION,

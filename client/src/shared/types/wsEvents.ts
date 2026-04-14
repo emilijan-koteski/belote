@@ -48,25 +48,15 @@ export interface PickTrumpPayload {
   suit?: "S" | "H" | "D" | "C"; // Required in round 2 (free suit selection); omit in round 1
 }
 
-export interface PassTrumpPayload {
-  // Empty — passing on trump selection
-}
+export type PassTrumpPayload = Record<string, never>;
 
-export interface DeclarePayload {
-  // Empty — declaring available combinations
-}
+export type DeclarePayload = Record<string, never>;
 
-export interface SkipDeclarePayload {
-  // Empty — skipping declaration
-}
+export type SkipDeclarePayload = Record<string, never>;
 
-export interface AnnounceBelotPayload {
-  // Empty — announcing Belot (K+Q of trump)
-}
+export type AnnounceBelotPayload = Record<string, never>;
 
-export interface DeclineBelotPayload {
-  // Empty — declining Belot announcement
-}
+export type DeclineBelotPayload = Record<string, never>;
 
 // --- Game state events (server -> client) ---
 export const EVENT_GAME_STATE = "event:game_state" as const;
@@ -205,6 +195,7 @@ export interface RoomCreatedPayload {
   timerDurationSeconds: number | null;
   status: string;
   playerCount: number;
+  isQuickPlay: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -220,6 +211,7 @@ export interface RoomUpdatedPayload {
   timerDurationSeconds: number | null;
   status: string;
   playerCount: number;
+  isQuickPlay: boolean;
   createdAt: string;
   updatedAt: string;
 }

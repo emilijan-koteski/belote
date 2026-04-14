@@ -23,7 +23,7 @@ describe("roomLobbyStore", () => {
 
     const state = useRoomLobbyStore.getState();
     expect(state.players).toHaveLength(1);
-    expect(state.players[0].username).toBe("Alice");
+    expect(state.players[0]!.username).toBe("Alice");
   });
 
   it("addPlayer updates room playerCount", () => {
@@ -87,7 +87,7 @@ describe("roomLobbyStore", () => {
 
     useRoomLobbyStore.getState().updatePlayerSeat(42, 2, "red", null);
 
-    const updated = useRoomLobbyStore.getState().players[0];
+    const updated = useRoomLobbyStore.getState().players[0]!;
     expect(updated.seat).toBe(2);
     expect(updated.team).toBe("red");
   });
