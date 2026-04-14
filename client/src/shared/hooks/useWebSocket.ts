@@ -150,10 +150,14 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
 
   useEffect(() => {
     mountedRef.current = true;
-    connect();
+    // Defer connect so React.StrictMode's synchronous unmount cancels
+    // the timer before any WebSocket is created, avoiding the
+    // "WebSocket is closed before the connection is established" warning.
+    const connectTimer = setTimeout(connect, 0);
 
     return () => {
       mountedRef.current = false;
+      clearTimeout(connectTimer);
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
