@@ -74,10 +74,7 @@ export function PauseOverlay({
                 {t("game.pause.pauseButton")}
               </button>
             ) : (
-              <p
-                className="text-text-secondary text-sm italic"
-                data-testid="pause-waiting"
-              >
+              <p className="text-text-secondary text-sm italic" data-testid="pause-waiting">
                 {t("game.pause.waitingToResume")}
               </p>
             )}

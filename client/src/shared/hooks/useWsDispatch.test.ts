@@ -30,10 +30,42 @@ const mockGameState: GameState = {
   awaitingDeclaration: false,
   declarationsResolved: false,
   players: [
-    { hand: [{ rank: "K", suit: "S" }], seat: 0, userId: 10, username: "Alice", team: "red", declarations: [], connected: true },
-    { hand: [{ rank: "7", suit: "H" }], seat: 1, userId: 20, username: "Bob", team: "blue", declarations: [], connected: true },
-    { hand: [{ rank: "A", suit: "D" }], seat: 2, userId: 30, username: "Carol", team: "red", declarations: [], connected: true },
-    { hand: [{ rank: "9", suit: "C" }], seat: 3, userId: 40, username: "Dave", team: "blue", declarations: [], connected: true },
+    {
+      hand: [{ rank: "K", suit: "S" }],
+      seat: 0,
+      userId: 10,
+      username: "Alice",
+      team: "red",
+      declarations: [],
+      connected: true,
+    },
+    {
+      hand: [{ rank: "7", suit: "H" }],
+      seat: 1,
+      userId: 20,
+      username: "Bob",
+      team: "blue",
+      declarations: [],
+      connected: true,
+    },
+    {
+      hand: [{ rank: "A", suit: "D" }],
+      seat: 2,
+      userId: 30,
+      username: "Carol",
+      team: "red",
+      declarations: [],
+      connected: true,
+    },
+    {
+      hand: [{ rank: "9", suit: "C" }],
+      seat: 3,
+      userId: 40,
+      username: "Dave",
+      team: "blue",
+      declarations: [],
+      connected: true,
+    },
   ],
   teamScores: [0, 0],
   handPoints: [0, 0],
@@ -264,13 +296,21 @@ describe("useWsDispatch", () => {
     dispatch({
       type: "event:hand_scored",
       payload: {
-        redCardPoints: 70, blueCardPoints: 82,
-        redDeclPoints: 0, blueDeclPoints: 0,
-        lastTrickTeam: 1, lastTrickBonus: 10,
-        capot: false, capotTeam: null, capotBonus: 0,
-        failedContract: false, contractingTeam: 1,
-        redHandTotal: 70, blueHandTotal: 92,
-        redMatchScore: 70, blueMatchScore: 92,
+        redCardPoints: 70,
+        blueCardPoints: 82,
+        redDeclPoints: 0,
+        blueDeclPoints: 0,
+        lastTrickTeam: 1,
+        lastTrickBonus: 10,
+        capot: false,
+        capotTeam: null,
+        capotBonus: 0,
+        failedContract: false,
+        contractingTeam: 1,
+        redHandTotal: 70,
+        blueHandTotal: 92,
+        redMatchScore: 70,
+        blueMatchScore: 92,
       },
     });
 
@@ -326,7 +366,15 @@ describe("useWsDispatch", () => {
   it("dispatches system:player_left to roomLobbyStore", () => {
     // Pre-populate a player
     useRoomLobbyStore.getState().addPlayer(
-      { id: 42, roomId: 10, userId: 42, username: "Alice", seat: null, team: null, createdAt: "" },
+      {
+        id: 42,
+        roomId: 10,
+        userId: 42,
+        username: "Alice",
+        seat: null,
+        team: null,
+        createdAt: "",
+      },
       2,
     );
 
@@ -348,7 +396,15 @@ describe("useWsDispatch", () => {
 
   it("dispatches system:seat_updated to roomLobbyStore", () => {
     useRoomLobbyStore.getState().addPlayer(
-      { id: 42, roomId: 10, userId: 42, username: "Alice", seat: null, team: null, createdAt: "" },
+      {
+        id: 42,
+        roomId: 10,
+        userId: 42,
+        username: "Alice",
+        seat: null,
+        team: null,
+        createdAt: "",
+      },
       1,
     );
 

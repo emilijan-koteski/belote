@@ -23,10 +23,42 @@ vi.mock("react-i18next", () => ({
 }));
 
 const mockPlayers = [
-  { hand: [], seat: 0, userId: 1, username: "Alice", team: "red", declarations: [], connected: true },
-  { hand: [], seat: 1, userId: 2, username: "Bob", team: "blue", declarations: [], connected: true },
-  { hand: [], seat: 2, userId: 3, username: "Carol", team: "red", declarations: [], connected: true },
-  { hand: [], seat: 3, userId: 4, username: "Dave", team: "blue", declarations: [], connected: true },
+  {
+    hand: [],
+    seat: 0,
+    userId: 1,
+    username: "Alice",
+    team: "red",
+    declarations: [],
+    connected: true,
+  },
+  {
+    hand: [],
+    seat: 1,
+    userId: 2,
+    username: "Bob",
+    team: "blue",
+    declarations: [],
+    connected: true,
+  },
+  {
+    hand: [],
+    seat: 2,
+    userId: 3,
+    username: "Carol",
+    team: "red",
+    declarations: [],
+    connected: true,
+  },
+  {
+    hand: [],
+    seat: 3,
+    userId: 4,
+    username: "Dave",
+    team: "blue",
+    declarations: [],
+    connected: true,
+  },
 ] as PauseOverlayProps["players"];
 
 type PauseOverlayProps = Parameters<typeof PauseOverlay>[0];

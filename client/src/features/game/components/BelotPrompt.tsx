@@ -38,17 +38,10 @@ export function BelotPrompt({ onAnnounce, onDecline }: BelotPromptProps) {
         </p>
 
         <div className="flex gap-3 justify-center">
-          <Button
-            onClick={onAnnounce}
-            data-testid="belot-prompt-announce"
-          >
+          <Button onClick={onAnnounce} data-testid="belot-prompt-announce">
             {t("game.belot.announce")}
           </Button>
-          <Button
-            variant="ghost"
-            onClick={onDecline}
-            data-testid="belot-prompt-decline"
-          >
+          <Button variant="ghost" onClick={onDecline} data-testid="belot-prompt-decline">
             {t("game.belot.decline")}
           </Button>
         </div>

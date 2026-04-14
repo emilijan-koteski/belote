@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  ActionType,
-  CardId,
-  GameState,
-  Phase,
-  Rank,
-  Suit,
-  Variant,
-} from "./gameTypes";
+import type { ActionType, CardId, GameState, Phase, Rank, Suit, Variant } from "./gameTypes";
 
 describe("gameTypes", () => {
   describe("CardId", () => {
@@ -96,10 +88,42 @@ describe("gameTypes", () => {
         awaitingDeclaration: false,
         declarationsResolved: false,
         players: [
-          { hand: [], seat: 0, userId: 10, username: "Alice", team: "red", declarations: [], connected: true },
-          { hand: [], seat: 1, userId: 20, username: "Bob", team: "blue", declarations: [], connected: true },
-          { hand: [], seat: 2, userId: 30, username: "Carol", team: "red", declarations: [], connected: true },
-          { hand: [], seat: 3, userId: 40, username: "Dave", team: "blue", declarations: [], connected: true },
+          {
+            hand: [],
+            seat: 0,
+            userId: 10,
+            username: "Alice",
+            team: "red",
+            declarations: [],
+            connected: true,
+          },
+          {
+            hand: [],
+            seat: 1,
+            userId: 20,
+            username: "Bob",
+            team: "blue",
+            declarations: [],
+            connected: true,
+          },
+          {
+            hand: [],
+            seat: 2,
+            userId: 30,
+            username: "Carol",
+            team: "red",
+            declarations: [],
+            connected: true,
+          },
+          {
+            hand: [],
+            seat: 3,
+            userId: 40,
+            username: "Dave",
+            team: "blue",
+            declarations: [],
+            connected: true,
+          },
         ],
         teamScores: [0, 0],
         handPoints: [0, 0],

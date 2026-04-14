@@ -13,7 +13,12 @@ interface RoomLobbyState {
   setCurrentRoomId: (roomId: number | null) => void;
   addPlayer: (player: RoomPlayer, playerCount: number) => void;
   removePlayer: (userId: number, playerCount: number, newOwnerId?: number) => void;
-  updatePlayerSeat: (userId: number, seat: number, team: string, previousSeat: number | null) => void;
+  updatePlayerSeat: (
+    userId: number,
+    seat: number,
+    team: string,
+    previousSeat: number | null,
+  ) => void;
   setGameStarted: (started: boolean) => void;
   reset: () => void;
 }

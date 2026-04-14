@@ -15,18 +15,18 @@ function compassOffset(seat: number, myPlayerSeat: number): number {
 }
 
 const TRICK_CARD_POSITIONS: Record<number, string> = {
-  0: "bottom-0 left-1/2 -translate-x-1/2",   // South
-  1: "top-1/2 left-0 -translate-y-1/2",       // West
-  2: "top-0 left-1/2 -translate-x-1/2",       // North
-  3: "top-1/2 right-0 -translate-y-1/2",      // East
+  0: "bottom-0 left-1/2 -translate-x-1/2", // South
+  1: "top-1/2 left-0 -translate-y-1/2", // West
+  2: "top-0 left-1/2 -translate-x-1/2", // North
+  3: "top-1/2 right-0 -translate-y-1/2", // East
 };
 
 // Sweep destinations toward winning team's corner
 const SWEEP_POSITIONS: Record<number, string> = {
-  0: "translate-y-[200%]",   // South → off bottom
-  1: "-translate-x-[200%]",  // West → off left
-  2: "-translate-y-[200%]",  // North → off top
-  3: "translate-x-[200%]",   // East → off right
+  0: "translate-y-[200%]", // South → off bottom
+  1: "-translate-x-[200%]", // West → off left
+  2: "-translate-y-[200%]", // North → off top
+  3: "translate-x-[200%]", // East → off right
 };
 
 export function TrickArea({ trick, winnerSeat, myPlayerSeat }: TrickAreaProps) {
@@ -93,10 +93,7 @@ export function TrickArea({ trick, winnerSeat, myPlayerSeat }: TrickAreaProps) {
   const winnerCompass = winnerSeat !== null ? compassOffset(winnerSeat, myPlayerSeat) : null;
 
   return (
-    <div
-      className="relative w-[25vw] aspect-square"
-      data-testid="trick-area"
-    >
+    <div className="relative w-[25vw] aspect-square" data-testid="trick-area">
       {displayTrick.length === 0 && !sweeping && (
         <div className="absolute inset-0 border border-border rounded-full opacity-30" />
       )}
@@ -104,9 +101,7 @@ export function TrickArea({ trick, winnerSeat, myPlayerSeat }: TrickAreaProps) {
       {displayTrick.map((tc) => {
         const compass = compassOffset(tc.playerSeat, myPlayerSeat);
         const isWinner = resolving && compass === winnerCompass;
-        const sweepClass = sweeping && winnerCompass !== null
-          ? SWEEP_POSITIONS[winnerCompass]
-          : "";
+        const sweepClass = sweeping && winnerCompass !== null ? SWEEP_POSITIONS[winnerCompass] : "";
 
         return (
           <div

@@ -23,8 +23,7 @@ export function ScoreReveal({ data, onContinue }: ScoreRevealProps) {
     return () => clearTimeout(timer);
   }, [prefersReducedMotion]);
 
-  const teamName = (team: number) =>
-    team === 0 ? t("game.score.red") : t("game.score.blue");
+  const teamName = (team: number) => (team === 0 ? t("game.score.red") : t("game.score.blue"));
 
   const hasDeclarations = data.redDeclPoints > 0 || data.blueDeclPoints > 0;
   const stagger = prefersReducedMotion ? 0 : 200;

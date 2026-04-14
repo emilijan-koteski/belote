@@ -19,16 +19,12 @@ beforeEach(() => {
 
 const mockPayload: DeclarationsResolvedPayload = {
   winnerTeam: 0,
-  declarations: [
-    { playerSeat: 0, type: "sequence", value: 50, cards: ["JD", "QD", "KD", "AD"] },
-  ],
+  declarations: [{ playerSeat: 0, type: "sequence", value: 50, cards: ["JD", "QD", "KD", "AD"] }],
 };
 
 describe("DeclarationReveal", () => {
   it("renders declaration reveal with total value", () => {
-    render(
-      <DeclarationReveal payload={mockPayload} onComplete={vi.fn()} />,
-    );
+    render(<DeclarationReveal payload={mockPayload} onComplete={vi.fn()} />);
     expect(screen.getByTestId("declaration-reveal")).toBeInTheDocument();
     expect(screen.getByText("+50")).toBeInTheDocument();
   });
@@ -38,18 +34,14 @@ describe("DeclarationReveal", () => {
       winnerTeam: null,
       declarations: [],
     };
-    render(
-      <DeclarationReveal payload={payload} onComplete={vi.fn()} />,
-    );
+    render(<DeclarationReveal payload={payload} onComplete={vi.fn()} />);
     expect(screen.queryByTestId("declaration-reveal")).not.toBeInTheDocument();
   });
 
   it("calls onComplete after animation duration", () => {
     vi.useFakeTimers();
     const onComplete = vi.fn();
-    render(
-      <DeclarationReveal payload={mockPayload} onComplete={onComplete} />,
-    );
+    render(<DeclarationReveal payload={mockPayload} onComplete={onComplete} />);
     vi.advanceTimersByTime(2100);
     expect(onComplete).toHaveBeenCalledOnce();
     vi.useRealTimers();
@@ -67,9 +59,7 @@ describe("DeclarationReveal", () => {
     });
     vi.useFakeTimers();
     const onComplete = vi.fn();
-    render(
-      <DeclarationReveal payload={mockPayload} onComplete={onComplete} />,
-    );
+    render(<DeclarationReveal payload={mockPayload} onComplete={onComplete} />);
     vi.advanceTimersByTime(600);
     expect(onComplete).toHaveBeenCalledOnce();
     vi.useRealTimers();

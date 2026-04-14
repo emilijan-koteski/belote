@@ -58,7 +58,13 @@ function suitColorClass(suit: Suit): string {
   return suit === "H" || suit === "D" ? "text-red-500" : "text-text-primary";
 }
 
-export function PlayingCard({ card, state, size, onClick, withTransition = true }: PlayingCardProps) {
+export function PlayingCard({
+  card,
+  state,
+  size,
+  onClick,
+  withTransition = true,
+}: PlayingCardProps) {
   const isFaceDown = state === "face-down" || card === null;
   const isPlayable = state === "playable";
   const isUnplayable = state === "unplayable";
@@ -110,7 +116,9 @@ export function PlayingCard({ card, state, size, onClick, withTransition = true 
       {isFaceDown ? (
         <div className="w-full h-full rounded-lg bg-surface-elevated border border-border" />
       ) : (
-        <div className={`w-full h-full flex flex-col justify-between p-1 ${suitColorClass(card!.suit)}`}>
+        <div
+          className={`w-full h-full flex flex-col justify-between p-1 ${suitColorClass(card!.suit)}`}
+        >
           <div className="text-xs font-body leading-none">
             <span>{DISPLAY_RANK[card!.rank]}</span>
             <span>{DISPLAY_SUIT[card!.suit]}</span>

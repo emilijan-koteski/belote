@@ -45,10 +45,10 @@ function teamColor(seat: number): "red" | "blue" {
 }
 
 const SEAT_POSITIONS: Record<number, string> = {
-  0: "bottom-24 left-1/2 -translate-x-1/2",  // South (self) - above hand cards
-  1: "left-4 top-1/2 -translate-y-1/2",       // West
-  2: "top-4 left-1/2 -translate-x-1/2",       // North
-  3: "right-4 top-1/2 -translate-y-1/2",      // East
+  0: "bottom-24 left-1/2 -translate-x-1/2", // South (self) - above hand cards
+  1: "left-4 top-1/2 -translate-y-1/2", // West
+  2: "top-4 left-1/2 -translate-x-1/2", // North
+  3: "right-4 top-1/2 -translate-y-1/2", // East
 };
 
 export function GamePage() {
@@ -182,13 +182,19 @@ export function GamePage() {
   }, [gameState, clearGame, navigate, t]);
 
   // --- Action handlers ---
-  const handlePlayCard = useCallback((cardId: string) => {
-    sendMessage(ACTION_PLAY_CARD, { cardId });
-  }, [sendMessage]);
+  const handlePlayCard = useCallback(
+    (cardId: string) => {
+      sendMessage(ACTION_PLAY_CARD, { cardId });
+    },
+    [sendMessage],
+  );
 
-  const handlePickTrump = useCallback((suit?: Suit) => {
-    sendMessage(ACTION_PICK_TRUMP, suit ? { suit } : {});
-  }, [sendMessage]);
+  const handlePickTrump = useCallback(
+    (suit?: Suit) => {
+      sendMessage(ACTION_PICK_TRUMP, suit ? { suit } : {});
+    },
+    [sendMessage],
+  );
 
   const handlePassTrump = useCallback(() => {
     sendMessage(ACTION_PASS_TRUMP, {});
@@ -270,7 +276,8 @@ export function GamePage() {
   // Pause state
   const isRoomOwner = myPlayerSeat !== null && gameState.ownerSeat === myPlayerSeat;
   const isPaused = gameState.phase === "paused";
-  const canPause = !isPaused &&
+  const canPause =
+    !isPaused &&
     (gameState.phase === "playing" || gameState.phase === "bidding") &&
     myPlayerSeat !== null &&
     !gameState.pauseUsed?.[myPlayerSeat];
@@ -283,9 +290,7 @@ export function GamePage() {
     gameState.pendingBelotSeat !== myPlayerSeat;
   const myPlayer = gameState.players.find((p) => p.seat === myPlayerSeat);
   const myHand = myPlayer?.hand ?? [];
-  const playableCardIds = isMyTurn
-    ? myHand.map((card) => `${card.rank}${card.suit}`)
-    : [];
+  const playableCardIds = isMyTurn ? myHand.map((card) => `${card.rank}${card.suit}`) : [];
 
   // Bidding state
   const isBiddingPhase = gameState.phase === "bidding";
@@ -293,12 +298,10 @@ export function GamePage() {
 
   // Declaration state
   const showDeclarationPrompt =
-    gameState.awaitingDeclaration === true &&
-    gameState.activePlayerSeat === myPlayerSeat;
+    gameState.awaitingDeclaration === true && gameState.activePlayerSeat === myPlayerSeat;
 
   // Belot state
-  const showBelotPrompt =
-    gameState.pendingBelotSeat === myPlayerSeat;
+  const showBelotPrompt = gameState.pendingBelotSeat === myPlayerSeat;
 
   // Deal animation state
   const isDealingPhase = gameState.phase === "dealing";
@@ -320,9 +323,7 @@ export function GamePage() {
 
       {/* Trump indicator - top right, visible only during play and later (AC 4.4.5) */}
       <div className="absolute top-4 right-16 z-10">
-        {gameState.trumpSuit &&
-          gameState.phase !== "dealing" &&
-          gameState.phase !== "bidding" && (
+        {gameState.trumpSuit && gameState.phase !== "dealing" && gameState.phase !== "bidding" && (
           <TrumpIndicator trumpSuit={gameState.trumpSuit} />
         )}
       </div>
@@ -400,12 +401,17 @@ export function GamePage() {
       )}
 
       {/* Reconnect overlay — shown during disconnect countdown OR abandonment */}
-      {((gameState.phase === "disconnected" && gameState.disconnectedSeat !== -1 && gameState.reconnectExpiresAt) || matchAbandonedData) && (
+      {((gameState.phase === "disconnected" &&
+        gameState.disconnectedSeat !== -1 &&
+        gameState.reconnectExpiresAt) ||
+        matchAbandonedData) && (
         <ReconnectOverlay
           disconnectedPlayerName={
             matchAbandonedData
-              ? (gameState.players[matchAbandonedData.abandonedByPlayer]?.username ?? `Player ${matchAbandonedData.abandonedByPlayer + 1}`)
-              : (gameState.players[gameState.disconnectedSeat]?.username ?? `Player ${gameState.disconnectedSeat + 1}`)
+              ? (gameState.players[matchAbandonedData.abandonedByPlayer]?.username ??
+                `Player ${matchAbandonedData.abandonedByPlayer + 1}`)
+              : (gameState.players[gameState.disconnectedSeat]?.username ??
+                `Player ${gameState.disconnectedSeat + 1}`)
           }
           reconnectExpiresAt={gameState.reconnectExpiresAt ?? ""}
           abandonedData={matchAbandonedData}
@@ -414,14 +420,10 @@ export function GamePage() {
       )}
 
       {/* Deal animation overlay */}
-      {isDealingPhase && (
-        <DealAnimation trumpCandidate={gameState.trumpCandidate} />
-      )}
+      {isDealingPhase && <DealAnimation trumpCandidate={gameState.trumpCandidate} />}
 
       {/* Reshuffle animation overlay */}
-      {showReshuffle && (
-        <ReshuffleAnimation onComplete={handleReshuffleComplete} />
-      )}
+      {showReshuffle && <ReshuffleAnimation onComplete={handleReshuffleComplete} />}
 
       {/* Trump bidding prompt overlay */}
       {isBiddingPhase && (
@@ -445,10 +447,7 @@ export function GamePage() {
 
       {/* Belot prompt overlay */}
       {showBelotPrompt && (
-        <BelotPrompt
-          onAnnounce={handleAnnounceBelot}
-          onDecline={handleDeclineBelot}
-        />
+        <BelotPrompt onAnnounce={handleAnnounceBelot} onDecline={handleDeclineBelot} />
       )}
 
       {/* Declaration resolution reveal */}
@@ -496,34 +495,25 @@ export function GamePage() {
               &times;
             </button>
           </div>
-          <p className="font-body text-xs text-text-secondary">
-            {t("game.chat.placeholder")}
-          </p>
+          <p className="font-body text-xs text-text-secondary">{t("game.chat.placeholder")}</p>
         </aside>
       )}
 
       {/* Capot animation overlay */}
-      {overlayPhase === "capot_animation" && scoreRevealData?.capotTeam !== null && scoreRevealData?.capotTeam !== undefined && (
-        <CapotAnimation
-          capotTeam={scoreRevealData.capotTeam}
-          onComplete={handleCapotComplete}
-        />
-      )}
+      {overlayPhase === "capot_animation" &&
+        scoreRevealData?.capotTeam !== null &&
+        scoreRevealData?.capotTeam !== undefined && (
+          <CapotAnimation capotTeam={scoreRevealData.capotTeam} onComplete={handleCapotComplete} />
+        )}
 
       {/* Score reveal overlay */}
       {overlayPhase === "score_reveal" && scoreRevealData !== null && (
-        <ScoreReveal
-          data={scoreRevealData}
-          onContinue={handleScoreRevealContinue}
-        />
+        <ScoreReveal data={scoreRevealData} onContinue={handleScoreRevealContinue} />
       )}
 
       {/* Match result overlay */}
       {overlayPhase === "match_result" && matchEndData !== null && (
-        <MatchResult
-          data={matchEndData}
-          onReturnToLobby={handleReturnToLobby}
-        />
+        <MatchResult data={matchEndData} onReturnToLobby={handleReturnToLobby} />
       )}
 
       {/* Error toast */}

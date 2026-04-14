@@ -53,10 +53,7 @@ export function RoomDetailPreview({ roomId }: RoomDetailPreviewProps) {
 
   if (isLoading) {
     return (
-      <div
-        className="grid grid-cols-2 gap-2 p-3"
-        data-testid="room-detail-preview"
-      >
+      <div className="grid grid-cols-2 gap-2 p-3" data-testid="room-detail-preview">
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
@@ -100,9 +97,7 @@ export function RoomDetailPreview({ roomId }: RoomDetailPreviewProps) {
                 data-testid={`room-detail-seat-${seatIndex}`}
               >
                 {player !== undefined ? (
-                  <span className={`text-sm font-medium ${teamTextClass}`}>
-                    {player.username}
-                  </span>
+                  <span className={`text-sm font-medium ${teamTextClass}`}>{player.username}</span>
                 ) : (
                   <span className="text-xs text-text-secondary">
                     {t("lobby.roomDetail.emptySlot")}

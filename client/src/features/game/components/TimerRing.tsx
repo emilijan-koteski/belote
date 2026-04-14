@@ -54,9 +54,7 @@ export function TimerRing({ turnExpiresAt, totalDuration }: TimerRingProps) {
       ? "var(--color-warning)"
       : "var(--color-text-secondary)";
 
-  const pulseClass = isWarning && !isExpired
-    ? "motion-safe:animate-pulse"
-    : "";
+  const pulseClass = isWarning && !isExpired ? "motion-safe:animate-pulse" : "";
 
   return (
     <div

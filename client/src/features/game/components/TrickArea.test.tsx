@@ -38,9 +38,7 @@ const trickCards: TrickCard[] = [
 
 describe("TrickArea", () => {
   it("renders empty state with oval outline when no cards", () => {
-    const { container } = render(
-      <TrickArea trick={[]} winnerSeat={null} myPlayerSeat={0} />,
-    );
+    const { container } = render(<TrickArea trick={[]} winnerSeat={null} myPlayerSeat={0} />);
 
     expect(screen.getByTestId("trick-area")).toBeInTheDocument();
     const oval = container.querySelector(".rounded-full.opacity-30");
@@ -48,9 +46,7 @@ describe("TrickArea", () => {
   });
 
   it("renders played cards in correct compass positions", () => {
-    render(
-      <TrickArea trick={trickCards.slice(0, 2)} winnerSeat={null} myPlayerSeat={0} />,
-    );
+    render(<TrickArea trick={trickCards.slice(0, 2)} winnerSeat={null} myPlayerSeat={0} />);
 
     expect(screen.getByTestId("playing-card-KS")).toBeInTheDocument();
     expect(screen.getByTestId("playing-card-7H")).toBeInTheDocument();
@@ -61,9 +57,7 @@ describe("TrickArea", () => {
       <TrickArea trick={trickCards} winnerSeat={null} myPlayerSeat={0} />,
     );
 
-    rerender(
-      <TrickArea trick={[]} winnerSeat={2} myPlayerSeat={0} />,
-    );
+    rerender(<TrickArea trick={[]} winnerSeat={2} myPlayerSeat={0} />);
 
     const trickArea = screen.getByTestId("trick-area");
     const glowElement = trickArea.querySelector('[class*="shadow-[0_0_20px_var(--color-accent)]"]');
@@ -75,9 +69,7 @@ describe("TrickArea", () => {
       <TrickArea trick={trickCards} winnerSeat={null} myPlayerSeat={0} />,
     );
 
-    rerender(
-      <TrickArea trick={[]} winnerSeat={2} myPlayerSeat={0} />,
-    );
+    rerender(<TrickArea trick={[]} winnerSeat={2} myPlayerSeat={0} />);
 
     // Cards still visible during 1s resolve pause
     expect(screen.getByTestId("playing-card-KS")).toBeInTheDocument();
@@ -110,9 +102,7 @@ describe("TrickArea", () => {
       <TrickArea trick={trickCards} winnerSeat={null} myPlayerSeat={0} />,
     );
 
-    rerender(
-      <TrickArea trick={[]} winnerSeat={2} myPlayerSeat={0} />,
-    );
+    rerender(<TrickArea trick={[]} winnerSeat={2} myPlayerSeat={0} />);
 
     // Should clear immediately — no 1s pause
     expect(screen.queryByTestId("playing-card-KS")).not.toBeInTheDocument();
@@ -126,9 +116,7 @@ describe("TrickArea", () => {
     expect(screen.getByTestId("playing-card-KS")).toBeInTheDocument();
 
     // Simulate reconnect: trick resets to empty from 2 cards
-    rerender(
-      <TrickArea trick={[]} winnerSeat={null} myPlayerSeat={0} />,
-    );
+    rerender(<TrickArea trick={[]} winnerSeat={null} myPlayerSeat={0} />);
 
     expect(screen.queryByTestId("playing-card-KS")).not.toBeInTheDocument();
   });

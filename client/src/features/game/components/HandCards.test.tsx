@@ -17,12 +17,7 @@ const testHand: Card[] = [
 describe("HandCards", () => {
   it("renders correct number of cards", () => {
     render(
-      <HandCards
-        hand={testHand}
-        isMyTurn={false}
-        playableCardIds={[]}
-        onPlayCard={vi.fn()}
-      />,
+      <HandCards hand={testHand} isMyTurn={false} playableCardIds={[]} onPlayCard={vi.fn()} />,
     );
 
     expect(screen.getByTestId("hand-cards")).toBeInTheDocument();
@@ -60,12 +55,7 @@ describe("HandCards", () => {
 
   it("marks all cards as default when not my turn", () => {
     render(
-      <HandCards
-        hand={testHand}
-        isMyTurn={false}
-        playableCardIds={[]}
-        onPlayCard={vi.fn()}
-      />,
+      <HandCards hand={testHand} isMyTurn={false} playableCardIds={[]} onPlayCard={vi.fn()} />,
     );
 
     const ks = screen.getByTestId("playing-card-KS");

@@ -70,15 +70,10 @@ export function AppLayout() {
                 >
                   {(user.username.charAt(0) || "?").toUpperCase()}
                 </span>
-                <span className="font-body text-sm text-text-secondary">
-                  {user.username}
-                </span>
+                <span className="font-body text-sm text-text-secondary">{user.username}</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-surface-elevated">
-                <DropdownMenuItem
-                  onClick={logout}
-                  data-testid="nav-logout"
-                >
+                <DropdownMenuItem onClick={logout} data-testid="nav-logout">
                   {t("nav.logout")}
                 </DropdownMenuItem>
               </DropdownMenuContent>

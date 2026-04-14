@@ -102,7 +102,13 @@ describe("ScoreReveal", () => {
   });
 
   it("shows capot bonus when capot", () => {
-    const capotData = { ...normalData, capot: true, capotTeam: 0, capotBonus: 100, lastTrickBonus: 0 };
+    const capotData = {
+      ...normalData,
+      capot: true,
+      capotTeam: 0,
+      capotBonus: 100,
+      lastTrickBonus: 0,
+    };
     render(<ScoreReveal data={capotData} onContinue={vi.fn()} />);
 
     expect(screen.getByTestId("row-capot-bonus")).toBeInTheDocument();

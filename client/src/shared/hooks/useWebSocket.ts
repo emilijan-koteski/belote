@@ -68,10 +68,12 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
     ws.onopen = () => {
       if (!mountedRef.current || wsRef.current !== ws) return;
       updateState("authenticating");
-      ws.send(JSON.stringify({
-        type: ACTION_AUTHENTICATE,
-        payload: { token: useAuthStore.getState().token },
-      }));
+      ws.send(
+        JSON.stringify({
+          type: ACTION_AUTHENTICATE,
+          payload: { token: useAuthStore.getState().token },
+        }),
+      );
     };
 
     ws.onmessage = (event: MessageEvent) => {
@@ -115,7 +117,7 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
     ws.onerror = () => {
       // onclose will fire after onerror — reconnection handled there
     };
-  }, []);// eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAuthFailure = useCallback(async () => {
     try {
@@ -128,7 +130,7 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
       // Refresh failed — user must re-login
       useAuthStore.getState().logout();
     }
-  }, []);// eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const scheduleReconnect = useCallback(() => {
     if (!mountedRef.current) return;

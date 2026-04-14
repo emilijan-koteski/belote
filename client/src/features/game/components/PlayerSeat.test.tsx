@@ -22,14 +22,7 @@ function makePlayer(overrides: Partial<PlayerState> = {}): PlayerState {
 
 describe("PlayerSeat", () => {
   it("renders empty seat with 'Waiting...' text when player is null", () => {
-    render(
-      <PlayerSeat
-        player={null}
-        isSelf={false}
-        isActive={false}
-        teamColor="red"
-      />,
-    );
+    render(<PlayerSeat player={null} isSelf={false} isActive={false} teamColor="red" />);
 
     expect(screen.getByText("Waiting...")).toBeInTheDocument();
   });
@@ -63,12 +56,7 @@ describe("PlayerSeat", () => {
 
   it("renders active state with accent border and pulse animation class", () => {
     const { container } = render(
-      <PlayerSeat
-        player={makePlayer()}
-        isSelf={false}
-        isActive={true}
-        teamColor="red"
-      />,
+      <PlayerSeat player={makePlayer()} isSelf={false} isActive={true} teamColor="red" />,
     );
 
     expect(container.firstChild).toHaveClass("border-accent");
@@ -77,12 +65,7 @@ describe("PlayerSeat", () => {
 
   it("renders self seat with 'You' badge and scale-110", () => {
     const { container } = render(
-      <PlayerSeat
-        player={makePlayer()}
-        isSelf={true}
-        isActive={false}
-        teamColor="red"
-      />,
+      <PlayerSeat player={makePlayer()} isSelf={true} isActive={false} teamColor="red" />,
     );
 
     expect(screen.getByText("You")).toBeInTheDocument();
@@ -99,10 +82,7 @@ describe("PlayerSeat", () => {
       />,
     );
 
-    expect(container.firstChild).toHaveAttribute(
-      "aria-label",
-      "Alice, Red team, active",
-    );
+    expect(container.firstChild).toHaveAttribute("aria-label", "Alice, Red team, active");
   });
 
   it("has correct aria-label for waiting state", () => {
@@ -115,10 +95,7 @@ describe("PlayerSeat", () => {
       />,
     );
 
-    expect(container.firstChild).toHaveAttribute(
-      "aria-label",
-      "Bob, Blue team, waiting",
-    );
+    expect(container.firstChild).toHaveAttribute("aria-label", "Bob, Blue team, waiting");
   });
 
   it("shows card count for non-self occupied seats", () => {

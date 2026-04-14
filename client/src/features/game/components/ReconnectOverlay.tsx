@@ -69,10 +69,7 @@ export function ReconnectOverlay({
             })}
           </h2>
 
-          <p
-            className="text-text-secondary text-sm mb-4"
-            data-testid="abandon-scores"
-          >
+          <p className="text-text-secondary text-sm mb-4" data-testid="abandon-scores">
             {t("game.disconnect.matchAbandonedScores", {
               red: abandonedData.redFinalScore,
               blue: abandonedData.blueFinalScore,
@@ -112,9 +109,7 @@ export function ReconnectOverlay({
         </p>
 
         <div className="mb-4">
-          <p className="text-text-secondary text-xs mb-1">
-            {t("game.disconnect.countdownLabel")}
-          </p>
+          <p className="text-text-secondary text-xs mb-1">{t("game.disconnect.countdownLabel")}</p>
           <p
             className="font-mono text-4xl font-bold text-warning"
             data-testid="reconnect-countdown"

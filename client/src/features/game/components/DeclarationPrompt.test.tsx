@@ -23,22 +23,14 @@ const mockDeclarations: Declaration[] = [
 describe("DeclarationPrompt", () => {
   it("renders the declaration prompt overlay", () => {
     render(
-      <DeclarationPrompt
-        declarations={mockDeclarations}
-        onDeclare={vi.fn()}
-        onSkip={vi.fn()}
-      />,
+      <DeclarationPrompt declarations={mockDeclarations} onDeclare={vi.fn()} onSkip={vi.fn()} />,
     );
     expect(screen.getByTestId("declaration-prompt")).toBeInTheDocument();
   });
 
   it("shows DECLARE and SKIP buttons", () => {
     render(
-      <DeclarationPrompt
-        declarations={mockDeclarations}
-        onDeclare={vi.fn()}
-        onSkip={vi.fn()}
-      />,
+      <DeclarationPrompt declarations={mockDeclarations} onDeclare={vi.fn()} onSkip={vi.fn()} />,
     );
     expect(screen.getByTestId("declaration-prompt-declare")).toBeInTheDocument();
     expect(screen.getByTestId("declaration-prompt-skip")).toBeInTheDocument();
@@ -46,11 +38,7 @@ describe("DeclarationPrompt", () => {
 
   it("displays declaration value", () => {
     render(
-      <DeclarationPrompt
-        declarations={mockDeclarations}
-        onDeclare={vi.fn()}
-        onSkip={vi.fn()}
-      />,
+      <DeclarationPrompt declarations={mockDeclarations} onDeclare={vi.fn()} onSkip={vi.fn()} />,
     );
     expect(screen.getByText(/50/)).toBeInTheDocument();
   });
@@ -59,11 +47,7 @@ describe("DeclarationPrompt", () => {
     const user = userEvent.setup();
     const onDeclare = vi.fn();
     render(
-      <DeclarationPrompt
-        declarations={mockDeclarations}
-        onDeclare={onDeclare}
-        onSkip={vi.fn()}
-      />,
+      <DeclarationPrompt declarations={mockDeclarations} onDeclare={onDeclare} onSkip={vi.fn()} />,
     );
     await user.click(screen.getByTestId("declaration-prompt-declare"));
     expect(onDeclare).toHaveBeenCalledOnce();
@@ -73,11 +57,7 @@ describe("DeclarationPrompt", () => {
     const user = userEvent.setup();
     const onSkip = vi.fn();
     render(
-      <DeclarationPrompt
-        declarations={mockDeclarations}
-        onDeclare={vi.fn()}
-        onSkip={onSkip}
-      />,
+      <DeclarationPrompt declarations={mockDeclarations} onDeclare={vi.fn()} onSkip={onSkip} />,
     );
     await user.click(screen.getByTestId("declaration-prompt-skip"));
     expect(onSkip).toHaveBeenCalledOnce();
@@ -85,11 +65,7 @@ describe("DeclarationPrompt", () => {
 
   it("has role dialog and aria-modal", () => {
     render(
-      <DeclarationPrompt
-        declarations={mockDeclarations}
-        onDeclare={vi.fn()}
-        onSkip={vi.fn()}
-      />,
+      <DeclarationPrompt declarations={mockDeclarations} onDeclare={vi.fn()} onSkip={vi.fn()} />,
     );
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");

@@ -46,8 +46,7 @@ const initialState = {
 export const useGameStore = create<GameStoreState>((set) => ({
   ...initialState,
 
-  setGameState: (gameState) =>
-    set({ gameState, roomId: gameState.roomId }),
+  setGameState: (gameState) => set({ gameState, roomId: gameState.roomId }),
 
   setMyPlayerSeat: (myPlayerSeat) => set({ myPlayerSeat }),
 

@@ -10,7 +10,10 @@ interface DeclarationPromptProps {
   onSkip: () => void;
 }
 
-function declarationLabel(decl: Declaration, t: (key: string, opts?: Record<string, unknown>) => string): string {
+function declarationLabel(
+  decl: Declaration,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   if (decl.type === "four_of_a_kind") {
     return t("game.declaration.fourOfAKind", { points: decl.value });
   }
@@ -60,17 +63,10 @@ export function DeclarationPrompt({ declarations, onDeclare, onSkip }: Declarati
         </div>
 
         <div className="flex gap-3 justify-center">
-          <Button
-            onClick={onDeclare}
-            data-testid="declaration-prompt-declare"
-          >
+          <Button onClick={onDeclare} data-testid="declaration-prompt-declare">
             {t("game.declaration.declare")}
           </Button>
-          <Button
-            variant="ghost"
-            onClick={onSkip}
-            data-testid="declaration-prompt-skip"
-          >
+          <Button variant="ghost" onClick={onSkip} data-testid="declaration-prompt-skip">
             {t("game.declaration.skip")}
           </Button>
         </div>

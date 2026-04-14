@@ -16,8 +16,13 @@ describe("roomLobbyStore", () => {
 
   it("addPlayer adds a new player to the list", () => {
     const player = {
-      id: 1, roomId: 10, userId: 42, username: "Alice",
-      seat: null, team: null, createdAt: "2026-04-12T00:00:00Z",
+      id: 1,
+      roomId: 10,
+      userId: 42,
+      username: "Alice",
+      seat: null,
+      team: null,
+      createdAt: "2026-04-12T00:00:00Z",
     };
     useRoomLobbyStore.getState().addPlayer(player, 2);
 
@@ -28,15 +33,29 @@ describe("roomLobbyStore", () => {
 
   it("addPlayer updates room playerCount", () => {
     useRoomLobbyStore.getState().setRoom({
-      id: 10, name: "Test", code: "ABC123", ownerId: 1, variant: "bitola",
-      matchMode: "1001", timerStyle: "relaxed", timerDurationSeconds: null,
-      status: "waiting", playerCount: 1, isQuickPlay: false,
-      createdAt: "2026-04-12T00:00:00Z", updatedAt: "2026-04-12T00:00:00Z",
+      id: 10,
+      name: "Test",
+      code: "ABC123",
+      ownerId: 1,
+      variant: "bitola",
+      matchMode: "1001",
+      timerStyle: "relaxed",
+      timerDurationSeconds: null,
+      status: "waiting",
+      playerCount: 1,
+      isQuickPlay: false,
+      createdAt: "2026-04-12T00:00:00Z",
+      updatedAt: "2026-04-12T00:00:00Z",
     });
 
     const player = {
-      id: 2, roomId: 10, userId: 42, username: "Alice",
-      seat: null, team: null, createdAt: "2026-04-12T00:00:00Z",
+      id: 2,
+      roomId: 10,
+      userId: 42,
+      username: "Alice",
+      seat: null,
+      team: null,
+      createdAt: "2026-04-12T00:00:00Z",
     };
     useRoomLobbyStore.getState().addPlayer(player, 2);
 
@@ -45,8 +64,13 @@ describe("roomLobbyStore", () => {
 
   it("addPlayer does not duplicate players with the same userId", () => {
     const player = {
-      id: 1, roomId: 10, userId: 42, username: "Alice",
-      seat: null, team: null, createdAt: "2026-04-12T00:00:00Z",
+      id: 1,
+      roomId: 10,
+      userId: 42,
+      username: "Alice",
+      seat: null,
+      team: null,
+      createdAt: "2026-04-12T00:00:00Z",
     };
     useRoomLobbyStore.getState().addPlayer(player, 1);
     useRoomLobbyStore.getState().addPlayer(player, 2);
@@ -56,8 +80,13 @@ describe("roomLobbyStore", () => {
 
   it("removePlayer removes a player by userId", () => {
     const player = {
-      id: 1, roomId: 10, userId: 42, username: "Alice",
-      seat: null, team: null, createdAt: "2026-04-12T00:00:00Z",
+      id: 1,
+      roomId: 10,
+      userId: 42,
+      username: "Alice",
+      seat: null,
+      team: null,
+      createdAt: "2026-04-12T00:00:00Z",
     };
     useRoomLobbyStore.getState().addPlayer(player, 1);
     useRoomLobbyStore.getState().removePlayer(42, 0);
@@ -67,10 +96,19 @@ describe("roomLobbyStore", () => {
 
   it("removePlayer updates ownerId when newOwnerId is provided", () => {
     useRoomLobbyStore.getState().setRoom({
-      id: 10, name: "Test", code: "ABC123", ownerId: 42, variant: "bitola",
-      matchMode: "1001", timerStyle: "relaxed", timerDurationSeconds: null,
-      status: "waiting", playerCount: 2, isQuickPlay: false,
-      createdAt: "2026-04-12T00:00:00Z", updatedAt: "2026-04-12T00:00:00Z",
+      id: 10,
+      name: "Test",
+      code: "ABC123",
+      ownerId: 42,
+      variant: "bitola",
+      matchMode: "1001",
+      timerStyle: "relaxed",
+      timerDurationSeconds: null,
+      status: "waiting",
+      playerCount: 2,
+      isQuickPlay: false,
+      createdAt: "2026-04-12T00:00:00Z",
+      updatedAt: "2026-04-12T00:00:00Z",
     });
 
     useRoomLobbyStore.getState().removePlayer(42, 1, 99);
@@ -80,8 +118,13 @@ describe("roomLobbyStore", () => {
 
   it("updatePlayerSeat modifies a player's seat and team", () => {
     const player = {
-      id: 1, roomId: 10, userId: 42, username: "Alice",
-      seat: null, team: null, createdAt: "2026-04-12T00:00:00Z",
+      id: 1,
+      roomId: 10,
+      userId: 42,
+      username: "Alice",
+      seat: null,
+      team: null,
+      createdAt: "2026-04-12T00:00:00Z",
     };
     useRoomLobbyStore.getState().addPlayer(player, 1);
 
@@ -99,10 +142,18 @@ describe("roomLobbyStore", () => {
 
   it("reset clears all state", () => {
     useRoomLobbyStore.getState().setGameStarted(true);
-    useRoomLobbyStore.getState().addPlayer({
-      id: 1, roomId: 10, userId: 42, username: "Alice",
-      seat: null, team: null, createdAt: "2026-04-12T00:00:00Z",
-    }, 1);
+    useRoomLobbyStore.getState().addPlayer(
+      {
+        id: 1,
+        roomId: 10,
+        userId: 42,
+        username: "Alice",
+        seat: null,
+        team: null,
+        createdAt: "2026-04-12T00:00:00Z",
+      },
+      1,
+    );
 
     useRoomLobbyStore.getState().reset();
 

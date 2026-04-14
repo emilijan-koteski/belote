@@ -195,10 +195,7 @@ describe("RoomList", () => {
   it("only one room is expanded at a time (accordion)", async () => {
     const user = userEvent.setup();
     useLobbyStore.setState({
-      rooms: [
-        makeRoom({ id: 1, name: "Room Alpha" }),
-        makeRoom({ id: 2, name: "Room Beta" }),
-      ],
+      rooms: [makeRoom({ id: 1, name: "Room Alpha" }), makeRoom({ id: 2, name: "Room Beta" })],
     });
 
     renderRoomList();

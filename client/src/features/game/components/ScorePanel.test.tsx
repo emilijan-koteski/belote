@@ -63,7 +63,16 @@ describe("ScorePanel", () => {
   });
 
   it("shows float-up bonus when lastTrickBonus prop is provided", () => {
-    render(<ScorePanel redScore={100} blueScore={200} redTricks={4} blueTricks={4} lastTrickBonus={10} lastTrickTeam={0} />);
+    render(
+      <ScorePanel
+        redScore={100}
+        blueScore={200}
+        redTricks={4}
+        blueTricks={4}
+        lastTrickBonus={10}
+        lastTrickTeam={0}
+      />,
+    );
 
     expect(screen.getByTestId("score-bonus")).toHaveTextContent("+10");
   });

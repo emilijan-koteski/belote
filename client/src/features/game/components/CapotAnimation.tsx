@@ -27,13 +27,7 @@ export function CapotAnimation({ capotTeam, onComplete }: CapotAnimationProps) {
       className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 pointer-events-none"
       data-testid="capot-animation"
     >
-      <div
-        className={
-          prefersReducedMotion
-            ? ""
-            : "motion-safe:animate-capot-scale"
-        }
-      >
+      <div className={prefersReducedMotion ? "" : "motion-safe:animate-capot-scale"}>
         <h1
           className={`font-display text-7xl font-bold ${teamColorClass} drop-shadow-[0_0_40px_currentColor]`}
           data-testid="capot-text"

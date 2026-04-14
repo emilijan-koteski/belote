@@ -46,9 +46,7 @@ export function DeclarationReveal({ payload, onComplete }: DeclarationRevealProp
           <p className="text-text-secondary font-body text-sm mb-1">
             {t("game.declaration.resolved")}
           </p>
-          <p className="text-accent font-display text-3xl font-bold">
-            +{totalValue}
-          </p>
+          <p className="text-accent font-display text-3xl font-bold">+{totalValue}</p>
           <p className="text-text-secondary font-body text-xs mt-1">
             {payload.winnerTeam === 0
               ? t("game.declaration.teamRed")

@@ -10,7 +10,14 @@ interface ScorePanelProps {
   lastTrickTeam?: number;
 }
 
-export function ScorePanel({ redScore, blueScore, redTricks, blueTricks, lastTrickBonus, lastTrickTeam }: ScorePanelProps) {
+export function ScorePanel({
+  redScore,
+  blueScore,
+  redTricks,
+  blueTricks,
+  lastTrickBonus,
+  lastTrickTeam,
+}: ScorePanelProps) {
   const { t } = useTranslation();
   const prefersReducedMotion = useMemo(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -39,7 +46,10 @@ export function ScorePanel({ redScore, blueScore, redTricks, blueTricks, lastTri
     >
       {/* Red team row */}
       <div className="flex items-center justify-between gap-4 mb-1">
-        <span className="text-team-red font-body text-sm font-semibold" data-testid="score-label-red">
+        <span
+          className="text-team-red font-body text-sm font-semibold"
+          data-testid="score-label-red"
+        >
           {t("game.score.red")}
         </span>
         <span
@@ -52,7 +62,10 @@ export function ScorePanel({ redScore, blueScore, redTricks, blueTricks, lastTri
 
       {/* Blue team row */}
       <div className="flex items-center justify-between gap-4 mb-2">
-        <span className="text-team-blue font-body text-sm font-semibold" data-testid="score-label-blue">
+        <span
+          className="text-team-blue font-body text-sm font-semibold"
+          data-testid="score-label-blue"
+        >
           {t("game.score.blue")}
         </span>
         <span

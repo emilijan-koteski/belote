@@ -64,9 +64,7 @@ describe("PlayingCard", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
 
     onClick.mockClear();
-    rerender(
-      <PlayingCard card={kingOfSpades} state="unplayable" size="md" onClick={onClick} />,
-    );
+    rerender(<PlayingCard card={kingOfSpades} state="unplayable" size="md" onClick={onClick} />);
 
     await user.click(screen.getByTestId("playing-card-KS"));
     expect(onClick).not.toHaveBeenCalled();
@@ -75,10 +73,7 @@ describe("PlayingCard", () => {
   it("has correct aria-label for face-up card", () => {
     render(<PlayingCard card={kingOfSpades} state="default" size="md" />);
 
-    expect(screen.getByTestId("playing-card-KS")).toHaveAttribute(
-      "aria-label",
-      "King of Spades",
-    );
+    expect(screen.getByTestId("playing-card-KS")).toHaveAttribute("aria-label", "King of Spades");
   });
 
   it("has correct aria-label for face-down card", () => {
@@ -117,9 +112,7 @@ describe("PlayingCard", () => {
   });
 
   it("has tabIndex={0} when playable, tabIndex={-1} when not", () => {
-    const { rerender } = render(
-      <PlayingCard card={kingOfSpades} state="playable" size="md" />,
-    );
+    const { rerender } = render(<PlayingCard card={kingOfSpades} state="playable" size="md" />);
 
     expect(screen.getByTestId("playing-card-KS")).toHaveAttribute("tabindex", "0");
 

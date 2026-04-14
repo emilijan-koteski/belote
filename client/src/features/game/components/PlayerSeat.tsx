@@ -14,7 +14,15 @@ interface PlayerSeatProps {
   timerDuration?: number;
 }
 
-export function PlayerSeat({ player, isSelf, isActive, teamColor, cardCount, turnExpiresAt, timerDuration }: PlayerSeatProps) {
+export function PlayerSeat({
+  player,
+  isSelf,
+  isActive,
+  teamColor,
+  cardCount,
+  turnExpiresAt,
+  timerDuration,
+}: PlayerSeatProps) {
   const { t } = useTranslation();
 
   const borderColor = teamColor === "red" ? "border-team-red" : "border-team-blue";
@@ -36,9 +44,10 @@ export function PlayerSeat({ player, isSelf, isActive, teamColor, cardCount, tur
 
   const isDisconnected = player.connected === false;
 
-  const activeClasses = isActive && !isDisconnected
-    ? "border-accent shadow-[0_0_16px_var(--color-accent-glow)] motion-safe:animate-pulse"
-    : borderColor;
+  const activeClasses =
+    isActive && !isDisconnected
+      ? "border-accent shadow-[0_0_16px_var(--color-accent-glow)] motion-safe:animate-pulse"
+      : borderColor;
 
   const scaleClass = isSelf ? "scale-110" : "";
   const disconnectedClass = isDisconnected ? "opacity-50 grayscale" : "";
@@ -61,9 +70,7 @@ export function PlayerSeat({ player, isSelf, isActive, teamColor, cardCount, tur
         )}
       </div>
       <span className="font-body text-sm text-text-primary">{displayName}</span>
-      {isSelf && (
-        <span className="font-body text-xs text-accent">{t("game.seat.you")}</span>
-      )}
+      {isSelf && <span className="font-body text-xs text-accent">{t("game.seat.you")}</span>}
       {!isSelf && cardCount !== undefined && cardCount > 0 && (
         <span className="font-body text-xs text-text-secondary">&times;{cardCount}</span>
       )}

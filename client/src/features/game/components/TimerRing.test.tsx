@@ -1,5 +1,5 @@
-import { act,render, screen } from "@testing-library/react";
-import { afterEach,beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TimerRing } from "./TimerRing";
 
@@ -13,9 +13,7 @@ describe("TimerRing", () => {
   });
 
   it("returns null when turnExpiresAt is null", () => {
-    const { container } = render(
-      <TimerRing turnExpiresAt={null} totalDuration={30} />
-    );
+    const { container } = render(<TimerRing turnExpiresAt={null} totalDuration={30} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -23,9 +21,7 @@ describe("TimerRing", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() + 25000); // 25 seconds from now
 
-    render(
-      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />
-    );
+    render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     expect(screen.getByTestId("timer-ring")).toBeInTheDocument();
     const seconds = screen.getByTestId("timer-seconds");
@@ -37,9 +33,7 @@ describe("TimerRing", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() + 20000); // 20 seconds
 
-    render(
-      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />
-    );
+    render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     const seconds = screen.getByTestId("timer-seconds");
     expect(seconds.style.color).toBe("var(--color-text-secondary)");
@@ -49,9 +43,7 @@ describe("TimerRing", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() + 8000); // 8 seconds
 
-    render(
-      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />
-    );
+    render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     const seconds = screen.getByTestId("timer-seconds");
     expect(seconds.style.color).toBe("var(--color-warning)");
@@ -64,9 +56,7 @@ describe("TimerRing", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() - 1000); // already expired
 
-    render(
-      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />
-    );
+    render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     const seconds = screen.getByTestId("timer-seconds");
     expect(seconds.style.color).toBe("var(--color-destructive)");
@@ -77,9 +67,7 @@ describe("TimerRing", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() + 15000); // 15 seconds
 
-    render(
-      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />
-    );
+    render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     const seconds = screen.getByTestId("timer-seconds");
     const initialValue = Number(seconds.textContent);
@@ -97,9 +85,7 @@ describe("TimerRing", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() + 20000);
 
-    render(
-      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />
-    );
+    render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     const ring = screen.getByTestId("timer-ring");
     expect(ring.getAttribute("aria-label")).toMatch(/\d+ seconds remaining/);
@@ -109,9 +95,7 @@ describe("TimerRing", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() + 20000); // 20 seconds, well above 10
 
-    render(
-      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />
-    );
+    render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     const ring = screen.getByTestId("timer-ring");
     expect(ring.className).not.toContain("motion-safe:animate-pulse");
@@ -122,7 +106,7 @@ describe("TimerRing", () => {
     const expiry = new Date(now.getTime() + 5000); // warning state
 
     const { container } = render(
-      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />
+      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />,
     );
 
     const svg = container.querySelector("svg");

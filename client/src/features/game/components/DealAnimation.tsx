@@ -77,12 +77,7 @@ export function DealAnimation({ trumpCandidate }: DealAnimationProps) {
       {/* Trump candidate reveal in center */}
       {(dealPhase === "revealing" || dealPhase === "done") && trumpCandidate && (
         <div className="motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150">
-          <PlayingCard
-            card={trumpCandidate}
-            state="default"
-            size="lg"
-            withTransition={false}
-          />
+          <PlayingCard card={trumpCandidate} state="default" size="lg" withTransition={false} />
         </div>
       )}
     </div>

@@ -37,7 +37,11 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
 
 function renderRoomCard(
   room: Room = makeRoom(),
-  props: { onJoin?: ReturnType<typeof vi.fn>; isExpanded?: boolean; onToggle?: ReturnType<typeof vi.fn> } = {},
+  props: {
+    onJoin?: ReturnType<typeof vi.fn>;
+    isExpanded?: boolean;
+    onToggle?: ReturnType<typeof vi.fn>;
+  } = {},
 ) {
   const onJoin = props.onJoin ?? vi.fn();
   const onToggle = props.onToggle ?? vi.fn();

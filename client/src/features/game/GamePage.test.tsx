@@ -42,10 +42,42 @@ const mockGameState: GameState = {
   awaitingDeclaration: false,
   declarationsResolved: false,
   players: [
-    { hand: [{ rank: "K", suit: "S" }], seat: 0, userId: 10, username: "Alice", team: "red", declarations: [], connected: true },
-    { hand: [{ rank: "7", suit: "H" }], seat: 1, userId: 20, username: "Bob", team: "blue", declarations: [], connected: true },
-    { hand: [{ rank: "A", suit: "D" }], seat: 2, userId: 30, username: "Carol", team: "red", declarations: [], connected: true },
-    { hand: [{ rank: "9", suit: "C" }], seat: 3, userId: 40, username: "Dave", team: "blue", declarations: [], connected: true },
+    {
+      hand: [{ rank: "K", suit: "S" }],
+      seat: 0,
+      userId: 10,
+      username: "Alice",
+      team: "red",
+      declarations: [],
+      connected: true,
+    },
+    {
+      hand: [{ rank: "7", suit: "H" }],
+      seat: 1,
+      userId: 20,
+      username: "Bob",
+      team: "blue",
+      declarations: [],
+      connected: true,
+    },
+    {
+      hand: [{ rank: "A", suit: "D" }],
+      seat: 2,
+      userId: 30,
+      username: "Carol",
+      team: "red",
+      declarations: [],
+      connected: true,
+    },
+    {
+      hand: [{ rank: "9", suit: "C" }],
+      seat: 3,
+      userId: 40,
+      username: "Dave",
+      team: "blue",
+      declarations: [],
+      connected: true,
+    },
   ],
   teamScores: [0, 0],
   handPoints: [0, 0],
@@ -78,7 +110,17 @@ describe("GamePage", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     useGameStore.getState().reset();
-    useAuthStore.setState({ token: "test-token", user: { id: 10, email: "a@b.com", username: "Alice", languagePreference: "en", createdAt: "" }, isLoading: false });
+    useAuthStore.setState({
+      token: "test-token",
+      user: {
+        id: 10,
+        email: "a@b.com",
+        username: "Alice",
+        languagePreference: "en",
+        createdAt: "",
+      },
+      isLoading: false,
+    });
 
     Object.defineProperty(window, "matchMedia", {
       writable: true,

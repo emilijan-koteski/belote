@@ -109,7 +109,13 @@ function dispatchGameEvent(message: WsMessage): void {
         ...current,
         currentTrick: [
           ...current.currentTrick,
-          { card: { rank: rank as "7"|"8"|"9"|"T"|"J"|"Q"|"K"|"A", suit: suit as "S"|"H"|"D"|"C" }, playerSeat: payload.playerSeat },
+          {
+            card: {
+              rank: rank as "7" | "8" | "9" | "T" | "J" | "Q" | "K" | "A",
+              suit: suit as "S" | "H" | "D" | "C",
+            },
+            playerSeat: payload.playerSeat,
+          },
         ],
       });
     }
@@ -199,8 +205,13 @@ function dispatchGameEvent(message: WsMessage): void {
   if (type === EVENT_PLAYER_DISCONNECTED) {
     const payload = message.payload as PlayerDisconnectedPayload;
     const current = store.gameState;
-    const playerName = current?.players[payload.playerSeat]?.username ?? payload.username ?? `Player ${payload.playerSeat + 1}`;
-    toast.warning(i18n.t("game.disconnect.playerDisconnected", { player: playerName }), { duration: 5000 });
+    const playerName =
+      current?.players[payload.playerSeat]?.username ??
+      payload.username ??
+      `Player ${payload.playerSeat + 1}`;
+    toast.warning(i18n.t("game.disconnect.playerDisconnected", { player: playerName }), {
+      duration: 5000,
+    });
     // Full state update follows via event:game_state
     return;
   }
@@ -208,8 +219,11 @@ function dispatchGameEvent(message: WsMessage): void {
   if (type === EVENT_PLAYER_RECONNECTED) {
     const payload = message.payload as PlayerReconnectedPayload;
     const current = store.gameState;
-    const playerName = current?.players[payload.playerSeat]?.username ?? `Player ${payload.playerSeat + 1}`;
-    toast.success(i18n.t("game.disconnect.playerReconnected", { player: playerName }), { duration: 3000 });
+    const playerName =
+      current?.players[payload.playerSeat]?.username ?? `Player ${payload.playerSeat + 1}`;
+    toast.success(i18n.t("game.disconnect.playerReconnected", { player: playerName }), {
+      duration: 3000,
+    });
     // Full state update follows via event:game_state
     return;
   }

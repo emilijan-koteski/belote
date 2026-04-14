@@ -65,7 +65,10 @@ export function MatchResult({ data, onReturnToLobby }: MatchResultProps) {
         </div>
 
         {/* Duration */}
-        <p className="text-text-secondary font-body text-sm mb-6" data-testid="match-result-duration">
+        <p
+          className="text-text-secondary font-body text-sm mb-6"
+          data-testid="match-result-duration"
+        >
           {t("game.matchResult.duration")}: {formattedDuration}
         </p>
 

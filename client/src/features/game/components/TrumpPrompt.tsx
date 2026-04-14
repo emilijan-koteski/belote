@@ -80,52 +80,40 @@ export function TrumpPrompt({
             : t("game.trumpPrompt.titleRound2")}
         </h2>
 
-            {/* Round 1: show trump candidate card */}
-            {biddingRound === 1 && trumpCandidate && (
-              <div className="flex justify-center mb-4">
-                <PlayingCard
-                  card={trumpCandidate}
-                  state="default"
-                  size="lg"
-                  withTransition={false}
-                />
-              </div>
-            )}
+        {/* Round 1: show trump candidate card */}
+        {biddingRound === 1 && trumpCandidate && (
+          <div className="flex justify-center mb-4">
+            <PlayingCard card={trumpCandidate} state="default" size="lg" withTransition={false} />
+          </div>
+        )}
 
-            {/* Round 2: show 4 suit buttons for free selection */}
-            {biddingRound === 2 && (
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                {SUITS.map((suit) => (
-                  <Button
-                    key={suit}
-                    variant="outline"
-                    className={`text-2xl font-display py-4 ${SUIT_COLOR[suit]} hover:bg-accent/10 hover:border-accent`}
-                    onClick={() => onPick(suit)}
-                    data-testid={`trump-prompt-suit-${suit}`}
-                  >
-                    {SUIT_SYMBOL[suit]}
-                  </Button>
-                ))}
-              </div>
-            )}
-
-            <div className="flex gap-3 justify-center">
-              {biddingRound === 1 && (
-                <Button
-                  onClick={() => onPick()}
-                  data-testid="trump-prompt-pick"
-                >
-                  {t("game.trumpPrompt.pick")}
-                </Button>
-              )}
+        {/* Round 2: show 4 suit buttons for free selection */}
+        {biddingRound === 2 && (
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            {SUITS.map((suit) => (
               <Button
-                variant="ghost"
-                onClick={onPass}
-                data-testid="trump-prompt-pass"
+                key={suit}
+                variant="outline"
+                className={`text-2xl font-display py-4 ${SUIT_COLOR[suit]} hover:bg-accent/10 hover:border-accent`}
+                onClick={() => onPick(suit)}
+                data-testid={`trump-prompt-suit-${suit}`}
               >
-                {t("game.trumpPrompt.pass")}
+                {SUIT_SYMBOL[suit]}
               </Button>
-            </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-3 justify-center">
+          {biddingRound === 1 && (
+            <Button onClick={() => onPick()} data-testid="trump-prompt-pick">
+              {t("game.trumpPrompt.pick")}
+            </Button>
+          )}
+          <Button variant="ghost" onClick={onPass} data-testid="trump-prompt-pass">
+            {t("game.trumpPrompt.pass")}
+          </Button>
+        </div>
       </div>
     </div>
   );

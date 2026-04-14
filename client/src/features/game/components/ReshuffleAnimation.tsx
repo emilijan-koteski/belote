@@ -46,9 +46,7 @@ export function ReshuffleAnimation({ onComplete }: ReshuffleAnimationProps) {
             />
           ))}
         </div>
-        <p className="text-text-secondary font-body text-sm">
-          {t("game.reshuffle.message")}
-        </p>
+        <p className="text-text-secondary font-body text-sm">{t("game.reshuffle.message")}</p>
       </div>
     </div>
   );

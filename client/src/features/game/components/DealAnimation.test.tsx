@@ -17,21 +17,13 @@ beforeEach(() => {
 
 describe("DealAnimation", () => {
   it("renders deal animation container", () => {
-    render(
-      <DealAnimation
-        trumpCandidate={{ rank: "K", suit: "H" }}
-      />,
-    );
+    render(<DealAnimation trumpCandidate={{ rank: "K", suit: "H" }} />);
     expect(screen.getByTestId("deal-animation")).toBeInTheDocument();
   });
 
   it("shows trump candidate card when available", () => {
     vi.useFakeTimers();
-    render(
-      <DealAnimation
-        trumpCandidate={{ rank: "K", suit: "H" }}
-      />,
-    );
+    render(<DealAnimation trumpCandidate={{ rank: "K", suit: "H" }} />);
     // Advance to revealing phase
     vi.advanceTimersByTime(900);
     expect(screen.getByTestId("deal-animation")).toBeInTheDocument();
@@ -39,20 +31,12 @@ describe("DealAnimation", () => {
   });
 
   it("renders without trump candidate", () => {
-    render(
-      <DealAnimation
-        trumpCandidate={null}
-      />,
-    );
+    render(<DealAnimation trumpCandidate={null} />);
     expect(screen.getByTestId("deal-animation")).toBeInTheDocument();
   });
 
   it("has aria-label for deal animation", () => {
-    render(
-      <DealAnimation
-        trumpCandidate={{ rank: "K", suit: "H" }}
-      />,
-    );
+    render(<DealAnimation trumpCandidate={{ rank: "K", suit: "H" }} />);
     expect(screen.getByTestId("deal-animation")).toHaveAttribute("aria-label");
   });
 
@@ -66,11 +50,7 @@ describe("DealAnimation", () => {
         removeEventListener: vi.fn(),
       })),
     });
-    render(
-      <DealAnimation
-        trumpCandidate={{ rank: "K", suit: "H" }}
-      />,
-    );
+    render(<DealAnimation trumpCandidate={{ rank: "K", suit: "H" }} />);
     // With reduced motion, deal phase goes to done immediately
   });
 });
