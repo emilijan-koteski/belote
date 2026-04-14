@@ -22,7 +22,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **Vite 8** — dev server + production bundler
 - **Tailwind CSS v4** via `@tailwindcss/vite` plugin — CSS-first configuration only. **No `tailwind.config.js`** — all theming via `@theme` directives in `index.css`
 - **shadcn/ui** — components are owned copies in `src/shared/components/ui/`. Install via `npx shadcn@latest add <component>`, never `npm install`. Never create UI primitive files manually
-- **Zustand** — 4 partitioned stores: `authStore`, `lobbyStore`, `gameStore`, `chatStore`
+- **Zustand** — 5 partitioned stores: `authStore`, `lobbyStore`, `gameStore`, `chatStore`, `roomLobbyStore`
 - **React Router v7**
 - **react-i18next** — JSON translation files, English + Serbian (Latin)
 - **Vitest** — Vite-native testing (Jest-compatible API)
@@ -89,7 +89,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Feature folder organization: `features/auth/`, `features/game/`, `features/lobby/`, `features/profile/`, `features/chat/` — new features get their own folder
 - Components never call `fetch()` directly — all HTTP requests through `shared/api/` client functions via `fetchClient.ts` (handles auth headers, error parsing, token refresh)
 - `fetchClient.ts` owns the entire 401 → refresh → retry cycle — individual API functions never handle 401 themselves. Only if refresh fails does it redirect to login
-- Zustand store partitioning by lifecycle: `authStore` persists across app, `gameStore` wiped on match end, `lobbyStore` active in lobby, `chatStore` active when connected
+- Zustand store partitioning by lifecycle: `authStore` persists across app, `gameStore` wiped on match end, `lobbyStore` active in lobby, `chatStore` active when connected, `roomLobbyStore` active in room lobby (real-time seat/player updates via WS)
 - `gameStore` is wiped on **navigation away from the game page**, not on receiving `game_over` event — final game state must remain available for score reveal and post-game display
 - Each store manages its own `isLoading` boolean — skeleton loaders for lists, no full-page spinners
 - React Error Boundary at app level as safety net

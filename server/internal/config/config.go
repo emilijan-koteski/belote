@@ -24,6 +24,10 @@ func Load() *Config {
 	}
 
 	if cfg.JWTSecret == "" || cfg.JWTSecret == "change-me-in-production" {
+		if cfg.Environment != "development" {
+			slog.Error("BELOTE_JWT_SECRET must be set to a secure value in non-development environments")
+			os.Exit(1)
+		}
 		slog.Warn("BELOTE_JWT_SECRET is not set or uses the default value — do not deploy to production without changing it")
 	}
 

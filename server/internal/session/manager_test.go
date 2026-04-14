@@ -101,10 +101,10 @@ func (r *mockMatchRepo) getMatches() []*match.Match {
 
 func defaultPlayers() [4]room.PlayerSeatInfo {
 	return [4]room.PlayerSeatInfo{
-		{UserID: 10, Seat: 0},
-		{UserID: 20, Seat: 1},
-		{UserID: 30, Seat: 2},
-		{UserID: 40, Seat: 3},
+		{UserID: 10, Username: "player1", Seat: 0},
+		{UserID: 20, Username: "player2", Seat: 1},
+		{UserID: 30, Username: "player3", Seat: 2},
+		{UserID: 40, Username: "player4", Seat: 3},
 	}
 }
 

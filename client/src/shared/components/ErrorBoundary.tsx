@@ -3,6 +3,7 @@ import { Component } from "react";
 
 interface Props {
   children: ReactNode;
+  resetKey?: string;
 }
 
 interface State {
@@ -19,6 +20,12 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true };
   }
 
+  componentDidUpdate(prevProps: Props) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false });
+    }
+  }
+
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
@@ -31,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <h1 className="mb-4 font-display text-2xl text-text-primary">Something went wrong</h1>
             <button
               className="rounded bg-accent px-4 py-2 text-background"
-              onClick={() => this.setState({ hasError: false })}
+              onClick={() => window.location.reload()}
             >
               Try again
             </button>

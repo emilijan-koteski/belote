@@ -102,6 +102,7 @@ function dispatchGameEvent(message: WsMessage): void {
     const payload = message.payload as CardPlayedPayload;
     const current = store.gameState;
     if (current) {
+      if (!payload.cardId || payload.cardId.length < 2) return;
       const rank = payload.cardId[0];
       const suit = payload.cardId[1];
       store.setGameState({

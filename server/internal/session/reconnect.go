@@ -130,7 +130,7 @@ func (m *Manager) HandleDisconnect(userID uint) {
 	// [F1] Capture immutable values and build messages BEFORE unlocking to avoid data races.
 	// The gs pointer aliases session.gameState — concurrent HandleAction could mutate after unlock.
 	playerIDs := session.playerIDs
-	username := "" // D43: server PlayerState has no Username field; client resolves from gameState
+	username := gs.Players[seat].Username
 
 	disconnectPayload := ws.PlayerDisconnectedPayload{
 		PlayerSeat:         seat,

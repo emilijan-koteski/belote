@@ -24,7 +24,7 @@ func NewAppError(code string, message string, status int) *AppError {
 }
 
 func Wrap(err error, appErr *AppError) error {
-	return fmt.Errorf("%s: %w", appErr.Message, err)
+	return fmt.Errorf("%s: %w", appErr.Message, appErr)
 }
 
 // Centralized application errors

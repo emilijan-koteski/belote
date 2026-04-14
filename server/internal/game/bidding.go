@@ -168,6 +168,10 @@ func cloneGameState(state *GameState) *GameState {
 		v := *state.ReconnectExpiresAt
 		newState.ReconnectExpiresAt = &v
 	}
+	if state.LastHandResult != nil {
+		v := *state.LastHandResult
+		newState.LastHandResult = &v
+	}
 
 	// Deep clone slice fields
 	newState.CurrentTrick = slices.Clone(state.CurrentTrick)

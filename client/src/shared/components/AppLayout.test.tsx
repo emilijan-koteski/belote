@@ -3,7 +3,7 @@ import "@/shared/i18n/i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAuthStore } from "@/shared/stores/authStore";
 
@@ -50,6 +50,10 @@ describe("AppLayout", () => {
     });
   });
 
+  afterEach(() => {
+    useAuthStore.setState({ token: null, user: null, isLoading: false });
+  });
+
   it("renders nav bar with all tabs", () => {
     renderWithRouter("/lobby");
 
@@ -65,14 +69,14 @@ describe("AppLayout", () => {
     renderWithRouter("/lobby");
 
     const playTab = screen.getByTestId("nav-play");
-    expect(playTab.className).toContain("border-accent");
+    expect(playTab).toHaveAttribute("aria-current", "page");
   });
 
   it("highlights active tab for /profile", () => {
     renderWithRouter("/profile");
 
     const profileTab = screen.getByTestId("nav-profile");
-    expect(profileTab.className).toContain("border-accent");
+    expect(profileTab).toHaveAttribute("aria-current", "page");
   });
 
   it("renders outlet content", () => {

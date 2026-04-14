@@ -502,7 +502,7 @@ func TestInstantWin_FirstHand(t *testing.T) {
 	// NewGame uses random shuffle — verify it always returns a valid state.
 	// IF instant-win triggers (astronomically unlikely), WinnerTeam must be set.
 	for i := 0; i < 100; i++ {
-		gs := game.NewGame([4]uint{10, 20, 30, 40}, game.VariantBitola, "1001", 1)
+		gs := game.NewGame([4]uint{10, 20, 30, 40}, [4]string{"p1", "p2", "p3", "p4"}, game.VariantBitola, "1001", 1)
 		assert.True(t,
 			gs.Phase == game.PhaseDealing || gs.Phase == game.PhaseMatchEnd,
 			"NewGame should return PhaseDealing or PhaseMatchEnd, got %s", gs.Phase)

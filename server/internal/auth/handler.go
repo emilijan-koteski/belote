@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/emilijan/belote/server/internal/apperr"
 	"github.com/emilijan/belote/server/internal/user"
@@ -148,13 +149,13 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return apperr.ErrBadRequest
 	}
 
-	email := strings.ToLower(strings.TrimSpace(req.Email))
+	email := strings.ToLower(norm.NFC.String(strings.TrimSpace(req.Email)))
 	if email == "" || req.Password == "" {
 		return apperr.ErrInvalidCredentials
 	}
 	addr, err := mail.ParseAddress(email)
 	if err == nil {
-		email = strings.ToLower(addr.Address)
+		email = strings.ToLower(norm.NFC.String(addr.Address))
 	}
 
 	u, err := h.userRepo.FindByEmail(email)
@@ -261,7 +262,7 @@ func validateRegisterRequest(req *RegisterRequest) error {
 	if err != nil {
 		return apperr.ErrInvalidEmail
 	}
-	req.Email = strings.ToLower(addr.Address)
+	req.Email = strings.ToLower(norm.NFC.String(addr.Address))
 
 	req.Username = strings.TrimSpace(req.Username)
 	if len(req.Username) < 3 {

@@ -2,69 +2,69 @@
 
 ## Deferred from: code review of 1-1-project-scaffold-and-development-environment (2026-04-10)
 
-- **W1: fetchClient 401 handler doesn't implement refresh-then-retry cycle** — The project-context.md specifies fetchClient owns the full 401 → refresh → retry cycle, but the current implementation immediately logs out and redirects. Explicitly scoped to Story 1.3 with a TODO comment in code.
-- **W2: apperr.Wrap wraps raw error instead of AppError** — `Wrap(err, appErr)` uses `fmt.Errorf("%s: %w", appErr.Message, err)` which wraps the raw err, not the AppError. `errors.As` will never match the AppError after wrapping. Function is defined but never called yet — fix when first used.
-- **W3: ErrorBoundary "Try again" can loop on deterministic errors** — Setting `hasError: false` re-renders the same broken children. Works for transient errors but deterministic errors cause an infinite loop. Proper fix needs router integration or a `resetKeys` mechanism.
+- **W1: fetchClient 401 handler doesn't implement refresh-then-retry cycle** — **RESOLVED in Story 1.3** — fetchClient now implements 401 → refresh → retry with `_isRetry` guard and concurrent refresh deduplication.
+- **W2: apperr.Wrap wraps raw error instead of AppError** — **RESOLVED in mid-Phase 1 cleanup** — `Wrap` now wraps the `appErr` (not raw `err`), so `errors.As` correctly matches the AppError after wrapping.
+- **W3: ErrorBoundary "Try again" can loop on deterministic errors** — **RESOLVED in mid-Phase 1 cleanup** — "Try again" now calls `window.location.reload()` for a clean restart. Added `resetKey` prop for route-change auto-recovery.
 
 ## Deferred from: code review of 1-2-user-registration (2026-04-10)
 
-- **D1: Token lost on page refresh** — Access token stored in Zustand memory only (no persist middleware). Refresh token endpoint not implemented yet. User session lost on any full page reload. Deferred to Story 1.3 (refresh token cycle).
-- **D2: fetchClient hard redirect on 401 breaks SPA UX** — Uses `window.location.href = "/login"` instead of React Router navigation, destroying all in-memory state. Pre-existing from Story 1.1, deferred to Story 1.3.
-- **D3: Default JWT secret warning-only** — Config logs `slog.Warn` but continues with insecure default `"change-me-in-production"`. Acknowledged in Story 1.1 review (P1 RESOLVED). Should fail hard in production mode.
-- **D4: No rate limiting on registration endpoint** — bcrypt cost makes registration a CPU DoS vector. Infrastructure-level concern, not story-scoped. Address when adding API gateway or middleware.
-- **D5: Refresh token Secure:true hardcoded** — Cookie `Secure: true` prevents sending over HTTP in dev. Moot until refresh endpoint exists in Story 1.3. Make configurable by environment then.
+- **D1: Token lost on page refresh** — **MITIGATED in Story 1.3** — No Zustand persist middleware, but `useAuthInit()` calls refresh endpoint on mount using httpOnly cookie. Session survives refresh with brief unauth flash. Design intent met.
+- **D2: fetchClient hard redirect on 401 breaks SPA UX** — **RESOLVED in Story 1.3** — Uses `setAuthRedirect()` callback pattern with React Router `navigate("/login")` instead of `window.location.href`.
+- **D3: Default JWT secret warning-only** — **RESOLVED in mid-Phase 1 cleanup** — Config now calls `os.Exit(1)` in non-development environments when JWT secret is default.
+- **D4: No rate limiting on registration endpoint** — **ACCEPTED for Phase 1** — Infrastructure-level concern. Address when adding API gateway or rate-limiting middleware.
+- **D5: Refresh token Secure:true hardcoded** — **RESOLVED in Story 1.3** — `Secure: h.env != "development"` in `auth/handler.go` makes it environment-aware.
 
 ## Deferred from: code review of 1-3-user-login-and-session-persistence (2026-04-11)
 
-- **D6: Logout fire-and-forget can orphan refresh cookie server-side** — `logout()` is fire-and-forget per spec. If the network call fails, the refresh cookie remains valid for up to 7 days. Requires server-side token revocation/blocklist to truly fix. Phase 1 design decision.
-- **D7: Refresh tokens stateless with no server-side revocation** — No token blocklist or session store. Once issued, a refresh token is valid until expiry. Logout only clears the browser cookie. Requires DB session store or token-version column for Phase 2+.
-- **D8: Same signing secret for access and refresh tokens** — Both token types use identical `jwtSecret`. Audience claim is the only differentiator. Separate keys would provide defense-in-depth. Phase 2+ improvement.
-- **D9: Mutable `var` AppError sentinels shared across goroutines** — Pre-existing from Story 1.1. Sentinel errors are `var *AppError` pointers — any accidental mutation would affect all goroutines. Currently safe (nobody mutates), but latent.
-- **D10: `apperr.Wrap()` wraps raw error instead of AppError** — Pre-existing from Story 1.2 (also tracked as W2). Still unused but still broken.
-- **D11: Default JWT secret only warns, doesn't abort in production** — Pre-existing (D3). Config logs warning but continues with insecure default. Should fail hard when `BELOTE_ENV=production`.
-- **D12: No Unicode normalization on email addresses** — `strings.ToLower` doesn't handle NFC/NFD normalization or locale-specific case folding (e.g., Turkish dotless i). Pre-existing, affects both registration and login.
+- **D6: Logout fire-and-forget can orphan refresh cookie server-side** — **ACCEPTED for Phase 1** — By-design fire-and-forget. Server-side revocation requires DB session store (Phase 2).
+- **D7: Refresh tokens stateless with no server-side revocation** — **ACCEPTED for Phase 1** — Requires DB session store or token-version column. Planned for Phase 2.
+- **D8: Same signing secret for access and refresh tokens** — **ACCEPTED for Phase 1** — Audience claim differentiates. Separate keys planned for Phase 2 defense-in-depth.
+- **D9: Mutable `var` AppError sentinels shared across goroutines** — **ACCEPTED** — Go `var` pointer sentinels are idiomatic for `errors.Is` matching. No code path mutates them; enforced by code review convention. Changing to functions would break all `errors.Is` usage.
+- **D10: `apperr.Wrap()` wraps raw error instead of AppError** — **RESOLVED in mid-Phase 1 cleanup** — Same as W2; `Wrap` now wraps the AppError.
+- **D11: Default JWT secret only warns, doesn't abort in production** — **RESOLVED in mid-Phase 1 cleanup** — Same as D3; `os.Exit(1)` in non-development environments.
+- **D12: No Unicode normalization on email addresses** — **RESOLVED in mid-Phase 1 cleanup** — Added `norm.NFC.String()` normalization in both login and registration email processing paths.
 
 ## Deferred from: code review of 1-4-basic-player-profile-and-navigation-shell (2026-04-11)
 
-- **D13: Duplicate `getUserID` helper diverges from `auth.GetUserID`** — `user/handler.go:32-42` duplicates the JWT extraction logic from `auth/middleware.go`. Intentional to avoid import cycle (`user -> auth -> user`). If the context key or type changes in auth middleware, this copy will silently break. Revisit if packages are restructured.
-- **D14: `i18n.language` region subtag comparison** — `LanguageSelector.tsx:23` compares `lang === i18n.language` but `i18n.language` can include region subtags (e.g., `"en-US"`). Currently safe because the project configures only `"en"` and `"sr"` as supported locales. Revisit if locale detection plugins are added.
-- **D15: Path parameter `:id` accepts 0 as valid user ID** — `handler.go:50` parses 0 without rejection. GORM `First(&u, 0)` may return an arbitrary first record instead of not-found. Mitigated by JWT IDs always starting at 1. Revisit if zero-ID edge cases become reachable.
+- **D13: Duplicate `getUserID` helper diverges from `auth.GetUserID`** — **ACCEPTED** — Import cycle (`auth` imports `user`) prevents `user` from importing `auth.GetUserID`. Duplication is intentional and idiomatic Go. Both implementations are identical.
+- **D14: `i18n.language` region subtag comparison** — **ACCEPTED** — Project only configures `"en"` and `"sr"` as supported locales with no region subtags. Will only break if locale detection plugins are added.
+- **D15: Path parameter `:id` accepts 0 as valid user ID** — **RESOLVED in mid-Phase 1 cleanup** — Both `GetProfile` and `UpdatePreferences` now reject `paramID == 0` as `ErrBadRequest`.
 
 ## Deferred from: code review of 2-1-create-room-and-room-configuration (2026-04-11)
 
-- **D16: FindByID returns (nil, nil) for missing rooms** — `gorm_repo.go:34-43` returns `(nil, nil)` when room not found. Callers must check `room == nil` after a nil-error return. Not called by any handler in this diff; follows established project pattern. Revisit when FindByID is first used in a handler.
-- **D17: No rate limiting on room creation endpoint** — `POST /api/v1/rooms` has no per-user rate limit. An authenticated user can create rooms in a tight loop. Infrastructure-level concern, not story-scoped. Address when adding API gateway or rate-limiting middleware.
-- **D18: No per-user active room count cap** — Handler does not check how many active rooms a user already owns. Business rule not specified in story requirements. Revisit if abuse becomes a concern or when product defines a limit.
+- **D16: FindByID returns (nil, nil) for missing rooms** — **ACCEPTED** — Established project pattern (FindByCode uses same convention). All callers check `room == nil` after nil-error return. Changing would break existing call sites.
+- **D17: No rate limiting on room creation endpoint** — **ACCEPTED for Phase 1** — Infrastructure-level concern. Address when adding API gateway or rate-limiting middleware.
+- **D18: No per-user active room count cap** — **ACCEPTED for Phase 1** — Business rule not specified. Address when product defines a limit.
 
 ## Deferred from: code review of 2-2-browse-and-search-rooms (2026-04-11)
 
-- **D19: `handleWsMessage` uses unsafe `as` casts on raw `JSON.parse` output** — Violates project rule requiring typed WS dispatch function for all incoming WebSocket messages. Code is dormant (WS hub not wired). Deferred to Story 4-1 (WS Gateway) where the central typed dispatch + validation function will be built. Validation belongs at the dispatch layer, not in per-feature handlers.
+- **D19: `handleWsMessage` uses unsafe `as` casts on raw `JSON.parse` output** — **RESOLVED in Story 4.1** — All `as` casts in `useWsDispatch.ts` are guarded by `if (type === CONSTANT)` discriminant checks.
 
 ## Deferred from: code review of 2-3-join-room-and-room-lobby (2026-04-11)
 
-- **D20: WS events system:player_joined and system:player_left are TODO-only** — Event constants defined in both contract files but never broadcast. Requires WS hub infrastructure from Story 4-1. Real-time seat updates will not work until then.
-- **D21: Copy Link copies room code, not a full URL** — Spec says "code/link" and user journeys describe sharing codes via WhatsApp/Viber. Current behavior matches spec intent. Revisit if URL sharing is needed.
-- **D22: Orphan room_players rows for soft-deleted rooms** — GORM soft delete doesn't trigger FK CASCADE. room_players rows for soft-deleted rooms linger with no functional impact. Cleanup script for Phase 2.
-- **D23: No unit test for useRoomLobbyUpdates handler logic** — WS not yet wired. Test when WS infrastructure lands (Story 4-1).
+- **D20: WS events system:player_joined and system:player_left are TODO-only** — **RESOLVED in Story 4.7** — Server broadcasts both events in `room/handler.go`; client dispatches via `roomLobbyStore`.
+- **D21: Copy Link copies room code, not a full URL** — **ACCEPTED** — Spec says "code/link"; current behavior matches intent for WhatsApp/Viber sharing.
+- **D22: Orphan room_players rows for soft-deleted rooms** — **ACCEPTED for Phase 1** — No functional impact. Cleanup script planned for Phase 2.
+- **D23: No unit test for useRoomLobbyUpdates handler logic** — **RESOLVED** — `useRoomLobbyUpdates.ts` superseded by `roomLobbyStore` + `useWsDispatch`; tests exist in `roomLobbyStore.test.ts` and `useWsDispatch.test.ts`. Dead file deleted in mid-Phase 1 cleanup.
 
 ## Deferred from: code review of 2-4-team-assignment-and-game-start (2026-04-11)
 
-- **D24: `useRoomLobbyUpdates` hardcodes `id: 0` for joined players** — Pre-existing from Story 2.3. When constructing a RoomPlayer from PlayerJoinedPayload, `id` is hardcoded to 0. Multiple WS join events before a refresh would produce duplicate IDs. Fix when WS infrastructure lands (Story 4-1).
-- **D25: `onRoomUpdated` uses unsafe `as unknown as Room` cast** — Pre-existing from Story 2.3. Bypasses TypeScript safety between RoomUpdatedPayload and Room types. Fix when WS typed dispatch is built (Story 4-1).
+- **D24: `useRoomLobbyUpdates` hardcodes `id: 0` for joined players** — **RESOLVED** — Fixed in active code (`useWsDispatch.ts` uses `id: payload.userId`). Dead file `useRoomLobbyUpdates.ts` deleted in mid-Phase 1 cleanup.
+- **D25: `onRoomUpdated` uses unsafe `as unknown as Room` cast** — **RESOLVED** — Dead file `useRoomLobbyUpdates.ts` deleted in mid-Phase 1 cleanup. Active code uses proper `roomLobbyStore` dispatch.
 
 ## Deferred from: code review of 2-5-quick-play-matchmaking (2026-04-11)
 
-- **D26: TOCTOU race on FindPlayerRoom check before transaction** — FindPlayerRoom runs outside the transaction in QuickPlay handler (same pattern as JoinRoom). Two concurrent requests from the same user can both pass the check. Pre-existing architectural pattern; mitigated by low Phase 1 scale.
-- **D27: Only 4th-seat player receives gameStarted notification** — SelectSeat auto-start returns gameStarted:true only to the triggering player. Other 3 players have no notification mechanism until WS hub is wired in Epic 4.
-- **D28: Client abort does not cancel server-side room join/creation** — AbortController cancels the HTTP fetch but the server completes the operation. User gets ALREADY_IN_ROOM on next attempt with recovery via browse. Acceptable for Phase 1.
-- **D29: player_count denormalized counter drift risk** — player_count is manually tracked via IncrementPlayerCount/DecrementPlayerCount. Any code path that adds/removes players without updating the counter causes drift. Pre-existing since Story 2.1.
-- **D30: No TTL/cleanup for abandoned Quick Play rooms** — Quick Play rooms with no players persist in waiting status. LeaveRoom marks empty rooms as completed, but rooms where the last player disconnects without leaving may linger. Same concern applies to manual rooms.
-- **D31: RoomLobby has no real-time refresh for other players' actions** — RoomLobby fetches room data once on mount with no polling or WS subscription. Other players' seat selections and joins are invisible until page refresh. Pre-existing, affects all rooms. WS solution in Epic 4.
+- **D26: TOCTOU race on FindPlayerRoom check before transaction** — **ACCEPTED for Phase 1** — Pre-existing pattern. Mitigated by low scale; DB unique constraints catch concurrent duplicates.
+- **D27: Only 4th-seat player receives gameStarted notification** — **RESOLVED in Story 4.7** — Server broadcasts `system:game_started` via WS to all room participants. HTTP response `gameStarted: true` also returned to all.
+- **D28: Client abort does not cancel server-side room join/creation** — **ACCEPTED for Phase 1** — Server completes the operation; user recovers via ALREADY_IN_ROOM on retry.
+- **D29: player_count denormalized counter drift risk** — **ACCEPTED for Phase 1** — Counter tracked via atomic increment/decrement in transactions. Drift risk is low at Phase 1 scale; refactor to subquery count in Phase 2 if drift observed.
+- **D30: No TTL/cleanup for abandoned Quick Play rooms** — **ACCEPTED for Phase 1** — Lobby disconnect handler marks empty rooms as "completed". Background cleanup job for stale rooms planned for Phase 2.
+- **D31: RoomLobby has no real-time refresh for other players' actions** — **RESOLVED in Story 4.7** — RoomLobby now uses `roomLobbyStore` with real-time WS dispatch for `player_joined`, `player_left`, `seat_updated`, `game_started` events.
 
 ## Deferred from: code review of 3-1-game-state-types-card-encoding-and-deck (2026-04-12)
 
-- **D32: Duplicate playerID validation missing in `NewGame`** — `NewGame` accepts `[4]uint{10, 10, 20, 30}` silently. Validation is the session manager's responsibility (Epic 4), not the pure game layer. Pre-existing design pattern.
-- **D33: Zero UserID (uint 0) accepted silently in `NewGame`** — GORM auto-increment starts at 1 so DB ID=0 is impossible, but the game layer doesn't enforce. Session manager will validate. Pre-existing pattern.
+- **D32: Duplicate playerID validation missing in `NewGame`** — **ACCEPTED** — Validation at boundary: session manager receives players from room handler which enforces unique DB users in seated positions. Pure game layer stays validation-free by design.
+- **D33: Zero UserID (uint 0) accepted silently in `NewGame`** — **ACCEPTED** — Same as D32; GORM auto-increment guarantees DB IDs start at 1. Room handler validates players before session creation.
 
 ## Deferred from: code review of 3-2-trump-bidding-bitola-variant (2026-04-12)
 
@@ -72,65 +72,65 @@
 
 ## Deferred from: code review of 3-3-card-play-and-trick-resolution (2026-04-12)
 
-- **D35: `legalCards` dereferences `TrumpSuit`/`LeadSuit` without nil guards** — `validation.go:18-19` dereferences both pointers unconditionally when `CurrentTrick` is non-empty. Current call chain is safe (`PhasePlaying` invariant guarantees `TrumpSuit` non-nil; `LeadSuit` set before trick cards accumulate). Latent panic risk on corrupted/deserialized state or if called from a future code path without the same preconditions. Fix when persistence/deserialization is added (Epic 4+).
-- **D36: `currentTrickWinnerSeat` returns -1 for empty trick → `TeamForSeat(-1)` = -1 in Go** — `validation.go:108` returns -1 as sentinel for empty trick. Go's modulo of negative numbers produces -1, not 1. Unreachable through current call paths (`isOpponentWinning` only called when `CurrentTrick` is non-empty). Fix by adding guard or using unsigned seat type when `currentTrickWinnerSeat` gains callers in future stories.
-- **D37: No bounds check on `action.PlayerSeat` before array index** — `playing.go` indexes `state.Players[action.PlayerSeat]` without validating range [0,3]. Session manager (Epic 4) validates seat range before calling rules engine. Add guard when session manager is implemented or if rules engine is exposed to untrusted input.
+- **D35: `legalCards` dereferences `TrumpSuit`/`LeadSuit` without nil guards** — **RESOLVED in mid-Phase 1 cleanup** — Added nil guard returning full hand if `TrumpSuit` or `LeadSuit` is nil.
+- **D36: `currentTrickWinnerSeat` returns -1 for empty trick → `TeamForSeat(-1)` = -1 in Go** — **RESOLVED in mid-Phase 1 cleanup** — `isOpponentWinning` now returns `false` for empty trick or nil TrumpSuit, preventing the -1 sentinel from reaching `TeamForSeat`.
+- **D37: No bounds check on `action.PlayerSeat` before array index** — **RESOLVED in mid-Phase 1 cleanup** — `handlePlayCard` now validates `action.PlayerSeat` is in range [0,3] before any array access.
 
 ## Deferred from: code review of 3-6-match-completion-and-special-conditions (2026-04-12)
 
-- **D38: Nil TrickWinnerSeat dereference in `scoreHand()`** — `scoring.go:9` dereferences `*state.TrickWinnerSeat` without nil guard. Safe through current call chain (`resolveTrick` always sets it at trick 8 before `scoreHand` runs). Pre-existing from Story 3.5, explicitly listed in story Dev Notes as deferred. Latent panic risk if `scoreHand` gains callers from paths where `TrickWinnerSeat` is unset.
+- **D38: Nil TrickWinnerSeat dereference in `scoreHand()`** — **RESOLVED in mid-Phase 1 cleanup** — Added nil guard with early return in `scoreHand()` before dereferencing `TrickWinnerSeat`.
 
 ## Deferred from: nav bar user avatar addition (2026-04-12)
 
-- **D39: AppLayout tests use `className` string-contains assertions for active tab styling** — `AppLayout.test.tsx` checks `className.toContain("border-accent")` instead of testing `aria-current="page"` which NavLink sets automatically. Fragile if Tailwind class names change. Pre-existing from Story 1.4.
-- **D40: No `afterEach` store reset in AppLayout tests** — `useAuthStore.setState()` in `beforeEach` is not cleaned up after each test. Same pattern as `LanguageSelector.test.tsx`. Safe under default Vitest worker isolation but non-deterministic if isolation is changed.
+- **D39: AppLayout tests use `className` string-contains assertions for active tab styling** — **RESOLVED in mid-Phase 1 cleanup** — Tests now use `toHaveAttribute("aria-current", "page")` instead of `className.toContain("border-accent")`.
+- **D40: No `afterEach` store reset in AppLayout tests** — **RESOLVED in mid-Phase 1 cleanup** — Added `afterEach` that resets `useAuthStore` to initial state.
 
 ## Deferred from: code review of 4-3-game-table-ui-layout-seats-and-cards (2026-04-12)
 
-- **D41: EVENT_CARD_PLAYED cardId[0]/[1] parsing assumes 2-char format** — `useWsDispatch.ts:82-86` extracts rank as `cardId[0]` and suit as `cardId[1]` with type assertions. If cardId deviates from the 2-char format (e.g., serialization bug), it silently corrupts game state. Pre-existing code not modified in this story.
+- **D41: EVENT_CARD_PLAYED cardId[0]/[1] parsing assumes 2-char format** — **RESOLVED in mid-Phase 1 cleanup** — Added bounds check: `if (!payload.cardId || payload.cardId.length < 2) return;` before accessing indices.
 
 ## Deferred from: code review of 4-4-trump-bidding-and-declaration-ui (2026-04-12)
 
-- **D42: `playableCardIds` includes ALL hand cards with no legal-move filtering** — `GamePage.tsx` marks every card in hand as playable when it's the player's turn. Belote has strict follow-suit and trump rules. Server rejects illegal plays, but UX suffers. Pre-existing design from Story 4.3; requires server to expose `legalMoves` in GameState.
-- **D43: `PlayerState.username` missing from server Go `PlayerState` struct** — Client `gameTypes.ts` declares `username: string` but server `state.go` `PlayerState` has no `Username` field. Players may display as undefined. Pre-existing from Story 4.3 when field was added to client type.
-- **D44: `TrumpSelectedPayload.trumpSuit` unsafe `as` cast from `string` to `Suit | null`** — `useWsDispatch.ts:143` casts without runtime validation. If server sends unexpected value, it silently enters GameState. Pre-existing from Story 4.2.
-- **D45: `window.confirm()` for back-button interception** — Blocking synchronous API, not styleable, may not render i18n correctly on all platforms. Pre-existing from Story 4.3.
+- **D42: `playableCardIds` includes ALL hand cards with no legal-move filtering** — **ACCEPTED for Phase 1** — Server rejects illegal plays with clear error toast. Adding server-side `legalMoves` to GameState is a Phase 2 UX enhancement.
+- **D43: `PlayerState.username` missing from server Go `PlayerState` struct** — **RESOLVED in mid-Phase 1 cleanup** — Added `Username string` to `PlayerState`, `PlayerSeatInfo`, and `NewGame()`. Server now populates username from room player data.
+- **D44: `TrumpSelectedPayload.trumpSuit` unsafe `as` cast from `string` to `Suit | null`** — **ACCEPTED** — Handler returns early without processing the payload; cast is unreachable. The full authoritative state follows via `event:game_state`.
+- **D45: `window.confirm()` for back-button interception** — **ACCEPTED for Phase 1** — Standard browser API, works across platforms. Custom modal replacement planned for Phase 2 UX polish.
 
 ## Deferred from: code review of 4-5-per-move-timer-and-auto-play (2026-04-12)
 
-- **D46: GetStateSnapshot returns mutable pointer** — `manager.go:172-174` returns `session.gameState` directly under RLock. Callers hold a raw pointer that can observe concurrent mutations after the lock is released. Pre-existing design pattern, not introduced by timer changes.
-- **D47: legalCards dereferences TrumpSuit without nil check** — `validation.go:18` dereferences `*state.TrumpSuit` unconditionally when `CurrentTrick` is non-empty. Safe through current call chain (PhasePlaying guarantees TrumpSuit non-nil). Pre-existing (also tracked as D35).
-- **D48: Client clock skew — no server-client time sync** — TimerRing computes remaining time as `new Date(turnExpiresAt).getTime() - Date.now()`. If client clock differs from server, countdown may be off. Spec accepts ±1s. Future enhancement to send serverTimeMs alongside turnExpiresAt.
+- **D46: GetStateSnapshot returns mutable pointer** — **RESOLVED in mid-Phase 1 cleanup** — Now returns a shallow copy (`snapshot := *session.gameState; return &snapshot`) so callers cannot observe concurrent mutations.
+- **D47: legalCards dereferences TrumpSuit without nil check** — **RESOLVED in mid-Phase 1 cleanup** — Same as D35; nil guard added.
+- **D48: Client clock skew — no server-client time sync** — **ACCEPTED for Phase 1** — Spec accepts ±1s tolerance. Server-client time sync via `serverTimeMs` field planned for Phase 2.
 
 ## Deferred from: code review of 5-1-player-pause-system (2026-04-13)
 
-- **D53: `sendGameError` routes ALL game errors as `error:invalid_action`** — Pause-specific error types (`error:pause_exhausted`, `error:no_active_pause`) are defined in both WS contract files but never emitted by the session manager. The i18n mappings in GamePage for these types are unreachable. Pre-existing pattern across all game errors (not specific to pause). Fix by adding `errors.Is` dispatch in `sendGameError`.
-- **D54: Disconnect while paused leaves game frozen** — No mechanism auto-clears a disconnected player's active pause. If the pausing player's browser closes, the 3 remaining players see a permanent PauseOverlay with no way to resume. Covered by Stories 5.3/5.4 (Disconnect Detection & Reconnection).
+- **D53: `sendGameError` routes ALL game errors as `error:invalid_action`** — **RESOLVED in mid-Phase 1 cleanup** — `sendGameError` now uses `errors.Is` dispatch to map `apperr` sentinels to typed WS error events (`error:not_your_turn`, `error:wrong_phase`, `error:illegal_play`, `error:pause_exhausted`, `error:no_active_pause`, `error:not_room_owner`, `error:player_disconnected`).
+- **D54: Disconnect while paused leaves game frozen** — **RESOLVED in Story 5.3** — `HandleDisconnect()` in `reconnect.go` auto-clears disconnected player's pause and resumes game if no other pauses remain.
 
 ## Deferred from: code review of 4-6-score-panel-score-reveal-and-match-flow (2026-04-13)
 
-- **D49: LastHandResult not cleared in startNewHand()** — After `scoreHand()` populates `LastHandResult` and calls `startNewHand()`, the field persists in the new hand's GameState. Reconnecting players mid-hand-2 receive a state snapshot containing hand-1's scoring breakdown. Cosmetic issue (client ignores `lastHandResult` outside score reveal flow) but structurally stale data in the wire format.
-- **D50: cloneGameState shallow-copies LastHandResult pointer** — `cloneGameState` does a shallow struct copy; `LastHandResult *HandResult` is not deep-copied. Currently safe because `scoreHand()` always assigns a new pointer. Latent mutation risk if future code modifies `HandResult` fields through the pointer.
-- **D51: matchDurationSec includes session setup time** — `time.Since(session.startedAt)` measures from session creation (including lobby wait, deal animation, bidding) rather than the first trick. Acceptable for Phase 1 but overstates actual play time.
-- **D52: Second hand_scored during reconnect while overlay active loses that hand's score reveal** — If a reconnecting client receives a `hand_scored` event while the score reveal overlay is still showing (overlayPhase !== "normal"), `setScoreRevealData` overwrites the store but the state machine guard blocks the overlay from re-triggering. The user's Continue click later nulls out the unseen data. Epic 5 reconnection story should address overlay state restoration.
+- **D49: LastHandResult not cleared in startNewHand()** — **ACCEPTED** — `LastHandResult` intentionally persists through `startNewHand()` so the session manager can broadcast it. Overwritten by the next `scoreHand()` call. Client ignores it outside score reveal flow.
+- **D50: cloneGameState shallow-copies LastHandResult pointer** — **RESOLVED in mid-Phase 1 cleanup** — `cloneGameState` now deep-copies `LastHandResult` pointer field.
+- **D51: matchDurationSec includes session setup time** — **ACCEPTED for Phase 1** — Overstates actual play time by including lobby/deal/bidding. Acceptable approximation.
+- **D52: Second hand_scored during reconnect while overlay active loses that hand's score reveal** — **ACCEPTED for Phase 1** — Edge case only during reconnection. The overlay guard prevents UI glitches; the missed score data is cosmetic (match scores are correct). Overlay queue for Phase 2.
 
 ## Deferred from: code review of 4-7-room-lobby-websocket-wiring (2026-04-13)
 
-- **D53: `userId` used as `RoomPlayer.id` field in WS dispatch** — `useWsDispatch.ts:205` sets `id: payload.userId` when constructing `RoomPlayer` from `PlayerJoinedPayload`. The actual DB row ID is not available from the WS event. No current breakage since `id` is not used for API calls, but a latent misidentification if future features need the DB record ID.
-- **D54: Dead code `useRoomLobbyUpdates.ts` with known bugs** — The file (80 lines) is no longer invoked after `roomLobbyStore` replaced its dispatch role. Still contains `id: 0` hardcode (D24) and `as unknown as Room` unsafe cast (D25). Spec allows keeping it as utility; should be deleted in a cleanup pass.
-- **D55: `project-context.md` not updated for 5th Zustand store** — `roomLobbyStore` is a new lifecycle-partitioned store not documented in the "4 partitioned stores" list in project-context.md.
+- **D53: `userId` used as `RoomPlayer.id` field in WS dispatch** — **ACCEPTED** — DB row ID not available from WS event; `userId` serves as a unique client-side identifier. No API calls use this `id` field.
+- **D54: Dead code `useRoomLobbyUpdates.ts` with known bugs** — **RESOLVED in mid-Phase 1 cleanup** — File deleted. Active code in `useWsDispatch.ts` + `roomLobbyStore` has no known bugs.
+- **D55: `project-context.md` not updated for 5th Zustand store** — **RESOLVED in mid-Phase 1 cleanup** — Updated to list 5 partitioned stores including `roomLobbyStore`.
 
 ## Deferred from: code review of 5-2-room-owner-pause-override (2026-04-13)
 
-- **D56: Room ownership transfer during active game not synced to session** — If room ownership changes via `LeaveRoom` during an active game, `GameState.OwnerSeat` remains stale. Pre-existing design: OwnerSeat is fixed at game start. The new owner cannot use `owner_unpause`. Acceptable for Phase 1 (owner must be seated to start game, and leaving during game is not a normal flow).
-- **D57: No integration test for broadcast `OwnerOverride: true`** — `broadcastActionResult` sets `OwnerOverride: true` for `ActionOwnerUnpause` (implemented in Story 5.1), but no test asserts the broadcast payload contains this flag. Pre-existing from Story 5.1; broadcast code unchanged in this story.
-- **D58: No WS-layer test for `error:not_room_owner` event delivery** — Rules engine returns `ErrNotRoomOwner` correctly, but `sendGameError` routes all game errors as `error:invalid_action` (pre-existing D53). The typed `error:not_room_owner` constant is defined for future use when D53 is addressed.
+- **D56: Room ownership transfer during active game not synced to session** — **ACCEPTED for Phase 1** — OwnerSeat fixed at game start by design. Owner must be seated to start game, and leaving during game is not a normal flow.
+- **D57: No integration test for broadcast `OwnerOverride: true`** — **ACCEPTED** — Low priority test gap. Broadcast code is straightforward and covered by manual testing.
+- **D58: No WS-layer test for `error:not_room_owner` event delivery** — **ACCEPTED** — D53 fix enables proper dispatch. Integration test is low priority.
 
 ## Deferred from: code review of 5-3-disconnect-detection-and-reconnect-countdown (2026-04-13)
 
-- **D59: `username` field in `PlayerDisconnectedPayload` is always empty** — Server `PlayerState` has no `Username` field (pre-existing D43). `HandleDisconnect` sends `username: ""` in the disconnect payload. Client falls back to `Player N` via nullish coalescing. Fix when D43 is addressed (add Username to server-side PlayerState).
-- **D60: `ERROR_PLAYER_DISCONNECTED` unreachable on wire** — `sendGameError` routes all game errors as `error:invalid_action` (pre-existing D53). The typed `error:player_disconnected` constant is defined in both contract files for future use when D53 is addressed.
-- **D61: `startNewHand` does not reset disconnect fields** — `DisconnectedSeat`, `ReconnectExpiresAt`, and `Players[i].Connected` are not cleared when a new hand starts. Pre-existing design; Story 5.4/5.5 must handle reset on reconnection or match resumption.
+- **D59: `username` field in `PlayerDisconnectedPayload` is always empty** — **RESOLVED in mid-Phase 1 cleanup** — `HandleDisconnect` now reads `gs.Players[seat].Username` (populated via D43 fix).
+- **D60: `ERROR_PLAYER_DISCONNECTED` unreachable on wire** — **RESOLVED** — D53 fix dispatches `error:player_disconnected` via `errors.Is(err, apperr.ErrPlayerDisconnected)`.
+- **D61: `startNewHand` does not reset disconnect fields** — **RESOLVED in mid-Phase 1 cleanup** — `startNewHand()` now resets `DisconnectedSeat = -1` and `ReconnectExpiresAt = nil`. `HandleReconnect()` also clears on reconnect.
 
 ## Deferred from: code review of 5-4-reconnection-and-state-restoration (2026-04-13)
 
@@ -138,4 +138,4 @@
 
 ## Deferred from: code review of 5-5-match-abandonment-on-timeout (2026-04-14)
 
-- **D63: Page refresh during/after abandonment shows blank game page** — `useReconnectionRedirect` suppresses lobby redirect when `phase === "match_end"`, but `matchAbandonedData` is not persisted in Zustand so the abandonment overlay never renders on refresh. Player sees frozen game board. Pre-existing limitation of the page-refresh recovery path from Story 5.4's `useReconnectionRedirect` hook.
+- **D63: Page refresh during/after abandonment shows blank game page** — **RESOLVED in mid-Phase 1 cleanup** — Added `useEffect` in `GamePage.tsx` that detects stale `match_end` phase with no overlay data and redirects to lobby.

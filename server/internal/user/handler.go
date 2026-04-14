@@ -49,7 +49,7 @@ func (h *UserHandler) GetProfile(c echo.Context) error {
 	}
 
 	paramID, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
+	if err != nil || paramID == 0 {
 		return apperr.ErrBadRequest
 	}
 
@@ -82,7 +82,7 @@ func (h *UserHandler) UpdatePreferences(c echo.Context) error {
 	}
 
 	paramID, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
+	if err != nil || paramID == 0 {
 		return apperr.ErrBadRequest
 	}
 

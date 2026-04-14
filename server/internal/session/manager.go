@@ -2,11 +2,13 @@ package session
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
 	"time"
 
+	"github.com/emilijan/belote/server/internal/apperr"
 	"github.com/emilijan/belote/server/internal/game"
 	"github.com/emilijan/belote/server/internal/match"
 	"github.com/emilijan/belote/server/internal/room"
@@ -70,11 +72,13 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 	}
 
 	var playerIDs [4]uint
+	var usernames [4]string
 	for _, p := range players {
 		playerIDs[p.Seat] = p.UserID
+		usernames[p.Seat] = p.Username
 	}
 
-	gs := game.NewGame(playerIDs, game.Variant(variant), matchMode, roomID)
+	gs := game.NewGame(playerIDs, usernames, game.Variant(variant), matchMode, roomID)
 
 	// Map room owner to seat index for pause override validation.
 	// Default to -1 (no owner override available) if ownerID not found among players.
@@ -228,7 +232,9 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 	}
 }
 
-// GetStateSnapshot returns the current game state for a room (used for reconnection).
+// GetStateSnapshot returns a shallow copy of the current game state for a room
+// (used for reconnection and tests). Returns a copy to prevent callers from
+// observing concurrent mutations after the lock is released.
 func (m *Manager) GetStateSnapshot(roomID uint) *game.GameState {
 	m.mu.RLock()
 	session, ok := m.sessions[roomID]
@@ -238,7 +244,8 @@ func (m *Manager) GetStateSnapshot(roomID uint) *game.GameState {
 	}
 	session.mu.RLock()
 	defer session.mu.RUnlock()
-	return session.gameState
+	snapshot := *session.gameState
+	return &snapshot
 }
 
 // RemoveSession cleans up a game session, cancelling any active timer.
@@ -547,7 +554,24 @@ func (m *Manager) sendError(userID uint, errorType string, message string) {
 
 // sendGameError maps rules engine errors to appropriate WS error events.
 func (m *Manager) sendGameError(userID uint, err error) {
-	m.sendError(userID, ws.ErrorInvalidAction, err.Error())
+	eventType := ws.ErrorInvalidAction
+	switch {
+	case errors.Is(err, apperr.ErrNotYourTurn):
+		eventType = ws.ErrorNotYourTurn
+	case errors.Is(err, apperr.ErrWrongPhase):
+		eventType = ws.ErrorWrongPhase
+	case errors.Is(err, apperr.ErrIllegalPlay):
+		eventType = ws.ErrorIllegalPlay
+	case errors.Is(err, apperr.ErrPauseExhausted):
+		eventType = ws.ErrorPauseExhausted
+	case errors.Is(err, apperr.ErrNoActivePause):
+		eventType = ws.ErrorNoActivePause
+	case errors.Is(err, apperr.ErrNotRoomOwner):
+		eventType = ws.ErrorNotRoomOwner
+	case errors.Is(err, apperr.ErrPlayerDisconnected):
+		eventType = ws.ErrorPlayerDisconnected
+	}
+	m.sendError(userID, eventType, err.Error())
 }
 
 // buildMessage creates a JSON-encoded WS message.

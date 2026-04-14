@@ -32,6 +32,11 @@ func handlePlaying(state *GameState, action Action) (*GameState, error) {
 
 // handlePlayCard validates and processes a play_card action.
 func handlePlayCard(state *GameState, action Action) (*GameState, error) {
+	// Guard: seat must be valid
+	if action.PlayerSeat < 0 || action.PlayerSeat > 3 {
+		return nil, apperr.ErrNotYourTurn
+	}
+
 	// Guard: must resolve pending declaration first
 	if state.AwaitingDeclaration {
 		return nil, apperr.ErrActionRequired

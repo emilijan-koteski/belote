@@ -47,8 +47,9 @@ type GameStarter interface {
 
 // PlayerSeatInfo holds the player info needed for game session initialization.
 type PlayerSeatInfo struct {
-	UserID uint
-	Seat   int
+	UserID   uint
+	Username string
+	Seat     int
 }
 
 // RoomStatusAdapter implements session.RoomStatusUpdater using the room repository.
@@ -704,8 +705,9 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 			for _, p := range players {
 				if p.Seat != nil {
 					seatInfo[*p.Seat] = PlayerSeatInfo{
-						UserID: p.UserID,
-						Seat:   *p.Seat,
+						UserID:   p.UserID,
+						Username: p.Username,
+						Seat:     *p.Seat,
 					}
 				}
 			}
@@ -809,8 +811,9 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 			for _, p := range players {
 				if p.Seat != nil {
 					seatInfo[*p.Seat] = PlayerSeatInfo{
-						UserID: p.UserID,
-						Seat:   *p.Seat,
+						UserID:   p.UserID,
+						Username: p.Username,
+						Seat:     *p.Seat,
 					}
 				}
 			}

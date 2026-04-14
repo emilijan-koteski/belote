@@ -106,6 +106,20 @@ export function GamePage() {
     }
   }, [gameState, user, myPlayerSeat, setMyPlayerSeat]);
 
+  // Redirect to lobby on stale match_end state (e.g. page refresh after abandonment
+  // when matchAbandonedData/matchEndData are lost from in-memory store)
+  useEffect(() => {
+    if (
+      gameState &&
+      gameState.phase === "match_end" &&
+      matchEndData === null &&
+      matchAbandonedData === null
+    ) {
+      clearGame();
+      navigate("/lobby", { replace: true });
+    }
+  }, [gameState, matchEndData, matchAbandonedData, clearGame, navigate]);
+
   // Transition to match result after score reveal is dismissed (if match ended)
   useEffect(() => {
     if (matchEndData !== null && overlayPhase === "normal") {

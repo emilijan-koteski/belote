@@ -141,7 +141,8 @@ func TestGameStateJSONCamelCaseKeys(t *testing.T) {
 
 func TestNewGame(t *testing.T) {
 	playerIDs := [4]uint{10, 20, 30, 40}
-	gs := game.NewGame(playerIDs, game.VariantBitola, "1001", 42)
+	usernames := [4]string{"alice", "bob", "carol", "dave"}
+	gs := game.NewGame(playerIDs, usernames, game.VariantBitola, "1001", 42)
 
 	t.Run("sets match metadata", func(t *testing.T) {
 		assert.Equal(t, uint(42), gs.RoomID)

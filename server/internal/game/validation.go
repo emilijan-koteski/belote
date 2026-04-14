@@ -15,6 +15,9 @@ func legalCards(state *GameState, seat int) []Card {
 		return hand
 	}
 
+	if state.TrumpSuit == nil || state.LeadSuit == nil {
+		return hand // defensive: treat as leading if pointers unset
+	}
 	trumpSuit := *state.TrumpSuit
 	ledSuit := *state.LeadSuit
 
@@ -96,6 +99,9 @@ func highestTrumpInTrick(trick []TrickCard, trumpSuit Suit) *Rank {
 // isOpponentWinning returns true if the team currently winning the trick is the
 // opponent of the given seat.
 func isOpponentWinning(state *GameState, seat int) bool {
+	if len(state.CurrentTrick) == 0 || state.TrumpSuit == nil {
+		return false
+	}
 	winnerSeat := currentTrickWinnerSeat(state.CurrentTrick, *state.TrumpSuit)
 	return TeamForSeat(winnerSeat) != TeamForSeat(seat)
 }

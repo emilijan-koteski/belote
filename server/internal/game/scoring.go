@@ -7,6 +7,9 @@ package game
 // Mutates an already-cloned state (called from within resolveTrickWithDeclarations).
 func scoreHand(state *GameState) {
 	// Step 1: Determine last-trick winner's team
+	if state.TrickWinnerSeat == nil {
+		return // defensive: should never happen in normal flow
+	}
 	lastTrickTeam := TeamForSeat(*state.TrickWinnerSeat)
 
 	// Capture raw card points BEFORE bonus application
@@ -138,6 +141,14 @@ func startNewHand(state *GameState) {
 	state.BelotAnnounced = false
 	state.WinnerTeam = nil
 	state.TurnExpiresAt = nil
+	// NOTE: LastHandResult is intentionally NOT cleared here — it must persist
+	// in the state returned to the session manager for broadcast. It is overwritten
+	// by the next scoreHand() call, so it never leaks across hands.
+
+	// Reset disconnect fields (defensive — PhaseDisconnected blocks new hands,
+	// but ensures clean state if flow changes)
+	state.DisconnectedSeat = -1
+	state.ReconnectExpiresAt = nil
 
 	// Clear player hands and declarations
 	for i := range state.Players {

@@ -11,6 +11,7 @@ type PlayerState struct {
 	Hand         []Card        `json:"hand"`
 	Seat         int           `json:"seat"`
 	UserID       uint          `json:"userId"`
+	Username     string        `json:"username"`
 	Team         string        `json:"team"`
 	Declarations []Declaration `json:"declarations"`
 	Connected    bool          `json:"connected"`
@@ -125,7 +126,7 @@ func ShuffleDeck(deck []Card) {
 
 // NewGame creates a new game state with 4 players, shuffles and deals cards
 // using the Bitola 3+2 dealing sequence.
-func NewGame(playerIDs [4]uint, variant Variant, matchMode string, roomID uint) *GameState {
+func NewGame(playerIDs [4]uint, usernames [4]string, variant Variant, matchMode string, roomID uint) *GameState {
 	gs := &GameState{
 		RoomID:           roomID,
 		Variant:          variant,
@@ -151,6 +152,7 @@ func NewGame(playerIDs [4]uint, variant Variant, matchMode string, roomID uint) 
 			Hand:         []Card{},
 			Seat:         i,
 			UserID:       userID,
+			Username:     usernames[i],
 			Team:         team,
 			Declarations: []Declaration{},
 			Connected:    true,
