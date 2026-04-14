@@ -5,7 +5,7 @@ import type { TrickCard } from "@/shared/types/gameTypes";
 import { PlayingCard } from "./PlayingCard";
 
 interface TrickAreaProps {
-  trick: TrickCard[];
+  trick: TrickCard[] | null;
   winnerSeat: number | null;
   myPlayerSeat: number;
 }
@@ -29,7 +29,8 @@ const SWEEP_POSITIONS: Record<number, string> = {
   3: "translate-x-[200%]", // East → off right
 };
 
-export function TrickArea({ trick, winnerSeat, myPlayerSeat }: TrickAreaProps) {
+export function TrickArea({ trick: rawTrick, winnerSeat, myPlayerSeat }: TrickAreaProps) {
+  const trick = rawTrick ?? [];
   const [displayTrick, setDisplayTrick] = useState<TrickCard[]>([]);
   const [resolving, setResolving] = useState(false);
   const [sweeping, setSweeping] = useState(false);
