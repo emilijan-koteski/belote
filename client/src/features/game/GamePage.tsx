@@ -77,6 +77,15 @@ export function GamePage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [showReshuffle, setShowReshuffle] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
+  const errorToastTimerRef = useRef<number | null>(null);
+
+  const dismissErrorToast = useCallback(() => {
+    if (errorToastTimerRef.current !== null) {
+      clearTimeout(errorToastTimerRef.current);
+      errorToastTimerRef.current = null;
+    }
+    setErrorToast(null);
+  }, []);
 
   // Overlay flow state: normal → capot_animation → score_reveal → normal/match_result
   type OverlayPhase = "normal" | "capot_animation" | "score_reveal" | "match_result";
@@ -138,7 +147,9 @@ export function GamePage() {
     }
   }, [currentPhase]);
 
-  // Error toast display — uses same mapping as useWsDispatch error routing
+  // Error toast display — uses same mapping as useWsDispatch error routing.
+  // Timer is tracked via ref (not effect cleanup) so the 3 s auto-dismiss isn't
+  // cancelled by the re-run triggered by setLastError(null).
   useEffect(() => {
     if (!lastError) return;
     const ERROR_I18N: Record<string, string> = {
@@ -152,11 +163,24 @@ export function GamePage() {
     };
     const i18nKey = ERROR_I18N[lastError];
     setLastError(null);
-    if (!i18nKey) return; // Unknown error type — don't show toast or start timer
+    if (!i18nKey) return;
+    if (errorToastTimerRef.current !== null) {
+      clearTimeout(errorToastTimerRef.current);
+    }
     setErrorToast(t(i18nKey));
-    const timer = setTimeout(() => setErrorToast(null), 3000);
-    return () => clearTimeout(timer);
+    errorToastTimerRef.current = window.setTimeout(() => {
+      setErrorToast(null);
+      errorToastTimerRef.current = null;
+    }, 3000);
   }, [lastError, setLastError, t]);
+
+  useEffect(() => {
+    return () => {
+      if (errorToastTimerRef.current !== null) {
+        clearTimeout(errorToastTimerRef.current);
+      }
+    };
+  }, []);
 
   // Browser back-button interception — push sentinel entry only once
   const historyPushedRef = useRef(false);
@@ -519,11 +543,20 @@ export function GamePage() {
       {/* Error toast */}
       {errorToast && (
         <div
-          className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 bg-destructive/90 text-text-primary font-body text-sm px-4 py-2 rounded-lg"
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 bg-destructive/90 text-text-primary font-body text-sm px-4 py-2 rounded-lg flex items-center gap-3"
           role="alert"
           data-testid="error-toast"
         >
-          {errorToast}
+          <span>{errorToast}</span>
+          <button
+            type="button"
+            onClick={dismissErrorToast}
+            aria-label={t("common.close")}
+            data-testid="error-toast-close"
+            className="text-text-primary/80 hover:text-text-primary text-lg leading-none px-1 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background rounded"
+          >
+            ×
+          </button>
         </div>
       )}
     </div>

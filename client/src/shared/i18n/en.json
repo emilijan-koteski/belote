@@ -1,6 +1,7 @@
 {
   "common": {
-    "appName": "Belote"
+    "appName": "Belote",
+    "close": "Close"
   },
   "nav": {
     "play": "Play",

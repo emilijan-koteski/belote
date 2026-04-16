@@ -1,6 +1,7 @@
 {
   "common": {
-    "appName": "Belote"
+    "appName": "Belote",
+    "close": "Zatvori"
   },
   "nav": {
     "play": "Igraj",

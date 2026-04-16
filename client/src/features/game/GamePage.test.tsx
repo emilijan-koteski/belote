@@ -1,6 +1,6 @@
 import "@/shared/i18n/i18n";
 
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { BrowserRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -205,6 +205,62 @@ describe("GamePage", () => {
     // Match result overlay should appear
     expect(screen.getByTestId("match-result")).toBeInTheDocument();
     expect(screen.getByTestId("match-result-red-score")).toHaveTextContent("1020");
+  });
+
+  it("shows error toast when lastError is set and dismisses it on close button click", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage();
+
+    act(() => {
+      useGameStore.getState().setLastError("error:illegal_play");
+    });
+
+    const toast = screen.getByTestId("error-toast");
+    expect(toast).toHaveTextContent("That card cannot be played");
+
+    fireEvent.click(screen.getByTestId("error-toast-close"));
+
+    expect(screen.queryByTestId("error-toast")).not.toBeInTheDocument();
+  });
+
+  it("auto-dismisses the error toast after 3 seconds", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage();
+
+    act(() => {
+      useGameStore.getState().setLastError("error:illegal_play");
+    });
+
+    expect(screen.getByTestId("error-toast")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(screen.queryByTestId("error-toast")).not.toBeInTheDocument();
+  });
+
+  it("re-shows the error toast on a new error after manual dismiss", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage();
+
+    act(() => {
+      useGameStore.getState().setLastError("error:illegal_play");
+    });
+    fireEvent.click(screen.getByTestId("error-toast-close"));
+    expect(screen.queryByTestId("error-toast")).not.toBeInTheDocument();
+
+    act(() => {
+      useGameStore.getState().setLastError("error:not_your_turn");
+    });
+
+    expect(screen.getByTestId("error-toast")).toHaveTextContent("It's not your turn");
   });
 
   it("shows confirm dialog on browser back button and stays if declined", () => {
