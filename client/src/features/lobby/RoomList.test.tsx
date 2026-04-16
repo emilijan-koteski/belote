@@ -1,12 +1,13 @@
 import "@/shared/i18n/i18n";
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useLobbyStore } from "@/shared/stores/lobbyStore";
 import type { Room } from "@/shared/types/apiTypes";
+import { QueryWrapper } from "@/test-utils";
 
 import { RoomList } from "./RoomList";
 
@@ -15,6 +16,11 @@ vi.mock("@/features/lobby/RoomDetailPreview", () => ({
   RoomDetailPreview: ({ roomId }: { roomId: number }) => (
     <div data-testid="room-detail-preview">Preview for room {roomId}</div>
   ),
+}));
+
+const mockGetRooms = vi.fn();
+vi.mock("@/shared/api/rooms", () => ({
+  getRooms: (...args: unknown[]) => mockGetRooms(...args),
 }));
 
 function makeRoom(overrides: Partial<Room> = {}): Room {
@@ -38,45 +44,49 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
 
 function renderRoomList(onJoinRoom = vi.fn()) {
   render(
-    <BrowserRouter>
-      <RoomList onJoinRoom={onJoinRoom} />
-    </BrowserRouter>,
+    <QueryWrapper>
+      <BrowserRouter>
+        <RoomList onJoinRoom={onJoinRoom} />
+      </BrowserRouter>
+    </QueryWrapper>,
   );
   return { onJoinRoom };
 }
 
 afterEach(() => {
-  useLobbyStore.setState({
-    rooms: [],
-    isLoading: false,
-    searchQuery: "",
-  });
+  vi.clearAllMocks();
+  useLobbyStore.setState({ searchQuery: "" });
 });
 
 describe("RoomList", () => {
-  it("renders room cards from data", () => {
-    useLobbyStore.setState({
-      rooms: [makeRoom({ id: 1, name: "Room Alpha" }), makeRoom({ id: 2, name: "Room Beta" })],
-    });
+  it("renders room cards from data", async () => {
+    mockGetRooms.mockResolvedValueOnce([
+      makeRoom({ id: 1, name: "Room Alpha" }),
+      makeRoom({ id: 2, name: "Room Beta" }),
+    ]);
 
     renderRoomList();
 
-    const cards = screen.getAllByTestId("room-card");
-    expect(cards).toHaveLength(2);
+    await waitFor(() => {
+      const cards = screen.getAllByTestId("room-card");
+      expect(cards).toHaveLength(2);
+    });
     expect(screen.getByText("Room Alpha")).toBeInTheDocument();
     expect(screen.getByText("Room Beta")).toBeInTheDocument();
   });
 
   it("filters rooms by name as user types", async () => {
     const user = userEvent.setup();
-    useLobbyStore.setState({
-      rooms: [
-        makeRoom({ id: 1, name: "Zagreb Ekipa" }),
-        makeRoom({ id: 2, name: "Bitola Majstori" }),
-      ],
-    });
+    mockGetRooms.mockResolvedValueOnce([
+      makeRoom({ id: 1, name: "Zagreb Ekipa" }),
+      makeRoom({ id: 2, name: "Bitola Majstori" }),
+    ]);
 
     renderRoomList();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("room-card")).toHaveLength(2);
+    });
 
     const searchInput = screen.getByTestId("room-list-search");
     await user.type(searchInput, "zagreb");
@@ -88,14 +98,16 @@ describe("RoomList", () => {
 
   it("filters rooms by code", async () => {
     const user = userEvent.setup();
-    useLobbyStore.setState({
-      rooms: [
-        makeRoom({ id: 1, name: "Room A", code: "XYZ789" }),
-        makeRoom({ id: 2, name: "Room B", code: "ABC123" }),
-      ],
-    });
+    mockGetRooms.mockResolvedValueOnce([
+      makeRoom({ id: 1, name: "Room A", code: "XYZ789" }),
+      makeRoom({ id: 2, name: "Room B", code: "ABC123" }),
+    ]);
 
     renderRoomList();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("room-card")).toHaveLength(2);
+    });
 
     const searchInput = screen.getByTestId("room-list-search");
     await user.type(searchInput, "xyz");
@@ -107,11 +119,13 @@ describe("RoomList", () => {
 
   it("displays empty state when no rooms match search", async () => {
     const user = userEvent.setup();
-    useLobbyStore.setState({
-      rooms: [makeRoom({ id: 1, name: "Room A" })],
-    });
+    mockGetRooms.mockResolvedValueOnce([makeRoom({ id: 1, name: "Room A" })]);
 
     renderRoomList();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("room-card")).toHaveLength(1);
+    });
 
     const searchInput = screen.getByTestId("room-list-search");
     await user.type(searchInput, "nonexistent");
@@ -119,21 +133,25 @@ describe("RoomList", () => {
     expect(screen.getByTestId("room-list-empty-search")).toBeInTheDocument();
   });
 
-  it("displays empty state when no rooms exist at all", () => {
-    useLobbyStore.setState({ rooms: [] });
+  it("displays empty state when no rooms exist at all", async () => {
+    mockGetRooms.mockResolvedValueOnce([]);
 
     renderRoomList();
 
-    expect(screen.getByTestId("room-list-empty")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("room-list-empty")).toBeInTheDocument();
+    });
   });
 
   it("clears search when clear link is clicked", async () => {
     const user = userEvent.setup();
-    useLobbyStore.setState({
-      rooms: [makeRoom({ id: 1, name: "Room A" })],
-    });
+    mockGetRooms.mockResolvedValueOnce([makeRoom({ id: 1, name: "Room A" })]);
 
     renderRoomList();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("room-card")).toHaveLength(1);
+    });
 
     const searchInput = screen.getByTestId("room-list-search");
     await user.type(searchInput, "nonexistent");
@@ -145,7 +163,8 @@ describe("RoomList", () => {
   });
 
   it("displays loading skeleton when loading", () => {
-    useLobbyStore.setState({ isLoading: true });
+    // Return a promise that never resolves to keep loading state
+    mockGetRooms.mockReturnValueOnce(new Promise(() => {}));
 
     renderRoomList();
 
@@ -156,11 +175,13 @@ describe("RoomList", () => {
 
   it("expands room detail when clicking a room card", async () => {
     const user = userEvent.setup();
-    useLobbyStore.setState({
-      rooms: [makeRoom({ id: 1, name: "Room Alpha" })],
-    });
+    mockGetRooms.mockResolvedValueOnce([makeRoom({ id: 1, name: "Room Alpha" })]);
 
     renderRoomList();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("room-card")).toBeInTheDocument();
+    });
 
     // Initially no preview
     expect(screen.queryByTestId("room-detail-preview")).not.toBeInTheDocument();
@@ -175,11 +196,13 @@ describe("RoomList", () => {
 
   it("collapses room detail when clicking the same room card again", async () => {
     const user = userEvent.setup();
-    useLobbyStore.setState({
-      rooms: [makeRoom({ id: 1, name: "Room Alpha" })],
-    });
+    mockGetRooms.mockResolvedValueOnce([makeRoom({ id: 1, name: "Room Alpha" })]);
 
     renderRoomList();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("room-card")).toBeInTheDocument();
+    });
 
     const toggle = screen.getByTestId("room-card-toggle");
 
@@ -194,11 +217,16 @@ describe("RoomList", () => {
 
   it("only one room is expanded at a time (accordion)", async () => {
     const user = userEvent.setup();
-    useLobbyStore.setState({
-      rooms: [makeRoom({ id: 1, name: "Room Alpha" }), makeRoom({ id: 2, name: "Room Beta" })],
-    });
+    mockGetRooms.mockResolvedValueOnce([
+      makeRoom({ id: 1, name: "Room Alpha" }),
+      makeRoom({ id: 2, name: "Room Beta" }),
+    ]);
 
     renderRoomList();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("room-card")).toHaveLength(2);
+    });
 
     const toggles = screen.getAllByTestId("room-card-toggle");
 

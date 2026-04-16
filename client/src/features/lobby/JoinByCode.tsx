@@ -3,25 +3,23 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { FetchError } from "@/shared/api/fetchClient";
-import { getRoomByCode, joinRoom } from "@/shared/api/rooms";
+import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { useJoinByCodeMutation } from "@/shared/hooks/mutations/useRooms";
 
 export function JoinByCode() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [code, setCode] = useState("");
-  const [isJoining, setIsJoining] = useState(false);
+  const joinByCodeMutation = useJoinByCodeMutation();
 
   async function handleJoinByCode() {
     const trimmed = code.trim().toUpperCase();
-    if (!trimmed || isJoining) return;
+    if (!trimmed || joinByCodeMutation.isPending) return;
 
-    setIsJoining(true);
     try {
-      const { room } = await getRoomByCode(trimmed);
-      await joinRoom(room.id);
+      const room = await joinByCodeMutation.mutateAsync(trimmed);
       navigate(`/rooms/${room.id}`);
     } catch (err) {
       if (err instanceof FetchError) {
@@ -37,8 +35,6 @@ export function JoinByCode() {
       } else {
         toast.error(t("lobby.roomList.errors.joinFailed"));
       }
-    } finally {
-      setIsJoining(false);
     }
   }
 
@@ -58,7 +54,7 @@ export function JoinByCode() {
         />
         <Button
           onClick={handleJoinByCode}
-          disabled={!code.trim() || isJoining}
+          disabled={!code.trim() || joinByCodeMutation.isPending}
           data-testid="join-by-code-button"
         >
           {t("lobby.joinByCode.join")}

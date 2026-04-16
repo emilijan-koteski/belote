@@ -1,31 +1,14 @@
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ProfileResponse } from "@/shared/api/profile";
-import { getProfile } from "@/shared/api/profile";
+import { useProfileQuery } from "@/shared/hooks/queries/useProfile";
 import { useAuthStore } from "@/shared/stores/authStore";
 
 export function ProfilePage() {
   const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const [profile, setProfile] = useState<ProfileResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: profile, isPending } = useProfileQuery(user?.id);
 
-  useEffect(() => {
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
-    getProfile(user.id)
-      .then(setProfile)
-      .catch(() => {
-        // Error handled silently — profile data falls back to auth store
-      })
-      .finally(() => setIsLoading(false));
-  }, [user]);
-
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="p-6" data-testid="profile-loading">
         <div className="h-8 w-48 animate-pulse rounded bg-surface" />

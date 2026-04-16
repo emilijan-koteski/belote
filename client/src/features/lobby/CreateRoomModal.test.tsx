@@ -5,6 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { QueryWrapper } from "@/test-utils";
+
 import { CreateRoomModal } from "./CreateRoomModal";
 
 const mockCreateRoom = vi.fn();
@@ -25,9 +27,11 @@ vi.mock("react-router", async () => {
 function renderModal(open = true) {
   const onOpenChange = vi.fn();
   render(
-    <BrowserRouter>
-      <CreateRoomModal open={open} onOpenChange={onOpenChange} />
-    </BrowserRouter>,
+    <QueryWrapper>
+      <BrowserRouter>
+        <CreateRoomModal open={open} onOpenChange={onOpenChange} />
+      </BrowserRouter>
+    </QueryWrapper>,
   );
   return { onOpenChange };
 }
@@ -134,7 +138,7 @@ describe("CreateRoomModal", () => {
 
   it("displays error when API returns ROOM_NAME_TAKEN", async () => {
     const user = userEvent.setup();
-    const { FetchError } = await import("@/shared/api/fetchClient");
+    const { FetchError } = await import("@/shared/api/axiosClient");
     mockCreateRoom.mockRejectedValueOnce(
       new FetchError(409, "ROOM_NAME_TAKEN", "a room with this name already exists"),
     );

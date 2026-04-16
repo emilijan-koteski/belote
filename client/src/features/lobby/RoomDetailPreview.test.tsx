@@ -4,6 +4,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
+import { QueryWrapper } from "@/test-utils";
+
 import { RoomDetailPreview } from "./RoomDetailPreview";
 
 // Mock API
@@ -33,9 +35,11 @@ const defaultRoom = {
 
 function renderPreview(roomId = 1) {
   render(
-    <BrowserRouter>
-      <RoomDetailPreview roomId={roomId} />
-    </BrowserRouter>,
+    <QueryWrapper>
+      <BrowserRouter>
+        <RoomDetailPreview roomId={roomId} />
+      </BrowserRouter>
+    </QueryWrapper>,
   );
 }
 

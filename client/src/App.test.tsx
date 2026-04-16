@@ -1,5 +1,6 @@
 import "@/shared/i18n/i18n";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,24 +25,30 @@ describe("App routing", () => {
   });
 
   it("renders login page at /login", () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
-      <MemoryRouter initialEntries={["/login"]}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
-      </MemoryRouter>,
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/login"]}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
 
     expect(screen.getByTestId("login-title")).toHaveTextContent("Log In");
   });
 
   it("renders lobby page at /lobby", () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
-      <MemoryRouter initialEntries={["/lobby"]}>
-        <Routes>
-          <Route path="/lobby" element={<LobbyPage />} />
-        </Routes>
-      </MemoryRouter>,
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/lobby"]}>
+          <Routes>
+            <Route path="/lobby" element={<LobbyPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
 
     expect(screen.getByTestId("quick-play-card")).toBeInTheDocument();

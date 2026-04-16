@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAuthStore } from "@/shared/stores/authStore";
+import { QueryWrapper } from "@/test-utils";
 
 import { ProfilePage } from "./ProfilePage";
 
@@ -20,9 +21,11 @@ vi.mock("@/shared/api/profile", () => ({
 
 function renderProfilePage() {
   return render(
-    <BrowserRouter>
-      <ProfilePage />
-    </BrowserRouter>,
+    <QueryWrapper>
+      <BrowserRouter>
+        <ProfilePage />
+      </BrowserRouter>
+    </QueryWrapper>,
   );
 }
 

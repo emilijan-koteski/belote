@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 
-import { useLobbyStore } from "@/shared/stores/lobbyStore";
+import { queryClient } from "@/shared/api/queryClient";
+import { queryKeys } from "@/shared/api/queryKeys";
+import type { Room } from "@/shared/types/apiTypes";
 import type { RoomCreatedPayload, RoomUpdatedPayload, WsMessage } from "@/shared/types/wsEvents";
 import { SYSTEM_ROOM_CREATED, SYSTEM_ROOM_UPDATED } from "@/shared/types/wsEvents";
 
@@ -29,15 +31,21 @@ export function handleWsMessage(event: MessageEvent) {
 
     if (message.type === SYSTEM_ROOM_CREATED) {
       const payload = message.payload as RoomCreatedPayload;
-      useLobbyStore.getState().addRoom(payload);
+      queryClient.setQueryData<Room[]>(queryKeys.rooms.list("waiting"), (old) =>
+        old ? [...old, payload] : undefined,
+      );
     }
 
     if (message.type === SYSTEM_ROOM_UPDATED) {
       const payload = message.payload as RoomUpdatedPayload;
       if (payload.status !== "waiting") {
-        useLobbyStore.getState().removeRoom(payload.id);
+        queryClient.setQueryData<Room[]>(queryKeys.rooms.list("waiting"), (old) =>
+          old ? old.filter((r) => r.id !== payload.id) : undefined,
+        );
       } else {
-        useLobbyStore.getState().updateRoom(payload);
+        queryClient.setQueryData<Room[]>(queryKeys.rooms.list("waiting"), (old) =>
+          old ? old.map((r) => (r.id === payload.id ? payload : r)) : undefined,
+        );
       }
     }
   } catch {

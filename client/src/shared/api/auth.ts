@@ -1,4 +1,6 @@
-import { fetchClient, FetchError } from "@/shared/api/fetchClient";
+import type { AxiosError } from "axios";
+
+import { axiosPublic, FetchError } from "@/shared/api/axiosClient";
 
 export interface RegisterRequest {
   email: string;
@@ -31,53 +33,61 @@ export interface RefreshResponse {
   createdAt: string;
 }
 
-export function register(data: RegisterRequest): Promise<RegisterResponse> {
-  return fetchClient<RegisterResponse>("/auth/register", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+export async function register(data: RegisterRequest): Promise<RegisterResponse> {
+  try {
+    const response = await axiosPublic.post<{ data: RegisterResponse }>("/auth/register", data);
+    return response.data.data;
+  } catch (e) {
+    const err = e as AxiosError<{ error: { code: string; message: string } }>;
+    if (err.response?.data?.error) {
+      throw new FetchError(
+        err.response.status,
+        err.response.data.error.code,
+        err.response.data.error.message,
+      );
+    }
+    throw new FetchError(
+      err.response?.status ?? 0,
+      "UNKNOWN_ERROR",
+      err.response?.statusText ?? "Registration failed",
+    );
+  }
 }
 
 export async function login(data: LoginRequest): Promise<LoginResponse> {
-  const response = await fetch("/api/v1/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    try {
-      const body = (await response.json()) as { error: { code: string; message: string } };
-      throw new FetchError(response.status, body.error.code, body.error.message);
-    } catch (e) {
-      if (e instanceof FetchError) throw e;
-      throw new FetchError(response.status, "UNKNOWN_ERROR", response.statusText || "Login failed");
+  try {
+    const response = await axiosPublic.post<{ data: LoginResponse }>("/auth/login", data);
+    return response.data.data;
+  } catch (e) {
+    const err = e as AxiosError<{ error: { code: string; message: string } }>;
+    if (err.response?.data?.error) {
+      throw new FetchError(
+        err.response.status,
+        err.response.data.error.code,
+        err.response.data.error.message,
+      );
     }
+    throw new FetchError(
+      err.response?.status ?? 0,
+      "UNKNOWN_ERROR",
+      err.response?.statusText ?? "Login failed",
+    );
   }
-
-  const body = (await response.json()) as { data: LoginResponse };
-  return body.data;
 }
 
 export async function refresh(signal?: AbortSignal): Promise<RefreshResponse> {
-  const response = await fetch("/api/v1/auth/refresh", {
-    method: "POST",
-    credentials: "include",
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Refresh failed: ${response.status}`);
+  try {
+    const response = await axiosPublic.post<{ data: RefreshResponse }>(
+      "/auth/refresh",
+      undefined,
+      { signal },
+    );
+    return response.data.data;
+  } catch (e) {
+    throw new Error(`Refresh failed: ${(e as AxiosError).response?.status ?? "unknown"}`);
   }
-
-  const body = (await response.json()) as { data: RefreshResponse };
-  return body.data;
 }
 
 export function logout(): void {
-  fetch("/api/v1/auth/logout", {
-    method: "POST",
-    credentials: "include",
-  }).catch(() => {});
+  axiosPublic.post("/auth/logout").catch(() => {});
 }

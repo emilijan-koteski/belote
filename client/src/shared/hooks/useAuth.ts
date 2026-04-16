@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import { refresh } from "@/shared/api/auth";
-import { setAuthRedirect } from "@/shared/api/fetchClient";
+import { setAuthRedirect } from "@/shared/api/axiosClient";
 import { useAuthStore } from "@/shared/stores/authStore";
 
 export function useAuthInit(): void {

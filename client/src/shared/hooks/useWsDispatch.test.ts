@@ -1,9 +1,11 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { queryClient } from "@/shared/api/queryClient";
+import { queryKeys } from "@/shared/api/queryKeys";
 import { useGameStore } from "@/shared/stores/gameStore";
-import { useLobbyStore } from "@/shared/stores/lobbyStore";
 import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
+import type { Room } from "@/shared/types/apiTypes";
 import type { GameState } from "@/shared/types/gameTypes";
 import type { WsMessage } from "@/shared/types/wsEvents";
 
@@ -88,17 +90,16 @@ const mockGameState: GameState = {
 
 describe("useWsDispatch", () => {
   beforeEach(() => {
-    useLobbyStore.setState({
-      rooms: [],
-      isLoading: false,
-      searchQuery: "",
-    });
+    queryClient.clear();
     useGameStore.getState().reset();
     useRoomLobbyStore.getState().reset();
     vi.restoreAllMocks();
   });
 
-  it("routes system:room_created to lobbyStore.addRoom", () => {
+  it("routes system:room_created to queryClient room cache", () => {
+    // Seed the cache with an empty rooms list
+    queryClient.setQueryData<Room[]>(queryKeys.rooms.list("waiting"), []);
+
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
@@ -122,29 +123,31 @@ describe("useWsDispatch", () => {
 
     dispatch(message);
 
-    const rooms = useLobbyStore.getState().rooms;
+    const rooms = queryClient.getQueryData<Room[]>(queryKeys.rooms.list("waiting"));
     expect(rooms).toHaveLength(1);
-    expect(rooms[0]!.id).toBe(1);
-    expect(rooms[0]!.name).toBe("Test Room");
+    expect(rooms![0]!.id).toBe(1);
+    expect(rooms![0]!.name).toBe("Test Room");
   });
 
-  it("routes system:room_updated to lobbyStore.updateRoom", () => {
+  it("routes system:room_updated to queryClient room cache", () => {
     // Pre-populate with a room
-    useLobbyStore.getState().addRoom({
-      id: 2,
-      name: "Old Name",
-      code: "XYZ789",
-      ownerId: 42,
-      variant: "bitola",
-      matchMode: "1001",
-      timerStyle: "relaxed",
-      timerDurationSeconds: null,
-      status: "waiting",
-      playerCount: 1,
-      isQuickPlay: false,
-      createdAt: "2026-04-12T00:00:00Z",
-      updatedAt: "2026-04-12T00:00:00Z",
-    });
+    queryClient.setQueryData<Room[]>(queryKeys.rooms.list("waiting"), [
+      {
+        id: 2,
+        name: "Old Name",
+        code: "XYZ789",
+        ownerId: 42,
+        variant: "bitola",
+        matchMode: "1001",
+        timerStyle: "relaxed",
+        timerDurationSeconds: null,
+        status: "waiting",
+        playerCount: 1,
+        isQuickPlay: false,
+        createdAt: "2026-04-12T00:00:00Z",
+        updatedAt: "2026-04-12T00:00:00Z",
+      },
+    ]);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -167,28 +170,30 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const rooms = useLobbyStore.getState().rooms;
+    const rooms = queryClient.getQueryData<Room[]>(queryKeys.rooms.list("waiting"));
     expect(rooms).toHaveLength(1);
-    expect(rooms[0]!.name).toBe("Updated Name");
-    expect(rooms[0]!.playerCount).toBe(2);
+    expect(rooms![0]!.name).toBe("Updated Name");
+    expect(rooms![0]!.playerCount).toBe(2);
   });
 
-  it("removes room from lobby when status is not waiting", () => {
-    useLobbyStore.getState().addRoom({
-      id: 3,
-      name: "Active Room",
-      code: "AAA111",
-      ownerId: 42,
-      variant: "bitola",
-      matchMode: "1001",
-      timerStyle: "relaxed",
-      timerDurationSeconds: null,
-      status: "waiting",
-      playerCount: 4,
-      isQuickPlay: false,
-      createdAt: "2026-04-12T00:00:00Z",
-      updatedAt: "2026-04-12T00:00:00Z",
-    });
+  it("removes room from cache when status is not waiting", () => {
+    queryClient.setQueryData<Room[]>(queryKeys.rooms.list("waiting"), [
+      {
+        id: 3,
+        name: "Active Room",
+        code: "AAA111",
+        ownerId: 42,
+        variant: "bitola",
+        matchMode: "1001",
+        timerStyle: "relaxed",
+        timerDurationSeconds: null,
+        status: "waiting",
+        playerCount: 4,
+        isQuickPlay: false,
+        createdAt: "2026-04-12T00:00:00Z",
+        updatedAt: "2026-04-12T00:00:00Z",
+      },
+    ]);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -211,7 +216,7 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const rooms = useLobbyStore.getState().rooms;
+    const rooms = queryClient.getQueryData<Room[]>(queryKeys.rooms.list("waiting"));
     expect(rooms).toHaveLength(0);
   });
 
@@ -251,8 +256,8 @@ describe("useWsDispatch", () => {
     dispatch({ type: "system:authenticated", payload: { userId: 42 } });
     dispatch({ type: "error:auth_failed", payload: { message: "bad token" } });
 
-    // No rooms added
-    expect(useLobbyStore.getState().rooms).toHaveLength(0);
+    // No rooms added to cache
+    expect(queryClient.getQueryData(queryKeys.rooms.list("waiting"))).toBeUndefined();
   });
 
   it("dispatches event:game_state to gameStore", () => {

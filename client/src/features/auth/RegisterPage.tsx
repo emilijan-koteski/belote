@@ -4,11 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { register } from "@/shared/api/auth";
-import { FetchError } from "@/shared/api/fetchClient";
+import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { useAuthStore } from "@/shared/stores/authStore";
+import { useRegisterMutation } from "@/shared/hooks/mutations/useAuth";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
@@ -22,13 +21,13 @@ interface FieldErrors {
 export function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const registerMutation = useRegisterMutation();
 
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
 
   function validateEmail(value: string): string | undefined {
     if (!value) return t("auth.register.errors.emailRequired");
@@ -72,19 +71,10 @@ export function RegisterPage() {
       return;
     }
 
-    setIsLoading(true);
     setErrors({});
 
     try {
-      const res = await register({ email, username, password });
-      useAuthStore.getState().setToken(res.token);
-      useAuthStore.getState().setUser({
-        id: res.id,
-        username: res.username,
-        email: res.email,
-        languagePreference: res.languagePreference,
-        createdAt: res.createdAt,
-      });
+      await registerMutation.mutateAsync({ email, username, password });
       navigate("/lobby");
     } catch (err) {
       if (err instanceof FetchError) {
@@ -110,8 +100,6 @@ export function RegisterPage() {
       } else {
         toast.error(t("auth.register.errors.registrationFailed"));
       }
-    } finally {
-      setIsLoading(false);
     }
   }
 
@@ -203,10 +191,12 @@ export function RegisterPage() {
           <Button
             type="submit"
             className="mt-2 h-10 w-full bg-primary text-primary-foreground font-semibold hover:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed"
-            disabled={isLoading}
+            disabled={registerMutation.isPending}
             data-testid="submit-button"
           >
-            {isLoading ? t("auth.register.submitting") : t("auth.register.submitButton")}
+            {registerMutation.isPending
+              ? t("auth.register.submitting")
+              : t("auth.register.submitButton")}
           </Button>
         </form>
 

@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getRoom } from "@/shared/api/rooms";
+import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
 import type { RoomPlayer } from "@/shared/types/apiTypes";
 
 interface RoomDetailPreviewProps {
@@ -23,35 +22,10 @@ function getPlayerAtSeat(players: RoomPlayer[], seatIndex: number): RoomPlayer |
 
 export function RoomDetailPreview({ roomId }: RoomDetailPreviewProps) {
   const { t } = useTranslation();
-  const [players, setPlayers] = useState<RoomPlayer[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data, isPending } = useRoomDetailQuery(roomId);
+  const players = data?.players ?? [];
 
-  useEffect(() => {
-    let stale = false;
-
-    async function fetchDetail() {
-      setIsLoading(true);
-      try {
-        const data = await getRoom(roomId);
-        if (!stale) {
-          setPlayers(data.players);
-        }
-      } catch {
-        // Silently handle — the preview just shows empty seats on failure
-      } finally {
-        if (!stale) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    fetchDetail();
-    return () => {
-      stale = true;
-    };
-  }, [roomId]);
-
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="grid grid-cols-2 gap-2 p-3" data-testid="room-detail-preview">
         {[0, 1, 2, 3].map((i) => (

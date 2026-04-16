@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -6,33 +6,28 @@ import { toast } from "sonner";
 import { CreateRoomModal } from "@/features/lobby/CreateRoomModal";
 import { JoinByCode } from "@/features/lobby/JoinByCode";
 import { RoomList } from "@/features/lobby/RoomList";
-import { FetchError } from "@/shared/api/fetchClient";
-import { getRooms, joinRoom, quickPlay } from "@/shared/api/rooms";
+import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
-import { useLobbyStore } from "@/shared/stores/lobbyStore";
+import { useJoinRoomMutation, useQuickPlayMutation } from "@/shared/hooks/mutations/useRooms";
+import { useRoomsQuery } from "@/shared/hooks/queries/useRooms";
 
 export function LobbyPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeView, setActiveView] = useState<"options" | "browse">("options");
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [isMatchmaking, setIsMatchmaking] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-    };
-  }, []);
+  const roomsQuery = useRoomsQuery("waiting", activeView === "browse");
+  const quickPlayMutation = useQuickPlayMutation();
+  const joinRoomMutation = useJoinRoomMutation();
 
   async function handleQuickPlay() {
-    if (isMatchmaking) return;
-    setIsMatchmaking(true);
+    if (quickPlayMutation.isPending) return;
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const room = await quickPlay(controller.signal);
+      const room = await quickPlayMutation.mutateAsync(controller.signal);
       navigate(`/rooms/${room.id}`);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -48,47 +43,26 @@ export function LobbyPage() {
         toast.error(t("lobby.matchmaking.failed"));
       }
     } finally {
-      setIsMatchmaking(false);
       abortRef.current = null;
     }
   }
 
   function handleCancelMatchmaking() {
     abortRef.current?.abort();
-    setIsMatchmaking(false);
+    quickPlayMutation.reset();
   }
 
-  async function handleBrowseRooms() {
-    if (useLobbyStore.getState().isLoading) return;
+  function handleBrowseRooms() {
     setActiveView("browse");
-    setFetchError(null);
-    useLobbyStore.getState().setRooms([]);
-    useLobbyStore.getState().setSearchQuery("");
-    useLobbyStore.getState().setLoading(true);
-    try {
-      const rooms = await getRooms("waiting");
-      useLobbyStore.getState().setRooms(rooms);
-    } catch (err) {
-      if (err instanceof FetchError) {
-        setFetchError(err.message);
-      } else {
-        setFetchError(t("lobby.createRoomModal.errors.unexpected"));
-      }
-    } finally {
-      useLobbyStore.getState().setLoading(false);
-    }
   }
 
   function handleBackToOptions() {
     setActiveView("options");
-    setFetchError(null);
-    useLobbyStore.getState().setSearchQuery("");
-    useLobbyStore.getState().setRooms([]);
   }
 
   async function handleJoinRoom(roomId: number) {
     try {
-      await joinRoom(roomId);
+      await joinRoomMutation.mutateAsync(roomId);
       navigate(`/rooms/${roomId}`);
     } catch (err) {
       if (err instanceof FetchError) {
@@ -110,7 +84,7 @@ export function LobbyPage() {
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
         {/* Left: Play Options or Browse view */}
         <div className="flex flex-col gap-4">
-          {activeView === "options" && !isMatchmaking && (
+          {activeView === "options" && !quickPlayMutation.isPending && (
             <>
               <button
                 className="rounded-xl bg-accent-glow p-6 text-left transition-colors hover:opacity-90"
@@ -150,7 +124,7 @@ export function LobbyPage() {
             </>
           )}
 
-          {activeView === "options" && isMatchmaking && (
+          {activeView === "options" && quickPlayMutation.isPending && (
             <div
               className="flex flex-col items-center justify-center gap-6 rounded-xl border border-border bg-surface p-10"
               data-testid="matchmaking-overlay"
@@ -177,9 +151,11 @@ export function LobbyPage() {
                 &larr; {t("lobby.roomList.backToOptions")}
               </Button>
 
-              {fetchError && (
+              {roomsQuery.isError && (
                 <p className="text-sm text-destructive" data-testid="room-fetch-error">
-                  {fetchError}
+                  {roomsQuery.error instanceof FetchError
+                    ? roomsQuery.error.message
+                    : t("lobby.createRoomModal.errors.unexpected")}
                 </p>
               )}
 

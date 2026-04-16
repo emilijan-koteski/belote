@@ -5,8 +5,9 @@ import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FetchError } from "@/shared/api/fetchClient";
+import { FetchError } from "@/shared/api/axiosClient";
 import { useAuthStore } from "@/shared/stores/authStore";
+import { QueryWrapper } from "@/test-utils";
 
 import { LoginPage } from "./LoginPage";
 
@@ -33,9 +34,11 @@ import { toast } from "sonner";
 
 function renderLoginPage() {
   return render(
-    <BrowserRouter>
-      <LoginPage />
-    </BrowserRouter>,
+    <QueryWrapper>
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    </QueryWrapper>,
   );
 }
 

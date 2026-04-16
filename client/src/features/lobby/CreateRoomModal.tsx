@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { FetchError } from "@/shared/api/fetchClient";
-import { createRoom } from "@/shared/api/rooms";
+import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
@@ -20,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { useLobbyStore } from "@/shared/stores/lobbyStore";
+import { useCreateRoomMutation } from "@/shared/hooks/mutations/useRooms";
 
 interface CreateRoomModalProps {
   open: boolean;
@@ -30,6 +29,7 @@ interface CreateRoomModalProps {
 export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const createRoomMutation = useCreateRoomMutation();
 
   const [name, setName] = useState("");
   const [variant] = useState("bitola");
@@ -48,7 +48,6 @@ export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
   };
   const [timerDuration, setTimerDuration] = useState(30);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,18 +57,16 @@ export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
       return;
     }
 
-    setIsSubmitting(true);
     setError(null);
 
     try {
-      const room = await createRoom({
+      const room = await createRoomMutation.mutateAsync({
         name: name.trim(),
         variant,
         matchMode,
         timerStyle,
         timerDurationSeconds: timerStyle === "per-move" ? timerDuration : null,
       });
-      useLobbyStore.getState().addRoom(room);
       onOpenChange(false);
       navigate(`/rooms/${room.id}`);
     } catch (err) {
@@ -84,8 +81,6 @@ export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
       } else {
         setError(t("lobby.createRoomModal.errors.unexpected"));
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -95,7 +90,7 @@ export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
       setTimerStyle("relaxed");
       setTimerDuration(30);
       setError(null);
-      setIsSubmitting(false);
+      createRoomMutation.reset();
     }
     onOpenChange(nextOpen);
   }
@@ -206,7 +201,7 @@ export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
             </Button>
             <Button
               type="submit"
-              disabled={!name.trim() || isSubmitting}
+              disabled={!name.trim() || createRoomMutation.isPending}
               data-testid="create-room-button"
             >
               {t("lobby.createRoomModal.create")}

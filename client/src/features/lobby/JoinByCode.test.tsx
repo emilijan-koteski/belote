@@ -5,7 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FetchError } from "@/shared/api/fetchClient";
+import { FetchError } from "@/shared/api/axiosClient";
+import { QueryWrapper } from "@/test-utils";
 
 import { JoinByCode } from "./JoinByCode";
 
@@ -35,9 +36,11 @@ vi.mock("sonner", () => ({
 
 function renderJoinByCode() {
   render(
-    <BrowserRouter>
-      <JoinByCode />
-    </BrowserRouter>,
+    <QueryWrapper>
+      <BrowserRouter>
+        <JoinByCode />
+      </BrowserRouter>
+    </QueryWrapper>,
   );
 }
 

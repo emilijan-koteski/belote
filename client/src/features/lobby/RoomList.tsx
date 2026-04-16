@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { RoomCard } from "@/features/lobby/RoomCard";
 import { useRoomUpdates } from "@/features/lobby/useRoomUpdates";
 import { Input } from "@/shared/components/ui/input";
+import { useRoomsQuery } from "@/shared/hooks/queries/useRooms";
 import { useLobbyStore } from "@/shared/stores/lobbyStore";
 
 interface RoomListProps {
@@ -16,8 +17,7 @@ export function RoomList({ onJoinRoom }: RoomListProps) {
 
   // WS room update listener — scoped to browse view lifecycle (WS hub not yet wired)
   useRoomUpdates();
-  const rooms = useLobbyStore((s) => s.rooms);
-  const isLoading = useLobbyStore((s) => s.isLoading);
+  const { data: rooms = [], isPending } = useRoomsQuery("waiting");
   const searchQuery = useLobbyStore((s) => s.searchQuery);
   const setSearchQuery = useLobbyStore((s) => s.setSearchQuery);
 
@@ -42,7 +42,7 @@ export function RoomList({ onJoinRoom }: RoomListProps) {
         data-testid="room-list-search"
       />
 
-      {isLoading && (
+      {isPending && (
         <div className="flex flex-col gap-2" data-testid="room-list-loading">
           {[0, 1, 2].map((i) => (
             <div
@@ -53,7 +53,7 @@ export function RoomList({ onJoinRoom }: RoomListProps) {
         </div>
       )}
 
-      {!isLoading && filteredRooms.length === 0 && searchQuery && (
+      {!isPending && filteredRooms.length === 0 && searchQuery && (
         <p className="text-sm text-text-secondary" data-testid="room-list-empty-search">
           {t("lobby.roomList.emptyNoMatch", { query: searchQuery })}{" "}
           <button
@@ -66,13 +66,13 @@ export function RoomList({ onJoinRoom }: RoomListProps) {
         </p>
       )}
 
-      {!isLoading && filteredRooms.length === 0 && !searchQuery && (
+      {!isPending && filteredRooms.length === 0 && !searchQuery && (
         <p className="text-sm text-text-secondary" data-testid="room-list-empty">
           {t("lobby.roomList.emptyNoRooms")}
         </p>
       )}
 
-      {!isLoading && filteredRooms.length > 0 && (
+      {!isPending && filteredRooms.length > 0 && (
         <div className="flex flex-col gap-2">
           {filteredRooms.map((room) => (
             <RoomCard

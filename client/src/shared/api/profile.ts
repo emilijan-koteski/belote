@@ -1,4 +1,4 @@
-import { fetchClient } from "@/shared/api/fetchClient";
+import { axiosClient } from "@/shared/api/axiosClient";
 
 export interface ProfileResponse {
   id: number;
@@ -12,15 +12,12 @@ export interface UpdatePreferencesRequest {
 }
 
 export function getProfile(userId: number): Promise<ProfileResponse> {
-  return fetchClient<ProfileResponse>(`/users/${userId}/profile`);
+  return axiosClient.get(`/users/${userId}/profile`);
 }
 
 export function updatePreferences(
   userId: number,
   prefs: UpdatePreferencesRequest,
 ): Promise<{ languagePreference: string }> {
-  return fetchClient<{ languagePreference: string }>(`/users/${userId}/preferences`, {
-    method: "PATCH",
-    body: JSON.stringify(prefs),
-  });
+  return axiosClient.patch(`/users/${userId}/preferences`, prefs);
 }

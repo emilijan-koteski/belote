@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useLobbyStore } from "@/shared/stores/lobbyStore";
+import { QueryWrapper } from "@/test-utils";
 
 import { LobbyPage } from "./LobbyPage";
 
@@ -27,22 +27,20 @@ vi.mock("@/shared/api/rooms", () => ({
   getRooms: (...args: unknown[]) => mockGetRooms(...args),
   joinRoom: (...args: unknown[]) => mockJoinRoom(...args),
   quickPlay: (...args: unknown[]) => mockQuickPlay(...args),
+  getRoomByCode: vi.fn(),
 }));
 
 afterEach(() => {
   vi.clearAllMocks();
-  useLobbyStore.setState({
-    rooms: [],
-    isLoading: false,
-    searchQuery: "",
-  });
 });
 
 function renderLobbyPage() {
   render(
-    <BrowserRouter>
-      <LobbyPage />
-    </BrowserRouter>,
+    <QueryWrapper>
+      <BrowserRouter>
+        <LobbyPage />
+      </BrowserRouter>
+    </QueryWrapper>,
   );
 }
 

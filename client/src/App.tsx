@@ -11,6 +11,7 @@ import { RulesPage } from "@/features/rules/RulesPage";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { ProtectedRoute } from "@/shared/components/ProtectedRoute";
 import { useAuthInit } from "@/shared/hooks/useAuth";
+import { QueryProvider } from "@/shared/providers/QueryProvider";
 import { useAuthStore } from "@/shared/stores/authStore";
 
 function AppRoutes() {
@@ -43,8 +44,10 @@ function AppRoutes() {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <QueryProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </QueryProvider>
   );
 }

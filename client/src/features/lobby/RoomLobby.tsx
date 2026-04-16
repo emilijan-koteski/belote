@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 
-import { FetchError } from "@/shared/api/fetchClient";
-import { getRoom, leaveRoom, selectSeat, startGame } from "@/shared/api/rooms";
+import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
+import { useLeaveRoomMutation, useSelectSeatMutation, useStartGameMutation } from "@/shared/hooks/mutations/useRooms";
+import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
-import type { Room, RoomPlayer } from "@/shared/types/apiTypes";
+import type { RoomPlayer } from "@/shared/types/apiTypes";
 
 const variantKeys: Record<string, string> = {
   bitola: "lobby.roomList.variantBitola",
@@ -38,64 +39,35 @@ export function RoomLobby() {
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
 
-  // Read from the roomLobbyStore for real-time updates
+  // TanStack Query for initial REST fetch
+  const roomQuery = useRoomDetailQuery(id ? Number(id) : undefined);
+
+  // Zustand store for real-time WS updates (source of truth for rendering)
   const storeRoom = useRoomLobbyStore((s) => s.room);
   const storePlayers = useRoomLobbyStore((s) => s.players);
   const gameStarted = useRoomLobbyStore((s) => s.gameStarted);
 
-  const [room, setRoom] = useState<Room | null>(null);
-  const [players, setPlayers] = useState<RoomPlayer[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isStarting, setIsStarting] = useState(false);
   const hasLeftRef = useRef(false);
   const hasJoinedRef = useRef(false);
 
-  useEffect(() => {
-    if (!id) return;
-    let stale = false;
+  // Mutations
+  const selectSeatMutation = useSelectSeatMutation();
+  const startGameMutation = useStartGameMutation();
+  const leaveRoomMutation = useLeaveRoomMutation();
 
-    async function fetchRoom() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await getRoom(Number(id));
-        if (stale) return; // Guard against stale fetch after unmount/remount
-        setRoom(data.room);
-        setPlayers(data.players);
-        // Initialize the store with REST data so WS updates build on top
-        const store = useRoomLobbyStore.getState();
-        store.setRoom(data.room);
-        store.setPlayers(data.players);
-        store.setCurrentRoomId(data.room.id);
-        const userId = useAuthStore.getState().user?.id;
-        if (userId && data.players.some((p) => p.userId === userId)) {
-          hasJoinedRef.current = true;
-        }
-      } catch {
-        if (!stale) setError(t("lobby.roomLobby.notFound"));
-      } finally {
-        if (!stale) setIsLoading(false);
+  // Seed roomLobbyStore from query data
+  useEffect(() => {
+    if (roomQuery.data) {
+      const store = useRoomLobbyStore.getState();
+      store.setRoom(roomQuery.data.room);
+      store.setPlayers(roomQuery.data.players);
+      store.setCurrentRoomId(roomQuery.data.room.id);
+      const userId = useAuthStore.getState().user?.id;
+      if (userId && roomQuery.data.players.some((p) => p.userId === userId)) {
+        hasJoinedRef.current = true;
       }
     }
-
-    fetchRoom();
-
-    // Reset store on unmount
-    return () => {
-      stale = true;
-      useRoomLobbyStore.getState().reset();
-    };
-  }, [id, t]);
-
-  // Sync store changes into local state for rendering (no guards — allow clears)
-  useEffect(() => {
-    setRoom(storeRoom);
-  }, [storeRoom]);
-
-  useEffect(() => {
-    setPlayers(storePlayers);
-  }, [storePlayers]);
+  }, [roomQuery.data]);
 
   // Handle game_started from WebSocket — navigate all players to the game page
   useEffect(() => {
@@ -105,28 +77,37 @@ export function RoomLobby() {
     }
   }, [gameStarted, id, navigate]);
 
+  // Reset store on unmount
+  useEffect(() => {
+    return () => {
+      useRoomLobbyStore.getState().reset();
+    };
+  }, []);
+
+  // Leave room on unmount if player joined and hasn't explicitly left
   useEffect(() => {
     return () => {
       if (id && hasJoinedRef.current && !hasLeftRef.current) {
-        leaveRoom(Number(id)).catch(() => {});
+        leaveRoomMutation.mutate(Number(id));
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleCopyLink = async () => {
-    if (!room) return;
+    if (!storeRoom) return;
     try {
-      await navigator.clipboard.writeText(room.code);
+      await navigator.clipboard.writeText(storeRoom.code);
       toast.success(t("lobby.roomLobby.copyLinkSuccess"));
     } catch {
-      toast.error(t("lobby.roomLobby.copyLinkFailed", { code: room.code }));
+      toast.error(t("lobby.roomLobby.copyLinkFailed", { code: storeRoom.code }));
     }
   };
 
   const handleLeaveRoom = async () => {
     hasLeftRef.current = true;
     try {
-      await leaveRoom(Number(id));
+      await leaveRoomMutation.mutateAsync(Number(id));
     } catch {
       // Even on error, navigate back
     }
@@ -134,13 +115,14 @@ export function RoomLobby() {
   };
 
   const handleSelectSeat = async (seatIndex: number) => {
-    if (!room) return;
+    if (!storeRoom) return;
     try {
-      const data = await selectSeat(room.id, seatIndex);
-      setPlayers(data.players);
+      const data = await selectSeatMutation.mutateAsync({ roomId: storeRoom.id, seat: seatIndex });
+      // Update players from response (in case WS hasn't arrived yet)
+      useRoomLobbyStore.getState().setPlayers(data.players);
       if (data.gameStarted) {
         hasLeftRef.current = true;
-        navigate(`/game/${room.id}`);
+        navigate(`/game/${storeRoom.id}`);
         return;
       }
     } catch (err) {
@@ -153,14 +135,12 @@ export function RoomLobby() {
   };
 
   const handleStartGame = async () => {
-    if (!room || isStarting) return;
-    setIsStarting(true);
+    if (!storeRoom || startGameMutation.isPending) return;
     try {
-      await startGame(room.id);
+      await startGameMutation.mutateAsync(storeRoom.id);
       hasLeftRef.current = true; // Prevent cleanup leave on navigation
-      navigate(`/game/${room.id}`);
+      navigate(`/game/${storeRoom.id}`);
     } catch (err) {
-      setIsStarting(false);
       if (err instanceof FetchError && err.code === "NOT_ROOM_OWNER") {
         toast.error(t("lobby.roomLobby.errors.notOwner"));
       } else if (err instanceof FetchError && err.code === "NOT_ALL_SEATED") {
@@ -171,7 +151,8 @@ export function RoomLobby() {
     }
   };
 
-  if (isLoading) {
+  // Use query loading state for initial load
+  if (roomQuery.isPending) {
     return (
       <div className="mx-auto max-w-2xl px-8 py-8" data-testid="room-lobby-loading">
         <div className="mb-6 h-8 w-48 animate-pulse rounded bg-surface" />
@@ -187,16 +168,21 @@ export function RoomLobby() {
     );
   }
 
-  if (error || !room) {
+  if (roomQuery.isError || (!storeRoom && !roomQuery.data)) {
     return (
       <div className="mx-auto max-w-2xl px-8 py-8 text-center" data-testid="room-lobby-error">
-        <p className="mb-4 text-text-secondary">{error ?? t("lobby.roomLobby.notFound")}</p>
+        <p className="mb-4 text-text-secondary">{t("lobby.roomLobby.notFound")}</p>
         <Button variant="ghost" onClick={() => navigate("/lobby")} data-testid="back-to-lobby">
           {t("lobby.roomLobby.notFoundAction")}
         </Button>
       </div>
     );
   }
+
+  // Render from store (source of truth after initial seed), fall back to query data
+  // during the brief window before the seeding effect runs
+  const room = storeRoom ?? roomQuery.data!.room;
+  const players = storePlayers.length > 0 ? storePlayers : roomQuery.data!.players;
 
   const variantLabel = t(variantKeys[room.variant] ?? room.variant);
   const matchModeLabel = t(matchModeKeys[room.matchMode] ?? room.matchMode);
@@ -309,12 +295,12 @@ export function RoomLobby() {
           ) : isOwner ? (
             <Button
               onClick={handleStartGame}
-              disabled={!allSeated || isStarting}
-              className={allSeated && !isStarting ? "" : "opacity-40 cursor-not-allowed"}
+              disabled={!allSeated || startGameMutation.isPending}
+              className={allSeated && !startGameMutation.isPending ? "" : "opacity-40 cursor-not-allowed"}
               title={allSeated ? undefined : t("lobby.roomLobby.startGameDisabled")}
               data-testid="start-game"
             >
-              {isStarting ? t("lobby.roomLobby.gameStarting") : t("lobby.roomLobby.startGame")}
+              {startGameMutation.isPending ? t("lobby.roomLobby.gameStarting") : t("lobby.roomLobby.startGame")}
             </Button>
           ) : allSeated ? (
             <p className="text-sm text-text-secondary" data-testid="waiting-for-start">

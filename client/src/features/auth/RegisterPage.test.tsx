@@ -5,7 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FetchError } from "@/shared/api/fetchClient";
+import { FetchError } from "@/shared/api/axiosClient";
+import { QueryWrapper } from "@/test-utils";
 
 import { RegisterPage } from "./RegisterPage";
 
@@ -25,9 +26,11 @@ vi.mock("@/shared/api/auth", () => ({
 
 function renderRegisterPage() {
   return render(
-    <BrowserRouter>
-      <RegisterPage />
-    </BrowserRouter>,
+    <QueryWrapper>
+      <BrowserRouter>
+        <RegisterPage />
+      </BrowserRouter>
+    </QueryWrapper>,
   );
 }
 

@@ -5,8 +5,9 @@ import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FetchError } from "@/shared/api/fetchClient";
+import { FetchError } from "@/shared/api/axiosClient";
 import { useAuthStore } from "@/shared/stores/authStore";
+import { QueryWrapper } from "@/test-utils";
 
 import { RoomLobby } from "./RoomLobby";
 
@@ -48,9 +49,11 @@ const mockStartGame = vi.mocked(startGame);
 
 function renderRoomLobby() {
   render(
-    <BrowserRouter>
-      <RoomLobby />
-    </BrowserRouter>,
+    <QueryWrapper>
+      <BrowserRouter>
+        <RoomLobby />
+      </BrowserRouter>
+    </QueryWrapper>,
   );
 }
 

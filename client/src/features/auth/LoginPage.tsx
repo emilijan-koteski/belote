@@ -4,11 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { login } from "@/shared/api/auth";
-import { FetchError } from "@/shared/api/fetchClient";
+import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { useAuthStore } from "@/shared/stores/authStore";
+import { useLoginMutation } from "@/shared/hooks/mutations/useAuth";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -20,13 +19,13 @@ interface FieldErrors {
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const loginMutation = useLoginMutation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   function validateEmail(value: string): string | undefined {
     if (!value) return t("auth.login.errors.emailRequired");
@@ -58,20 +57,11 @@ export function LoginPage() {
       return;
     }
 
-    setIsLoading(true);
     setErrors({});
     setFormError(null);
 
     try {
-      const res = await login({ email, password });
-      useAuthStore.getState().setToken(res.token);
-      useAuthStore.getState().setUser({
-        id: res.id,
-        username: res.username,
-        email: res.email,
-        languagePreference: res.languagePreference,
-        createdAt: res.createdAt,
-      });
+      await loginMutation.mutateAsync({ email, password });
       navigate("/lobby");
     } catch (err) {
       if (err instanceof FetchError) {
@@ -83,8 +73,6 @@ export function LoginPage() {
       } else {
         toast.error(t("auth.login.errors.loginFailed"));
       }
-    } finally {
-      setIsLoading(false);
     }
   }
 
@@ -161,10 +149,10 @@ export function LoginPage() {
           <Button
             type="submit"
             className="mt-2 h-10 w-full bg-primary text-primary-foreground font-semibold hover:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed"
-            disabled={isLoading}
+            disabled={loginMutation.isPending}
             data-testid="submit-button"
           >
-            {isLoading ? t("auth.login.submitting") : t("auth.login.submitButton")}
+            {loginMutation.isPending ? t("auth.login.submitting") : t("auth.login.submitButton")}
           </Button>
         </form>
 
