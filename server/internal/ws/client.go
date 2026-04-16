@@ -11,7 +11,7 @@ import (
 
 const (
 	pingInterval = 30 * time.Second
-	pongTimeout  = 45 * time.Second
+	pingTimeout  = 10 * time.Second
 	sendBufSize  = 256
 )
 
@@ -82,9 +82,10 @@ func (c *Client) readPump() {
 	go c.pingLoop(ctx)
 
 	for {
-		readCtx, cancel := context.WithTimeout(context.Background(), pongTimeout)
-		_, data, err := c.conn.Read(readCtx)
-		cancel()
+		// No per-read timeout — liveness is handled by pingLoop.
+		// Read unblocks when data arrives or the connection is closed
+		// (pingLoop calls CloseNow on pong failure, defer cancels ctx).
+		_, data, err := c.conn.Read(ctx)
 		if err != nil {
 			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 				slog.Info("ws: client closed normally", "userID", c.UserID)
@@ -112,7 +113,7 @@ func (c *Client) pingLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			pingCtx, cancel := context.WithTimeout(ctx, pingTimeout)
 			if err := c.conn.Ping(pingCtx); err != nil {
 				cancel()
 				slog.Info("ws: ping failed", "userID", c.UserID, "error", err)
