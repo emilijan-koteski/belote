@@ -419,6 +419,13 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchEnd, matchEnd))
 		}
 
+		// Follow with authoritative state so clients advance activePlayerSeat,
+		// remove the played card from hand, refresh turn timer, and pick up
+		// awaitingDeclaration / pendingBelotSeat flags. event:card_played only
+		// mutates the trick on the client — without this the next player never
+		// learns it's their turn.
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+
 	case game.ActionPickTrump:
 		if newState.TrumpSuit != nil {
 			trumpSelected := map[string]interface{}{
@@ -426,9 +433,12 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 				"trumpSuit":  string(*newState.TrumpSuit),
 			}
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventTrumpSelected, trumpSelected))
-		} else {
-			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 		}
+		// Always follow with full state so clients leave the bidding UI and
+		// sync activePlayerSeat/phase/trumpCallerSeat. Without this, a
+		// successful pick leaves the client stuck on TrumpPrompt and every
+		// subsequent click returns error:wrong_phase.
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 
 	case game.ActionPassTrump:
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
@@ -458,9 +468,11 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 				"declarations": decls,
 			}
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventDeclarationsResolved, declResolved))
-		} else {
-			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 		}
+		// Always follow with full state so the client clears awaitingDeclaration,
+		// advances activePlayerSeat, and picks up declarationsResolved. The
+		// event:declarations_resolved handler is reveal-only and does not sync state.
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 
 	case game.ActionAnnounceBelot, game.ActionSkipBelot:
 		if newState.BelotAnnounced && !oldState.BelotAnnounced {
@@ -469,9 +481,11 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 				"team":       game.TeamForSeat(action.PlayerSeat),
 			}
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventBelotAnnounced, belot))
-		} else {
-			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 		}
+		// Always follow with full state so the client clears pendingBelotSeat,
+		// advances activePlayerSeat, and resolves the trick if the belot action
+		// came after the 4th card. event:belot_announced is informational only.
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 
 	case game.ActionPause:
 		paused := ws.GamePausedPayload{
@@ -494,14 +508,6 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 
 	default:
 		// For any other action, broadcast full state
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
-	}
-
-	// If the phase transitioned to dealing→bidding (handled inside the lock before
-	// this function was called), broadcast the bidding state for the client to see
-	// the dealing→bidding sequence.
-	if newState.Phase == game.PhaseBidding && oldState.Phase != game.PhaseBidding &&
-		(action.Type == game.ActionPassTrump || action.Type == game.ActionPlayCard) {
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 	}
 }
