@@ -30,6 +30,11 @@ vi.mock("@/shared/api/rooms", () => ({
   startGame: vi.fn(),
 }));
 
+// Mock WebSocket connection state
+vi.mock("@/shared/providers/WebSocketContext", () => ({
+  useWsConnectionState: () => "connected",
+}));
+
 // Mock sonner toast
 vi.mock("sonner", () => ({
   toast: {

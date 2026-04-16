@@ -7,6 +7,7 @@ import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
 import { useLeaveRoomMutation, useSelectSeatMutation, useStartGameMutation } from "@/shared/hooks/mutations/useRooms";
 import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
+import { useWsConnectionState } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { RoomPlayer } from "@/shared/types/apiTypes";
@@ -42,6 +43,10 @@ export function RoomLobby() {
   // TanStack Query for initial REST fetch
   const roomQuery = useRoomDetailQuery(id ? Number(id) : undefined);
 
+  // WebSocket connection state — used to refetch after reconnection
+  const wsState = useWsConnectionState();
+  const prevWsStateRef = useRef(wsState);
+
   // Zustand store for real-time WS updates (source of truth for rendering)
   const storeRoom = useRoomLobbyStore((s) => s.room);
   const storePlayers = useRoomLobbyStore((s) => s.players);
@@ -68,6 +73,15 @@ export function RoomLobby() {
       }
     }
   }, [roomQuery.data]);
+
+  // Refetch room state after WebSocket reconnects to catch events missed during disconnect
+  useEffect(() => {
+    const prev = prevWsStateRef.current;
+    prevWsStateRef.current = wsState;
+    if (wsState === "connected" && prev !== "connected") {
+      roomQuery.refetch();
+    }
+  }, [wsState, roomQuery]);
 
   // Handle game_started from WebSocket — navigate all players to the game page
   useEffect(() => {
