@@ -89,9 +89,9 @@ export function PlayingCard({
   const baseClasses = `${SIZE_CLASSES[size]} bg-surface rounded-lg border border-border relative select-none`;
 
   const stateClasses = isPlayable
-    ? "motion-safe:translate-y-[-4px] shadow-[0_0_12px_var(--color-accent-glow)] cursor-pointer motion-safe:hover:translate-y-[-6px] focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    ? "motion-safe:translate-y-[-10px] shadow-[0_0_12px_var(--color-accent-glow)] cursor-pointer motion-safe:hover:translate-y-[-14px] focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     : isUnplayable
-      ? "opacity-40 cursor-not-allowed"
+      ? "motion-safe:translate-y-[4px] opacity-40 grayscale cursor-not-allowed"
       : "";
 
   const transitionClasses = withTransition
