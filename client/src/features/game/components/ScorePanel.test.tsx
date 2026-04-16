@@ -8,6 +8,7 @@ vi.mock("react-i18next", () => ({
         "game.score.red": "Red",
         "game.score.blue": "Blue",
         "game.score.tricks": "Tricks",
+        "game.score.thisHand": "this hand",
       };
       return translations[key] ?? key;
     },
@@ -75,5 +76,61 @@ describe("ScorePanel", () => {
     );
 
     expect(screen.getByTestId("score-bonus")).toHaveTextContent("+10");
+  });
+
+  it("hides both potential lines when hand potentials are zero", () => {
+    render(
+      <ScorePanel
+        redScore={100}
+        blueScore={200}
+        redTricks={0}
+        blueTricks={0}
+        redHandPotential={0}
+        blueHandPotential={0}
+      />,
+    );
+
+    expect(screen.queryByTestId("score-red-potential")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("score-blue-potential")).not.toBeInTheDocument();
+  });
+
+  it("shows red potential line with summed hand points + declarations", () => {
+    render(
+      <ScorePanel
+        redScore={100}
+        blueScore={200}
+        redTricks={2}
+        blueTricks={1}
+        redHandPotential={12}
+        blueHandPotential={0}
+      />,
+    );
+
+    const potential = screen.getByTestId("score-red-potential");
+    expect(potential).toHaveTextContent("+12 this hand");
+    expect(screen.queryByTestId("score-blue-potential")).not.toBeInTheDocument();
+  });
+
+  it("shows each team's potential independently", () => {
+    render(
+      <ScorePanel
+        redScore={100}
+        blueScore={200}
+        redTricks={2}
+        blueTricks={1}
+        redHandPotential={12}
+        blueHandPotential={64}
+      />,
+    );
+
+    expect(screen.getByTestId("score-red-potential")).toHaveTextContent("+12 this hand");
+    expect(screen.getByTestId("score-blue-potential")).toHaveTextContent("+64 this hand");
+  });
+
+  it("omits potential lines when props are not passed at all (default zero)", () => {
+    render(<ScorePanel redScore={50} blueScore={50} redTricks={0} blueTricks={0} />);
+
+    expect(screen.queryByTestId("score-red-potential")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("score-blue-potential")).not.toBeInTheDocument();
   });
 });

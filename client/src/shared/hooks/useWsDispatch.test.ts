@@ -327,6 +327,42 @@ describe("useWsDispatch", () => {
     expect(state.scoreRevealData?.capot).toBe(false);
   });
 
+  it("zeroes handPoints and declarationPoints on event:hand_scored to clear stale potential", () => {
+    useGameStore.getState().setGameState({
+      ...mockGameState,
+      handPoints: [70, 82],
+      declarationPoints: [0, 50],
+    });
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:hand_scored",
+      payload: {
+        redCardPoints: 70,
+        blueCardPoints: 82,
+        redDeclPoints: 0,
+        blueDeclPoints: 50,
+        lastTrickTeam: 1,
+        lastTrickBonus: 10,
+        capot: false,
+        capotTeam: null,
+        capotBonus: 0,
+        failedContract: false,
+        contractingTeam: 1,
+        redHandTotal: 70,
+        blueHandTotal: 142,
+        redMatchScore: 70,
+        blueMatchScore: 142,
+      },
+    });
+
+    const state = useGameStore.getState();
+    expect(state.gameState?.handPoints).toEqual([0, 0]);
+    expect(state.gameState?.declarationPoints).toEqual([0, 0]);
+  });
+
   it("dispatches event:match_end to gameStore", () => {
     useGameStore.getState().setGameState(mockGameState);
 

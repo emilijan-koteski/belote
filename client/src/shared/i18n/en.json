@@ -202,7 +202,8 @@
       "red": "Red",
       "blue": "Blue",
       "tricks": "Tricks",
-      "lastTrickBonus": "+{{amount}}"
+      "lastTrickBonus": "+{{amount}}",
+      "thisHand": "this hand"
     },
     "scoreReveal": {
       "title": "Hand Score",

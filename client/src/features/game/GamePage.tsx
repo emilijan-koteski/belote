@@ -341,6 +341,8 @@ export function GamePage() {
         blueScore={gameState.teamScores[1]}
         redTricks={gameState.tricksWon[0]}
         blueTricks={gameState.tricksWon[1]}
+        redHandPotential={gameState.handPoints[0] + gameState.declarationPoints[0]}
+        blueHandPotential={gameState.handPoints[1] + gameState.declarationPoints[1]}
         lastTrickBonus={scoreRevealData?.lastTrickBonus}
         lastTrickTeam={scoreRevealData?.lastTrickTeam}
       />

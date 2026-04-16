@@ -6,6 +6,8 @@ interface ScorePanelProps {
   blueScore: number;
   redTricks: number;
   blueTricks: number;
+  redHandPotential?: number;
+  blueHandPotential?: number;
   lastTrickBonus?: number;
   lastTrickTeam?: number;
 }
@@ -15,6 +17,8 @@ export function ScorePanel({
   blueScore,
   redTricks,
   blueTricks,
+  redHandPotential = 0,
+  blueHandPotential = 0,
   lastTrickBonus,
   lastTrickTeam,
 }: ScorePanelProps) {
@@ -44,36 +48,56 @@ export function ScorePanel({
       data-testid="score-panel"
       aria-live="polite"
     >
-      {/* Red team row */}
-      <div className="flex items-center justify-between gap-4 mb-1">
-        <span
-          className="text-team-red font-body text-sm font-semibold"
-          data-testid="score-label-red"
-        >
-          {t("game.score.red")}
-        </span>
-        <span
-          className="text-team-red font-display text-3xl font-bold tabular-nums motion-safe:transition-all motion-safe:duration-300"
-          data-testid="score-red"
-        >
-          {redScore}
-        </span>
+      {/* Red team block */}
+      <div className="mb-1">
+        <div className="flex items-center justify-between gap-4">
+          <span
+            className="text-team-red font-body text-sm font-semibold"
+            data-testid="score-label-red"
+          >
+            {t("game.score.red")}
+          </span>
+          <span
+            className="text-team-red font-display text-3xl font-bold tabular-nums motion-safe:transition-all motion-safe:duration-300"
+            data-testid="score-red"
+          >
+            {redScore}
+          </span>
+        </div>
+        {redHandPotential > 0 && (
+          <div
+            className="text-text-secondary font-body text-xs text-right tabular-nums"
+            data-testid="score-red-potential"
+          >
+            +{redHandPotential} {t("game.score.thisHand")}
+          </div>
+        )}
       </div>
 
-      {/* Blue team row */}
-      <div className="flex items-center justify-between gap-4 mb-2">
-        <span
-          className="text-team-blue font-body text-sm font-semibold"
-          data-testid="score-label-blue"
-        >
-          {t("game.score.blue")}
-        </span>
-        <span
-          className="text-team-blue font-display text-3xl font-bold tabular-nums motion-safe:transition-all motion-safe:duration-300"
-          data-testid="score-blue"
-        >
-          {blueScore}
-        </span>
+      {/* Blue team block */}
+      <div className="mb-2">
+        <div className="flex items-center justify-between gap-4">
+          <span
+            className="text-team-blue font-body text-sm font-semibold"
+            data-testid="score-label-blue"
+          >
+            {t("game.score.blue")}
+          </span>
+          <span
+            className="text-team-blue font-display text-3xl font-bold tabular-nums motion-safe:transition-all motion-safe:duration-300"
+            data-testid="score-blue"
+          >
+            {blueScore}
+          </span>
+        </div>
+        {blueHandPotential > 0 && (
+          <div
+            className="text-text-secondary font-body text-xs text-right tabular-nums"
+            data-testid="score-blue-potential"
+          >
+            +{blueHandPotential} {t("game.score.thisHand")}
+          </div>
+        )}
       </div>
 
       {/* Trick count */}

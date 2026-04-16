@@ -147,9 +147,14 @@ function dispatchGameEvent(message: WsMessage): void {
     const payload = message.payload as HandScoredPayload;
     const current = store.gameState;
     if (current) {
+      // Clear per-hand fields here so the ScorePanel's "this hand" line disappears
+      // immediately. The follow-up event:game_state will replace them with the
+      // new-hand defaults, but zeroing now avoids a flicker of stale potentials.
       store.setGameState({
         ...current,
         teamScores: [payload.redMatchScore, payload.blueMatchScore],
+        handPoints: [0, 0],
+        declarationPoints: [0, 0],
       });
     }
     store.setScoreRevealData(payload);

@@ -202,7 +202,8 @@
       "red": "Crveni",
       "blue": "Plavi",
       "tricks": "Ruke",
-      "lastTrickBonus": "+{{amount}}"
+      "lastTrickBonus": "+{{amount}}",
+      "thisHand": "ovo deljenje"
     },
     "scoreReveal": {
       "title": "Rezultat ruke",
