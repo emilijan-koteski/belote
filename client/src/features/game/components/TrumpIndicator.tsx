@@ -20,6 +20,13 @@ const SUIT_NAME_KEY: Record<Suit, string> = {
   C: "game.suits.clubs",
 };
 
+const SUIT_COLOR: Record<Suit, string> = {
+  S: "text-text-primary",
+  H: "text-red-500",
+  D: "text-red-500",
+  C: "text-text-primary",
+};
+
 export function TrumpIndicator({ trumpSuit }: TrumpIndicatorProps) {
   const { t } = useTranslation();
 
@@ -33,7 +40,7 @@ export function TrumpIndicator({ trumpSuit }: TrumpIndicatorProps) {
       <span className="text-text-secondary font-body text-sm">
         {t("game.trumpIndicator.trump")}
       </span>
-      <span className="text-accent font-display text-lg font-semibold">
+      <span className={`${SUIT_COLOR[trumpSuit]} font-display text-lg font-semibold`}>
         {SUIT_SYMBOL[trumpSuit]}
       </span>
     </div>

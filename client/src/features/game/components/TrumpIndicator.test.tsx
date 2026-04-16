@@ -4,26 +4,33 @@ import { describe, expect, it } from "vitest";
 import { TrumpIndicator } from "./TrumpIndicator";
 
 describe("TrumpIndicator", () => {
-  it("renders spades suit symbol with accent color", () => {
+  it("renders spades suit symbol in primary text color", () => {
     render(<TrumpIndicator trumpSuit="S" />);
     const indicator = screen.getByTestId("trump-indicator");
     expect(indicator).toBeInTheDocument();
     expect(indicator.textContent).toContain("\u2660");
+    expect(indicator.querySelector(".text-text-primary")?.textContent).toContain("\u2660");
   });
 
-  it("renders hearts suit symbol", () => {
+  it("renders hearts suit symbol in red", () => {
     render(<TrumpIndicator trumpSuit="H" />);
-    expect(screen.getByTestId("trump-indicator").textContent).toContain("\u2665");
+    const indicator = screen.getByTestId("trump-indicator");
+    expect(indicator.textContent).toContain("\u2665");
+    expect(indicator.querySelector(".text-red-500")?.textContent).toContain("\u2665");
   });
 
-  it("renders diamonds suit symbol", () => {
+  it("renders diamonds suit symbol in red", () => {
     render(<TrumpIndicator trumpSuit="D" />);
-    expect(screen.getByTestId("trump-indicator").textContent).toContain("\u2666");
+    const indicator = screen.getByTestId("trump-indicator");
+    expect(indicator.textContent).toContain("\u2666");
+    expect(indicator.querySelector(".text-red-500")?.textContent).toContain("\u2666");
   });
 
-  it("renders clubs suit symbol", () => {
+  it("renders clubs suit symbol in primary text color", () => {
     render(<TrumpIndicator trumpSuit="C" />);
-    expect(screen.getByTestId("trump-indicator").textContent).toContain("\u2663");
+    const indicator = screen.getByTestId("trump-indicator");
+    expect(indicator.textContent).toContain("\u2663");
+    expect(indicator.querySelector(".text-text-primary")?.textContent).toContain("\u2663");
   });
 
   it("has aria-live polite for screen reader updates", () => {
