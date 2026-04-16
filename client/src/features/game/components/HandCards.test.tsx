@@ -63,6 +63,46 @@ describe("HandCards", () => {
     expect(ks.className).not.toContain("cursor-not-allowed");
   });
 
+  it("renders cards sorted by suit (S, H, C, D) then rank ascending", () => {
+    const unordered: Card[] = [
+      { rank: "A", suit: "D" },
+      { rank: "7", suit: "S" },
+      { rank: "K", suit: "H" },
+      { rank: "9", suit: "S" },
+      { rank: "J", suit: "C" },
+      { rank: "T", suit: "H" },
+    ];
+
+    render(
+      <HandCards hand={unordered} isMyTurn={false} playableCardIds={[]} onPlayCard={vi.fn()} />,
+    );
+
+    const container = screen.getByTestId("hand-cards");
+    const rendered = Array.from(container.querySelectorAll('[data-testid^="playing-card-"]')).map(
+      (el) => el.getAttribute("data-testid")?.replace("playing-card-", ""),
+    );
+
+    expect(rendered).toEqual(["7S", "9S", "TH", "KH", "JC", "AD"]);
+  });
+
+  it("keeps all cards in default state when not my turn even after sorting", () => {
+    const scrambled: Card[] = [
+      { rank: "A", suit: "D" },
+      { rank: "7", suit: "S" },
+      { rank: "K", suit: "H" },
+    ];
+
+    render(
+      <HandCards hand={scrambled} isMyTurn={false} playableCardIds={[]} onPlayCard={vi.fn()} />,
+    );
+
+    for (const id of ["7S", "KH", "AD"]) {
+      const el = screen.getByTestId(`playing-card-${id}`);
+      expect(el.className).not.toContain("cursor-pointer");
+      expect(el.className).not.toContain("cursor-not-allowed");
+    }
+  });
+
   it("calls onPlayCard with correct cardId on playable card click", async () => {
     const user = userEvent.setup();
     const onPlayCard = vi.fn();
