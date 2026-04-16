@@ -144,3 +144,7 @@
 
 - **D64: `doRefresh()` in fetchClient does not pass AbortSignal to `refresh()`** — Pre-existing. The 401 retry path in `fetchClient` calls `refresh()` without an AbortSignal. Not related to StrictMode double-mount fix. Low risk at current scale.
 - **D65: GORM logger uses `log.New` (plain text) while app uses `slog` (JSON)** — Pre-existing. GORM's default logger already output plain text before configuration change. Creating a proper slog adapter is a Phase 2 observability improvement.
+
+## Deferred from: code review of fix-auth-routing-and-refresh (2026-04-16)
+
+- **D66: Stale `gameState` in gameStore on re-login after session expiry** — Pre-existing. When 401 interceptor calls `authStore.logout()`, it clears token and user but does not reset `gameStore`. If the user logs in again, `useReconnectionRedirect` sees stale game state and may redirect to a game page for a game that has ended server-side. Low risk: server will reject actions on ended games.

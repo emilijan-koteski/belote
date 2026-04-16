@@ -1,13 +1,16 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 
 import { refresh } from "@/shared/api/auth";
 import { setAuthRedirect } from "@/shared/api/axiosClient";
 import { useAuthStore } from "@/shared/stores/authStore";
 
+const GUEST_PATHS = ["/login", "/register"];
+
 export function useAuthInit(): void {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { i18n } = useTranslation();
 
   useEffect(() => {
@@ -17,6 +20,13 @@ export function useAuthInit(): void {
   useEffect(() => {
     const token = useAuthStore.getState().token;
     if (token) {
+      useAuthStore.getState().setLoading(false);
+      return;
+    }
+
+    // Guest pages (login/register) never need a refresh attempt —
+    // there is no session to restore.
+    if (GUEST_PATHS.includes(pathname)) {
       useAuthStore.getState().setLoading(false);
       return;
     }
