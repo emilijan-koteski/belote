@@ -385,6 +385,14 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventTrickResolved, trickResolved))
 		}
 
+		// In Bitola, declarations resolve at end of trick 1 inside
+		// resolveTrickWithDeclarations, which runs under ActionPlayCard — not
+		// under ActionDeclare. Broadcast the reveal event here so the client's
+		// DeclarationReveal fires at start of trick 2. Must precede the
+		// authoritative event:game_state below so the reveal handler sets
+		// declarationReveal before any follow-up state logic runs.
+		m.broadcastDeclarationsResolvedIfTransition(oldState, newState, userIDs)
+
 		// Check if hand was scored (hand number incremented or match ended)
 		if (oldState.HandNumber < newState.HandNumber || newState.Phase == game.PhaseMatchEnd) && newState.LastHandResult != nil {
 			hr := newState.LastHandResult
@@ -444,31 +452,11 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 
 	case game.ActionDeclare, game.ActionSkipDeclare:
-		if newState.DeclarationsResolved && !oldState.DeclarationsResolved {
-			var decls []map[string]interface{}
-			for _, p := range newState.Players {
-				for _, d := range p.Declarations {
-					decls = append(decls, map[string]interface{}{
-						"playerSeat": d.PlayerSeat,
-						"type":       string(d.Type),
-						"value":      d.Value,
-						"cards":      cardsToIDs(d.Cards),
-					})
-				}
-			}
-			// Determine declaration winner from points
-			var declWinnerTeam interface{} = nil
-			if newState.DeclarationPoints[game.TeamRed] > 0 {
-				declWinnerTeam = game.TeamRed
-			} else if newState.DeclarationPoints[game.TeamBlue] > 0 {
-				declWinnerTeam = game.TeamBlue
-			}
-			declResolved := map[string]interface{}{
-				"winnerTeam":   declWinnerTeam,
-				"declarations": decls,
-			}
-			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventDeclarationsResolved, declResolved))
-		}
+		// In Bitola, DeclarationsResolved cannot actually flip here — declarations
+		// resolve only at end of trick 1 (see ActionPlayCard branch). The helper
+		// is still called so future variants (e.g. Croatian, where declarations
+		// resolve during a dedicated phase) don't silently regress.
+		m.broadcastDeclarationsResolvedIfTransition(oldState, newState, userIDs)
 		// Always follow with full state so the client clears awaitingDeclaration,
 		// advances activePlayerSeat, and picks up declarationsResolved. The
 		// event:declarations_resolved handler is reveal-only and does not sync state.
@@ -517,6 +505,41 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		// For any other action, broadcast full state
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 	}
+}
+
+// broadcastDeclarationsResolvedIfTransition fires event:declarations_resolved
+// exactly once, when DeclarationsResolved flips from false to true. Losing-team
+// declarations have already been cleared by resolveDeclarationsForHand at the
+// game layer, so iterating every player yields only the winning team's.
+func (m *Manager) broadcastDeclarationsResolvedIfTransition(oldState, newState *game.GameState, userIDs []uint) {
+	if !newState.DeclarationsResolved || oldState.DeclarationsResolved {
+		return
+	}
+
+	decls := make([]map[string]interface{}, 0)
+	for _, p := range newState.Players {
+		for _, d := range p.Declarations {
+			decls = append(decls, map[string]interface{}{
+				"playerSeat": d.PlayerSeat,
+				"type":       string(d.Type),
+				"value":      d.Value,
+				"cards":      cardsToIDs(d.Cards),
+			})
+		}
+	}
+
+	var declWinnerTeam interface{} = nil
+	if newState.DeclarationPoints[game.TeamRed] > 0 {
+		declWinnerTeam = game.TeamRed
+	} else if newState.DeclarationPoints[game.TeamBlue] > 0 {
+		declWinnerTeam = game.TeamBlue
+	}
+
+	payload := map[string]interface{}{
+		"winnerTeam":   declWinnerTeam,
+		"declarations": decls,
+	}
+	m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventDeclarationsResolved, payload))
 }
 
 // handleMatchEnd persists the match record, updates room status, and removes the session.
