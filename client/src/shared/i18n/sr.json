@@ -13,11 +13,11 @@
   },
   "profile": {
     "title": "Profil",
-    "memberSince": "\u010clan od {{date}}",
-    "matchHistory": "Istorija me\u010deva",
-    "matchHistoryEmpty": "Nema me\u010deva \u2014 odigrajte prvu partiju!",
+    "memberSince": "Član od {{date}}",
+    "matchHistory": "Istorija mečeva",
+    "matchHistoryEmpty": "Nema mečeva — odigrajte prvu partiju!",
     "stats": "Statistika",
-    "statsEmpty": "Statistika \u0107e se pojaviti nakon prvog me\u010da"
+    "statsEmpty": "Statistika će se pojaviti nakon prvog meča"
   },
   "language": {
     "label": "Jezik",
@@ -40,12 +40,12 @@
     "browseRoomsDesc": "Pronađi otvorenu igru",
     "createRoom": "Napravi sobu",
     "createRoomDesc": "Podesi igru po svom",
-    "leaderboardPlaceholder": "Lista lidera uskoro",
+    "leaderboardPlaceholder": "Rang lista uskoro",
     "matchmaking": {
-      "finding": "Tra\u017eenje me\u010da...",
-      "cancel": "Otka\u017ei",
-      "failed": "Nije mogu\u0107e prona\u0107i me\u010d \u2014 poku\u0161ajte ponovo",
-      "alreadyInRoom": "Ve\u0107 ste u sobi \u2014 prvo je napustite"
+      "finding": "Traženje meča...",
+      "cancel": "Otkaži",
+      "failed": "Nije moguće pronaći meč — pokušajte ponovo",
+      "alreadyInRoom": "Već ste u sobi — prvo je napustite"
     },
     "createRoomModal": {
       "title": "Napravi sobu za igru",
@@ -54,7 +54,7 @@
       "variant": "Varijanta igre",
       "variantBitola": "Bitola",
       "matchMode": "Režim igre",
-      "matchMode1001": "1001 poen",
+      "matchMode1001": "1001 poena",
       "timerStyle": "Stil tajmera",
       "timerRelaxed": "Opušteno (bez tajmera)",
       "timerPerMove": "Tajmer po potezu",
@@ -74,77 +74,77 @@
       "teamBlue": "Plavi"
     },
     "roomList": {
-      "searchPlaceholder": "Pretra\u017ei sobe po imenu ili kodu...",
+      "searchPlaceholder": "Pretraži sobe po imenu ili kodu...",
       "backToOptions": "Nazad",
       "variant": "Varijanta",
       "variantBitola": "Bitola",
-      "mode": "Re\u017eim",
+      "mode": "Režim",
       "matchMode1001": "1001 poena",
       "players": "{{current}}/{{max}}",
-      "timerRelaxed": "Opu\u0161teno",
+      "timerRelaxed": "Opušteno",
       "timerPerMove": "{{seconds}}s tajmer",
-      "join": "Pridru\u017ei se",
-      "loading": "U\u010ditavanje soba...",
-      "emptyNoRooms": "Nema otvorenih soba \u2014 Napravi sobu ili probaj Brzu igru",
-      "emptyNoMatch": "Nijedna soba ne odgovara '{{query}}' \u2014",
-      "clearSearch": "Obri\u0161i pretragu",
+      "join": "Pridruži se",
+      "loading": "Učitavanje soba...",
+      "emptyNoRooms": "Nema otvorenih soba — Napravi sobu ili probaj Brzu igru",
+      "emptyNoMatch": "Nijedna soba ne odgovara '{{query}}' —",
+      "clearSearch": "Obriši pretragu",
       "errors": {
-        "roomFull": "Soba je puna \u2014 probaj drugu",
-        "alreadyInRoom": "Ve\u0107 si u sobi",
-        "joinFailed": "Pridru\u017eivanje neuspe\u0161no \u2014 probaj ponovo"
+        "roomFull": "Soba je puna — probaj drugu",
+        "alreadyInRoom": "Već si u sobi",
+        "joinFailed": "Pridruživanje neuspešno — probaj ponovo"
       }
     },
     "joinByCode": {
-      "label": "Ima\u0161 kod sobe?",
+      "label": "Imaš kod sobe?",
       "placeholder": "Unesi kod...",
-      "join": "Pridru\u017ei se",
-      "notFound": "Soba nije prona\u0111ena \u2014 proveri kod i probaj ponovo"
+      "join": "Pridruži se",
+      "notFound": "Soba nije pronađena — proveri kod i probaj ponovo"
     },
     "roomLobby": {
-      "waitingForPlayers": "\u010cekanje igra\u010da...",
+      "waitingForPlayers": "Čekanje igrača...",
       "backToLobby": "Nazad u lobi",
       "copyLink": "Kopiraj link",
       "copyLinkSuccess": "Kod sobe kopiran!",
-      "copyLinkFailed": "Kopiranje neuspe\u0161no \u2014 kod: {{code}}",
+      "copyLinkFailed": "Kopiranje neuspešno — kod: {{code}}",
       "leaveRoom": "Napusti sobu",
-      "seatEmpty": "\u010cekanje...",
+      "seatEmpty": "Čekanje...",
       "seatYou": "Ti",
       "seatOwner": "Vlasnik",
-      "loading": "U\u010ditavanje sobe...",
-      "notFound": "Soba nije prona\u0111ena",
+      "loading": "Učitavanje sobe...",
+      "notFound": "Soba nije pronađena",
       "notFoundAction": "Nazad u lobi",
-      "playerJoined": "{{username}} se pridru\u017eio sobi",
+      "playerJoined": "{{username}} se pridružio sobi",
       "playerLeft": "{{username}} je napustio sobu",
       "teamRed": "Crveni tim",
       "teamBlue": "Plavi tim",
-      "startGame": "Zapo\u010dni igru",
-      "startGameDisabled": "Sva 4 igra\u010da moraju da sednu",
-      "waitingForOwner": "\u010cekanje da {{owner}} zapo\u010dne igru...",
+      "startGame": "Započni igru",
+      "startGameDisabled": "Sva 4 igrača moraju da sednu",
+      "waitingForOwner": "Čekanje da {{owner}} započne igru...",
       "seatTaken": "To mesto je zauzeto",
-      "seatUpdated": "Mesto a\u017eurirano",
-      "gameStarting": "Igra po\u010dinje...",
-      "autoStartMessage": "Igra po\u010dinje automatski kada svi igra\u010di sednu",
-      "autoStarting": "Igra po\u010dinje...",
+      "seatUpdated": "Mesto ažurirano",
+      "gameStarting": "Igra počinje...",
+      "autoStartMessage": "Igra počinje automatski kada svi igrači sednu",
+      "autoStarting": "Igra počinje...",
       "errors": {
-        "seatFailed": "Neuspe\u0161an izbor mesta \u2014 poku\u0161ajte ponovo",
-        "startFailed": "Neuspe\u0161no pokretanje \u2014 poku\u0161ajte ponovo",
-        "notOwner": "Samo vlasnik sobe mo\u017ee da zapo\u010dne",
-        "notAllSeated": "Sva 4 igra\u010da moraju da sednu da bi po\u010delo"
+        "seatFailed": "Neuspešan izbor mesta — pokušajte ponovo",
+        "startFailed": "Neuspešno pokretanje — pokušajte ponovo",
+        "notOwner": "Samo vlasnik sobe može da započne",
+        "notAllSeated": "Sva 4 igrača moraju da sednu da bi počelo"
       }
     }
   },
   "game": {
     "seat": {
-      "waiting": "\u010ceka se...",
+      "waiting": "Čeka se...",
       "you": "Ti"
     },
     "chat": {
-      "title": "\u010cet u me\u010du",
-      "placeholder": "\u010cet uskoro dostupan"
+      "title": "Ćaskanje u meču",
+      "placeholder": "Ćaskanje uskoro dostupno"
     },
     "trump": "Adut: {{suit}}",
     "loading": "Povezivanje na igru...",
-    "leaveConfirm": "Napusti igru? Mo\u017ee\u0161 izgubiti napredak.",
+    "leaveConfirm": "Napusti igru? Možeš izgubiti napredak.",
     "suits": {
       "spades": "Pik",
       "hearts": "Herc",
@@ -160,36 +160,36 @@
       "titleRound2": "Izaberi adut",
       "pick": "Uzmi",
       "pass": "Dalje",
-      "waiting": "\u010cekanje na licitanta..."
+      "waiting": "Čekanje na licitanta..."
     },
     "deal": {
       "dealing": "Deljenje karata..."
     },
     "reshuffle": {
-      "message": "Ponovno me\u0161anje \u0161pila..."
+      "message": "Ponovno mešanje špila..."
     },
     "declaration": {
-      "title": "Ima\u0161 zvanja!",
+      "title": "Imaš zvanja!",
       "declare": "Zvanje",
-      "skip": "Presko\u010di",
+      "skip": "Preskoči",
       "pts": "poena",
       "total": "Ukupno",
-      "sequence": "Niz od {{count}} \u2014 {{points}} poena",
-      "fourOfAKind": "\u010cetvorka \u2014 {{points}} poena",
+      "sequence": "Niz od {{count}} — {{points}} poena",
+      "fourOfAKind": "Četvorka — {{points}} poena",
       "sequenceShort": "Niz od {{count}}",
-      "fourOfAKindShort": "\u010cetvorka",
+      "fourOfAKindShort": "Četvorka",
       "resolved": "Zvanja",
-      "teamDeclared": "Zvanje \u2014 {{team}}",
+      "teamDeclared": "Zvanje — {{team}}",
       "teamRed": "Crveni tim",
       "teamBlue": "Plavi tim"
     },
     "belot": {
       "titleBelot": "Objavi belot?",
       "titleRebelot": "Objavi re-belot?",
-      "description": "Ima\u0161 kralja i damu aduta (+20 poena)",
+      "description": "Imaš kralja i damu aduta (+20 poena)",
       "announceBelot": "Objavi belot",
       "announceRebelot": "Objavi re-belot",
-      "decline": "Presko\u010di",
+      "decline": "Preskoči",
       "reveal": {
         "belot": "Belot!",
         "rebelot": "Re-belot!"
@@ -198,12 +198,12 @@
     "errors": {
       "wrongPhase": "Akcija nije dostupna u ovoj fazi",
       "notYourTurn": "Nije tvoj red",
-      "invalidAction": "Neva\u017ee\u0107a akcija",
-      "illegalPlay": "Ta karta ne mo\u017ee da se odigra",
-      "pauseExhausted": "Ve\u0107 ste iskoristili pauzu",
+      "invalidAction": "Nevažeća akcija",
+      "illegalPlay": "Ta karta ne može da se odigra",
+      "pauseExhausted": "Već ste iskoristili pauzu",
       "noActivePause": "Nemate aktivnu pauzu",
-      "notRoomOwner": "Samo vlasnik sobe mo\u017ee ovo da uradi",
-      "playerDisconnected": "Igrac je diskonektovan"
+      "notRoomOwner": "Samo vlasnik sobe može ovo da uradi",
+      "playerDisconnected": "Igrač je prekinuo vezu"
     },
     "timer": {
       "autoPlayed": "Automatski odigrano: {{card}}"
@@ -217,44 +217,44 @@
     },
     "scoreReveal": {
       "title": "Rezultat ruke",
-      "cardPoints": "Bodovi karata",
+      "cardPoints": "Poeni karata",
       "declarationPoints": "Zvanja",
       "lastTrickBonus": "Bonus poslednje ruke",
       "capotBonus": "Kapot bonus",
       "failedContract": "Pao ugovor",
-      "failedContractDesc": "{{team}} pao \u2014 svi bodovi za {{otherTeam}}",
+      "failedContractDesc": "{{team}} pao — svi poeni za {{otherTeam}}",
       "handTotal": "Ukupno ruka",
-      "matchTotal": "Ukupno me\u010d",
+      "matchTotal": "Ukupno meč",
       "continue": "Nastavi"
     },
     "capot": {
       "title": "KAPOT!"
     },
     "matchResult": {
-      "title": "Me\u010d zavr\u0161en",
-      "winner": "{{team}} pobe\u0111uje!",
-      "duration": "Trajanje me\u010da",
+      "title": "Meč završen",
+      "winner": "{{team}} pobeđuje!",
+      "duration": "Trajanje meča",
       "returnToLobby": "Nazad u lobi"
     },
     "pause": {
       "title": "Igra pauzirana",
       "pausedBy": "{{player}} je pauzirao igru",
-      "waitingToResume": "\u010cekanje da igra\u010di nastave...",
+      "waitingToResume": "Čekanje da igrači nastave...",
       "resume": "Nastavi",
       "pauseButton": "Pauza",
-      "pauseUsed": "Pauza iskori\u0161\u0107ena",
+      "pauseUsed": "Pauza iskorišćena",
       "resumeAll": "Nastavi sve",
       "ownerResumedToast": "Vlasnik sobe je nastavio igru"
     },
     "disconnect": {
-      "playerDisconnected": "{{player}} se diskonektova",
-      "playerReconnected": "{{player}} se rekonektova",
-      "reconnecting": "Rekonektovanje...",
-      "waitingMessage": "Igra je pauzirana dok cekamo da se {{player}} vrati.",
+      "playerDisconnected": "{{player}} je prekinuo vezu",
+      "playerReconnected": "{{player}} se ponovo povezao",
+      "reconnecting": "Ponovno povezivanje...",
+      "waitingMessage": "Igra je pauzirana dok čekamo da se {{player}} vrati.",
       "countdownLabel": "Preostalo vreme",
       "reconnected": "Ponovo ste povezani",
-      "reconnectFailed": "Rekonektovanje neuspešno — meč je možda završen",
-      "matchAbandoned": "{{player}} se diskonektovao — meč završen",
+      "reconnectFailed": "Ponovno povezivanje nije uspelo — meč je možda završen",
+      "matchAbandoned": "{{player}} je prekinuo vezu — meč završen",
       "matchAbandonedScores": "Rezultat: Crveni {{red}} : Plavi {{blue}}",
       "returningToLobby": "Povratak u lobi..."
     }
@@ -271,7 +271,7 @@
     "login": {
       "title": "Prijavite se",
       "emailLabel": "Email",
-      "emailPlaceholder": "vas@email.com",
+      "emailPlaceholder": "ime@primer.com",
       "passwordLabel": "Lozinka",
       "passwordPlaceholder": "Unesite lozinku",
       "submitButton": "Prijavite se",
@@ -288,7 +288,7 @@
     "register": {
       "title": "Kreiraj nalog",
       "emailLabel": "Email",
-      "emailPlaceholder": "vas@email.com",
+      "emailPlaceholder": "ime@primer.com",
       "usernameLabel": "Korisničko ime",
       "usernamePlaceholder": "Izaberite korisničko ime",
       "passwordLabel": "Lozinka",
