@@ -153,7 +153,8 @@
     },
     "trumpIndicator": {
       "trump": "Trump",
-      "label": "Trump suit: {{suit}}"
+      "label": "Trump suit: {{suit}}",
+      "labelWithTeam": "Trump suit: {{suit}}, called by {{team}} team"
     },
     "trumpPrompt": {
       "titleRound1": "Trump Candidate",

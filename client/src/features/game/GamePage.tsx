@@ -365,7 +365,10 @@ export function GamePage() {
       {/* Trump indicator - top right, visible only during play and later (AC 4.4.5) */}
       <div className="absolute top-4 right-16 z-10">
         {gameState.trumpSuit && gameState.phase !== "dealing" && gameState.phase !== "bidding" && (
-          <TrumpIndicator trumpSuit={gameState.trumpSuit} />
+          <TrumpIndicator
+            trumpSuit={gameState.trumpSuit}
+            trumpCallerSeat={gameState.trumpCallerSeat}
+          />
         )}
       </div>
 

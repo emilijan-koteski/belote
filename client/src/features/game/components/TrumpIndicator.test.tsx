@@ -42,4 +42,26 @@ describe("TrumpIndicator", () => {
     render(<TrumpIndicator trumpSuit="H" />);
     expect(screen.getByTestId("trump-indicator")).toHaveAttribute("aria-label");
   });
+
+  it("shows a red team badge when the trump caller is on an even seat", () => {
+    render(<TrumpIndicator trumpSuit="S" trumpCallerSeat={0} />);
+    const badge = screen.getByTestId("trump-caller-team");
+    expect(badge).toHaveAttribute("data-team", "red");
+    expect(badge.className).toContain("text-team-red");
+    expect(screen.getByTestId("trump-indicator").className).toContain("border-team-red");
+  });
+
+  it("shows a blue team badge when the trump caller is on an odd seat", () => {
+    render(<TrumpIndicator trumpSuit="H" trumpCallerSeat={3} />);
+    const badge = screen.getByTestId("trump-caller-team");
+    expect(badge).toHaveAttribute("data-team", "blue");
+    expect(badge.className).toContain("text-team-blue");
+    expect(screen.getByTestId("trump-indicator").className).toContain("border-team-blue");
+  });
+
+  it("omits the team badge when trump caller seat is null", () => {
+    render(<TrumpIndicator trumpSuit="S" trumpCallerSeat={null} />);
+    expect(screen.queryByTestId("trump-caller-team")).not.toBeInTheDocument();
+    expect(screen.getByTestId("trump-indicator").className).not.toContain("border-team-");
+  });
 });
