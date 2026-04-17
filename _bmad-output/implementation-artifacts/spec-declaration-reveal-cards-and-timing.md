@@ -2,9 +2,9 @@
 title: 'Declaration reveal: winning cards shown at start of trick 2, seat-anchored'
 type: 'feature'
 created: '2026-04-17'
-status: 'ready-for-dev'
+status: 'done'
 context: ['spec-declaration-prompt-sum-and-bitola-dedup.md']
-baseline_commit: 'TBD (HEAD at implementation time)'
+baseline_commit: '7c77683d4275701febb4f802138319ae273c55be'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -113,3 +113,49 @@ baseline_commit: 'TBD (HEAD at implementation time)'
 - Manual/Playwright: deal a hand with a declaration winner, verify reveal location (seat-anchored), cards visible with correct suit colors, 4s duration, no click-blocking.
 
 </frozen-after-approval>
+
+## Suggested Review Order
+
+**Reveal panel layout & data flow**
+
+- Entry point: seat-anchored panel replaces centered overlay; duration bumped to 4s.
+  [`DeclarationReveal.tsx:48`](../../client/src/features/game/components/DeclarationReveal.tsx#L48)
+
+- Compass-based positioning map; south offset raised to clear own hand cards.
+  [`DeclarationReveal.tsx:15`](../../client/src/features/game/components/DeclarationReveal.tsx#L15)
+
+- Null/empty guard preserves original early-return for `winnerTeam === null`.
+  [`DeclarationReveal.tsx:53`](../../client/src/features/game/components/DeclarationReveal.tsx#L53)
+
+- Winner seat derived from first declaration; anchor computed via `compassOffset`.
+  [`DeclarationReveal.tsx:58`](../../client/src/features/game/components/DeclarationReveal.tsx#L58)
+
+- Card rendering: stacks per-declaration rows with short type label and `PlayingCard` chips.
+  [`DeclarationReveal.tsx:83`](../../client/src/features/game/components/DeclarationReveal.tsx#L83)
+
+- Inline card-ID parser (single-char rank + suit matches project `CardId` encoding).
+  [`DeclarationReveal.tsx:27`](../../client/src/features/game/components/DeclarationReveal.tsx#L27)
+
+**Caller wiring**
+
+- `myPlayerSeat` now threaded into the reveal so compass offsets resolve to self-relative positions.
+  [`GamePage.tsx:488`](../../client/src/features/game/GamePage.tsx#L488)
+
+**i18n**
+
+- New `teamDeclared` label plus short type labels without point suffixes.
+  [`en.json:179`](../../client/src/shared/i18n/en.json#L179)
+
+- Serbian mirror of the three new keys.
+  [`sr.json:179`](../../client/src/shared/i18n/sr.json#L179)
+
+**Tests**
+
+- Replaces `+total` assertion with card testids, team `data-team` attribute, and 4s timer window.
+  [`DeclarationReveal.test.tsx:27`](../../client/src/features/game/components/DeclarationReveal.test.tsx#L27)
+
+- Negative assertion that no `+total` number leaks into the reveal.
+  [`DeclarationReveal.test.tsx:43`](../../client/src/features/game/components/DeclarationReveal.test.tsx#L43)
+
+- Multiple-declaration stacking scenario covers per-row rendering.
+  [`DeclarationReveal.test.tsx:58`](../../client/src/features/game/components/DeclarationReveal.test.tsx#L58)

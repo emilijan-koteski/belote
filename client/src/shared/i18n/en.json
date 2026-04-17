@@ -176,7 +176,10 @@
       "total": "Total",
       "sequence": "Sequence of {{count}} — {{points}} pts",
       "fourOfAKind": "Four of a Kind — {{points}} pts",
+      "sequenceShort": "Sequence of {{count}}",
+      "fourOfAKindShort": "Four of a Kind",
       "resolved": "Declarations",
+      "teamDeclared": "{{team}} declared",
       "teamRed": "Red Team",
       "teamBlue": "Blue Team"
     },

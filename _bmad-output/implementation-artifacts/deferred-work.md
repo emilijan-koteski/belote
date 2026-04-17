@@ -148,3 +148,7 @@
 ## Deferred from: code review of fix-auth-routing-and-refresh (2026-04-16)
 
 - **D66: Stale `gameState` in gameStore on re-login after session expiry** — Pre-existing. When 401 interceptor calls `authStore.logout()`, it clears token and user but does not reset `gameStore`. If the user logs in again, `useReconnectionRedirect` sees stale game state and may redirect to a game page for a game that has ended server-side. Low risk: server will reject actions on ended games.
+
+## Deferred from: code review of declaration-reveal-cards-and-timing (2026-04-17)
+
+- **D67: DeclarationReveal anchors panel to `declarations[0].playerSeat`** — If the server ever broadcasts declarations from two teammates on the winning team (e.g. seat 0 has a tierce and seat 2 has a different sequence), the panel anchors to the first entry only. Current spec and bitola dedup rules imply a single declarer wins the clash, so this is theoretical. Revisit if multi-teammate broadcasts become possible (e.g. Croatian variant where both teammates' declarations can survive).

@@ -176,7 +176,10 @@
       "total": "Ukupno",
       "sequence": "Niz od {{count}} \u2014 {{points}} poena",
       "fourOfAKind": "\u010cetvorka \u2014 {{points}} poena",
+      "sequenceShort": "Niz od {{count}}",
+      "fourOfAKindShort": "\u010cetvorka",
       "resolved": "Zvanja",
+      "teamDeclared": "Zvanje \u2014 {{team}}",
       "teamRed": "Crveni tim",
       "teamBlue": "Plavi tim"
     },
