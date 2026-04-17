@@ -117,11 +117,6 @@ func dedupBitola(decls []Declaration) []Declaration {
 		return decls
 	}
 
-	type cardKey struct {
-		Rank Rank
-		Suit Suit
-	}
-
 	order := make([]int, len(decls))
 	for i := range order {
 		order[i] = i
@@ -130,13 +125,13 @@ func dedupBitola(decls []Declaration) []Declaration {
 		return decls[order[i]].Value > decls[order[j]].Value
 	})
 
-	used := map[cardKey]bool{}
+	used := map[Card]bool{}
 	keep := make([]bool, len(decls))
 	for _, idx := range order {
 		d := decls[idx]
 		conflict := false
 		for _, c := range d.Cards {
-			if used[cardKey{c.Rank, c.Suit}] {
+			if used[c] {
 				conflict = true
 				break
 			}
@@ -145,7 +140,7 @@ func dedupBitola(decls []Declaration) []Declaration {
 			continue
 		}
 		for _, c := range d.Cards {
-			used[cardKey{c.Rank, c.Suit}] = true
+			used[c] = true
 		}
 		keep[idx] = true
 	}
