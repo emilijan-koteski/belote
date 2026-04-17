@@ -44,7 +44,7 @@ export function BelotReveal({
   );
 
   useEffect(() => {
-    const duration = prefersReducedMotion ? 1500 : 4000;
+    const duration = prefersReducedMotion ? 1500 : 8000;
     const timer = setTimeout(() => {
       setVisible(false);
       onComplete();

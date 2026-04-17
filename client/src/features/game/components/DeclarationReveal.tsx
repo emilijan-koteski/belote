@@ -42,7 +42,7 @@ export function DeclarationReveal({ payload, myPlayerSeat, onComplete }: Declara
   );
 
   useEffect(() => {
-    const duration = prefersReducedMotion ? 1500 : 4000;
+    const duration = prefersReducedMotion ? 1500 : 8000;
     const timer = setTimeout(() => {
       setVisible(false);
       onComplete();

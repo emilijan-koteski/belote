@@ -47,7 +47,7 @@ describe("BelotReveal", () => {
     expect(screen.getByTestId("playing-card-KC")).toBeInTheDocument();
   });
 
-  it("auto-dismisses after 4 seconds", () => {
+  it("auto-dismisses after 8 seconds", () => {
     vi.useFakeTimers();
     const onComplete = vi.fn();
     render(
@@ -59,7 +59,7 @@ describe("BelotReveal", () => {
         onComplete={onComplete}
       />,
     );
-    vi.advanceTimersByTime(3900);
+    vi.advanceTimersByTime(7900);
     expect(onComplete).not.toHaveBeenCalled();
     vi.advanceTimersByTime(200);
     expect(onComplete).toHaveBeenCalledOnce();
