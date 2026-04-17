@@ -770,6 +770,120 @@ func TestSkipDeclareAtTrick2(t *testing.T) {
 	})
 }
 
+// --- Bitola dedup tests ---
+
+func TestDedupBitola(t *testing.T) {
+	t.Run("tierce spades + FoaK 9s sharing 9S — FoaK kept", func(t *testing.T) {
+		gs := testfixtures.NewGameFirstTrick(game.SuitHearts)
+		gs.Players[0].Hand = []game.Card{
+			{Rank: game.Rank7, Suit: game.SuitSpades},
+			{Rank: game.Rank8, Suit: game.SuitSpades},
+			{Rank: game.Rank9, Suit: game.SuitSpades},
+			{Rank: game.Rank9, Suit: game.SuitHearts},
+			{Rank: game.Rank9, Suit: game.SuitDiamonds},
+			{Rank: game.Rank9, Suit: game.SuitClubs},
+			{Rank: game.RankJack, Suit: game.SuitDiamonds},
+			{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+		}
+		gs.ActivePlayerSeat = 0
+		gs.AwaitingDeclaration = true
+
+		state, err := game.ApplyAction(gs, game.Action{Type: game.ActionDeclare, PlayerSeat: 0})
+		require.NoError(t, err)
+		require.Len(t, state.Players[0].Declarations, 1, "tierce should be dropped by dedup")
+		assert.Equal(t, game.DeclarationFourOfAKind, state.Players[0].Declarations[0].Type)
+		assert.Equal(t, 150, state.Players[0].Declarations[0].Value)
+	})
+
+	t.Run("quarte spades 9-T-J-Q + FoaK jacks sharing JS — FoaK kept", func(t *testing.T) {
+		gs := testfixtures.NewGameFirstTrick(game.SuitHearts)
+		gs.Players[0].Hand = []game.Card{
+			{Rank: game.Rank9, Suit: game.SuitSpades},
+			{Rank: game.RankTen, Suit: game.SuitSpades},
+			{Rank: game.RankJack, Suit: game.SuitSpades},
+			{Rank: game.RankQueen, Suit: game.SuitSpades},
+			{Rank: game.RankJack, Suit: game.SuitHearts},
+			{Rank: game.RankJack, Suit: game.SuitDiamonds},
+			{Rank: game.RankJack, Suit: game.SuitClubs},
+			{Rank: game.Rank7, Suit: game.SuitClubs},
+		}
+		gs.ActivePlayerSeat = 0
+		gs.AwaitingDeclaration = true
+
+		state, err := game.ApplyAction(gs, game.Action{Type: game.ActionDeclare, PlayerSeat: 0})
+		require.NoError(t, err)
+		require.Len(t, state.Players[0].Declarations, 1, "quarte should be dropped by dedup")
+		assert.Equal(t, game.DeclarationFourOfAKind, state.Players[0].Declarations[0].Type)
+		assert.Equal(t, 200, state.Players[0].Declarations[0].Value)
+	})
+
+	t.Run("two FoaKs of different ranks — both kept", func(t *testing.T) {
+		gs := testfixtures.NewGameFirstTrick(game.SuitHearts)
+		gs.Players[0].Hand = []game.Card{
+			{Rank: game.Rank9, Suit: game.SuitSpades},
+			{Rank: game.Rank9, Suit: game.SuitHearts},
+			{Rank: game.Rank9, Suit: game.SuitDiamonds},
+			{Rank: game.Rank9, Suit: game.SuitClubs},
+			{Rank: game.RankAce, Suit: game.SuitSpades},
+			{Rank: game.RankAce, Suit: game.SuitHearts},
+			{Rank: game.RankAce, Suit: game.SuitDiamonds},
+			{Rank: game.RankAce, Suit: game.SuitClubs},
+		}
+		gs.ActivePlayerSeat = 0
+		gs.AwaitingDeclaration = true
+
+		state, err := game.ApplyAction(gs, game.Action{Type: game.ActionDeclare, PlayerSeat: 0})
+		require.NoError(t, err)
+		require.Len(t, state.Players[0].Declarations, 2)
+	})
+
+	t.Run("non-overlapping tierce + FoaK — both kept", func(t *testing.T) {
+		// Tierce 7S-8S-9S (top=9S) + FoaK jacks. No overlap — 9 is not J.
+		gs := testfixtures.NewGameFirstTrick(game.SuitHearts)
+		gs.Players[0].Hand = []game.Card{
+			{Rank: game.Rank7, Suit: game.SuitSpades},
+			{Rank: game.Rank8, Suit: game.SuitSpades},
+			{Rank: game.Rank9, Suit: game.SuitSpades},
+			{Rank: game.RankJack, Suit: game.SuitSpades},
+			{Rank: game.RankJack, Suit: game.SuitHearts},
+			{Rank: game.RankJack, Suit: game.SuitDiamonds},
+			{Rank: game.RankJack, Suit: game.SuitClubs},
+			{Rank: game.Rank7, Suit: game.SuitClubs},
+		}
+		gs.ActivePlayerSeat = 0
+		gs.AwaitingDeclaration = true
+
+		state, err := game.ApplyAction(gs, game.Action{Type: game.ActionDeclare, PlayerSeat: 0})
+		require.NoError(t, err)
+		// Spade run 9→J is not consecutive (9 idx 2, J idx 4). So runs are
+		// 7-8-9 (tierce) and JS alone. Tierce + FoaK kept — no shared cards.
+		require.Len(t, state.Players[0].Declarations, 2)
+	})
+
+	t.Run("quarte subsumes tierce in detection — single declaration emitted", func(t *testing.T) {
+		// Pre-dedup sanity: JD-QD-KD-AD produces only the maximal quarte.
+		gs := testfixtures.NewGameFirstTrick(game.SuitHearts)
+		gs.Players[0].Hand = []game.Card{
+			{Rank: game.RankJack, Suit: game.SuitDiamonds},
+			{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+			{Rank: game.RankKing, Suit: game.SuitDiamonds},
+			{Rank: game.RankAce, Suit: game.SuitDiamonds},
+			{Rank: game.Rank7, Suit: game.SuitSpades},
+			{Rank: game.Rank8, Suit: game.SuitSpades},
+			{Rank: game.Rank7, Suit: game.SuitClubs},
+			{Rank: game.Rank8, Suit: game.SuitClubs},
+		}
+		gs.ActivePlayerSeat = 0
+		gs.AwaitingDeclaration = true
+
+		state, err := game.ApplyAction(gs, game.Action{Type: game.ActionDeclare, PlayerSeat: 0})
+		require.NoError(t, err)
+		require.Len(t, state.Players[0].Declarations, 1)
+		assert.Equal(t, 50, state.Players[0].Declarations[0].Value)
+		assert.Len(t, state.Players[0].Declarations[0].Cards, 4)
+	})
+}
+
 // makeCards is a test helper that creates cards from 2-char IDs.
 func makeCards(ids ...string) []game.Card {
 	cards := make([]game.Card, len(ids))

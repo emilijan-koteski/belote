@@ -40,7 +40,45 @@ describe("DeclarationPrompt", () => {
     render(
       <DeclarationPrompt declarations={mockDeclarations} onDeclare={vi.fn()} onSkip={vi.fn()} />,
     );
-    expect(screen.getByText(/50/)).toBeInTheDocument();
+    // Value appears in the group row and again in the total footer — both are fine.
+    expect(screen.getAllByText(/50/).length).toBeGreaterThan(0);
+  });
+
+  it("shows total equal to sum of declaration values", () => {
+    const multi: Declaration[] = [
+      {
+        type: "sequence",
+        cards: [
+          { rank: "7", suit: "S" },
+          { rank: "8", suit: "S" },
+          { rank: "9", suit: "S" },
+        ],
+        playerSeat: 0,
+        value: 20,
+      },
+      {
+        type: "four_of_a_kind",
+        cards: [
+          { rank: "J", suit: "S" },
+          { rank: "J", suit: "H" },
+          { rank: "J", suit: "D" },
+          { rank: "J", suit: "C" },
+        ],
+        playerSeat: 0,
+        value: 200,
+      },
+    ];
+    render(<DeclarationPrompt declarations={multi} onDeclare={vi.fn()} onSkip={vi.fn()} />);
+    const totalRow = screen.getByTestId("declaration-prompt-total");
+    expect(totalRow).toHaveTextContent(/220/);
+  });
+
+  it("total matches single-declaration value when only one group is present", () => {
+    render(
+      <DeclarationPrompt declarations={mockDeclarations} onDeclare={vi.fn()} onSkip={vi.fn()} />,
+    );
+    const totalRow = screen.getByTestId("declaration-prompt-total");
+    expect(totalRow).toHaveTextContent(/50/);
   });
 
   it("calls onDeclare when DECLARE button is clicked", async () => {

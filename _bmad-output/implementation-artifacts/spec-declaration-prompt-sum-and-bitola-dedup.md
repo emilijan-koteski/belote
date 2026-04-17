@@ -2,9 +2,9 @@
 title: 'Declaration prompt: show all groups with personal sum, Bitola single-use dedup'
 type: 'feature'
 created: '2026-04-17'
-status: 'ready-for-dev'
+status: 'done'
 context: []
-baseline_commit: 'TBD (HEAD at implementation time)'
+baseline_commit: '8f05a5d6f127acbe39ef5eab829e7ea38d631d43'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -101,3 +101,46 @@ baseline_commit: 'TBD (HEAD at implementation time)'
 - Manual: deal a hand with overlap (hard to force naturally) or write a test fixture. The modal shows only the winning-value group and the total matches.
 
 </frozen-after-approval>
+
+## Suggested Review Order
+
+**Dedup rule (source of truth)**
+
+- Server entry point — `detectDeclarations` now funnels through dedup before returning.
+  [`declarations.go:108`](../../server/internal/game/declarations.go#L108)
+
+- Bitola dedup algorithm — stable sort by value desc, track used card keys, keep first non-conflict.
+  [`declarations.go:115`](../../server/internal/game/declarations.go#L115)
+
+- Client mirror — identical contract, same output shape, keeps prompt and server in lock-step.
+  [`declarations.ts:110`](../../client/src/features/game/lib/declarations.ts#L110)
+
+- Client entry point — matches the server's single call site.
+  [`declarations.ts:101`](../../client/src/features/game/lib/declarations.ts#L101)
+
+**Prompt UI — personal sum**
+
+- Total computed from the same `declarations` prop driving the per-group rows.
+  [`DeclarationPrompt.tsx:28`](../../client/src/features/game/components/DeclarationPrompt.tsx#L28)
+
+- Footer row rendered between groups and buttons per spec JSX.
+  [`DeclarationPrompt.tsx:81`](../../client/src/features/game/components/DeclarationPrompt.tsx#L81)
+
+**i18n**
+
+- EN label "Total" added; reuses existing `pts` key.
+  [`en.json:176`](../../client/src/shared/i18n/en.json#L176)
+
+- SR label "Ukupno".
+  [`sr.json:176`](../../client/src/shared/i18n/sr.json#L176)
+
+**Tests**
+
+- Server dedup cases cover all four spec scenarios plus the quarte-subsumes-tierce sanity check.
+  [`declarations_test.go:775`](../../server/internal/game/declarations_test.go#L775)
+
+- Client mirror tests — same scenarios, vitest-style.
+  [`declarations.test.ts:53`](../../client/src/features/game/lib/declarations.test.ts#L53)
+
+- Prompt total assertions — multi-decl sum + single-decl parity.
+  [`DeclarationPrompt.test.tsx:47`](../../client/src/features/game/components/DeclarationPrompt.test.tsx#L47)

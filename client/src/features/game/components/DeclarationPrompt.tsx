@@ -25,6 +25,7 @@ function declarationLabel(
 export function DeclarationPrompt({ declarations, onDeclare, onSkip }: DeclarationPromptProps) {
   const { t } = useTranslation();
   const promptRef = useFocusTrap<HTMLDivElement>();
+  const total = declarations.reduce((sum, d) => sum + d.value, 0);
 
   return (
     <div
@@ -75,6 +76,18 @@ export function DeclarationPrompt({ declarations, onDeclare, onSkip }: Declarati
               </div>
             </div>
           ))}
+        </div>
+
+        <div
+          className="flex items-center justify-between border-t border-border pt-3 mb-4"
+          data-testid="declaration-prompt-total"
+        >
+          <span className="font-body text-sm text-text-secondary">
+            {t("game.declaration.total")}
+          </span>
+          <span className="text-accent font-display text-lg font-bold">
+            {total} {t("game.declaration.pts")}
+          </span>
         </div>
 
         <div className="flex gap-3 justify-center">

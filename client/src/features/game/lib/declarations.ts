@@ -96,5 +96,41 @@ export function detectDeclarations(hand: Card[]): Declaration[] {
     }
   }
 
-  return decls;
+  // TODO(croatian-variant): skip dedup for the Croatian variant when added —
+  // there a card may participate in multiple declarations.
+  return dedupBitola(decls);
+}
+
+/**
+ * Applies the Bitola-variant rule: one card, one group. Among declarations
+ * that share at least one card, the highest-value one is kept and the rest
+ * are dropped. Stable — original order is preserved among survivors; for
+ * equal-value ties, the earlier declaration wins.
+ */
+function dedupBitola(decls: Declaration[]): Declaration[] {
+  if (decls.length <= 1) return decls;
+
+  const order = decls.map((_, i) => i);
+  // Stable sort by value descending (Array.sort in modern engines is stable).
+  order.sort((a, b) => decls[b]!.value - decls[a]!.value);
+
+  const used = new Set<string>();
+  const keep = new Array<boolean>(decls.length).fill(false);
+  for (const idx of order) {
+    const d = decls[idx]!;
+    let conflict = false;
+    for (const c of d.cards) {
+      if (used.has(`${c.rank}${c.suit}`)) {
+        conflict = true;
+        break;
+      }
+    }
+    if (conflict) continue;
+    for (const c of d.cards) {
+      used.add(`${c.rank}${c.suit}`);
+    }
+    keep[idx] = true;
+  }
+
+  return decls.filter((_, i) => keep[i]);
 }

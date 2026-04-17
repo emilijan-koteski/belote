@@ -103,7 +103,60 @@ func detectDeclarations(hand []Card) []Declaration {
 		}
 	}
 
-	return decls
+	// TODO(croatian-variant): skip dedup for the Croatian variant when added —
+	// there a card may participate in multiple declarations.
+	return dedupBitola(decls)
+}
+
+// dedupBitola applies the Bitola-variant rule: one card, one group. Among
+// declarations that share at least one card, the highest-Value one is kept
+// and the rest are dropped. Stable — original order is preserved among
+// survivors; for equal-Value ties, the earlier declaration wins.
+func dedupBitola(decls []Declaration) []Declaration {
+	if len(decls) <= 1 {
+		return decls
+	}
+
+	type cardKey struct {
+		Rank Rank
+		Suit Suit
+	}
+
+	order := make([]int, len(decls))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(i, j int) bool {
+		return decls[order[i]].Value > decls[order[j]].Value
+	})
+
+	used := map[cardKey]bool{}
+	keep := make([]bool, len(decls))
+	for _, idx := range order {
+		d := decls[idx]
+		conflict := false
+		for _, c := range d.Cards {
+			if used[cardKey{c.Rank, c.Suit}] {
+				conflict = true
+				break
+			}
+		}
+		if conflict {
+			continue
+		}
+		for _, c := range d.Cards {
+			used[cardKey{c.Rank, c.Suit}] = true
+		}
+		keep[idx] = true
+	}
+
+	out := make([]Declaration, 0, len(decls))
+	for i, d := range decls {
+		if keep[i] {
+			out = append(out, d)
+		}
+	}
+	return out
 }
 
 // hasDeclarableCombinations returns true if the hand contains any valid declarations.

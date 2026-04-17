@@ -173,6 +173,7 @@
       "declare": "Declare",
       "skip": "Skip",
       "pts": "pts",
+      "total": "Total",
       "sequence": "Sequence of {{count}} — {{points}} pts",
       "fourOfAKind": "Four of a Kind — {{points}} pts",
       "resolved": "Declarations",

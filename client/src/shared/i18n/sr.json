@@ -173,6 +173,7 @@
       "declare": "Zvanje",
       "skip": "Presko\u010di",
       "pts": "poena",
+      "total": "Ukupno",
       "sequence": "Niz od {{count}} \u2014 {{points}} poena",
       "fourOfAKind": "\u010cetvorka \u2014 {{points}} poena",
       "resolved": "Zvanja",
