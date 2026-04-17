@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Rank, Suit } from "@/shared/types/gameTypes";
+import type { PlayerState, Rank, Suit } from "@/shared/types/gameTypes";
 import type { DeclarationsResolvedPayload } from "@/shared/types/wsEvents";
 
 import { PlayingCard } from "./PlayingCard";
@@ -9,6 +9,7 @@ import { PlayingCard } from "./PlayingCard";
 interface DeclarationRevealProps {
   payload: DeclarationsResolvedPayload;
   myPlayerSeat: number;
+  players: readonly PlayerState[];
   onComplete: () => void;
 }
 
@@ -32,7 +33,12 @@ function declarationLabelKey(type: string): "sequenceShort" | "fourOfAKindShort"
   return type === "four_of_a_kind" ? "fourOfAKindShort" : "sequenceShort";
 }
 
-export function DeclarationReveal({ payload, myPlayerSeat, onComplete }: DeclarationRevealProps) {
+export function DeclarationReveal({
+  payload,
+  myPlayerSeat,
+  players,
+  onComplete,
+}: DeclarationRevealProps) {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
 
@@ -80,26 +86,37 @@ export function DeclarationReveal({ payload, myPlayerSeat, onComplete }: Declara
           {t("game.declaration.teamDeclared", { team: teamName })}
         </p>
         <div className="flex flex-col gap-2">
-          {payload.declarations.map((decl, i) => (
-            <div key={i} className="flex flex-col items-center gap-1">
-              <span className="text-text-secondary font-body text-[11px]">
-                {t(`game.declaration.${declarationLabelKey(decl.type)}`, {
-                  count: decl.cards.length,
-                })}
-              </span>
-              <div className="flex flex-wrap gap-1 justify-center">
-                {decl.cards.map((cardId) => (
-                  <PlayingCard
-                    key={cardId}
-                    card={parseCardId(cardId)}
-                    state="default"
-                    size="sm"
-                    withTransition={false}
-                  />
-                ))}
+          {payload.declarations.map((decl, i) => {
+            const declarer = players.find((p) => p.seat === decl.playerSeat);
+            const username = declarer?.username ?? `#${decl.playerSeat}`;
+            return (
+              <div key={i} className="flex flex-col items-center gap-1">
+                <span
+                  className="text-text-primary font-display text-xs font-semibold"
+                  data-testid="declaration-reveal-declarer"
+                  data-seat={decl.playerSeat}
+                >
+                  {username}
+                </span>
+                <span className="text-text-secondary font-body text-[11px]">
+                  {t(`game.declaration.${declarationLabelKey(decl.type)}`, {
+                    count: decl.cards.length,
+                  })}
+                </span>
+                <div className="flex flex-wrap gap-1 justify-center">
+                  {decl.cards.map((cardId) => (
+                    <PlayingCard
+                      key={cardId}
+                      card={parseCardId(cardId)}
+                      state="default"
+                      size="sm"
+                      withTransition={false}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
