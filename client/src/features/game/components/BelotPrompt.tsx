@@ -4,13 +4,17 @@ import { Button } from "@/shared/components/ui/button";
 import { useFocusTrap } from "@/shared/hooks/useFocusTrap";
 
 interface BelotPromptProps {
+  isKing: boolean;
   onAnnounce: () => void;
   onDecline: () => void;
 }
 
-export function BelotPrompt({ onAnnounce, onDecline }: BelotPromptProps) {
+export function BelotPrompt({ isKing, onAnnounce, onDecline }: BelotPromptProps) {
   const { t } = useTranslation();
   const promptRef = useFocusTrap<HTMLDivElement>();
+
+  const titleKey = isKing ? "game.belot.titleRebelot" : "game.belot.titleBelot";
+  const announceKey = isKing ? "game.belot.announceRebelot" : "game.belot.announceBelot";
 
   return (
     <div
@@ -30,7 +34,7 @@ export function BelotPrompt({ onAnnounce, onDecline }: BelotPromptProps) {
           id="belot-prompt-title"
           className="text-text-primary font-display text-lg font-semibold text-center mb-4"
         >
-          {t("game.belot.title")}
+          {t(titleKey)}
         </h2>
 
         <p className="text-text-secondary font-body text-sm text-center mb-4">
@@ -39,7 +43,7 @@ export function BelotPrompt({ onAnnounce, onDecline }: BelotPromptProps) {
 
         <div className="flex gap-3 justify-center">
           <Button onClick={onAnnounce} data-testid="belot-prompt-announce">
-            {t("game.belot.announce")}
+            {t(announceKey)}
           </Button>
           <Button variant="ghost" onClick={onDecline} data-testid="belot-prompt-decline">
             {t("game.belot.decline")}

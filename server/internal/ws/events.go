@@ -46,6 +46,14 @@ type CardPlayedPayload struct {
 	AutoPlayed bool   `json:"autoPlayed"`
 }
 
+// BelotAnnouncedPayload is the typed payload for EventBelotAnnounced events.
+// CardID is the K/Q of trump that was just played and triggered the announcement.
+type BelotAnnouncedPayload struct {
+	PlayerSeat int    `json:"playerSeat"`
+	Team       int    `json:"team"`
+	CardID     string `json:"cardId"`
+}
+
 // GamePausedPayload is the typed payload for EventGamePaused events.
 type GamePausedPayload struct {
 	PausedBy      int     `json:"pausedBy"`

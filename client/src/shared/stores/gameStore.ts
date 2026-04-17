@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import type { GameState } from "@/shared/types/gameTypes";
 import type {
+  BelotAnnouncedPayload,
   DeclarationsResolvedPayload,
   HandScoredPayload,
   MatchAbandonedPayload,
@@ -15,6 +16,7 @@ interface GameStoreState {
   isLoading: boolean;
   lastError: string | null;
   declarationReveal: DeclarationsResolvedPayload | null;
+  belotReveal: BelotAnnouncedPayload | null;
   scoreRevealData: HandScoredPayload | null;
   matchEndData: MatchEndPayload | null;
   matchAbandonedData: MatchAbandonedPayload | null;
@@ -24,6 +26,7 @@ interface GameStoreState {
   setLoading: (loading: boolean) => void;
   setLastError: (error: string | null) => void;
   setDeclarationReveal: (payload: DeclarationsResolvedPayload | null) => void;
+  setBelotReveal: (payload: BelotAnnouncedPayload | null) => void;
   setScoreRevealData: (data: HandScoredPayload | null) => void;
   setMatchEndData: (data: MatchEndPayload | null) => void;
   setMatchAbandonedData: (data: MatchAbandonedPayload | null) => void;
@@ -52,6 +55,7 @@ const initialState = {
   isLoading: false,
   lastError: null,
   declarationReveal: null,
+  belotReveal: null,
   scoreRevealData: null,
   matchEndData: null,
   matchAbandonedData: null,
@@ -70,6 +74,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setLastError: (lastError) => set({ lastError }),
 
   setDeclarationReveal: (declarationReveal) => set({ declarationReveal }),
+
+  setBelotReveal: (belotReveal) => set({ belotReveal }),
 
   setScoreRevealData: (scoreRevealData) => set({ scoreRevealData }),
 

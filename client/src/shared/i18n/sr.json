@@ -184,10 +184,16 @@
       "teamBlue": "Plavi tim"
     },
     "belot": {
-      "title": "Objavi belot?",
+      "titleBelot": "Objavi belot?",
+      "titleRebelot": "Objavi re-belot?",
       "description": "Ima\u0161 kralja i damu aduta (+20 poena)",
-      "announce": "Objavi",
-      "decline": "Presko\u010di"
+      "announceBelot": "Objavi belot",
+      "announceRebelot": "Objavi re-belot",
+      "decline": "Presko\u010di",
+      "reveal": {
+        "belot": "Belot!",
+        "rebelot": "Re-belot!"
+      }
     },
     "errors": {
       "wrongPhase": "Akcija nije dostupna u ovoj fazi",

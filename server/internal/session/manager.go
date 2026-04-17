@@ -476,9 +476,16 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 
 	case game.ActionAnnounceBelot, game.ActionSkipBelot:
 		if newState.BelotAnnounced && !oldState.BelotAnnounced {
-			belot := map[string]interface{}{
-				"playerSeat": action.PlayerSeat,
-				"team":       game.TeamForSeat(action.PlayerSeat),
+			// The triggering card is the K/Q last appended to the trick before the
+			// Belot prompt paused post-play flow. It remains in oldState.CurrentTrick.
+			var cardID string
+			if n := len(oldState.CurrentTrick); n > 0 {
+				cardID = oldState.CurrentTrick[n-1].Card.String()
+			}
+			belot := ws.BelotAnnouncedPayload{
+				PlayerSeat: action.PlayerSeat,
+				Team:       game.TeamForSeat(action.PlayerSeat),
+				CardID:     cardID,
 			}
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventBelotAnnounced, belot))
 		}

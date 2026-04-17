@@ -184,10 +184,16 @@
       "teamBlue": "Blue Team"
     },
     "belot": {
-      "title": "Announce Belot?",
+      "titleBelot": "Announce Belot?",
+      "titleRebelot": "Announce Re-belot?",
       "description": "You hold King and Queen of trump suit (+20 pts)",
-      "announce": "Announce",
-      "decline": "Skip"
+      "announceBelot": "Announce Belot",
+      "announceRebelot": "Announce Re-belot",
+      "decline": "Skip",
+      "reveal": {
+        "belot": "Belot!",
+        "rebelot": "Re-belot!"
+      }
     },
     "errors": {
       "wrongPhase": "Action not available in this phase",

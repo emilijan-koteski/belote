@@ -20,6 +20,7 @@ import {
 } from "@/shared/types/wsEvents";
 
 import { BelotPrompt } from "./components/BelotPrompt";
+import { BelotReveal } from "./components/BelotReveal";
 import { CapotAnimation } from "./components/CapotAnimation";
 import { DealAnimation } from "./components/DealAnimation";
 import { DeclarationPrompt } from "./components/DeclarationPrompt";
@@ -69,6 +70,8 @@ export function GamePage() {
   const setLastError = useGameStore((s) => s.setLastError);
   const declarationReveal = useGameStore((s) => s.declarationReveal);
   const setDeclarationReveal = useGameStore((s) => s.setDeclarationReveal);
+  const belotReveal = useGameStore((s) => s.belotReveal);
+  const setBelotReveal = useGameStore((s) => s.setBelotReveal);
   const scoreRevealData = useGameStore((s) => s.scoreRevealData);
   const setScoreRevealData = useGameStore((s) => s.setScoreRevealData);
   const matchEndData = useGameStore((s) => s.matchEndData);
@@ -262,6 +265,10 @@ export function GamePage() {
     setDeclarationReveal(null);
   }, [setDeclarationReveal]);
 
+  const handleBelotRevealComplete = useCallback(() => {
+    setBelotReveal(null);
+  }, [setBelotReveal]);
+
   const handleCapotComplete = useCallback(() => {
     setOverlayPhase("score_reveal");
   }, []);
@@ -329,6 +336,11 @@ export function GamePage() {
 
   // Belot state
   const showBelotPrompt = gameState.pendingBelotSeat === myPlayerSeat;
+  // The triggering K/Q is the last card of the current trick at prompt time.
+  const belotPromptLastTrickCard = showBelotPrompt
+    ? (gameState.currentTrick[gameState.currentTrick.length - 1] ?? null)
+    : null;
+  const belotPromptIsKing = belotPromptLastTrickCard?.card.rank === "K";
 
   // Deal animation state
   const isDealingPhase = gameState.phase === "dealing";
@@ -480,7 +492,11 @@ export function GamePage() {
 
       {/* Belot prompt overlay */}
       {showBelotPrompt && (
-        <BelotPrompt onAnnounce={handleAnnounceBelot} onDecline={handleDeclineBelot} />
+        <BelotPrompt
+          isKing={belotPromptIsKing}
+          onAnnounce={handleAnnounceBelot}
+          onDecline={handleDeclineBelot}
+        />
       )}
 
       {/* Declaration resolution reveal */}
@@ -489,6 +505,18 @@ export function GamePage() {
           payload={declarationReveal}
           myPlayerSeat={myPlayerSeat}
           onComplete={handleDeclarationRevealComplete}
+        />
+      )}
+
+      {/* Belot / Re-belot reveal — keyed on payload so back-to-back reveals remount cleanly */}
+      {belotReveal && (
+        <BelotReveal
+          key={`${belotReveal.playerSeat}-${belotReveal.cardId}`}
+          playerSeat={belotReveal.playerSeat}
+          myPlayerSeat={myPlayerSeat}
+          cardId={belotReveal.cardId}
+          isKing={belotReveal.cardId.startsWith("K")}
+          onComplete={handleBelotRevealComplete}
         />
       )}
 

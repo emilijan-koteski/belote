@@ -7,6 +7,7 @@ import { useGameStore } from "@/shared/stores/gameStore";
 import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { GameState } from "@/shared/types/gameTypes";
 import type {
+  BelotAnnouncedPayload,
   CardPlayedPayload,
   DeclarationsResolvedPayload,
   GameResumedPayload,
@@ -189,7 +190,12 @@ function dispatchGameEvent(message: WsMessage): void {
   }
 
   if (type === EVENT_BELOT_ANNOUNCED) {
-    // Informational — the next event:game_state will have the full picture
+    const payload = message.payload as BelotAnnouncedPayload;
+    // Mirror the card_played guard: drop malformed payloads rather than propagate
+    // an empty cardId to BelotReveal where rendering/rank detection would silently break.
+    if (!payload.cardId || payload.cardId.length < 2) return;
+    store.setBelotReveal(payload);
+    // Full state update follows via event:game_state
     return;
   }
 

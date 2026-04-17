@@ -2,9 +2,9 @@
 title: 'Belot / Re-belot: rank-specific prompt and seat-anchored card reveal'
 type: 'feature'
 created: '2026-04-17'
-status: 'ready-for-dev'
+status: 'done'
 context: ['spec-declaration-reveal-cards-and-timing.md']
-baseline_commit: 'TBD (HEAD at implementation time)'
+baseline_commit: 'c0945b9'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -135,3 +135,57 @@ baseline_commit: 'TBD (HEAD at implementation time)'
 - Manual/Playwright: play through a hand where the dealer forces K+Q of trump to the human player. Announce Belot on Q-first play. Verify the prompt label, the reveal card, the auto-dismiss duration, the pending score bump, and the absence of any prompt/reveal on the second card. Repeat with K-first.
 
 </frozen-after-approval>
+
+## Suggested Review Order
+
+**Wire contract (server → client)**
+
+- Typed payload struct replaces the loose map, carrying the triggering card id.
+  [`events.go:49`](../../server/internal/ws/events.go#L49)
+
+- Broadcast reads the K/Q from the last trick entry before the announce action.
+  [`manager.go:477`](../../server/internal/session/manager.go#L477)
+
+- Client mirror of the payload gains `cardId`.
+  [`wsEvents.ts:131`](../../client/src/shared/types/wsEvents.ts#L131)
+
+- Dispatch now populates the store (with a `cardId` shape guard mirroring `card_played`).
+  [`useWsDispatch.ts:191`](../../client/src/shared/hooks/useWsDispatch.ts#L191)
+
+**Rank-aware prompt**
+
+- Prompt title/button copy branches on `isKing` instead of fixed keys.
+  [`BelotPrompt.tsx:12`](../../client/src/features/game/components/BelotPrompt.tsx#L12)
+
+- GamePage derives `isKing` from the last card in `currentTrick` (the triggering K/Q).
+  [`GamePage.tsx:338`](../../client/src/features/game/GamePage.tsx#L338)
+
+- Prompt mounted with the new prop.
+  [`GamePage.tsx:494`](../../client/src/features/game/GamePage.tsx#L494)
+
+**Seat-anchored reveal**
+
+- New `BelotReveal` component mirrors `DeclarationReveal`'s pattern (compass panel + single card + auto-dismiss).
+  [`BelotReveal.tsx:30`](../../client/src/features/game/components/BelotReveal.tsx#L30)
+
+- Mounted with `key` derived from payload so back-to-back announcements remount cleanly.
+  [`GamePage.tsx:512`](../../client/src/features/game/GamePage.tsx#L512)
+
+- Reveal state mirrors the existing `declarationReveal` store slot.
+  [`gameStore.ts:78`](../../client/src/shared/stores/gameStore.ts#L78)
+
+**i18n**
+
+- New `titleBelot`/`titleRebelot`/`announceBelot`/`announceRebelot`/`reveal.belot`/`reveal.rebelot` keys.
+  [`en.json:186`](../../client/src/shared/i18n/en.json#L186)
+
+- Matching SR translations.
+  [`sr.json:186`](../../client/src/shared/i18n/sr.json#L186)
+
+**Tests**
+
+- Prompt asserts both Belot and Re-belot copy variants.
+  [`BelotPrompt.test.tsx:45`](../../client/src/features/game/components/BelotPrompt.test.tsx#L45)
+
+- Reveal asserts label/card for both ranks and the 4s / 1.5s auto-dismiss paths.
+  [`BelotReveal.test.tsx:22`](../../client/src/features/game/components/BelotReveal.test.tsx#L22)

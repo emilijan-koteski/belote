@@ -131,6 +131,7 @@ export interface DeclarationsResolvedPayload {
 export interface BelotAnnouncedPayload {
   playerSeat: number;
   team: number;
+  cardId: string;
 }
 
 export interface GamePausedPayload {

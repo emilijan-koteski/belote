@@ -152,3 +152,8 @@
 ## Deferred from: code review of declaration-reveal-cards-and-timing (2026-04-17)
 
 - **D67: DeclarationReveal anchors panel to `declarations[0].playerSeat`** — If the server ever broadcasts declarations from two teammates on the winning team (e.g. seat 0 has a tierce and seat 2 has a different sequence), the panel anchors to the first entry only. Current spec and bitola dedup rules imply a single declarer wins the clash, so this is theoretical. Revisit if multi-teammate broadcasts become possible (e.g. Croatian variant where both teammates' declarations can survive).
+
+## Deferred from: code review of belot-rebelot-prompt-and-reveal (2026-04-17)
+
+- **D68: `prefersReducedMotion` snapshotted once via `useMemo`, not reactive** — `BelotReveal.tsx` and `DeclarationReveal.tsx` both read `window.matchMedia('(prefers-reduced-motion: reduce)').matches` once at mount and never subscribe to the `change` event. If a user toggles the OS-level reduce-motion setting mid-session, subsequent reveals use the stale value until the next page load. Shared pattern — fix once by introducing a `useReducedMotion` hook that subscribes to media-query changes.
+- **D69: Belot reveal lost on reconnect during the 4s window** — Server's `event:belot_announced` fires once on announcement. On reconnect, the server sends `event:game_state` (which carries `belotAnnounced: true`) but does not replay the cardId-bearing reveal event. A user refreshing during the 4s reveal window — or a late-joining spectator — never sees the overlay. Spec treats the reveal as purely visual so the gap is acceptable; revisit if spectators are added or if reveal persistence becomes important (would need `belotAnnouncedCardId` carried in `GameState`).
