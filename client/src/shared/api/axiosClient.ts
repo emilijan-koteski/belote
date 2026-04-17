@@ -64,7 +64,16 @@ async function doRefresh(): Promise<string> {
   }
 
   refreshPromise = axiosPublic
-    .post<{ data: { token: string; id: number; username: string; email: string; languagePreference: string; createdAt: string } }>("/auth/refresh")
+    .post<{
+      data: {
+        token: string;
+        id: number;
+        username: string;
+        email: string;
+        languagePreference: string;
+        createdAt: string;
+      };
+    }>("/auth/refresh")
     .then((res) => {
       const r = res.data.data;
       useAuthStore.getState().setToken(r.token);

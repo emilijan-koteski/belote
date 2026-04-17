@@ -5,7 +5,11 @@ import { toast } from "sonner";
 
 import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
-import { useLeaveRoomMutation, useSelectSeatMutation, useStartGameMutation } from "@/shared/hooks/mutations/useRooms";
+import {
+  useLeaveRoomMutation,
+  useSelectSeatMutation,
+  useStartGameMutation,
+} from "@/shared/hooks/mutations/useRooms";
 import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
 import { useWsConnectionState } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
@@ -310,11 +314,15 @@ export function RoomLobby() {
             <Button
               onClick={handleStartGame}
               disabled={!allSeated || startGameMutation.isPending}
-              className={allSeated && !startGameMutation.isPending ? "" : "opacity-40 cursor-not-allowed"}
+              className={
+                allSeated && !startGameMutation.isPending ? "" : "opacity-40 cursor-not-allowed"
+              }
               title={allSeated ? undefined : t("lobby.roomLobby.startGameDisabled")}
               data-testid="start-game"
             >
-              {startGameMutation.isPending ? t("lobby.roomLobby.gameStarting") : t("lobby.roomLobby.startGame")}
+              {startGameMutation.isPending
+                ? t("lobby.roomLobby.gameStarting")
+                : t("lobby.roomLobby.startGame")}
             </Button>
           ) : allSeated ? (
             <p className="text-sm text-text-secondary" data-testid="waiting-for-start">

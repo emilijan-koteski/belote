@@ -91,7 +91,7 @@ export function PlayingCard({
   const stateClasses = isPlayable
     ? "motion-safe:translate-y-[-10px] shadow-[0_0_12px_var(--color-accent-glow)] cursor-pointer motion-safe:hover:translate-y-[-14px] focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     : isUnplayable
-      ? "motion-safe:translate-y-[4px] opacity-40 grayscale cursor-not-allowed"
+      ? "motion-safe:translate-y-[4px] opacity-40 cursor-not-allowed"
       : "";
 
   const transitionClasses = withTransition

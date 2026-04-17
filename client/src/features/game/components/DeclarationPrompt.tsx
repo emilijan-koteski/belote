@@ -4,6 +4,8 @@ import { Button } from "@/shared/components/ui/button";
 import { useFocusTrap } from "@/shared/hooks/useFocusTrap";
 import type { Declaration } from "@/shared/types/gameTypes";
 
+import { PlayingCard } from "./PlayingCard";
+
 interface DeclarationPromptProps {
   declarations: Declaration[];
   onDeclare: () => void;
@@ -50,14 +52,27 @@ export function DeclarationPrompt({ declarations, onDeclare, onSkip }: Declarati
           {declarations.map((decl, i) => (
             <div
               key={i}
-              className="flex items-center justify-between bg-surface rounded-md px-3 py-2 border border-border"
+              className="flex flex-col gap-2 bg-surface rounded-md px-3 py-2 border border-border"
             >
-              <span className="text-text-primary font-body text-sm">
-                {declarationLabel(decl, t)}
-              </span>
-              <span className="text-accent font-display text-base font-semibold">
-                {decl.value} {t("game.declaration.pts")}
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-text-primary font-body text-sm">
+                  {declarationLabel(decl, t)}
+                </span>
+                <span className="text-accent font-display text-base font-semibold">
+                  {decl.value} {t("game.declaration.pts")}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {decl.cards.map((card) => (
+                  <PlayingCard
+                    key={`${card.rank}${card.suit}`}
+                    card={card}
+                    state="default"
+                    size="sm"
+                    withTransition={false}
+                  />
+                ))}
+              </div>
             </div>
           ))}
         </div>

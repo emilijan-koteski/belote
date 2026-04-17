@@ -77,11 +77,9 @@ export async function login(data: LoginRequest): Promise<LoginResponse> {
 
 export async function refresh(signal?: AbortSignal): Promise<RefreshResponse> {
   try {
-    const response = await axiosPublic.post<{ data: RefreshResponse }>(
-      "/auth/refresh",
-      undefined,
-      { signal },
-    );
+    const response = await axiosPublic.post<{ data: RefreshResponse }>("/auth/refresh", undefined, {
+      signal,
+    });
     return response.data.data;
   } catch (e) {
     throw new Error(`Refresh failed: ${(e as AxiosError).response?.status ?? "unknown"}`);

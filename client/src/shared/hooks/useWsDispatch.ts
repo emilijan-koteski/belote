@@ -108,7 +108,7 @@ function dispatchGameEvent(message: WsMessage): void {
       store.setGameState({
         ...current,
         currentTrick: [
-          ...current.currentTrick,
+          ...(current.currentTrick ?? []),
           {
             card: {
               rank: rank as "7" | "8" | "9" | "T" | "J" | "Q" | "K" | "A",

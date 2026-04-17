@@ -44,12 +44,12 @@ describe("PlayingCard", () => {
     expect(card.className).toContain("shadow-[0_0_12px_var(--color-accent-glow)]");
   });
 
-  it("is grayscaled, faded and lowered with cursor-not-allowed when unplayable", () => {
+  it("is faded and lowered with cursor-not-allowed when unplayable (suit color retained)", () => {
     render(<PlayingCard card={kingOfSpades} state="unplayable" size="md" />);
 
     const card = screen.getByTestId("playing-card-KS");
     expect(card.className).toContain("opacity-40");
-    expect(card.className).toContain("grayscale");
+    expect(card.className).not.toContain("grayscale");
     expect(card.className).toContain("motion-safe:translate-y-[4px]");
     expect(card.className).toContain("cursor-not-allowed");
   });

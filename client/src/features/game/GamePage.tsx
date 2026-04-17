@@ -35,6 +35,8 @@ import { ScoreReveal } from "./components/ScoreReveal";
 import { TrickArea } from "./components/TrickArea";
 import { TrumpIndicator } from "./components/TrumpIndicator";
 import { TrumpPrompt } from "./components/TrumpPrompt";
+import { detectDeclarations } from "./lib/declarations";
+import { legalCardIds } from "./lib/legalCards";
 
 function compassOffset(seat: number, myPlayerSeat: number): number {
   return (seat - myPlayerSeat + 4) % 4;
@@ -314,7 +316,8 @@ export function GamePage() {
     gameState.pendingBelotSeat !== myPlayerSeat;
   const myPlayer = gameState.players.find((p) => p.seat === myPlayerSeat);
   const myHand = myPlayer?.hand ?? [];
-  const playableCardIds = isMyTurn ? myHand.map((card) => `${card.rank}${card.suit}`) : [];
+  const playableCardIds =
+    isMyTurn && myPlayerSeat !== null ? legalCardIds(gameState, myPlayerSeat) : [];
 
   // Bidding state
   const isBiddingPhase = gameState.phase === "bidding";
@@ -465,7 +468,11 @@ export function GamePage() {
       {/* Declaration prompt overlay */}
       {showDeclarationPrompt && myPlayer && (
         <DeclarationPrompt
-          declarations={myPlayer.declarations}
+          declarations={
+            myPlayer.declarations.length > 0
+              ? myPlayer.declarations
+              : detectDeclarations(myPlayer.hand)
+          }
           onDeclare={handleDeclare}
           onSkip={handleSkipDeclare}
         />

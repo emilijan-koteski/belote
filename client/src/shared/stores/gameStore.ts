@@ -31,6 +31,20 @@ interface GameStoreState {
   reset: () => void;
 }
 
+// Go JSON serializes nil slices as `null`. Coerce the nullable array fields to
+// empty arrays so every consumer can iterate without a null guard.
+function normalizeGameState(gs: GameState): GameState {
+  return {
+    ...gs,
+    currentTrick: gs.currentTrick ?? [],
+    players: gs.players.map((p) => ({
+      ...p,
+      hand: p.hand ?? [],
+      declarations: p.declarations ?? [],
+    })) as GameState["players"],
+  };
+}
+
 const initialState = {
   gameState: null,
   myPlayerSeat: null,
@@ -46,7 +60,8 @@ const initialState = {
 export const useGameStore = create<GameStoreState>((set) => ({
   ...initialState,
 
-  setGameState: (gameState) => set({ gameState, roomId: gameState.roomId }),
+  setGameState: (gameState) =>
+    set({ gameState: normalizeGameState(gameState), roomId: gameState.roomId }),
 
   setMyPlayerSeat: (myPlayerSeat) => set({ myPlayerSeat }),
 
