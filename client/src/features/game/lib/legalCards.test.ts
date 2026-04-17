@@ -220,6 +220,22 @@ describe("legalCards", () => {
     expect(ids.sort()).toEqual(["7S", "AH", "KH"]);
   });
 
+  it("derives led suit from currentTrick[0] when leadSuit is stale/null (race between card_played and game_state)", () => {
+    // Simulates the window after event:card_played has appended the opener to
+    // currentTrick but the follow-up event:game_state hasn't synced leadSuit yet.
+    // Without deriving from currentTrick, the leadSuit===null fallback would
+    // return the full hand and all cards would flash as legal.
+    const myHand = hand(["7S", "KS", "AH", "9D"]);
+    const state = makeState({
+      mySeat: 0,
+      myHand,
+      trumpSuit: "C",
+      leadSuit: null,
+      currentTrick: [trickCard("KD", 3)],
+    });
+    expect(legalCards(state, 0).map((c) => `${c.rank}${c.suit}`)).toEqual(["9D"]);
+  });
+
   it("tolerates currentTrick === null on the wire (server emits nil between tricks)", () => {
     const myHand = hand(["7S", "KD", "AC"]);
     const state = makeState({

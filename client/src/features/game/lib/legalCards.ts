@@ -109,10 +109,18 @@ export function legalCards(state: GameState, seat: number): Card[] {
   // "leading the next trick" → any card is legal.
   const currentTrick = state.currentTrick ?? [];
   if (currentTrick.length === 0) return hand;
-  if (state.trumpSuit === null || state.leadSuit === null) return hand;
+  if (state.trumpSuit === null) return hand;
 
   const trumpSuit = state.trumpSuit;
-  const ledSuit = state.leadSuit;
+  // Derive the led suit from the first card in the trick rather than
+  // state.leadSuit. The server sends event:card_played and event:game_state
+  // as separate messages; between them the client briefly has currentTrick
+  // populated but leadSuit still stale from the previous trick's cleanup.
+  // currentTrick[0] is atomically consistent with the current trick, so
+  // using it closes that race — no "all cards legal" flash.
+  const first = currentTrick[0];
+  if (!first) return hand;
+  const ledSuit = first.card.suit;
   const suitCards = filterBySuit(hand, ledSuit);
 
   if (suitCards.length > 0) {
