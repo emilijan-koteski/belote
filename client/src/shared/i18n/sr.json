@@ -148,7 +148,9 @@
     },
     "chat": {
       "title": "Ćaskanje u meču",
-      "placeholder": "Ćaskanje uskoro dostupno"
+      "placeholder": "Poruči za sto\u2026",
+      "toggleOpen": "Otvori ćaskanje meča",
+      "toggleClose": "Zatvori ćaskanje meča"
     },
     "trump": "Adut: {{suit}}",
     "loading": "Povezivanje na igru...",

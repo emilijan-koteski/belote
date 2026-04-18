@@ -17,10 +17,12 @@ const (
 	ChannelMatch     = "match"
 )
 
-// GameMembership reports whether a user is currently in an active game session.
-// Wired to session.Manager.IsUserInGame in main.go.
+// GameMembership reports whether a user is currently in an active game session
+// and resolves the four participants of a given match.
+// Wired to *session.Manager in main.go.
 type GameMembership interface {
 	IsUserInGame(userID uint) bool
+	MatchParticipants(matchID uint) ([4]uint, bool)
 }
 
 // Broadcaster is the subset of *ws.Hub that the chat handler depends on.
@@ -77,8 +79,7 @@ func (h *Handler) HandleAction(client *ws.Client, msg ws.WSMessage) {
 	case ChannelGlobal:
 		h.handleGlobal(client.UserID, text)
 	case ChannelMatch:
-		// Reserved for Story 6.2 — silently ignore for now.
-		return
+		h.handleMatch(client.UserID, req.MatchID, text)
 	default:
 		slog.Info("chat: unknown channel", "userID", client.UserID, "channel", req.Channel)
 	}
@@ -125,6 +126,57 @@ func (h *Handler) handleGlobal(senderID uint, text string) {
 		eligible = append(eligible, uid)
 	}
 	h.hub.BroadcastToUsers(eligible, msgBytes)
+}
+
+func (h *Handler) handleMatch(senderID uint, matchID *uint, text string) {
+	if matchID == nil {
+		slog.Info("chat: match send dropped (missing matchId)", "userID", senderID)
+		return
+	}
+
+	participants, ok := h.game.MatchParticipants(*matchID)
+	if !ok {
+		slog.Info("chat: match send dropped (unknown matchId)",
+			"userID", senderID, "matchID", *matchID)
+		return
+	}
+
+	// Authorise: sender must be one of the 4 session participants.
+	authorized := false
+	for _, uid := range participants {
+		if uid == senderID {
+			authorized = true
+			break
+		}
+	}
+	if !authorized {
+		slog.Info("chat: match send dropped (sender not in match)",
+			"userID", senderID, "matchID", *matchID)
+		return
+	}
+
+	sender, err := h.userRepo.FindByID(senderID)
+	if err != nil || sender == nil {
+		slog.Warn("chat: match sender not found", "userID", senderID, "error", err)
+		return
+	}
+
+	payload := ws.ChatMessagePayload{
+		UserID:    sender.ID,
+		Username:  sender.Username,
+		Message:   text,
+		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+		Scope:     ChannelMatch,
+	}
+	msgBytes := buildMessage(ws.SystemChatMessage, payload)
+	if msgBytes == nil {
+		return
+	}
+
+	// Broadcast to ALL 4 participants (sender included so they see their own
+	// echo). Hub.BroadcastToUsers silently skips disconnected IDs, which is the
+	// intended behaviour for players inside the reconnect window.
+	h.hub.BroadcastToUsers(participants[:], msgBytes)
 }
 
 func buildMessage(eventType string, payload interface{}) []byte {

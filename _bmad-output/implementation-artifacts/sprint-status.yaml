@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-06
-last_updated: "2026-04-18"  # Story 6.1 done after code review; 6 patches applied, 6 deferred (D72-D77)
+last_updated: "2026-04-18"  # Story 6.2 done after code review; 6 patches applied, 4 deferred (D78-D81)
 project: belote
 project_key: NOKEY
 tracking_system: file-system
@@ -93,7 +93,7 @@ development_status:
   # --- Epic 6: In-Game & Lobby Communication (Phase 1) ---
   epic-6: in-progress
   6-1-global-lobby-chat: done
-  6-2-match-scoped-chat: backlog
+  6-2-match-scoped-chat: done
   epic-6-retrospective: optional
 
   # --- Epic 7: Match History & Player Profile (Phase 1) ---
@@ -102,43 +102,64 @@ development_status:
   7-2-expanded-player-profile: backlog
   epic-7-retrospective: optional
 
-  # --- Epic 8: Croatian Variant, 501 Mode & Game Enhancements (Phase 2) ---
+  # --- Epic 8: Game Table Enhancements (Phase 2) ---
   epic-8: backlog
-  8-1-croatian-variant-rules-engine: backlog
-  8-2-501-point-match-mode: backlog
-  8-3-in-app-rules-reference: backlog
-  8-4-team-surrender: backlog
-  8-5-in-game-emotes: backlog
+  8-1-room-owner-pre-game-controls: backlog
+  8-2-team-surrender: backlog
+  8-3-in-game-emotes: backlog
   epic-8-retrospective: optional
 
-  # --- Epic 9: Player Progression & Competitive Ranked Play (Phase 2) ---
+  # --- Epic 9: Player Economy & Progression (Phase 2) ---
   epic-9: backlog
-  9-1-xp-system-and-level-progression: backlog
-  9-2-ranked-queue-and-elo-matchmaking: backlog
-  9-3-placement-matches-and-rank-reveal: backlog
-  9-4-rank-tiers-and-season-system: backlog
-  9-5-seasonal-leaderboard: backlog
-  9-6-career-statistics-and-abandonment-penalties: backlog
+  9-1-coin-wallet-foundation: backlog
+  9-2-room-buy-in-and-match-coin-settlement: backlog
+  9-3-insolvency-ejection-and-room-persistence: backlog
+  9-4-quick-play-coin-bracketing: backlog
+  9-5-xp-and-level-system: backlog
+  9-6-honor-score-system: backlog
+  9-7-honor-gated-rooms: backlog
   epic-9-retrospective: optional
 
-  # --- Epic 10: Social & Friend System (Phase 3) ---
+  # --- Epic 10: Additional Languages (Phase 2) ---
   epic-10: backlog
-  10-1-social-login: backlog
-  10-2-player-search: backlog
-  10-3-friend-requests-and-friend-list: backlog
-  10-4-public-player-profiles: backlog
-  10-5-additional-languages: backlog
+  10-1-macedonian-and-croatian-translations: backlog
   epic-10-retrospective: optional
 
-  # --- Epic 11: Spectator Mode, Achievements & Cosmetics (Phase 4) ---
+  # --- Epic 11: Friends & Public Profiles (Phase 3) ---
   epic-11: backlog
-  11-1-spectator-mode: backlog
-  11-2-achievements-and-badges: backlog
-  11-3-cosmetic-store: backlog
+  11-1-player-search: backlog
+  11-2-friend-requests-and-friend-list: backlog
+  11-3-public-player-profiles: backlog
   epic-11-retrospective: optional
 
-  # --- Epic 12: Tournaments & Mobile (Phase 4) ---
+  # --- Epic 12: Variant Expansion (Phase 3) ---
   epic-12: backlog
-  12-1-tournament-system: backlog
-  12-2-mobile-experience: backlog
+  12-1-croatian-variant-rules-engine: backlog
+  12-2-501-point-match-mode: backlog
+  12-3-in-app-rules-reference: backlog
   epic-12-retrospective: optional
+
+  # --- Epic 13: Seasonal Rank & Leaderboard (Phase 4) ---
+  epic-13: backlog
+  13-1-season-points-and-tier-climb: backlog
+  13-2-seasonal-leaderboard: backlog
+  13-3-season-rollover-and-prior-season-archive: backlog
+  epic-13-retrospective: optional
+
+  # --- Epic 14: Social Login (Phase 4) ---
+  epic-14: backlog
+  14-1-google-and-facebook-oauth: backlog
+  epic-14-retrospective: optional
+
+  # --- Epic 15: Mobile Experience (Phase 4) ---
+  epic-15: backlog
+  15-1-pwa-mobile-layout-and-touch-interaction: backlog
+  epic-15-retrospective: optional
+
+  # --- Epic 16: Spectator, Achievements, Cosmetics & Tournaments (Phase 5) ---
+  epic-16: backlog
+  16-1-spectator-mode: backlog
+  16-2-achievements-and-badges: backlog
+  16-3-cosmetic-store: backlog
+  16-4-tournament-system: backlog
+  epic-16-retrospective: optional

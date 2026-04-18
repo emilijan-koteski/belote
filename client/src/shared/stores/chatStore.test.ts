@@ -17,7 +17,11 @@ function makeMessage(overrides: Partial<ChatMessagePayload> = {}): ChatMessagePa
 
 describe("chatStore", () => {
   beforeEach(() => {
-    useChatStore.setState({ globalMessages: [] });
+    useChatStore.setState({
+      globalMessages: [],
+      matchMessages: [],
+      matchMessagesReceivedTotal: 0,
+    });
   });
 
   it("appendGlobal adds a message to the end of the list", () => {
@@ -55,5 +59,72 @@ describe("chatStore", () => {
     useChatStore.getState().appendGlobal(makeMessage());
     const after = useChatStore.getState().globalMessages;
     expect(after).not.toBe(before);
+  });
+
+  it("appendMatch adds a message to the match partition", () => {
+    useChatStore.getState().appendMatch(makeMessage({ scope: "match", message: "team1" }));
+    useChatStore.getState().appendMatch(makeMessage({ scope: "match", message: "team2" }));
+
+    const messages = useChatStore.getState().matchMessages;
+    expect(messages).toHaveLength(2);
+    expect(messages[1]!.message).toBe("team2");
+  });
+
+  it("appendMatch drops oldest when exceeding 200-message cap", () => {
+    for (let i = 0; i < 210; i++) {
+      useChatStore.getState().appendMatch(makeMessage({ scope: "match", message: `m-${i}` }));
+    }
+
+    const messages = useChatStore.getState().matchMessages;
+    expect(messages).toHaveLength(200);
+    expect(messages[0]!.message).toBe("m-10");
+    expect(messages[199]!.message).toBe("m-209");
+  });
+
+  it("clearMatch resets only the match partition", () => {
+    useChatStore.getState().appendGlobal(makeMessage());
+    useChatStore.getState().appendMatch(makeMessage({ scope: "match" }));
+    expect(useChatStore.getState().globalMessages).toHaveLength(1);
+    expect(useChatStore.getState().matchMessages).toHaveLength(1);
+
+    useChatStore.getState().clearMatch();
+    expect(useChatStore.getState().matchMessages).toHaveLength(0);
+    expect(useChatStore.getState().globalMessages).toHaveLength(1);
+  });
+
+  it("partitions are independent: appendGlobal does not touch matchMessages", () => {
+    useChatStore.getState().appendGlobal(makeMessage());
+    expect(useChatStore.getState().matchMessages).toHaveLength(0);
+  });
+
+  it("partitions are independent: appendMatch does not touch globalMessages", () => {
+    useChatStore.getState().appendMatch(makeMessage({ scope: "match" }));
+    expect(useChatStore.getState().globalMessages).toHaveLength(0);
+  });
+
+  it("appendMatch increments matchMessagesReceivedTotal monotonically, even past the 200 cap", () => {
+    for (let i = 0; i < 210; i++) {
+      useChatStore.getState().appendMatch(makeMessage({ scope: "match", message: `t-${i}` }));
+    }
+
+    const state = useChatStore.getState();
+    expect(state.matchMessages).toHaveLength(200);
+    // Length is capped but the monotonic counter keeps growing — required for
+    // the sidebar's unread badge to stay accurate after the ring buffer fills.
+    expect(state.matchMessagesReceivedTotal).toBe(210);
+  });
+
+  it("clearMatch resets matchMessagesReceivedTotal to 0", () => {
+    useChatStore.getState().appendMatch(makeMessage({ scope: "match" }));
+    useChatStore.getState().appendMatch(makeMessage({ scope: "match" }));
+    expect(useChatStore.getState().matchMessagesReceivedTotal).toBe(2);
+
+    useChatStore.getState().clearMatch();
+    expect(useChatStore.getState().matchMessagesReceivedTotal).toBe(0);
+  });
+
+  it("appendGlobal does NOT affect matchMessagesReceivedTotal", () => {
+    useChatStore.getState().appendGlobal(makeMessage());
+    expect(useChatStore.getState().matchMessagesReceivedTotal).toBe(0);
   });
 });

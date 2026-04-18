@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router";
 
 import { useWsSendMessage } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
+import { useChatStore } from "@/shared/stores/chatStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 import type { Suit } from "@/shared/types/gameTypes";
 import {
@@ -26,6 +27,7 @@ import { DealAnimation } from "./components/DealAnimation";
 import { DeclarationPrompt } from "./components/DeclarationPrompt";
 import { DeclarationReveal } from "./components/DeclarationReveal";
 import { HandCards } from "./components/HandCards";
+import { MatchChatSidebar } from "./components/MatchChatSidebar";
 import { MatchResult } from "./components/MatchResult";
 import { PauseOverlay } from "./components/PauseOverlay";
 import { PlayerSeat } from "./components/PlayerSeat";
@@ -79,7 +81,6 @@ export function GamePage() {
   const matchAbandonedData = useGameStore((s) => s.matchAbandonedData);
   const setMatchAbandonedData = useGameStore((s) => s.setMatchAbandonedData);
 
-  const [chatOpen, setChatOpen] = useState(false);
   const [showReshuffle, setShowReshuffle] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const errorToastTimerRef = useRef<number | null>(null);
@@ -95,6 +96,15 @@ export function GamePage() {
   // Overlay flow state: normal → capot_animation → score_reveal → normal/match_result
   type OverlayPhase = "normal" | "capot_animation" | "score_reveal" | "match_result";
   const [overlayPhase, setOverlayPhase] = useState<OverlayPhase>("normal");
+
+  // Match chat history is tied to the GamePage lifecycle — clear it on
+  // unmount (navigation away, abandonment, match-end → lobby) so the next
+  // match starts with an empty panel. Ephemeral by design (AC #6).
+  useEffect(() => {
+    return () => {
+      useChatStore.getState().clearMatch();
+    };
+  }, []);
 
   // Trigger overlay flow when score reveal data arrives
   useEffect(() => {
@@ -524,46 +534,8 @@ export function GamePage() {
         />
       )}
 
-      {/* Chat sidebar toggle — hidden when sidebar is open */}
-      {!chatOpen && (
-        <button
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-surface-elevated border border-border rounded-l-lg p-2 text-text-secondary hover:text-text-primary"
-          onClick={() => setChatOpen(true)}
-          aria-label={t("game.chat.title")}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        </button>
-      )}
-
-      {/* Chat sidebar */}
-      {chatOpen && (
-        <aside className="absolute right-0 top-0 h-full w-64 bg-surface border-l border-border p-4 flex flex-col gap-2 z-20">
-          <div className="flex items-center justify-between">
-            <h2 className="font-body text-sm font-semibold text-text-primary">
-              {t("game.chat.title")}
-            </h2>
-            <button
-              className="text-text-secondary hover:text-text-primary"
-              onClick={() => setChatOpen(false)}
-              aria-label="Close chat"
-            >
-              &times;
-            </button>
-          </div>
-          <p className="font-body text-xs text-text-secondary">{t("game.chat.placeholder")}</p>
-        </aside>
-      )}
+      {/* Match chat sidebar — collapsible right-edge panel broadcasting to the 4 participants */}
+      <MatchChatSidebar />
 
       {/* Capot animation overlay */}
       {overlayPhase === "capot_animation" &&

@@ -276,6 +276,38 @@ func TestIsUserInGame(t *testing.T) {
 	assert.False(t, mgr.IsUserInGame(40))
 }
 
+func TestMatchParticipants(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	// No session yet for this roomID → (zero, false)
+	ids, ok := mgr.MatchParticipants(100)
+	assert.False(t, ok)
+	assert.Equal(t, [4]uint{}, ids)
+
+	// After StartGame → 4 player IDs returned, indexed by seat
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120)
+	require.NoError(t, err)
+
+	ids, ok = mgr.MatchParticipants(100)
+	require.True(t, ok)
+	assert.Equal(t, [4]uint{10, 20, 30, 40}, ids)
+
+	// A different roomID → (zero, false)
+	_, ok = mgr.MatchParticipants(999)
+	assert.False(t, ok)
+
+	// After RemoveSession → (zero, false)
+	mgr.RemoveSession(100)
+	ids, ok = mgr.MatchParticipants(100)
+	assert.False(t, ok)
+	assert.Equal(t, [4]uint{}, ids)
+}
+
 // --- Timer Tests ---
 
 func TestStartGame_PerMoveTimer_SetsTurnExpiresAt(t *testing.T) {

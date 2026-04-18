@@ -283,6 +283,20 @@ func (m *Manager) IsUserInGame(userID uint) bool {
 	return ok
 }
 
+// MatchParticipants returns the four player userIDs for an active session
+// keyed by roomID (the matchID in the chat wire format). Returns
+// (zero-value, false) when no session exists for that roomID.
+// Used by the chat handler to authorise match-scoped messages.
+func (m *Manager) MatchParticipants(roomID uint) ([4]uint, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	s, ok := m.sessions[roomID]
+	if !ok {
+		return [4]uint{}, false
+	}
+	return s.playerIDs, true
+}
+
 // parseAction converts a WS message into a game.Action for the rules engine.
 func (m *Manager) parseAction(userID uint, session *Session, msg ws.WSMessage) (game.Action, error) {
 	// Find seat for this user (playerIDs is immutable after StartGame)

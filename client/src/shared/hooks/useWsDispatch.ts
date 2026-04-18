@@ -318,8 +318,14 @@ function dispatchSystemEvent(message: WsMessage): void {
     }
     if (payload.scope === "global") {
       useChatStore.getState().appendGlobal(payload);
+    } else if (payload.scope === "match") {
+      // Defence in depth: server only broadcasts match chat to session
+      // participants, but if a stale frame arrives after clearGame (or during
+      // the race window before a fresh match state lands), drop it so the
+      // next match doesn't see leaked history from the previous one.
+      if (useGameStore.getState().roomId === null) return;
+      useChatStore.getState().appendMatch(payload);
     }
-    // scope === "match" handled by Story 6.2
     return;
   }
 }

@@ -148,7 +148,9 @@
     },
     "chat": {
       "title": "Match Chat",
-      "placeholder": "Chat available soon"
+      "placeholder": "Message your table\u2026",
+      "toggleOpen": "Open match chat",
+      "toggleClose": "Close match chat"
     },
     "trump": "Trump: {{suit}}",
     "loading": "Connecting to game...",

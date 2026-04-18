@@ -20,7 +20,7 @@ vi.mock("@/shared/providers/WebSocketContext", () => ({
 beforeEach(() => {
   mockSendMessage.mockReset();
   mockConnectionState = "connected";
-  useChatStore.setState({ globalMessages: [] });
+  useChatStore.setState({ globalMessages: [], matchMessages: [] });
   // jsdom does not implement scrollIntoView; stub it
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -143,5 +143,72 @@ describe("ChatPanel", () => {
 
     expect(mockSendMessage).not.toHaveBeenCalled();
     expect(screen.getByTestId("chat-too-long")).toBeInTheDocument();
+  });
+});
+
+describe("ChatPanel (match channel)", () => {
+  it("renders messages from chatStore.matchMessages", () => {
+    useChatStore.setState({
+      matchMessages: [
+        {
+          userId: 11,
+          username: "carol",
+          message: "nice trump",
+          timestamp: "2026-04-18T12:00:00Z",
+          scope: "match",
+        },
+      ],
+    });
+
+    render(<ChatPanel channel="match" matchId={42} />);
+    const rows = screen.getAllByTestId("chat-message-row");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("carol");
+    expect(rows[0]).toHaveTextContent("nice trump");
+  });
+
+  it("sends action:chat_message with channel=match and matchId", () => {
+    render(<ChatPanel channel="match" matchId={42} />);
+
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "team chat" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(mockSendMessage).toHaveBeenCalledTimes(1);
+    expect(mockSendMessage).toHaveBeenCalledWith(ACTION_CHAT_MESSAGE, {
+      channel: "match",
+      matchId: 42,
+      text: "team chat",
+    });
+    expect(input.value).toBe("");
+  });
+
+  it("does NOT send when matchId is undefined", () => {
+    render(<ChatPanel channel="match" />);
+
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "no match id" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  it("does NOT surface globalMessages when channel=match", () => {
+    useChatStore.setState({
+      globalMessages: [
+        {
+          userId: 1,
+          username: "alice",
+          message: "global",
+          timestamp: "2026-04-18T10:00:00Z",
+          scope: "global",
+        },
+      ],
+      matchMessages: [],
+    });
+
+    render(<ChatPanel channel="match" matchId={42} />);
+    expect(screen.getByTestId("chat-empty")).toBeInTheDocument();
+    expect(screen.queryByText("global")).not.toBeInTheDocument();
   });
 });

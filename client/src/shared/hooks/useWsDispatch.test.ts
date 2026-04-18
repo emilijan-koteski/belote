@@ -94,7 +94,7 @@ describe("useWsDispatch", () => {
     queryClient.clear();
     useGameStore.getState().reset();
     useRoomLobbyStore.getState().reset();
-    useChatStore.setState({ globalMessages: [] });
+    useChatStore.setState({ globalMessages: [], matchMessages: [] });
     vi.restoreAllMocks();
   });
 
@@ -508,7 +508,10 @@ describe("useWsDispatch", () => {
     });
   });
 
-  it("ignores system:chat_message with scope=match (handled by Story 6.2)", () => {
+  it("appends system:chat_message with scope=match to chatStore.matchMessages when in a match", () => {
+    // Dispatcher requires gameStore.roomId to be set (defence in depth)
+    useGameStore.setState({ roomId: 42 });
+
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
@@ -523,7 +526,56 @@ describe("useWsDispatch", () => {
       },
     });
 
-    expect(useChatStore.getState().globalMessages).toHaveLength(0);
+    const state = useChatStore.getState();
+    expect(state.matchMessages).toHaveLength(1);
+    expect(state.matchMessages[0]).toMatchObject({
+      userId: 7,
+      username: "alice",
+      message: "team only",
+      scope: "match",
+    });
+    expect(state.globalMessages).toHaveLength(0);
+  });
+
+  it("drops scope=match payloads when gameStore.roomId is null (no active match)", () => {
+    // roomId=null is the default from beforeEach reset — a match payload
+    // arriving after clearGame must not leak into the next match's history.
+    expect(useGameStore.getState().roomId).toBeNull();
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:chat_message",
+      payload: {
+        userId: 7,
+        username: "alice",
+        message: "stale",
+        timestamp: "2026-04-18T10:00:00Z",
+        scope: "match",
+      },
+    });
+
+    expect(useChatStore.getState().matchMessages).toHaveLength(0);
+  });
+
+  it("scope=global does not leak into matchMessages (partition isolation)", () => {
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:chat_message",
+      payload: {
+        userId: 1,
+        username: "alice",
+        message: "global-only",
+        timestamp: "2026-04-18T10:00:00Z",
+        scope: "global",
+      },
+    });
+
+    expect(useChatStore.getState().matchMessages).toHaveLength(0);
+    expect(useChatStore.getState().globalMessages).toHaveLength(1);
   });
 
   it("ignores malformed system:chat_message payloads (defensive validation)", () => {

@@ -11,20 +11,26 @@ import { ACTION_CHAT_MESSAGE } from "@/shared/types/wsEvents";
 
 const MAX_MESSAGE_LENGTH = 500;
 
+type ChatChannel = "global" | "match";
+
 interface ChatPanelProps {
   className?: string;
+  channel?: ChatChannel;
+  matchId?: number;
 }
 
-export function ChatPanel({ className }: ChatPanelProps) {
+export function ChatPanel({ className, channel = "global", matchId }: ChatPanelProps) {
   const { t, i18n } = useTranslation();
   const sendMessage = useWsSendMessage();
   const connectionState = useWsConnectionState();
-  const messages = useChatStore((s) => s.globalMessages);
+  const messages = useChatStore((s) => (channel === "match" ? s.matchMessages : s.globalMessages));
 
   const [draft, setDraft] = useState("");
   const listEndRef = useRef<HTMLDivElement | null>(null);
 
   const isConnected = connectionState === "connected";
+  const titleKey = channel === "match" ? "game.chat.title" : "chat.title";
+  const placeholderKey = channel === "match" ? "game.chat.placeholder" : "chat.placeholder";
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -34,7 +40,16 @@ export function ChatPanel({ className }: ChatPanelProps) {
     const text = draft.trim();
     if (!text || text.length > MAX_MESSAGE_LENGTH || !isConnected) return;
 
-    const payload: ChatMessageRequest = { channel: "global", text };
+    let payload: ChatMessageRequest;
+    if (channel === "match") {
+      // Server roomIDs are positive integers (PostgreSQL auto-increment from
+      // 1). Reject 0, negatives, NaN, Infinity, and non-integers so a caller
+      // bug doesn't waste frames on a guaranteed silent-drop path.
+      if (typeof matchId !== "number" || !Number.isInteger(matchId) || matchId <= 0) return;
+      payload = { channel: "match", matchId, text };
+    } else {
+      payload = { channel: "global", text };
+    }
     sendMessage(ACTION_CHAT_MESSAGE, payload);
     setDraft("");
   }
@@ -55,9 +70,7 @@ export function ChatPanel({ className }: ChatPanelProps) {
       data-testid="chat-panel"
     >
       <div className="border-b border-border px-4 py-3">
-        <h3 className="font-display text-base font-semibold text-text-primary">
-          {t("chat.title")}
-        </h3>
+        <h3 className="font-display text-base font-semibold text-text-primary">{t(titleKey)}</h3>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3" data-testid="chat-message-list">
@@ -95,7 +108,7 @@ export function ChatPanel({ className }: ChatPanelProps) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={isConnected ? t("chat.placeholder") : t("chat.placeholderDisabled")}
+          placeholder={isConnected ? t(placeholderKey) : t("chat.placeholderDisabled")}
           disabled={!isConnected}
           maxLength={MAX_MESSAGE_LENGTH + 1}
           aria-invalid={tooLong}
