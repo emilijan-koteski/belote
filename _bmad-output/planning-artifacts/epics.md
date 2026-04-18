@@ -50,16 +50,16 @@ FR30: All logged-in players can send and receive messages in a global lobby chat
 FR31: Players in an active match can send and receive messages in match-scoped chat, visible only to the four match participants
 FR32: Players can express reactions during a match using preset in-game emotes
 FR33: Players earn XP from completed matches proportional to game points scored in that match
-FR34: Players advance through a level system as XP accumulates, with Level 5 unlocking access to ranked mode
-FR35: Level 5+ players can queue for ranked competitive matches with ELO-based opponent pairing
-FR36: The system conducts 3 placement matches per season before revealing a player's initial rank
-FR37: Players can view their current rank tier (8 tiers: Iron → Bronze → Silver → Gold → Platinum → Diamond → Immortal → Radiant)
-FR38: The system applies scaled ELO penalties to players who abandon ranked matches, with penalty scaling by game progress at time of abandonment
-FR39: Players can view a seasonal leaderboard of top-ranked players
-FR40: The system runs quarterly ranked seasons with rank resets; prior season rank history is preserved and viewable
+FR34: Players advance through a lifetime level system as XP accumulates; the level is a career signal only with no gating behavior
+FR35: [retired — ranked/ELO queue removed; competitive pairing replaced by honor-gated rooms (FR57) and seasonal rank visibility (FR37)]
+FR36: [retired — placement matches removed; no ELO to calibrate in the new system]
+FR37: Players can view their current seasonal rank tier (8 tiers: Iron → Bronze → Silver → Gold → Platinum → Diamond → Immortal → Radiant) based on Season Points earned in the current quarterly season
+FR38: [retired — ELO penalty removed; abandonment is deterred via the Honor system (FR56)]
+FR39: Players can view a seasonal leaderboard of top Season-Point earners
+FR40: The system runs 3-month quarterly seasons with soft rank resets (all players start the next season at Iron with 0 SP); prior-season archive is preserved on the profile, with zero-game seasons omitted
 FR41: Players can view their full match history with per-match scoring detail and outcomes
-FR42: Players can view career statistics including win/loss record, points scored, and rank history across all seasons
-FR43: Remaining players in an abandoned casual match receive partial XP based on game progress at time of abandonment; the abandoning player receives none
+FR42: Players can view career statistics including win/loss record, total game points scored, lifetime XP/level, honor score with raw counts, and prior-season rank archive
+FR43: Remaining players in an abandoned match receive partial XP based on game progress at time of abandonment; the abandoning player receives none
 FR44: Players can use the platform in English or Serbian (Latin script), with language selectable as a player preference
 FR45: The platform supports additional languages (Macedonian, Croatian) as extended language options
 FR46: The platform is fully functional on desktop web browsers (Chrome, Firefox, Edge, Safari — latest 2 major versions)
@@ -69,6 +69,12 @@ FR49: Players can earn and display achievements and badges on their profile
 FR50: Players can purchase cosmetic items (card backs, table themes) that have no effect on gameplay
 FR51: Players can participate in bracket-style tournament events with seasonal scheduling
 FR52: Players can access the platform via a mobile-optimized experience (progressive web app or native client)
+FR53: Rooms have an owner-configurable coin buy-in (min 0, no maximum). Players must have sufficient wallet balance to join; stake is deducted on join, refunded on leave before game starts, and settled per match-end pot rules: winners split the pot; losers forfeit stake; surrender settles as a loss; abandonment — abandoner forfeits, teammate is refunded, winners split the reduced 3× stake pot
+FR54: Players receive 5 000 coins on registration and a daily login bonus (1 000 on day 1, increasing linearly by +162/day to 3 100 on day 14 of an uninterrupted streak; streak resets on a missed day)
+FR55: Quick Play stakes default to 500 coins; if a player's balance is below 500, they are matched into a balance-proximity bracket with a reduced stake (floor 0)
+FR56: The system computes and displays a public honor score (0–100) based on match-completion behavior — `honor = 100 × completed / (completed + 2.0·rage_quits + 1.5·timeout_abandons + 0.3·dc_abandons)` — with a "New Player" label for players with fewer than 20 completed matches regardless of score
+FR57: Room owners can optionally require a minimum honor score (0–100) and toggle `allow_new_players` for room access; players failing the check receive `error:honor_too_low` or `error:new_player_not_allowed`
+FR58: Room owners can kick seated players and swap seat assignments while the room is in `waiting` status; controls are disabled once the game starts and rejected for non-owners
 
 ### NonFunctional Requirements
 
@@ -79,12 +85,12 @@ NFR4: The application shell (initial page load) must complete within 3 seconds o
 NFR5: WebSocket reconnection attempts must begin automatically within 1 second of detecting a dropped connection
 NFR6: All client-server communication must use encrypted protocols (HTTPS for requests, WSS for WebSocket connections)
 NFR7: User passwords must be stored using a one-way cryptographic hash; plaintext passwords must never be stored or logged
-NFR8: All game logic (card validation, declaration scoring, auto-play selection, ELO calculation) must execute server-side; the client must not be able to influence game outcomes by sending unsanctioned messages
+NFR8: All game logic (card validation, declaration scoring, auto-play selection, SP calculation, coin settlement, honor calculation) must execute server-side; the client must not be able to influence game outcomes by sending unsanctioned messages
 NFR9: Authentication sessions must use time-limited tokens with secure refresh mechanisms
 NFR10: Player account data must be accessible only to the authenticated account owner and authorized platform administrators
 NFR11: The system must support Phase 1 capacity: up to 10 concurrent game sessions (~40 simultaneous players) without performance degradation
-NFR12: The system must support Phase 2 capacity: up to 50 concurrent game sessions (~200 simultaneous players) without architectural redesign
-NFR13: The platform architecture must permit horizontal scaling to accommodate growth beyond Phase 2 without a full rebuild
+NFR12: The system must support Phase 2–3 capacity: up to 50 concurrent game sessions (~200 simultaneous players) without architectural redesign
+NFR13: The platform architecture must permit horizontal scaling to accommodate growth beyond Phase 3 without a full rebuild
 NFR14: Server uptime must exceed 99.5% measured on a rolling monthly basis
 NFR15: The rate of WebSocket connections dropped during active game sessions must remain below 5%
 NFR16: Server-side game state must be fully preserved through any client disconnection event, ensuring reconnecting players restore to an identical match state
@@ -144,9 +150,12 @@ NFR17: A single player's disconnection must not affect game state integrity or c
 
 **From Architecture — Phase Scoping:**
 - Phase 1: ~25 FRs (auth, Bitola variant only, lobby/rooms, real-time session, chat, disconnect handling, basic match history, i18n EN+SR, desktop web)
-- Phase 2+: Croatian variant, ELO/ranked, XP/levels, 501 mode, friend system, social login, detailed stats
-- Agents must NOT implement Croatian variant or 501 mode in Phase 1
-- FR28, FR38, FR43 have undefined formulas — require product decisions before Phase 2 implementation
+- Phase 2: Coin economy (FR53–55), XP/lifetime level (FR33–34), honor system (FR56–57), room owner kick/seat (FR58), team surrender (FR28a), in-game emotes (FR32), additional languages MK+HR (FR45)
+- Phase 3: Player search (FR5), friends (FR6), public profiles (FR47), Croatian variant (FR8), 501 mode (FR15), in-app rules reference (FR29)
+- Phase 4: Seasonal rank + leaderboard (FR37, FR39, FR40), social login (FR3), mobile (FR52)
+- Phase 5: Spectator (FR48), achievements (FR49), cosmetics (FR50), tournaments (FR51)
+- Agents must NOT implement Croatian variant or 501 mode before Phase 3
+- FR28 and FR43 have undefined formulas — require product decisions before implementation (abandonment mechanics must be settled to wire Honor FR56 and partial XP FR43 correctly)
 
 **From UX Design:**
 - Balatro-inspired dark/neon visual register: near-black background (#0a0a0f), teal accent (#00e5a0), team Red/Blue colours
@@ -167,19 +176,19 @@ NFR17: A single player's disconnection must not affect game state integrity or c
 
 FR1: Epic 1 — Player registration (email/password)
 FR2: Epic 1 — Login and session persistence
-FR3: Epic 10 — Social login (Google, Facebook)
+FR3: Epic 14 — Social login (Google, Facebook)
 FR4: Epic 1 (basic) / Epic 7 (expanded) — Player profile display
-FR5: Epic 10 — Player search by username
-FR6: Epic 10 — Friend requests and friend list
+FR5: Epic 11 — Player search by username
+FR6: Epic 11 — Friend requests and friend list
 FR7: Epic 3 — Bitola variant rules engine
-FR8: Epic 8 — Croatian variant rules engine
+FR8: Epic 12 — Croatian variant rules engine
 FR9: Epic 3 — Declaration validation and scoring
 FR10: Epic 3 — Belot bonus (K+Q trump = 20 pts)
 FR11: Epic 3 — Failed contract scoring
 FR12: Epic 3 — Last-trick bonus and Capot scoring
 FR13: Epic 3 — Instant-win (8 trump in sequence)
 FR14: Epic 4 — 1001-point match mode
-FR15: Epic 8 — 501-point match mode
+FR15: Epic 12 — 501-point match mode
 FR16: Epic 2 — Create room with configuration
 FR17: Epic 2 — Browse/search rooms
 FR18: Epic 2 — Join room via list or code
@@ -194,30 +203,36 @@ FR26: Epic 5 — Disconnect detection + reconnect countdown
 FR27: Epic 5 — Reconnect within window, restore state
 FR28: Epic 5 — Match abandon on reconnect timeout
 FR28a: Epic 8 — Team surrender request
-FR29: Epic 8 — In-app rules reference
+FR29: Epic 12 — In-app rules reference
 FR30: Epic 6 — Global lobby chat
 FR31: Epic 6 — Match-scoped chat
 FR32: Epic 8 — In-game emotes
 FR33: Epic 9 — XP from completed matches
-FR34: Epic 9 — Level system with Level 5 gate
-FR35: Epic 9 — Ranked queue with ELO matchmaking
-FR36: Epic 9 — 3 placement matches per season
-FR37: Epic 9 — 8-tier rank display
-FR38: Epic 9 — Scaled ELO penalties for abandonment
-FR39: Epic 9 — Seasonal leaderboard
-FR40: Epic 9 — Quarterly seasons with rank resets
+FR34: Epic 9 — Lifetime level progression (no gating)
+FR35: [retired]
+FR36: [retired]
+FR37: Epic 13 — Seasonal rank tier display (SP-based)
+FR38: [retired]
+FR39: Epic 13 — Seasonal leaderboard
+FR40: Epic 13 — Quarterly seasons with soft reset + prior-season archive
 FR41: Epic 7 — Match history with scoring detail
-FR42: Epic 9 — Career statistics
-FR43: Epic 9 — Partial XP on casual abandonment
+FR42: Epic 9 + Epic 11 — Career statistics (data: Epic 9/13; display: Epic 11)
+FR43: Epic 9 — Partial XP on match abandonment
 FR44: Epic 1 — i18n (English + Serbian Latin)
 FR45: Epic 10 — Additional languages (Macedonian, Croatian)
 FR46: Epic 1 — Desktop web browser support
-FR47: Epic 10 — Public player profiles
-FR48: Epic 11 — Spectator/observer mode
-FR49: Epic 11 — Achievements and badges
-FR50: Epic 11 — Cosmetic purchases
-FR51: Epic 12 — Bracket-style tournaments
-FR52: Epic 12 — Mobile experience (PWA/native)
+FR47: Epic 11 — Public player profiles
+FR48: Epic 16 — Spectator/observer mode
+FR49: Epic 16 — Achievements and badges
+FR50: Epic 16 — Cosmetic purchases
+FR51: Epic 16 — Bracket-style tournaments
+FR52: Epic 15 — Mobile experience (PWA/native)
+FR53: Epic 9 — Room coin buy-in + match pot settlement
+FR54: Epic 9 — Coin sources (registration + daily streak)
+FR55: Epic 9 — Quick Play coin bracketing
+FR56: Epic 9 — Honor score calculation and display
+FR57: Epic 9 — Honor-gated rooms (min_honor + allow_new_players)
+FR58: Epic 8 — Room owner pre-game kick + seat swap
 
 ## Epic List
 
@@ -270,40 +285,68 @@ Players can view their complete match history with per-match scoring detail and 
 **FRs covered:** FR41, FR4 (expanded)
 **Phase:** 1
 
-### Epic 8: Croatian Variant, 501 Mode & Game Enhancements
+### Epic 8: Game Table Enhancements
 
-Players can play the Croatian trump variant, 501-point matches, access in-app rules reference, initiate team surrender, and express reactions via preset emotes.
+Room owners can curate the pre-game table (kick seated players, rearrange seats), and active-match players can initiate team surrender or express reactions via preset emotes.
 
-**FRs covered:** FR8, FR15, FR28a, FR29, FR32
+**FRs covered:** FR28a, FR32, FR58
 **Phase:** 2
 
-### Epic 9: Player Progression & Competitive Ranked Play
+### Epic 9: Player Economy & Progression
 
-Players earn XP, level up, unlock ranked mode at Level 5, compete in ELO-based matchmaking with placement matches, climb an 8-tier rank system across quarterly seasons, and view leaderboards and career stats.
+Players earn and spend coins (room buy-in, per-match settlement, daily/streak rewards), accumulate lifetime XP/level as a career signal, and build a public honor score that reflects match-completion reliability. Rooms may optionally gate by a minimum honor threshold.
 
-**FRs covered:** FR33, FR34, FR35, FR36, FR37, FR38, FR39, FR40, FR42, FR43
+**FRs covered:** FR33, FR34, FR42, FR43, FR53, FR54, FR55, FR56, FR57
 **Phase:** 2
 
-### Epic 10: Social & Friend System
+### Epic 10: Additional Languages
 
-Players can use social login, search for other players, manage friend lists, view public profiles, and use the platform in additional languages.
+The i18n system is extended with Macedonian and Croatian translations, giving players a fuller native-language experience independent of the social layer.
 
-**FRs covered:** FR3, FR5, FR6, FR45, FR47
+**FRs covered:** FR45
+**Phase:** 2
+
+### Epic 11: Friends & Public Profiles
+
+Players can search for other players by username, send/accept friend requests, maintain a friend list with online status, and view public profiles that include honor score, XP/level, prior-season rank archive, and career stats.
+
+**FRs covered:** FR5, FR6, FR47
 **Phase:** 3
 
-### Epic 11: Spectator Mode, Achievements & Cosmetics
+### Epic 12: Variant Expansion
 
-Players can spectate live matches, earn and display achievements, and purchase cosmetic items with no gameplay impact.
+Players can play the Croatian trump variant, 501-point matches, and access an in-app rules reference covering both variants.
 
-**FRs covered:** FR48, FR49, FR50
+**FRs covered:** FR8, FR15, FR29
+**Phase:** 3
+
+### Epic 13: Seasonal Rank & Leaderboard
+
+Players earn Season Points (SP) per match, climb an 8-tier seasonal ladder (Iron → Radiant) across 3-month quarterly seasons, and view a seasonal leaderboard. Prior seasons are archived on the profile (zero-game seasons skipped).
+
+**FRs covered:** FR37, FR39, FR40
 **Phase:** 4
 
-### Epic 12: Tournaments & Mobile
+### Epic 14: Social Login
 
-Players can compete in bracket-style tournaments and access the platform via mobile.
+Players can register and log in using Google or Facebook OAuth, with account linking when an email matches an existing account.
 
-**FRs covered:** FR51, FR52
+**FRs covered:** FR3
 **Phase:** 4
+
+### Epic 15: Mobile Experience
+
+The platform is delivered as a mobile-optimized experience (PWA or native client) with touch-friendly card interaction and responsive layout.
+
+**FRs covered:** FR52
+**Phase:** 4
+
+### Epic 16: Spectator, Achievements, Cosmetics & Tournaments
+
+Players can spectate live matches, earn achievements and badges, purchase cosmetic items with no gameplay impact, and compete in bracket-style tournaments.
+
+**FRs covered:** FR48, FR49, FR50, FR51
+**Phase:** 5
 
 ---
 
@@ -1379,11 +1422,468 @@ So that I have a meaningful overview of my Belote career.
 **When** their profile renders
 **Then** stats show "0 games played" with the match history empty state, not broken or missing elements
 
-## Epic 8: Croatian Variant, 501 Mode & Game Enhancements
+## Epic 8: Game Table Enhancements
 
-Players can play the Croatian trump variant, 501-point matches, access in-app rules reference, initiate team surrender, and express reactions via preset emotes.
+Room owners can curate the pre-game table (kick seated players, rearrange seats), and active-match players can initiate team surrender or express reactions via preset emotes.
 
-### Story 8.1: Croatian Variant Rules Engine
+### Story 8.1: Room Owner Pre-Game Controls
+
+As a room owner,
+I want to kick seated players and rearrange seat assignments before the game starts,
+So that I can curate the roster and team composition without tearing down the room.
+
+**Acceptance Criteria:**
+
+**Given** a room owner is in the room lobby and the room status is `waiting`
+**When** they click the kick icon next to a seated (non-owner) player
+**Then** a confirmation prompt appears: "Kick [username] from the room?"
+**And** on confirm, `action:room_kick_player` is sent
+**And** the kicked player is removed from their seat and disconnected from the room
+**And** the kicked player receives `event:room_kicked` and is returned to the lobby with a toast: "You were removed from room [name]"
+**And** all remaining occupants receive the updated `event:room_state` with the freed seat
+
+**Given** a room owner drags a seated player's avatar to a different seat (or uses a swap-seats affordance)
+**When** `action:room_swap_seats` is sent with the two seat indices
+**Then** the two players' seat indices are swapped server-side
+**And** team assignments are recomputed from seat indices (seats 0+2 → Red, seats 1+3 → Blue)
+**And** all occupants receive `event:room_state` with the new seat + team layout
+
+**Given** the room owner attempts to kick or swap seats after the game has started
+**When** `action:room_kick_player` or `action:room_swap_seats` is sent with room status != `waiting`
+**Then** the server returns `error:room_not_waiting` and makes no state change
+
+**Given** a non-owner attempts to kick or swap seats
+**When** the action is sent
+**Then** the server returns `error:not_room_owner`
+
+**Given** the owner controls
+**When** the room lobby renders for the owner
+**Then** each non-owner seated slot shows a kick icon (hover-revealed) and seated slots are drag-reorderable (or expose a swap-seats affordance)
+**And** the controls are not rendered for non-owners
+**And** the controls are hidden or disabled once the room transitions to `in_progress`
+
+### Story 8.2: Team Surrender
+
+As a player,
+I want to propose surrendering a match to my teammate,
+So that we can end a hopeless game without waiting for it to finish.
+
+**Acceptance Criteria:**
+
+**Given** a player is in an active match
+**When** they initiate a surrender request via `action:surrender_request`
+**Then** their teammate receives an `event:surrender_proposed` prompt: "Your teammate wants to surrender. Accept / Decline"
+**And** the opponents are notified that a surrender is being considered
+
+**Given** the teammate accepts the surrender
+**When** `action:surrender_accept` is submitted
+**Then** the match ends immediately as a win for the opposing team
+**And** all players receive `event:match_end` with surrender status
+**And** the match record is persisted with surrender outcome
+**And** coin settlement treats the surrendering team as the losing team — surrendering team forfeits stake, winners split the pot (see Epic 9 / Story 9.1 for pot math)
+
+**Given** the teammate declines the surrender
+**When** `action:surrender_decline` is submitted
+**Then** play continues normally and the proposing player's surrender attempt is consumed (each player may trigger at most once per game)
+
+**Given** a player has already initiated a surrender request in this game
+**When** they try to initiate another
+**Then** an `error:surrender_exhausted` event is returned
+
+### Story 8.3: In-Game Emotes
+
+As a player,
+I want to express reactions during a match using preset emotes,
+So that I can communicate emotions and reactions beyond text chat.
+
+**Acceptance Criteria:**
+
+**Given** a player is in an active match
+**When** they open the emote picker (button near chat toggle)
+**Then** a grid of preset emote options is displayed (e.g., thumbs up, clap, laugh, thinking, facepalm, heart)
+
+**Given** a player selects an emote
+**When** `action:emote` is sent with the emote type
+**Then** all 4 match participants receive `system:emote` and the emote displays briefly near the sender's seat with a pop-in animation (auto-dismiss after 2s)
+
+**Given** emotes are sent rapidly
+**When** a player sends multiple emotes
+**Then** a rate limit applies (max 1 emote per 3 seconds per player) to prevent spam
+
+## Epic 9: Player Economy & Progression
+
+Players earn and spend coins (room buy-in, per-match settlement, daily/streak rewards), accumulate lifetime XP/level as a career signal, and build a public honor score that reflects match-completion reliability. Rooms may optionally gate by a minimum honor threshold.
+
+### Story 9.1: Coin Wallet Foundation
+
+As a player,
+I want a coin wallet that grows with daily activity,
+So that I have an ongoing currency to spend on entering games.
+
+**Acceptance Criteria:**
+
+**Given** a new player registers
+**When** the user record is created
+**Then** their coin balance is initialized to 5 000
+**And** a `wallet_balance` column is persisted on the user (integer, non-negative)
+
+**Given** a player logs in on a new calendar day (UTC)
+**When** the login is processed
+**Then** the server checks their `last_login_at` date
+**And** if it was exactly the prior day, the streak counter increments; otherwise it resets to 1
+**And** a daily bonus is credited: `1000 + (streak_day - 1) × 162`, capped at 3 100 (reached on day 14)
+**And** `last_login_at` is updated to today
+**And** the client receives `event:daily_reward` with amount granted and new streak value, displayed as a lobby toast
+
+**Given** a player has already logged in today
+**When** they log in again in the same UTC day
+**Then** no additional bonus is granted
+
+**Given** a player views their profile or lobby header
+**When** the UI renders
+**Then** their current coin balance is displayed with a coin icon
+**And** the current streak (if > 1) is shown as a small indicator (e.g., "Day 7")
+
+**Given** the wallet migration
+**When** I inspect the schema
+**Then** `users` has columns: `wallet_balance` (integer, default 5000, non-negative constraint), `last_login_at` (date, nullable), `login_streak_days` (integer, default 0)
+
+**Given** the wallet backend package
+**When** structured
+**Then** a `wallet` domain package exists with model, repository, service, handler, _test.go per the feature-complete checklist
+**And** wallet mutations are atomic and transactional
+
+### Story 9.2: Room Buy-In & Match Coin Settlement
+
+As a player,
+I want to stake coins to play a match and receive winnings per the pot rules,
+So that each game carries real economic meaning.
+
+**Acceptance Criteria:**
+
+**Given** a room owner is configuring a new room
+**When** they view the create-room modal
+**Then** a "Coin buy-in" field is available (integer, min 0, no maximum — owner freedom)
+**And** the default buy-in is 500
+**And** the room record persists `coin_buy_in` on the `rooms` table
+
+**Given** a player attempts to join a room with a coin buy-in of S
+**When** `action:join_room` is processed
+**Then** the server checks the player's wallet balance
+**And** if balance < S, the request is rejected with `error:insufficient_coins` and a modal shows: "You need [S] coins to join this room — your balance: [balance]"
+**And** if balance ≥ S, S is deducted from wallet and held as stake; the player is seated
+
+**Given** a player leaves a room before the game starts
+**When** `action:leave_room` is processed
+**Then** their stake is refunded in full to their wallet
+
+**Given** a match ends with a normal win/loss outcome
+**When** coin settlement runs
+**Then** all four stakes form the pot (4S)
+**And** the winning team splits the pot equally (each winner gains 2S, net +S)
+**And** the losing team's stakes remain in the pot (net -S each)
+**And** all players receive `event:coin_settlement` with their delta; UI shows a settlement toast
+
+**Given** a match ends by surrender
+**When** coin settlement runs
+**Then** the surrendering team is treated as the losing team — settlement identical to normal loss outcome
+
+**Given** a match ends by abandonment (one player does not reconnect within the window)
+**When** coin settlement runs
+**Then** the abandoning player forfeits their stake (−S)
+**And** the abandoning player's teammate is refunded their stake (net 0)
+**And** the winning team splits the reduced pot of 3S (each winner gains 1.5S, net +0.5S)
+**And** the match record records the abandonment outcome and per-player coin deltas
+
+**Given** a match ends
+**When** post-match cleanup runs
+**Then** the room status returns to `waiting`
+**And** all remaining seated players retain their seat for a possible next match
+**And** each seated player's wallet is re-checked against the room `coin_buy_in` before the next match starts (see Story 9.3)
+
+**Given** the coin settlement code
+**When** it executes
+**Then** it runs as a single database transaction
+**And** if any wallet update fails, the entire settlement is rolled back and an error is logged
+
+### Story 9.3: Insolvency Ejection & Room Persistence Between Matches
+
+As a player,
+I want to be clearly notified and ejected from a room when I can no longer afford the buy-in,
+So that I'm not stuck at a seat I cannot use and the room can continue for others.
+
+**Acceptance Criteria:**
+
+**Given** a match has just ended and coin settlement is complete
+**When** the room prepares for a next match
+**Then** each seated player's wallet is checked against `coin_buy_in`
+**And** players with balance < buy-in receive `event:insolvent_kick` and are returned to the lobby
+**And** a modal on their screen shows: "You do not have enough coins for the next match in this room. Current balance: [balance]. Room buy-in: [buy_in]."
+**And** their seat is cleared and broadcast to remaining occupants
+
+**Given** some players are ejected for insolvency
+**When** the room state updates
+**Then** remaining players keep their seats
+**And** the room status stays `waiting`
+**And** the owner can invite or accept new players into the freed seats as normal
+
+**Given** the room owner is ejected for insolvency
+**When** ownership would be lost
+**Then** ownership transfers to the next-seated player (seat order ascending) who has sufficient funds
+**And** if no remaining player can afford the buy-in, the room is closed and all remaining seated players are returned to the lobby with `event:room_closed_insolvent`
+
+**Given** the coin buy-in is 0
+**When** the insolvency check runs
+**Then** no ejections occur (balance ≥ 0 always passes)
+
+### Story 9.4: Quick Play Coin Bracketing
+
+As a player,
+I want Quick Play to match me against players with similar coin balances when I'm low on coins,
+So that I can keep playing without being priced out.
+
+**Acceptance Criteria:**
+
+**Given** a player queues for Quick Play
+**When** the matchmaking service evaluates their queue entry
+**Then** if balance ≥ 500, they are placed in the default bracket (buy-in 500)
+**And** if balance is in [0, 499], they are placed into a balance-proximity bracket with buy-in = min(their balance, bracket_partners' balances)
+**And** brackets are defined by balance bands (e.g., 0, 1–50, 51–150, 151–499) to keep stake levels fair within a match
+
+**Given** a Quick Play match is formed
+**When** the server-side room is synthesized
+**Then** the `coin_buy_in` for the synthesized room is set to the bracket's buy-in
+**And** all four players are charged that stake on match start
+**And** settlement proceeds per Story 9.2 rules
+
+**Given** a player has 0 coins
+**When** they Quick Play
+**Then** they are bracketed into the 0-stake pool and play for no coins (pot = 0; match still counts for XP/honor per other stories)
+
+### Story 9.5: XP & Level System
+
+As a player,
+I want to earn XP from matches and see my level grow over time,
+So that I have a lifetime career signal independent of seasonal competitive standing.
+
+**Acceptance Criteria:**
+
+**Given** a match completes normally
+**When** XP is calculated
+**Then** each player earns XP proportional to the game points their team scored across the match: `xp_earned = floor(team_game_points / 10)`
+**And** the XP is added to their `total_xp` and persisted
+
+**Given** a player accumulates enough XP
+**When** their total crosses a level threshold (placeholder quadratic: Level N requires `50 × N²` XP)
+**Then** their level increments and the new level is reflected on their profile and in the lobby banner
+**And** the level is a lifetime value — it never resets, and has no gating behavior attached
+
+**Given** a player abandons a match
+**When** XP outcomes are applied
+**Then** the abandoning player receives 0 XP
+**And** the remaining three players receive partial XP proportional to the game progress at time of abandonment (placeholder formula with configurable constants)
+
+**Given** a player views their profile
+**When** the profile renders
+**Then** level + XP progress-to-next-level is shown alongside the honor score and prior-season rank archive
+**And** the lobby banner shows level + XP bar in the top-nav zone
+
+**Given** the level system
+**When** I inspect the database schema
+**Then** the `users` table has `total_xp` (integer, default 0, non-negative) and a derived `level` value computed from total_xp
+
+### Story 9.6: Honor Score System
+
+As a player,
+I want to see a public honor score that reflects how reliable a player is at completing matches,
+So that I can decide whom to play with and whether to stay in a room.
+
+**Acceptance Criteria:**
+
+**Given** a player's match outcomes are recorded
+**When** the honor score is calculated
+**Then** the formula is `honor = 100 × completed / (completed + 2.0·rage_quits + 1.5·timeout_abandons + 0.3·dc_abandons)` where:
+
+- `completed` = matches played to natural end (wins, losses, surrenders — surrender does NOT reduce honor)
+- `rage_quits` = player left the client during an active match (explicit leave action or window close detected as intentional)
+- `timeout_abandons` = match was declared abandoned because this player repeatedly let the per-move timer expire past a threshold (tuning constant)
+- `dc_abandons` = player disconnected and did not reconnect within the window, causing match abandonment
+
+**And** all counters persist as integers on the user record
+
+**Given** a player has completed fewer than 20 matches
+**When** the honor score is rendered anywhere in the UI
+**Then** the profile and lobby UI label them "New Player" regardless of score value
+**And** the raw counts are still shown
+
+**Given** a player has ≥ 20 completed matches
+**When** the score is rendered
+**Then** it is shown as a numeric value 0–100 with a tier label:
+
+- 95+ "Exemplary" (gold)
+- 85–94 "Trusted"
+- 70–84 "Fair"
+- 50–69 "Unreliable"
+- < 50 "Problematic" (red warning)
+
+**And** a recent trend indicator (last 20 matches) is shown next to the score
+
+**Given** a player views another player's profile
+**When** the profile renders
+**Then** the honor score, tier label, raw counts, and recent trend are publicly visible (integration landing in Epic 11)
+
+**Given** a match ends with accepted surrender
+**When** honor counters update
+**Then** surrender increments the `completed` counter (surrender is legitimate play)
+
+**Given** a player's WS disconnect is resolved within the reconnect window
+**When** honor counters update after match end
+**Then** no penalty is applied (reconnected DCs do not count toward any abandonment bucket)
+
+### Story 9.7: Honor-Gated Rooms
+
+As a room owner,
+I want to optionally require a minimum honor score to join my room,
+So that I can self-select into a community of reliable players.
+
+**Acceptance Criteria:**
+
+**Given** a room owner is configuring a new room
+**When** the create-room modal is open
+**Then** an optional "Minimum honor" field is available (integer 0–100, default 0 = no gate)
+**And** a separate "Allow New Players" toggle is available (default `true`)
+**And** both values persist on the `rooms` table as `min_honor` and `allow_new_players`
+
+**Given** a player attempts to join a room with `min_honor > 0`
+**When** `action:join_room` is processed
+**Then** the server checks the player's honor status
+**And** if the player has < 20 completed matches ("New Player") and `allow_new_players = false`, the join is rejected with `error:new_player_not_allowed`
+**And** if the player has ≥ 20 completed matches and their honor score < `min_honor`, the join is rejected with `error:honor_too_low` with a modal: "This room requires honor ≥ [min_honor]. Your honor: [score]."
+
+**Given** a room list shows a honor-gated room
+**When** the room card renders
+**Then** the honor requirement is visible on the card (e.g., "Honor 80+")
+**And** if `allow_new_players = false`, a small indicator is shown (e.g., "Veterans only")
+
+**Given** a player's honor drops below the threshold mid-session
+**When** a new match within the same room is about to start
+**Then** the honor check runs again alongside the insolvency check (Story 9.3) and applies the same ejection flow (`event:honor_eject`) with a modal: "Your honor has dropped below this room's threshold."
+
+## Epic 10: Additional Languages
+
+The i18n system is extended with Macedonian and Croatian translations, giving players a fuller native-language experience independent of the social layer.
+
+### Story 10.1: Macedonian and Croatian Translations
+
+As a player,
+I want to use the platform in Macedonian or Croatian,
+So that I can play in my native language.
+
+**Acceptance Criteria:**
+
+**Given** the i18n system is already configured for EN and SR
+**When** Macedonian and Croatian translation files are added
+**Then** `mk.json` and `hr.json` are created in `client/src/shared/i18n/` with all translated strings
+**And** the translation keys are 1:1 with `en.json` — no missing keys in either new file
+
+**Given** a player opens the language selector
+**When** they view available languages
+**Then** four options are listed: English, Serbian (Latin), Macedonian, Croatian
+
+**Given** a player selects Macedonian or Croatian
+**When** the preference is saved
+**Then** the UI re-renders in the selected language
+**And** the preference is persisted to the server via `PATCH /users/:id/preferences`
+**And** subsequent page loads use the saved preference
+
+**Given** translation coverage is checked
+**When** CI runs
+**Then** a lint step verifies `mk.json` and `hr.json` contain every key present in `en.json`
+**And** any missing or empty translation strings fail the build
+
+## Epic 11: Friends & Public Profiles
+
+Players can search for other players by username, send/accept friend requests, maintain a friend list with online status, and view public profiles that include honor score, XP/level, prior-season rank archive, and career stats.
+
+### Story 11.1: Player Search
+
+As a player,
+I want to search for other players by username,
+So that I can find friends and view their profiles.
+
+**Acceptance Criteria:**
+
+**Given** a player is in the lobby or profile section
+**When** they use a player search input
+**Then** `GET /api/v1/users?search=[query]` returns matching usernames with live-filtering
+
+**Given** search results are returned
+**When** the player clicks a result
+**Then** they are navigated to that player's public profile
+
+**Given** no players match the query
+**When** the results render
+**Then** an empty state is shown: "No players found matching '[query]'"
+
+### Story 11.2: Friend Requests & Friend List
+
+As a player,
+I want to send friend requests and maintain a friend list,
+So that I can easily find and play with people I know.
+
+**Acceptance Criteria:**
+
+**Given** a player views another player's profile
+**When** they click "Add Friend"
+**Then** a friend request is sent via `POST /api/v1/friends/request`
+**And** the recipient receives a notification
+
+**Given** a player has pending friend requests
+**When** they view their friend requests
+**Then** each request shows the sender's username with Accept and Decline buttons
+
+**Given** a friend request is accepted
+**When** both players view their friend list
+**Then** each appears in the other's friend list with online/offline status
+
+**Given** a player views their friend list
+**When** a friend is online
+**Then** their status shows as online and an "Invite to Room" action is available
+
+### Story 11.3: Public Player Profiles
+
+As a player,
+I want to view other players' public profiles,
+So that I can see their reliability, progression, and competitive history.
+
+**Acceptance Criteria:**
+
+**Given** a player navigates to another player's profile
+**When** `GET /api/v1/users/:id/profile` is called
+**Then** public information is returned: username, level, total_xp, honor score + tier label + raw counts + recent-trend indicator, current seasonal rank (if Epic 13 live), prior-season rank archive (zero-game seasons skipped), win/loss record, total game points scored career, member-since date
+**And** private information (email, language preference, wallet balance, streak counter) is NOT included
+
+**Given** the requested player has < 20 completed matches
+**When** the profile renders
+**Then** the honor section shows the "New Player" label (per Epic 9 Story 9.6) in place of a tier
+**And** raw counts are still shown
+
+**Given** the public profile renders
+**When** viewed by another player
+**Then** it uses the same visual layout as the player's own profile but without edit capabilities
+**And** an "Add Friend" button is shown if not already friends or if no pending request exists
+**And** a "View Match History" link is shown if the viewed player has public match history (always public for Phase 3)
+
+**Given** a seasonal rank system does not yet exist (Epic 13 not delivered)
+**When** the profile renders during Phase 3
+**Then** the prior-season rank archive section is omitted (not present in DOM), and the current seasonal rank is not displayed
+**And** the rest of the profile renders normally — the profile implementation tolerates absent season data gracefully
+
+## Epic 12: Variant Expansion
+
+Players can play the Croatian trump variant, 501-point matches, and access an in-app rules reference covering both variants.
+
+### Story 12.1: Croatian Variant Rules Engine
 
 As a player,
 I want to play the Croatian trump variant with its authentic bidding rules,
@@ -1409,7 +1909,7 @@ So that the platform supports both major Balkan Belot variants.
 **When** the variant dropdown is configured
 **Then** both Bitola and Croatian are available as options
 
-### Story 8.2: 501-Point Match Mode
+### Story 12.2: 501-Point Match Mode
 
 As a player,
 I want to play shorter 501-point matches,
@@ -1433,7 +1933,7 @@ So that I can enjoy a quicker game when I don't have time for a full 1001 match.
 **When** the player views the HUD
 **Then** the target score context reflects 501 (not 1001)
 
-### Story 8.3: In-App Rules Reference
+### Story 12.3: In-App Rules Reference
 
 As a player,
 I want to access a rules reference for both Belot variants,
@@ -1452,219 +1952,93 @@ So that I can look up rules without leaving the platform.
 
 **Given** the rules reference content
 **When** it renders
-**Then** it is displayed in the player's selected language (EN or SR) via i18n
+**Then** it is displayed in the player's selected language (EN, SR, MK, HR) via i18n
 **And** the content is structured as static markdown rendered as a React component in `features/rules/`
 
-### Story 8.4: Team Surrender
+## Epic 13: Seasonal Rank & Leaderboard
+
+Players earn Season Points (SP) per match, climb an 8-tier seasonal ladder (Iron → Radiant) across 3-month quarterly seasons, and view a seasonal leaderboard. Prior seasons are archived on the profile (zero-game seasons skipped).
+
+### Story 13.1: Season Points (SP) & Tier Climb
 
 As a player,
-I want to propose surrendering a match to my teammate,
-So that we can end a hopeless game without waiting for it to finish.
+I want to earn Season Points for every match I play and watch my rank tier advance,
+So that I have an active competitive goal distinct from lifetime level.
 
 **Acceptance Criteria:**
 
-**Given** a player is in an active match
-**When** they initiate a surrender request via `action:surrender_request`
-**Then** their teammate receives a `event:surrender_proposed` prompt: "Your teammate wants to surrender. Accept / Decline"
-**And** the opponents are notified that a surrender is being considered
+**Given** a match completes
+**When** SP is calculated for each player
+**Then** the formula is `SP_earned = 50 (completion) + (100 if team won else 0) + floor(team_game_points / 10) + (50 if Capot or instant-win occurred)`
+**And** abandoning players earn 0 SP
+**And** SP is accumulated into the player's current season record
 
-**Given** the teammate accepts the surrender
-**When** `action:surrender_accept` is submitted
-**Then** the match ends immediately as a win for the opposing team
-**And** all players receive `event:match_end` with surrender status
-**And** the match record is persisted with surrender outcome
-
-**Given** the teammate declines the surrender
-**When** `action:surrender_decline` is submitted
-**Then** play continues normally and the proposing player's surrender attempt is consumed (each player may trigger at most once per game)
-
-**Given** a player has already initiated a surrender request in this game
-**When** they try to initiate another
-**Then** an `error:surrender_exhausted` event is returned
-
-### Story 8.5: In-Game Emotes
-
-As a player,
-I want to express reactions during a match using preset emotes,
-So that I can communicate emotions and reactions beyond text chat.
-
-**Acceptance Criteria:**
-
-**Given** a player is in an active match
-**When** they open the emote picker (button near chat toggle)
-**Then** a grid of preset emote options is displayed (e.g., thumbs up, clap, laugh, thinking, facepalm, heart)
-
-**Given** a player selects an emote
-**When** `action:emote` is sent with the emote type
-**Then** all 4 match participants receive `system:emote` and the emote displays briefly near the sender's seat with a pop-in animation (auto-dismiss after 2s)
-
-**Given** emotes are sent rapidly
-**When** a player sends multiple emotes
-**Then** a rate limit applies (max 1 emote per 3 seconds per player) to prevent spam
-
-## Epic 9: Player Progression & Competitive Ranked Play
-
-Players earn XP, level up, unlock ranked mode at Level 5, compete in ELO-based matchmaking with placement matches, climb an 8-tier rank system across quarterly seasons, and view leaderboards and career stats.
-
-### Story 9.1: XP System & Level Progression
-
-As a player,
-I want to earn XP from matches and level up,
-So that I have a sense of progression and can unlock ranked mode.
-
-**Acceptance Criteria:**
-
-**Given** a match completes normally
-**When** XP is calculated
-**Then** each player earns XP proportional to the game points their team scored in the match
-**And** XP is added to their profile and persisted
-
-**Given** a player accumulates enough XP
-**When** their XP crosses a level threshold
-**Then** their level increments and the new level is reflected on their profile and in the lobby RankBanner
-
-**Given** the RankBanner in the lobby
-**When** a player below Level 5 views it
-**Then** it shows their current level, XP progress bar to next level, and a prompt: "Reach Level 5 to unlock Ranked mode"
-
-**Given** a player abandons a match
-**When** XP outcomes are applied
-**Then** the abandoning player receives 0 XP for that match
-
-### Story 9.2: Ranked Queue & ELO Matchmaking
-
-As a Level 5+ player,
-I want to queue for ranked matches with ELO-based pairing,
-So that I play against opponents of similar skill.
-
-**Acceptance Criteria:**
-
-**Given** a player is Level 5 or above
-**When** they view the lobby play options
-**Then** the "Ranked" card is active and clickable
-
-**Given** a player below Level 5
-**When** they view the Ranked card
-**Then** it is disabled at 40% opacity with a tooltip: "Reach Level 5 to unlock"
-
-**Given** a Level 5+ player clicks "Ranked"
-**When** they enter the ranked queue
-**Then** the server pairs them with players of similar ELO rating
-**And** a matchmaking indicator shows "Finding ranked match..."
-
-**Given** 4 players are matched
-**When** the ranked game starts
-**Then** the match is configured as: 1001 mode, per-move timer, ranked flag set
-**And** teams are assigned by the matchmaking system (not self-selected)
-
-### Story 9.3: Placement Matches & Rank Reveal
-
-As a new ranked player in a season,
-I want to play placement matches before receiving my rank,
-So that my initial rank reflects my actual skill level.
-
-**Acceptance Criteria:**
-
-**Given** a player enters ranked for the first time in a season
-**When** they click "Ranked"
-**Then** a placement info modal appears: "3 placement matches required to receive your rank"
-
-**Given** a player is in placement
-**When** they complete a ranked match
-**Then** the RankBanner updates: "Placement: X/3 complete"
-
-**Given** all 3 placement matches are completed
-**When** the rank is calculated from placement results
-**Then** a full-screen rank reveal animation plays: tier badge glows in with tier-specific color (Iron=grey, Bronze=#cd7f32, Silver=#c0c0c0, Gold=#ffd700, Platinum=#e5e4e2, Diamond=#b9f2ff, Immortal=#ff6b6b, Radiant=accent+glow)
-**And** the animation transitions to the updated lobby with the RankBanner showing the new rank
-
-**Given** the placement modal
-**When** it is shown
-**Then** it appears once per season only — returning ranked players go straight to queue
-
-### Story 9.4: Rank Tiers & Season System
-
-As a ranked player,
-I want to climb through rank tiers during quarterly seasons,
-So that I have a long-term competitive goal.
-
-**Acceptance Criteria:**
-
-**Given** a player has a rank
-**When** they win or lose ranked matches
-**Then** their ELO adjusts accordingly and their rank tier updates if thresholds are crossed
-**And** the 8 tiers are: Iron, Bronze, Silver, Gold, Platinum, Diamond, Immortal, Radiant
+**Given** a player's cumulative SP crosses a tier threshold
+**When** the next match ends
+**Then** their tier updates and a tier-up toast is shown
+**And** the 8 tiers and thresholds are: Iron (0), Bronze (500), Silver (1 500), Gold (3 000), Platinum (5 500), Diamond (8 500), Immortal (12 500), Radiant (18 000)
 
 **Given** a player views their rank
-**When** the RankBanner renders in ranked state
-**Then** it shows: tier badge (tier-specific color + glow), tier name, LP/ELO value, progress bar to next tier, and season countdown
+**When** the RankBanner renders in the lobby
+**Then** it shows: tier badge (tier-specific color + glow), tier name, current SP, progress bar to next tier, days remaining in season
 
-**Given** a quarterly season ends
-**When** the season reset runs
-**Then** all players' ranks are soft-reset (compressed toward the median)
-**And** prior season rank history is preserved and viewable on the profile
-**And** a new season begins with placement matches required again
-
-**Given** the season system
-**When** I inspect the database schema
+**Given** the season schema migration
+**When** I inspect the database
 **Then** a `seasons` table exists with: `id`, `name`, `started_at`, `ends_at`
-**And** a `player_seasons` table exists with: `id`, `user_id`, `season_id`, `elo`, `rank_tier`, `placement_completed`, `games_played`
+**And** a `player_seasons` table exists with: `id`, `user_id`, `season_id`, `sp`, `rank_tier`, `games_played`, `games_completed`
 
-### Story 9.5: Seasonal Leaderboard
+### Story 13.2: Seasonal Leaderboard
 
 As a competitive player,
-I want to view a leaderboard of top-ranked players,
+I want to view a leaderboard of top SP earners in the current season,
 So that I can see where I stand in the community.
 
 **Acceptance Criteria:**
 
 **Given** a player is in the lobby
-**When** the Direction 5 layout renders
-**Then** the right panel shows the seasonal leaderboard with the top players
+**When** the lobby layout renders
+**Then** the right panel shows the seasonal leaderboard with the top players (default top 10)
 
 **Given** the leaderboard loads
 **When** `GET /api/v1/leaderboard?season=current` is called
-**Then** it returns the top players ordered by ELO, each showing: rank position, username, tier badge, ELO value
+**Then** it returns the top players ordered by SP, each showing: rank position, username, tier badge, SP value, games played in season
 
 **Given** a player clicks the "Leaderboard" tab in the top nav
 **When** the full leaderboard page loads
-**Then** a complete paginated leaderboard is shown with the player's own position highlighted if they are ranked
+**Then** a complete paginated leaderboard is shown with the player's own position highlighted if they have any SP
 
 **Given** a season is active
 **When** matches complete
-**Then** the leaderboard updates to reflect current standings (not real-time — refreshed on page load or periodic poll)
+**Then** the leaderboard reflects current standings (refreshed on page load or periodic poll, not push)
 
-### Story 9.6: Career Statistics & Abandonment Penalties
+### Story 13.3: Season Rollover & Prior-Season Archive
 
-As a player,
-I want to view detailed career stats and have competitive abandonment penalized,
-So that long-term performance is tracked and ranked integrity is maintained.
+As a competitive player,
+I want a fresh start each quarter with my past seasons preserved,
+So that newcomers can compete fairly while my history is still on record.
 
 **Acceptance Criteria:**
 
+**Given** a season's `ends_at` timestamp passes
+**When** the season-rollover job runs (nightly scheduler)
+**Then** a new `seasons` row is created with the next quarter's window
+**And** each player starts the new season at Iron with 0 SP (soft reset — no merging or compression of prior SP)
+**And** the prior season's `player_seasons` records remain intact
+
 **Given** a player views their profile
-**When** the career statistics section loads
-**Then** it displays: total wins/losses, win rate, points scored (career total), rank history across all seasons (chart or timeline), games played per season
+**When** the prior-season rank archive renders
+**Then** seasons in which the player played ≥ 1 match are listed with: season name, final tier, final SP, games played
+**And** seasons with 0 games played are omitted from the list entirely
 
-**Given** a player abandons a ranked match
-**When** ELO penalties are applied
-**Then** the abandoning player receives a scaled ELO penalty based on game progress (higher penalty for later-stage abandonment)
-**And** the remaining players receive no ELO change — the match is voided
+**Given** the player has never played a ranked season
+**When** the archive section renders
+**Then** the section is hidden (not shown as "no history") until they complete their first post-Epic-13 season match
 
-**Given** a casual match is abandoned
-**When** outcomes are applied
-**Then** the remaining 3 players receive partial XP based on game progress at time of abandonment
-**And** the abandoning player receives 0 XP
+## Epic 14: Social Login
 
-**Given** FR38 and FR43 have undefined formulas
-**When** implementing ELO penalty scaling and partial XP calculation
-**Then** placeholder formulas are implemented with configurable constants that can be tuned based on product decisions
+Players can register and log in using Google or Facebook OAuth, with account linking when an email matches an existing account.
 
-## Epic 10: Social & Friend System
-
-Players can use social login, search for other players, manage friend lists, view public profiles, and use the platform in additional languages.
-
-### Story 10.1: Social Login
+### Story 14.1: Google & Facebook OAuth
 
 As a player,
 I want to register and log in using Google or Facebook,
@@ -1685,94 +2059,36 @@ So that I don't need to create a separate account.
 **When** they attempt social login with the same email
 **Then** the accounts are linked and the player can use either login method
 
-### Story 10.2: Player Search
+## Epic 15: Mobile Experience
+
+The platform is delivered as a mobile-optimized experience (PWA or native client) with touch-friendly card interaction and responsive layout.
+
+### Story 15.1: PWA / Mobile Layout & Touch Interaction
 
 As a player,
-I want to search for other players by username,
-So that I can find friends and view their profiles.
+I want to access Belote on my phone or tablet,
+So that I can play on the go.
 
 **Acceptance Criteria:**
 
-**Given** a player is in the lobby or profile section
-**When** they use a player search input
-**Then** `GET /api/v1/users?search=[query]` returns matching usernames with live-filtering
+**Given** the platform is desktop-only
+**When** mobile support is added
+**Then** the platform is accessible as a PWA (progressive web app) or native client optimized for touch interaction
 
-**Given** search results are returned
-**When** the player clicks a result
-**Then** they are navigated to that player's public profile
+**Given** a player opens the platform on mobile
+**When** the UI renders
+**Then** the layout adapts to mobile viewport (portrait and landscape) with touch-friendly card interaction (tap to play)
+**And** all core features are functional: lobby, room management, game play, chat, profile
 
-**Given** no players match the query
-**When** the results render
-**Then** an empty state is shown: "No players found matching '[query]'"
+**Given** a player installs the PWA
+**When** they open it from their home screen
+**Then** it launches in a standalone app-like experience with offline splash screen and push notification support for match invites
 
-### Story 10.3: Friend Requests & Friend List
+## Epic 16: Spectator, Achievements, Cosmetics & Tournaments
 
-As a player,
-I want to send friend requests and maintain a friend list,
-So that I can easily find and play with people I know.
+Players can spectate live matches, earn achievements and badges, purchase cosmetic items with no gameplay impact, and compete in bracket-style tournaments.
 
-**Acceptance Criteria:**
-
-**Given** a player views another player's profile
-**When** they click "Add Friend"
-**Then** a friend request is sent via `POST /api/v1/friends/request`
-**And** the recipient receives a notification
-
-**Given** a player has pending friend requests
-**When** they view their friend requests
-**Then** each request shows the sender's username with Accept and Decline buttons
-
-**Given** a friend request is accepted
-**When** both players view their friend list
-**Then** each appears in the other's friend list with online/offline status
-
-**Given** a player views their friend list
-**When** a friend is online
-**Then** their status shows as online and an "Invite to Room" action is available
-
-### Story 10.4: Public Player Profiles
-
-As a player,
-I want to view other players' public profiles,
-So that I can see their stats and rank.
-
-**Acceptance Criteria:**
-
-**Given** a player navigates to another player's profile
-**When** `GET /api/v1/users/:id/profile` is called
-**Then** public information is returned: username, level, rank tier, win/loss record, member since
-**And** private information (email, language preference) is NOT included
-
-**Given** the public profile renders
-**When** viewed by another player
-**Then** it shows the same visual layout as the player's own profile but without edit capabilities
-**And** an "Add Friend" button is shown if not already friends
-
-### Story 10.5: Additional Languages
-
-As a player,
-I want to use the platform in Macedonian or Croatian,
-So that I can play in my native language.
-
-**Acceptance Criteria:**
-
-**Given** the i18n system is already configured for EN and SR
-**When** Macedonian and Croatian translation files are added
-**Then** `mk.json` and `hr.json` are created in `shared/i18n/` with all translated strings
-
-**Given** a player opens the language selector
-**When** they view available languages
-**Then** four options are listed: English, Serbian (Latin), Macedonian, Croatian
-
-**Given** a player selects Macedonian or Croatian
-**When** the preference is saved
-**Then** the UI re-renders in the selected language and the preference is persisted
-
-## Epic 11: Spectator Mode, Achievements & Cosmetics
-
-Players can spectate live matches, earn and display achievements, and purchase cosmetic items with no gameplay impact.
-
-### Story 11.1: Spectator Mode
+### Story 16.1: Spectator Mode
 
 As a player,
 I want to watch ongoing matches as an observer,
@@ -1794,7 +2110,7 @@ So that I can learn from other players or watch friends play.
 **Then** they cannot interact with any game elements (no card play, no prompts, no pause)
 **And** they can access the match chat in read-only mode
 
-### Story 11.2: Achievements & Badges
+### Story 16.2: Achievements & Badges
 
 As a player,
 I want to earn achievements and display badges on my profile,
@@ -1814,7 +2130,7 @@ So that I have additional goals beyond winning matches.
 **When** the profile renders
 **Then** earned badges are visible to all viewers
 
-### Story 11.3: Cosmetic Store
+### Story 16.3: Cosmetic Store
 
 As a player,
 I want to purchase cosmetic items like card backs and table themes,
@@ -1825,6 +2141,7 @@ So that I can personalize my game experience.
 **Given** a player opens the cosmetics store
 **When** the store page renders
 **Then** available items are displayed: card back designs, table themes, with preview images and prices
+**And** prices may be coin-only or premium-currency-only per item (premium currency is out of scope for Epic 16 — coin-only defaults)
 
 **Given** a player purchases a cosmetic item
 **When** the transaction completes
@@ -1835,11 +2152,7 @@ So that I can personalize my game experience.
 **When** they enter a game
 **Then** their custom card back is visible to all players and the table theme applies to their view
 
-## Epic 12: Tournaments & Mobile
-
-Players can compete in bracket-style tournaments and access the platform via mobile.
-
-### Story 12.1: Tournament System
+### Story 16.4: Tournament System
 
 As a competitive player,
 I want to participate in bracket-style tournaments,
@@ -1849,7 +2162,7 @@ So that I can compete in organized events with seasonal scheduling.
 
 **Given** a tournament is scheduled
 **When** a player views the tournaments section
-**Then** they see upcoming tournaments with: name, date, format (bracket type), entry requirements, current registrations
+**Then** they see upcoming tournaments with: name, date, format (bracket type), entry requirements (incl. minimum honor, level, SP tier as applicable), current registrations
 
 **Given** a player registers for a tournament
 **When** the tournament starts
@@ -1859,24 +2172,3 @@ So that I can compete in organized events with seasonal scheduling.
 **Given** a tournament concludes
 **When** a winner is determined
 **Then** results are posted with final standings, and tournament-specific rewards (badges, cosmetics) are distributed
-
-### Story 12.2: Mobile Experience
-
-As a player,
-I want to access Belote on my phone or tablet,
-So that I can play on the go.
-
-**Acceptance Criteria:**
-
-**Given** the platform is desktop-only
-**When** mobile support is added
-**Then** the platform is accessible as a PWA (progressive web app) or native client optimized for touch interaction
-
-**Given** a player opens the platform on mobile
-**When** the UI renders
-**Then** the layout adapts to mobile viewport (portrait and landscape) with touch-friendly card interaction (tap to play)
-**And** all core features are functional: lobby, room management, game play, chat, profile
-
-**Given** a player installs the PWA
-**When** they open it from their home screen
-**Then** it launches in a standalone app-like experience with offline splash screen and push notification support for match invites

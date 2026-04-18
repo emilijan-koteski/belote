@@ -49,7 +49,7 @@ Belote is the only platform built specifically for the Balkan Belot community �
 ### Business Success
 
 - **Phase 1 — Closed Circle (Months 1–3):** ~20 active players, zero critical game-breaking bugs, rules confirmed correct by experienced Belot players for both variants.
-- **Phase 2 — Soft Opening (Months 3–6):** Organic growth beyond founding circle, ranked system live and functional, no paid acquisition.
+- **Phase 2 — Soft Opening (Months 3–6):** Organic growth beyond founding circle, coin economy and honor system live and functional, no paid acquisition.
 - **Phase 3 — Monetization Readiness:** Triggered at ~200 consistent MAU — the quantitative signal to open monetization discussions.
 
 ### Technical Success
@@ -109,40 +109,57 @@ Belote is the only platform built specifically for the Balkan Belot community �
 
 **Explicitly Deferred from Phase 1:**
 
-- Croatian trump variant (Phase 2)
-- ELO/ranked competitive mode (entire system)
-- XP/Level progression system
-- 501-point match mode
-- Configurable reconnect window per room
-- Detailed player statistics beyond basic match history
-
-### Phase 2 — Variant Expansion & Competitive
-
-- Croatian trump variant support
-- XP/Level progression system with Level 5 gate
-- ELO matchmaking engine, 8-tier rank system, placement matches, quarterly seasons, leaderboard
-- Team surrender: one player initiates, teammate must accept; match ends immediately as opponent win; each player may trigger once per game
-- 501-point match mode
-- Configurable reconnect window per room
-- Detailed player statistics (win/loss, points scored, rank history)
-- Scaled ELO penalty for competitive disconnections
-
-### Phase 3 — Growth & Social
-
-- Mobile support (PWA or native)
-- Social login (Facebook, Google)
-- Friend system (requests, player search, friend list)
+- Coin economy (room buy-in, daily/streak rewards, pot settlement)
+- XP/Level progression (lifetime, non-gating)
+- Honor system (public trust score)
+- Team surrender
+- Room owner kick / seat-rearrange controls
+- In-game preset emotes
 - Additional languages (Macedonian, Croatian)
+- Croatian trump variant
+- 501-point match mode
+- In-app rules reference
+- Seasonal rank ladder and leaderboard
+- Player search, friends, public profiles
+- Social login, mobile support
+- Spectator, achievements, cosmetics, tournaments
 
-### Phase 4 — Vision
+### Phase 2 — Player Economy & Game Table Enhancements
+
+- **Coin economy:** room buy-in configurable by owner (min 0, owner-freeform above); per-match settlement (not per-hand). Winners split pot; losers forfeit stake. Surrender settles identically (surrendering team loses stake). Abandonment: abandoning player forfeits their own stake, their teammate is refunded, winners split the reduced pot (3× stake when one abandons). Players with insufficient balance for the next match are ejected between matches with a modal — room and remaining seated players persist for the next match.
+- **Coin sources:** 5 000 coins on registration; daily login bonus linear 1 000 → 3 100 over a 14-day uninterrupted streak (+~162/day); streak resets on missed day.
+- **Quick Play economy:** default 500-coin stake; if balance < 500, player is bracketed into a matching pool by balance (can bracket down to 0).
+- **XP/Level system:** lifetime progression (never resets). XP from match completion + game points scored. No gating behavior — purely a career signal, shown on profile and lobby banner.
+- **Honor system:** public trust score (0–100) reflecting match-completion behavior. Signals: completed · rage-quit · timeout-abandon · unresolved-disconnect · accepted-surrender (neutral). Players with < 20 completed matches labeled "New Player" regardless of score. Profile shows score, tier label, recent trend. Rooms may optionally require a minimum honor threshold.
+- **Team surrender:** one player initiates, teammate must accept; match ends immediately as opponent win; each player may trigger once per game.
+- **Room owner controls (pre-game only):** kick a seated player; swap / reassign seats among seated players. Not available once the game has started.
+- **In-game preset emotes:** rate-limited (max 1 per 3s per player), visible to all 4 seats.
+- **Additional languages:** Macedonian and Croatian translations added to the i18n system (promoted from the later Social phase; decoupled from the friend system).
+
+### Phase 3 — Social & Game Variant Expansion
+
+- Player search by username
+- Friend system (requests, friend list with online status, invite to room)
+- Public player profiles (username, level, stats, honor tier/score with raw counts, prior-season rank archive — seasons with zero games are omitted)
+- Croatian trump variant (forced pick by dealer in round 2 — no reshuffle)
+- 501-point match mode
+- In-app rules reference for both variants
+
+### Phase 4 — Competitive Climb & Access Expansion
+
+- **Seasonal rank system:** 8 tiers (Iron → Bronze → Silver → Gold → Platinum → Diamond → Immortal → Radiant) across 3-month quarterly seasons. Climb via Season Points (SP) earned per match: 50 (completion) + 100 (win) + floor(team_game_points / 10) + 50 (Capot or instant-win). Abandoners earn 0 SP. No decay. Season end → soft reset (all players start next season at Iron). Profile archives every played season; seasons with zero games are skipped on display.
+- Seasonal leaderboard (top players by SP, per season)
+- Social login (Facebook, Google)
+- Mobile support (PWA or native)
+
+### Phase 5 — Vision
 
 - Spectator/observer mode
-- In-game emotes
-- Monetization (cosmetics, no pay-to-win)
-- Tournaments and bracket events
 - Achievements and badges
+- Cosmetics store (card backs, table themes; no pay-to-win)
+- Tournaments and bracket events
 - Streaming/OBS integration
-- Community features (public profiles, activity feeds)
+- Community features (activity feeds)
 
 ### Risk Mitigation Strategy
 
@@ -150,7 +167,7 @@ Belote is the only platform built specifically for the Balkan Belot community �
 
 - *Real-time multiplayer complexity* — Mitigated by server-authoritative architecture; client is a thin renderer.
 - *Rules engine correctness* — Mitigated by shipping one variant first (Bitola). Validates the engine with real players before adding Croatian variant branching.
-- *Single variant first* — Reduces rules engine complexity by ~10-15% and eliminates variant-switching UI. Croatian variant shares 90%+ of logic and layers on cleanly in Phase 2.
+- *Single variant first* — Reduces rules engine complexity by ~10-15% and eliminates variant-switching UI. Croatian variant shares 90%+ of logic and layers on cleanly in Phase 3.
 
 **Market Risks:**
 
@@ -381,8 +398,8 @@ Single Page Application (SPA) for desktop browsers. Real-time multiplayer with p
 ### Scalability
 
 - The system must support Phase 1 capacity: up to 10 concurrent game sessions (~40 simultaneous players) without performance degradation
-- The system must support Phase 2 capacity: up to 50 concurrent game sessions (~200 simultaneous players) without architectural redesign
-- The platform architecture must permit horizontal scaling to accommodate growth beyond Phase 2 without a full rebuild
+- The system must support Phase 2–3 capacity: up to 50 concurrent game sessions (~200 simultaneous players) without architectural redesign
+- The platform architecture must permit horizontal scaling to accommodate growth beyond Phase 3 without a full rebuild
 
 ### Reliability
 
