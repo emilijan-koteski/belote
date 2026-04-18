@@ -254,7 +254,14 @@ export interface GameStartedPayload {
 }
 
 // --- Chat events ---
+export const ACTION_CHAT_MESSAGE = "action:chat_message" as const;
 export const SYSTEM_CHAT_MESSAGE = "system:chat_message" as const;
+
+export interface ChatMessageRequest {
+  channel: "global" | "match";
+  matchId?: number; // required when channel === "match" (Story 6.2)
+  text: string;
+}
 
 export interface ChatMessagePayload {
   userId: number;

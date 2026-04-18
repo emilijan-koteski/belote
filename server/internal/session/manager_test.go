@@ -246,6 +246,36 @@ func TestHasSession(t *testing.T) {
 	assert.True(t, mgr.HasSession(100))
 }
 
+func TestIsUserInGame(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	// Unknown user → false
+	assert.False(t, mgr.IsUserInGame(10))
+	assert.False(t, mgr.IsUserInGame(999))
+
+	// After StartGame → all 4 seated players are in game
+	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120)
+	require.NoError(t, err)
+
+	assert.True(t, mgr.IsUserInGame(10))
+	assert.True(t, mgr.IsUserInGame(20))
+	assert.True(t, mgr.IsUserInGame(30))
+	assert.True(t, mgr.IsUserInGame(40))
+	assert.False(t, mgr.IsUserInGame(999), "non-player should not be in game")
+
+	// After RemoveSession → users no longer in game
+	mgr.RemoveSession(100)
+	assert.False(t, mgr.IsUserInGame(10))
+	assert.False(t, mgr.IsUserInGame(20))
+	assert.False(t, mgr.IsUserInGame(30))
+	assert.False(t, mgr.IsUserInGame(40))
+}
+
 // --- Timer Tests ---
 
 func TestStartGame_PerMoveTimer_SetsTurnExpiresAt(t *testing.T) {

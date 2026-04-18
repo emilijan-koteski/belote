@@ -19,6 +19,11 @@ vi.mock("@/shared/api/rooms", () => ({
   createRoom: vi.fn(),
 }));
 
+vi.mock("@/shared/providers/WebSocketContext", () => ({
+  useWsSendMessage: () => vi.fn(),
+  useWsConnectionState: () => "connected" as const,
+}));
+
 describe("App routing", () => {
   beforeEach(() => {
     useAuthStore.setState({ token: null, user: null, isLoading: false });

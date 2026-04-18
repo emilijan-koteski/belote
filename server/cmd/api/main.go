@@ -19,6 +19,7 @@ import (
 
 	"github.com/emilijan/belote/server/internal/apperr"
 	"github.com/emilijan/belote/server/internal/auth"
+	"github.com/emilijan/belote/server/internal/chat"
 	"github.com/emilijan/belote/server/internal/config"
 	"github.com/emilijan/belote/server/internal/match"
 	"github.com/emilijan/belote/server/internal/room"
@@ -108,7 +109,17 @@ func main() {
 	roomRepo := room.NewGormRepository(db)
 	sessionManager := session.NewManager(hub, matchRepo)
 	sessionManager.SetRoomUpdater(&room.RoomStatusAdapter{Repo: roomRepo})
-	hub.SetActionHandler(sessionManager.HandleAction)
+
+	// Chat handler — composed with sessionManager.HandleAction so a single
+	// hub action handler can route both game actions and chat messages.
+	chatHandler := chat.NewHandler(hub, userRepo, sessionManager)
+	hub.SetActionHandler(func(client *ws.Client, msg ws.WSMessage) {
+		if msg.Type == ws.ActionChatMessage {
+			chatHandler.HandleAction(client, msg)
+			return
+		}
+		sessionManager.HandleAction(client, msg)
+	})
 
 	// Lobby disconnect handler — frees seats after 10s when players disconnect in room lobby
 	lobbyDisconnectHandler := room.NewLobbyDisconnectHandler(roomRepo, hub)

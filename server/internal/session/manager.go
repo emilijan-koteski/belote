@@ -274,6 +274,15 @@ func (m *Manager) HasSession(roomID uint) bool {
 	return ok
 }
 
+// IsUserInGame returns true if the user is currently part of an active game session.
+// Used by the chat handler to enforce the "no global chat while in a game" rule.
+func (m *Manager) IsUserInGame(userID uint) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	_, ok := m.userToRoom[userID]
+	return ok
+}
+
 // parseAction converts a WS message into a game.Action for the rules engine.
 func (m *Manager) parseAction(userID uint, session *Session, msg ws.WSMessage) (game.Action, error) {
 	// Find seat for this user (playerIDs is immutable after StartGame)

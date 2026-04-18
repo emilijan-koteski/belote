@@ -114,7 +114,25 @@ const SystemSeatUpdated = "system:seat_updated"
 const SystemGameStarted = "system:game_started"
 
 // --- Chat events ---
+const ActionChatMessage = "action:chat_message"
 const SystemChatMessage = "system:chat_message"
+
+// ChatMessageRequest is the typed payload for ActionChatMessage (client → server).
+// Channel is "global" for lobby chat. "match" channel is reserved for Story 6.2.
+type ChatMessageRequest struct {
+	Channel string `json:"channel"`           // "global" (Story 6.1) | "match" (Story 6.2)
+	MatchID *uint  `json:"matchId,omitempty"` // required when channel == "match" (Story 6.2)
+	Text    string `json:"text"`
+}
+
+// ChatMessagePayload is the typed payload for SystemChatMessage (server → client).
+type ChatMessagePayload struct {
+	UserID    uint   `json:"userId"`
+	Username  string `json:"username"`
+	Message   string `json:"message"`
+	Timestamp string `json:"timestamp"` // ISO 8601 (RFC3339) UTC
+	Scope     string `json:"scope"`     // "global" | "match"
+}
 
 // --- General error events ---
 const SystemError = "system:error"

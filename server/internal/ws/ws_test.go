@@ -278,6 +278,44 @@ func TestHub_BroadcastToUsers(t *testing.T) {
 	assert.Equal(t, "event:broadcast_test", msg2.Type)
 }
 
+func TestHub_ConnectedUserIDs(t *testing.T) {
+	server, hub := setupTestServer(t)
+
+	// Empty hub
+	assert.Empty(t, hub.ConnectedUserIDs())
+
+	// Connect three users
+	conn1 := dialWS(t, server)
+	defer func() { _ = conn1.CloseNow() }()
+	sendAuthMessage(t, conn1, generateTestToken(t, 901))
+	readMessage(t, conn1)
+
+	conn2 := dialWS(t, server)
+	defer func() { _ = conn2.CloseNow() }()
+	sendAuthMessage(t, conn2, generateTestToken(t, 902))
+	readMessage(t, conn2)
+
+	conn3 := dialWS(t, server)
+	defer func() { _ = conn3.CloseNow() }()
+	sendAuthMessage(t, conn3, generateTestToken(t, 903))
+	readMessage(t, conn3)
+
+	time.Sleep(50 * time.Millisecond)
+
+	ids := hub.ConnectedUserIDs()
+	assert.Len(t, ids, hub.ClientCount(), "snapshot length must match ClientCount")
+	assert.Len(t, ids, 3)
+	assert.Contains(t, ids, uint(901))
+	assert.Contains(t, ids, uint(902))
+	assert.Contains(t, ids, uint(903))
+
+	// Mutating the returned slice must not affect the hub
+	ids[0] = 0
+	assert.True(t, hub.IsConnected(901))
+	assert.True(t, hub.IsConnected(902))
+	assert.True(t, hub.IsConnected(903))
+}
+
 func TestHub_DuplicateUserID(t *testing.T) {
 	server, hub := setupTestServer(t)
 

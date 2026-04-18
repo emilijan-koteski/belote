@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { queryClient } from "@/shared/api/queryClient";
 import { queryKeys } from "@/shared/api/queryKeys";
+import { useChatStore } from "@/shared/stores/chatStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { Room } from "@/shared/types/apiTypes";
@@ -93,6 +94,7 @@ describe("useWsDispatch", () => {
     queryClient.clear();
     useGameStore.getState().reset();
     useRoomLobbyStore.getState().reset();
+    useChatStore.setState({ globalMessages: [] });
     vi.restoreAllMocks();
   });
 
@@ -479,5 +481,73 @@ describe("useWsDispatch", () => {
     });
 
     expect(useRoomLobbyStore.getState().gameStarted).toBe(true);
+  });
+
+  it("appends system:chat_message with scope=global to chatStore", () => {
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:chat_message",
+      payload: {
+        userId: 7,
+        username: "alice",
+        message: "hello world",
+        timestamp: "2026-04-18T10:00:00Z",
+        scope: "global",
+      },
+    });
+
+    const messages = useChatStore.getState().globalMessages;
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      userId: 7,
+      username: "alice",
+      message: "hello world",
+      scope: "global",
+    });
+  });
+
+  it("ignores system:chat_message with scope=match (handled by Story 6.2)", () => {
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:chat_message",
+      payload: {
+        userId: 7,
+        username: "alice",
+        message: "team only",
+        timestamp: "2026-04-18T10:00:00Z",
+        scope: "match",
+      },
+    });
+
+    expect(useChatStore.getState().globalMessages).toHaveLength(0);
+  });
+
+  it("ignores malformed system:chat_message payloads (defensive validation)", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    const malformedPayloads: unknown[] = [
+      null,
+      undefined,
+      {},
+      { userId: "not-a-number", username: "x", message: "x", timestamp: "x", scope: "global" },
+      { userId: 1, username: null, message: "x", timestamp: "x", scope: "global" },
+      { userId: 1, username: "x", message: 42, timestamp: "x", scope: "global" },
+      { userId: 1, username: "x", message: "x", timestamp: undefined, scope: "global" },
+      { userId: 1, username: "x", message: "x", timestamp: "x" /* no scope */ },
+    ];
+
+    for (const payload of malformedPayloads) {
+      dispatch({ type: "system:chat_message", payload });
+    }
+
+    expect(useChatStore.getState().globalMessages).toHaveLength(0);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });

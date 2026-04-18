@@ -30,6 +30,11 @@ vi.mock("@/shared/api/rooms", () => ({
   getRoomByCode: vi.fn(),
 }));
 
+vi.mock("@/shared/providers/WebSocketContext", () => ({
+  useWsSendMessage: () => vi.fn(),
+  useWsConnectionState: () => "connected" as const,
+}));
+
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -51,6 +56,12 @@ describe("LobbyPage", () => {
     expect(screen.getByTestId("quick-play-card")).toBeInTheDocument();
     expect(screen.getByTestId("browse-rooms-card")).toBeInTheDocument();
     expect(screen.getByTestId("create-room-card")).toBeInTheDocument();
+  });
+
+  it("renders the ChatPanel in the right column", () => {
+    renderLobbyPage();
+    expect(screen.getByTestId("chat-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("chat-input")).toBeInTheDocument();
   });
 
   it("opens CreateRoomModal when Create Room card is clicked", async () => {

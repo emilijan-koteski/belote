@@ -28,6 +28,14 @@
     "title": "Rang lista",
     "comingSoon": "Rang lista uskoro dolazi"
   },
+  "chat": {
+    "title": "Lobi chat",
+    "placeholder": "Pozdravi\u2026",
+    "placeholderDisabled": "Ponovno povezivanje\u2026",
+    "send": "Pošalji",
+    "empty": "Još nema poruka \u2014 pozdravi.",
+    "tooLong": "Poruke moraju imati 500 karaktera ili manje."
+  },
   "rules": {
     "title": "Pravila",
     "comingSoon": "Pravila uskoro dolaze"

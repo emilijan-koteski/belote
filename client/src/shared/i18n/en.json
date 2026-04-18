@@ -28,6 +28,14 @@
     "title": "Leaderboard",
     "comingSoon": "Leaderboard coming soon"
   },
+  "chat": {
+    "title": "Lobby Chat",
+    "placeholder": "Say hi\u2026",
+    "placeholderDisabled": "Reconnecting\u2026",
+    "send": "Send",
+    "empty": "No messages yet \u2014 say hi.",
+    "tooLong": "Messages must be 500 characters or fewer."
+  },
   "rules": {
     "title": "Rules",
     "comingSoon": "Rules reference coming soon"

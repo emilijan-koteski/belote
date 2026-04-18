@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
+import { ChatPanel } from "@/features/chat/ChatPanel";
 import { CreateRoomModal } from "@/features/lobby/CreateRoomModal";
 import { JoinByCode } from "@/features/lobby/JoinByCode";
 import { RoomList } from "@/features/lobby/RoomList";
@@ -164,9 +165,12 @@ export function LobbyPage() {
           )}
         </div>
 
-        {/* Right: Leaderboard placeholder */}
-        <div className="rounded-lg border border-border bg-surface p-6">
-          <p className="text-text-secondary">{t("lobby.leaderboardPlaceholder")}</p>
+        {/* Right: Leaderboard placeholder above, ChatPanel below */}
+        <div className="flex flex-col gap-4 min-h-150">
+          <div className="rounded-lg border border-border bg-surface p-6">
+            <p className="text-text-secondary">{t("lobby.leaderboardPlaceholder")}</p>
+          </div>
+          <ChatPanel className="flex-1" />
         </div>
       </div>
 

@@ -197,6 +197,18 @@ func (h *Hub) ClientCount() int {
 	return len(h.clients)
 }
 
+// ConnectedUserIDs returns a snapshot of all currently-connected user IDs.
+// Order is unspecified. Caller may mutate the returned slice freely.
+func (h *Hub) ConnectedUserIDs() []uint {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	ids := make([]uint, 0, len(h.clients))
+	for uid := range h.clients {
+		ids = append(ids, uid)
+	}
+	return ids
+}
+
 // IsConnected checks if a user has an active WebSocket connection.
 func (h *Hub) IsConnected(userID uint) bool {
 	h.mu.RLock()

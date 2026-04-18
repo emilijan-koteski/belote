@@ -3,12 +3,14 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 
 import { handleWsMessage as handleRoomListMessage } from "@/features/lobby/useRoomUpdates";
+import { useChatStore } from "@/shared/stores/chatStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { GameState } from "@/shared/types/gameTypes";
 import type {
   BelotAnnouncedPayload,
   CardPlayedPayload,
+  ChatMessagePayload,
   DeclarationsResolvedPayload,
   GameResumedPayload,
   GameStartedPayload,
@@ -301,6 +303,23 @@ function dispatchSystemEvent(message: WsMessage): void {
 
   // Chat events
   if (type === SYSTEM_CHAT_MESSAGE) {
+    const payload = message.payload as ChatMessagePayload;
+    // Defensive: reject malformed payloads so a server bug or protocol drift
+    // cannot inject "Invalid Date" / null username into the chat UI.
+    if (
+      typeof payload?.userId !== "number" ||
+      typeof payload?.username !== "string" ||
+      typeof payload?.message !== "string" ||
+      typeof payload?.timestamp !== "string" ||
+      typeof payload?.scope !== "string"
+    ) {
+      console.warn("WS: ignoring malformed system:chat_message payload", payload);
+      return;
+    }
+    if (payload.scope === "global") {
+      useChatStore.getState().appendGlobal(payload);
+    }
+    // scope === "match" handled by Story 6.2
     return;
   }
 }
