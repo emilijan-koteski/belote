@@ -14,10 +14,44 @@
   "profile": {
     "title": "Profil",
     "memberSince": "Član od {{date}}",
-    "matchHistory": "Istorija mečeva",
-    "matchHistoryEmpty": "Nema mečeva — odigrajte prvu partiju!",
     "stats": "Statistika",
-    "statsEmpty": "Statistika će se pojaviti nakon prvog meča"
+    "statsEmpty": "Statistika će se pojaviti nakon prvog meča",
+    "matchHistory": {
+      "title": "Istorija mečeva",
+      "empty": "Nema mečeva \u2014 pokreni Brzu igru",
+      "emptyCta": "U lobi",
+      "loading": "Učitavanje mečeva\u2026",
+      "error": "Neuspešno učitavanje istorije \u2014 pokušaj ponovo",
+      "loadMore": "Učitaj još",
+      "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
+      "durationHms": "{{h}}:{{m}}:{{s}}",
+      "durationMs": "{{m}}:{{s}}",
+      "vs": "vs",
+      "teammate": "Saigrač",
+      "opponents": "Protivnici",
+      "outcomeWin": "Pobeda",
+      "outcomeLoss": "Poraz",
+      "outcomeAbandoned": "Prekinut",
+      "expandRow": "Prikaži detalje ruku",
+      "collapseRow": "Sakrij detalje ruku",
+      "variant": {
+        "bitola": "Bitola"
+      },
+      "mode": {
+        "1001": "1001 poen"
+      },
+      "hand": {
+        "number": "Ruka {{number}}",
+        "cardPoints": "Poeni iz karata",
+        "declarationPoints": "Deklaracije",
+        "lastTrickBonus": "Poslednji štih",
+        "capot": "Kapot",
+        "failedContract": "Pao",
+        "handTotal": "Ukupno ruka",
+        "failedContractTeamRed": "Crveni",
+        "failedContractTeamBlue": "Plavi"
+      }
+    }
   },
   "language": {
     "label": "Jezik",

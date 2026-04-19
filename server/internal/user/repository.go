@@ -5,5 +5,9 @@ type UserRepository interface {
 	FindByEmail(email string) (*User, error)
 	FindByUsername(username string) (*User, error)
 	FindByID(id uint) (*User, error)
+	// FindManyByIDs returns all users whose ID is in the provided slice, in
+	// arbitrary order. Returns an empty slice (no DB round-trip) when ids is
+	// empty. Soft-deleted users are excluded via GORM's default scope.
+	FindManyByIDs(ids []uint) ([]User, error)
 	UpdateLanguagePreference(id uint, lang string) error
 }

@@ -85,6 +85,23 @@ func (m *mockUserRepo) UpdateLanguagePreference(id uint, lang string) error {
 	return gorm.ErrRecordNotFound
 }
 
+func (m *mockUserRepo) FindManyByIDs(ids []uint) ([]user.User, error) {
+	if len(ids) == 0 {
+		return []user.User{}, nil
+	}
+	wanted := make(map[uint]struct{}, len(ids))
+	for _, id := range ids {
+		wanted[id] = struct{}{}
+	}
+	out := make([]user.User, 0, len(ids))
+	for _, u := range m.users {
+		if _, ok := wanted[u.ID]; ok {
+			out = append(out, *u)
+		}
+	}
+	return out, nil
+}
+
 func testErrorHandler(err error, c echo.Context) {
 	if c.Response().Committed {
 		return

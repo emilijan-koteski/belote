@@ -14,10 +14,44 @@
   "profile": {
     "title": "Profile",
     "memberSince": "Member since {{date}}",
-    "matchHistory": "Match History",
-    "matchHistoryEmpty": "No matches yet \u2014 play your first game!",
     "stats": "Stats",
-    "statsEmpty": "Stats will appear after your first match"
+    "statsEmpty": "Stats will appear after your first match",
+    "matchHistory": {
+      "title": "Match History",
+      "empty": "No games yet \u2014 Quick Play to get started",
+      "emptyCta": "Go to lobby",
+      "loading": "Loading matches\u2026",
+      "error": "Could not load match history \u2014 try again",
+      "loadMore": "Load more",
+      "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
+      "durationHms": "{{h}}:{{m}}:{{s}}",
+      "durationMs": "{{m}}:{{s}}",
+      "vs": "vs",
+      "teammate": "Teammate",
+      "opponents": "Opponents",
+      "outcomeWin": "Win",
+      "outcomeLoss": "Loss",
+      "outcomeAbandoned": "Abandoned",
+      "expandRow": "Show hand details",
+      "collapseRow": "Hide hand details",
+      "variant": {
+        "bitola": "Bitola"
+      },
+      "mode": {
+        "1001": "1001 points"
+      },
+      "hand": {
+        "number": "Hand {{number}}",
+        "cardPoints": "Card Points",
+        "declarationPoints": "Declarations",
+        "lastTrickBonus": "Last trick",
+        "capot": "Capot",
+        "failedContract": "Failed",
+        "handTotal": "Hand Total",
+        "failedContractTeamRed": "Red",
+        "failedContractTeamBlue": "Blue"
+      }
+    }
   },
   "language": {
     "label": "Language",

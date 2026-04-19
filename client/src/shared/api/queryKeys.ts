@@ -8,4 +8,7 @@ export const queryKeys = {
   profile: {
     detail: (userId: number) => ["profile", userId] as const,
   },
+  matches: {
+    byUser: (userId: number) => ["matches", "byUser", userId] as const,
+  },
 } as const;

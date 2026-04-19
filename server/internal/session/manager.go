@@ -17,19 +17,23 @@ import (
 
 // Session holds the live game state and player mapping for one active game.
 type Session struct {
-	gameState            *game.GameState
-	playerIDs            [4]uint // index = seat
-	roomID               uint
-	startedAt            time.Time
-	timerStyle           string      // "relaxed" or "per-move"
-	timerDurationSec     int         // seconds per move (only used when timerStyle == "per-move")
-	turnTimer            *time.Timer // current per-move timer (nil when inactive)
-	timerGeneration      uint64      // incremented on each turn; timer callback checks staleness
-	reconnectWindowSec   int         // seconds to wait for disconnected player (default 120)
-	reconnectTimer       *time.Timer // reconnect countdown timer (nil when inactive)
-	reconnectGeneration  uint64      // incremented on each disconnect; timer callback checks staleness
-	closed               bool        // set when session is being removed
-	mu                   sync.RWMutex
+	gameState           *game.GameState
+	playerIDs           [4]uint // index = seat
+	roomID              uint
+	startedAt           time.Time
+	timerStyle          string      // "relaxed" or "per-move"
+	timerDurationSec    int         // seconds per move (only used when timerStyle == "per-move")
+	turnTimer           *time.Timer // current per-move timer (nil when inactive)
+	timerGeneration     uint64      // incremented on each turn; timer callback checks staleness
+	reconnectWindowSec  int         // seconds to wait for disconnected player (default 120)
+	reconnectTimer      *time.Timer // reconnect countdown timer (nil when inactive)
+	reconnectGeneration uint64      // incremented on each disconnect; timer callback checks staleness
+	closed              bool        // set when session is being removed
+	// handResults buffers per-hand scoring rows during the match. Flushed via
+	// matchRepo.CreateWithHands when the match completes (normal end) or is
+	// abandoned. Mutated only under session.mu.Lock.
+	handResults []match.HandResult
+	mu          sync.RWMutex
 }
 
 // RoomStatusUpdater updates a room's status in the database.
@@ -225,6 +229,9 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 
 	// Broadcast the result using captured local variables (not session.gameState)
 	m.broadcastActionResult(playerIDs, oldState, newState, action, false, startedAt)
+
+	// Buffer per-hand scoring for persistence at match end
+	m.bufferHandResultIfScored(session, oldState, newState)
 
 	// Check for match completion
 	if newState.Phase == game.PhaseMatchEnd {
@@ -565,6 +572,49 @@ func (m *Manager) broadcastDeclarationsResolvedIfTransition(oldState, newState *
 	m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventDeclarationsResolved, payload))
 }
 
+// bufferHandResultIfScored appends a match.HandResult to session.handResults
+// when the provided state transition represents a scored hand (hand number
+// advanced OR match ended) AND LastHandResult is populated. The completed
+// hand's number is oldState.HandNumber — on normal hand completion newState
+// has already been advanced by startNewHand, and on match-end startNewHand
+// does not run so oldState.HandNumber still identifies the final hand. Safe
+// to call on every state transition; no-op when the condition is not met.
+func (m *Manager) bufferHandResultIfScored(session *Session, oldState, newState *game.GameState) {
+	if oldState == nil || newState == nil || newState.LastHandResult == nil {
+		return
+	}
+	handAdvanced := oldState.HandNumber < newState.HandNumber
+	matchEndTransition := oldState.Phase != game.PhaseMatchEnd && newState.Phase == game.PhaseMatchEnd
+	if !handAdvanced && !matchEndTransition {
+		return
+	}
+	hr := newState.LastHandResult
+	var capotTeam *int
+	if hr.CapotTeam != nil {
+		v := *hr.CapotTeam
+		capotTeam = &v
+	}
+	row := match.HandResult{
+		HandNumber:      oldState.HandNumber,
+		RedCardPoints:   hr.RedCardPoints,
+		BlueCardPoints:  hr.BlueCardPoints,
+		RedDeclPoints:   hr.RedDeclPoints,
+		BlueDeclPoints:  hr.BlueDeclPoints,
+		LastTrickTeam:   hr.LastTrickTeam,
+		LastTrickBonus:  hr.LastTrickBonus,
+		Capot:           hr.Capot,
+		CapotTeam:       capotTeam,
+		CapotBonus:      hr.CapotBonus,
+		FailedContract:  hr.FailedContract,
+		ContractingTeam: hr.ContractingTeam,
+		RedHandTotal:    hr.RedHandTotal,
+		BlueHandTotal:   hr.BlueHandTotal,
+	}
+	session.mu.Lock()
+	session.handResults = append(session.handResults, row)
+	session.mu.Unlock()
+}
+
 // handleMatchEnd persists the match record, updates room status, and removes the session.
 // Uses the passed newState (not session.gameState) to avoid data races.
 func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState) {
@@ -589,10 +639,16 @@ func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState) {
 		Status:        "completed",
 	}
 
-	if err := m.matchRepo.Create(matchRecord); err != nil {
+	// Copy buffered hand results under RLock to avoid holding the lock during I/O.
+	session.mu.RLock()
+	handsCopy := make([]match.HandResult, len(session.handResults))
+	copy(handsCopy, session.handResults)
+	session.mu.RUnlock()
+
+	if err := m.matchRepo.CreateWithHands(matchRecord, handsCopy); err != nil {
 		slog.Error("session: failed to persist match", "roomID", session.roomID, "error", err)
 	} else {
-		slog.Info("session: match persisted", "roomID", session.roomID, "matchID", matchRecord.ID)
+		slog.Info("session: match persisted", "roomID", session.roomID, "matchID", matchRecord.ID, "hands", len(handsCopy))
 	}
 
 	// Update room status to completed
@@ -775,6 +831,9 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 	// Broadcast result
 	isAutoPlayedCard := action.Type == game.ActionPlayCard
 	m.broadcastActionResult(playerIDs, oldState, newState, action, isAutoPlayedCard, startedAt)
+
+	// Buffer per-hand scoring for persistence at match end
+	m.bufferHandResultIfScored(session, oldState, newState)
 
 	// Check for match completion
 	if newState.Phase == game.PhaseMatchEnd {

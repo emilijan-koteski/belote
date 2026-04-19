@@ -21,6 +21,7 @@ import (
 type mockMatchRepo struct {
 	mu      sync.Mutex
 	matches []*match.Match
+	hands   [][]match.HandResult // index-aligned with matches (same order as Create / CreateWithHands calls)
 	err     error
 }
 
@@ -36,7 +37,38 @@ func (r *mockMatchRepo) Create(m *match.Match) error {
 	}
 	m.ID = uint(len(r.matches) + 1)
 	r.matches = append(r.matches, m)
+	r.hands = append(r.hands, nil)
 	return nil
+}
+
+func (r *mockMatchRepo) CreateWithHands(m *match.Match, hands []match.HandResult) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.err != nil {
+		return r.err
+	}
+	m.ID = uint(len(r.matches) + 1)
+	r.matches = append(r.matches, m)
+	handsCopy := make([]match.HandResult, len(hands))
+	copy(handsCopy, hands)
+	for i := range handsCopy {
+		handsCopy[i].MatchID = m.ID
+	}
+	r.hands = append(r.hands, handsCopy)
+	return nil
+}
+
+func (r *mockMatchRepo) GetMatchesForUser(userID uint, limit, offset int) ([]match.Match, int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.err != nil {
+		return nil, 0, r.err
+	}
+	// Not exercised by session-manager tests — return empty page.
+	_ = userID
+	_ = limit
+	_ = offset
+	return nil, 0, nil
 }
 
 func (r *mockMatchRepo) getMatches() []*match.Match {
@@ -45,6 +77,19 @@ func (r *mockMatchRepo) getMatches() []*match.Match {
 	result := make([]*match.Match, len(r.matches))
 	copy(result, r.matches)
 	return result
+}
+
+func (r *mockMatchRepo) getHandsFor(matchID uint) []match.HandResult {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i, m := range r.matches {
+		if m.ID == matchID {
+			result := make([]match.HandResult, len(r.hands[i]))
+			copy(result, r.hands[i])
+			return result
+		}
+	}
+	return nil
 }
 
 // --- Hub Adapter ---
@@ -497,4 +542,110 @@ func TestPerMoveTimer_ConcurrentActionAndExpiry(t *testing.T) {
 	// The session should still be valid (no panic, no corruption)
 	finalState := mgr.GetStateSnapshot(100)
 	require.NotNil(t, finalState, "session should survive concurrent access")
+}
+
+// --- Hand-result buffering (Story 7.1) ---
+
+// bufferTestResult produces a game.HandResult populated with distinctive values so
+// mapping correctness can be asserted.
+func bufferTestResult(red, blue int) *game.HandResult {
+	capotTeam := game.TeamBlue
+	return &game.HandResult{
+		RedCardPoints:   red,
+		BlueCardPoints:  blue,
+		RedDeclPoints:   20,
+		BlueDeclPoints:  50,
+		LastTrickTeam:   game.TeamRed,
+		LastTrickBonus:  10,
+		Capot:           true,
+		CapotTeam:       &capotTeam,
+		CapotBonus:      100,
+		FailedContract:  true,
+		ContractingTeam: game.TeamRed,
+		RedHandTotal:    red + 20,
+		BlueHandTotal:   blue + 150,
+	}
+}
+
+func TestBufferHandResultIfScored_HandAdvanced(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(900, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	// Normal hand completion: HandNumber advances from 3 → 4.
+	old := &game.GameState{HandNumber: 3}
+	next := &game.GameState{HandNumber: 4, LastHandResult: bufferTestResult(81, 81)}
+
+	mgr.BufferHandResultIfScored(900, old, next)
+
+	hands := mgr.HandResults(900)
+	require.Len(t, hands, 1)
+	assert.Equal(t, 3, hands[0].HandNumber, "buffered hand number must be oldState.HandNumber (the hand just completed)")
+	assert.Equal(t, 81, hands[0].RedCardPoints)
+	assert.Equal(t, 81, hands[0].BlueCardPoints)
+	assert.True(t, hands[0].Capot)
+	require.NotNil(t, hands[0].CapotTeam)
+	assert.Equal(t, game.TeamBlue, *hands[0].CapotTeam)
+	assert.True(t, hands[0].FailedContract)
+	assert.Equal(t, 101, hands[0].RedHandTotal)
+	assert.Equal(t, 231, hands[0].BlueHandTotal)
+}
+
+func TestBufferHandResultIfScored_MatchEnd(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(901, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	// On match end startNewHand does NOT run, so HandNumber stays the same.
+	old := &game.GameState{HandNumber: 7}
+	next := &game.GameState{HandNumber: 7, Phase: game.PhaseMatchEnd, LastHandResult: bufferTestResult(100, 62)}
+
+	mgr.BufferHandResultIfScored(901, old, next)
+
+	hands := mgr.HandResults(901)
+	require.Len(t, hands, 1)
+	assert.Equal(t, 7, hands[0].HandNumber, "match-end buffered hand number must be oldState.HandNumber (no startNewHand ran)")
+}
+
+func TestBufferHandResultIfScored_Noop_NoTransition(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(902, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	// No hand advance, not match end: buffer must stay empty.
+	old := &game.GameState{HandNumber: 2}
+	next := &game.GameState{HandNumber: 2, Phase: game.PhasePlaying, LastHandResult: bufferTestResult(10, 20)}
+
+	mgr.BufferHandResultIfScored(902, old, next)
+
+	assert.Empty(t, mgr.HandResults(902))
+}
+
+func TestBufferHandResultIfScored_Noop_NilHandResult(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(903, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	old := &game.GameState{HandNumber: 2}
+	next := &game.GameState{HandNumber: 3, LastHandResult: nil}
+
+	mgr.BufferHandResultIfScored(903, old, next)
+
+	assert.Empty(t, mgr.HandResults(903))
 }

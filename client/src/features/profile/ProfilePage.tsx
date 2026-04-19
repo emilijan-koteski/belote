@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useProfileQuery } from "@/shared/hooks/queries/useProfile";
 import { useAuthStore } from "@/shared/stores/authStore";
 
+import { MatchHistory } from "./MatchHistory";
+
 export function ProfilePage() {
   const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
@@ -54,9 +56,11 @@ export function ProfilePage() {
           data-testid="profile-match-history"
         >
           <h2 className="font-display text-lg font-semibold text-text-primary">
-            {t("profile.matchHistory")}
+            {t("profile.matchHistory.title")}
           </h2>
-          <p className="mt-2 text-sm text-text-secondary">{t("profile.matchHistoryEmpty")}</p>
+          <div className="mt-4">
+            <MatchHistory userId={user?.id} />
+          </div>
         </section>
 
         <section

@@ -288,6 +288,10 @@ func (m *Manager) handleReconnectTimeout(session *Session, generation uint64) {
 	blueScore := gs.TeamScores[game.TeamBlue]
 	variant := string(gs.Variant)
 	matchMode := gs.MatchMode
+	// Snapshot any hands scored before the abandonment so they persist alongside
+	// the match row. Empty when abandonment fires before hand 1 completed.
+	handsCopy := make([]match.HandResult, len(session.handResults))
+	copy(handsCopy, session.handResults)
 
 	abandonedPayload := ws.MatchAbandonedPayload{
 		AbandonedByPlayer: abandonedSeat,
@@ -329,10 +333,10 @@ func (m *Manager) handleReconnectTimeout(session *Session, generation uint64) {
 		AbandonedBy:   &abandonedPlayerID,
 	}
 
-	if err := m.matchRepo.Create(matchRecord); err != nil {
+	if err := m.matchRepo.CreateWithHands(matchRecord, handsCopy); err != nil {
 		slog.Error("session: failed to persist abandoned match", "roomID", roomID, "error", err)
 	} else {
-		slog.Info("session: abandoned match persisted", "roomID", roomID, "matchID", matchRecord.ID)
+		slog.Info("session: abandoned match persisted", "roomID", roomID, "matchID", matchRecord.ID, "hands", len(handsCopy))
 	}
 
 	// Update room status

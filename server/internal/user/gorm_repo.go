@@ -67,6 +67,17 @@ func (r *GormUserRepository) FindByID(id uint) (*User, error) {
 	return &u, nil
 }
 
+func (r *GormUserRepository) FindManyByIDs(ids []uint) ([]User, error) {
+	if len(ids) == 0 {
+		return []User{}, nil
+	}
+	var users []User
+	if err := r.db.Where("id IN ?", ids).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 func (r *GormUserRepository) UpdateLanguagePreference(id uint, lang string) error {
 	result := r.db.Model(&User{}).Where("id = ?", id).Update("language_preference", lang)
 	if result.Error != nil {

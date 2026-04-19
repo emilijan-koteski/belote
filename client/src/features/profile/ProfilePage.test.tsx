@@ -19,6 +19,11 @@ vi.mock("@/shared/api/profile", () => ({
   updatePreferences: vi.fn().mockResolvedValue({ languagePreference: "en" }),
 }));
 
+const mockGetUserMatches = vi.fn();
+vi.mock("@/shared/api/matches", () => ({
+  getUserMatches: (...args: unknown[]) => mockGetUserMatches(...args),
+}));
+
 function renderProfilePage() {
   return render(
     <QueryWrapper>
@@ -31,7 +36,10 @@ function renderProfilePage() {
 
 describe("ProfilePage", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockGetProfile.mockReset();
+    mockGetUserMatches.mockReset();
+    // Default: MatchHistory renders the empty state so existing tests need no per-case setup.
+    mockGetUserMatches.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
     useAuthStore.setState({
       token: "test-token",
       user: {

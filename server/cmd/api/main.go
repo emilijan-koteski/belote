@@ -89,9 +89,11 @@ func main() {
 	authGroup.POST("/logout", authHandler.Logout)
 
 	// Authenticated route group
-	userHandler := user.NewUserHandler(userRepo)
+	matchRepo := match.NewGormMatchRepository(db)
+	userHandler := user.NewUserHandler(userRepo, matchRepo)
 	api := e.Group("/api/v1", auth.AuthMiddleware(cfg.JWTSecret))
 	api.GET("/users/:id/profile", userHandler.GetProfile)
+	api.GET("/users/:id/matches", userHandler.ListMatches)
 	api.PATCH("/users/:id/preferences", userHandler.UpdatePreferences)
 
 	// WebSocket hub and endpoint
@@ -105,7 +107,6 @@ func main() {
 	e.GET("/ws", wsHandler.HandleWS)
 
 	// Session manager + room repo (repo needed before handler wiring)
-	matchRepo := match.NewGormMatchRepository(db)
 	roomRepo := room.NewGormRepository(db)
 	sessionManager := session.NewManager(hub, matchRepo)
 	sessionManager.SetRoomUpdater(&room.RoomStatusAdapter{Repo: roomRepo})
