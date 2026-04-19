@@ -14,8 +14,15 @@
   "profile": {
     "title": "Profile",
     "memberSince": "Member since {{date}}",
-    "stats": "Stats",
-    "statsEmpty": "Stats will appear after your first match",
+    "statsHeading": "Stats",
+    "stats": {
+      "totalGamesPlayed": "Games played",
+      "wins": "Wins",
+      "losses": "Losses",
+      "winRate": "Win rate",
+      "winRateEmpty": "\u2014",
+      "error": "Could not load stats \u2014 try again"
+    },
     "matchHistory": {
       "title": "Match History",
       "empty": "No games yet \u2014 Quick Play to get started",

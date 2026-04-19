@@ -27,6 +27,14 @@ import (
 type mockMatchRepo struct {
 	matches []match.Match // newest first (by completed_at); seeded in test order
 	err     error
+
+	// Stats-path overrides — when statsOverride is non-nil, GetStatsForUser
+	// returns these values regardless of r.matches. This lets the handler
+	// test drive the stats branch without seeding full Match rows.
+	statsOverride   *struct{ wins, losses, abandoned int }
+	statsErr        error
+	getStatsCalls   int
+	lastStatsUserID uint
 }
 
 func newMockMatchRepo() *mockMatchRepo {
@@ -67,6 +75,47 @@ func (r *mockMatchRepo) GetMatchesForUser(userID uint, limit, offset int) ([]mat
 		end = len(filtered)
 	}
 	return filtered[offset:end], total, nil
+}
+
+// GetStatsForUser returns the test-controlled stats override if set, else
+// computes the four counts from seeded matches using the same predicate as
+// the production SQL (participation by any seat; team derived from viewer's
+// seat). Tracks call count + last userID so auth-failure tests can assert
+// the stats path was NOT invoked.
+func (r *mockMatchRepo) GetStatsForUser(userID uint) (int, int, int, error) {
+	r.getStatsCalls++
+	r.lastStatsUserID = userID
+	if r.statsErr != nil {
+		return 0, 0, 0, r.statsErr
+	}
+	if r.statsOverride != nil {
+		return r.statsOverride.wins, r.statsOverride.losses, r.statsOverride.abandoned, nil
+	}
+	var wins, losses, abandoned int
+	for _, m := range r.matches {
+		seats := [4]uint{m.Player1ID, m.Player2ID, m.Player3ID, m.Player4ID}
+		viewerSeat := -1
+		for i, id := range seats {
+			if id == userID {
+				viewerSeat = i
+				break
+			}
+		}
+		if viewerSeat == -1 {
+			continue
+		}
+		switch m.Status {
+		case "abandoned":
+			abandoned++
+		case "completed":
+			if m.WinnerTeam == viewerSeat%2 {
+				wins++
+			} else {
+				losses++
+			}
+		}
+	}
+	return wins, losses, abandoned, nil
 }
 
 type mockUserRepo struct {
@@ -634,3 +683,210 @@ func TestListMatches_NoPIILeak(t *testing.T) {
 }
 
 func strconvUint(u uint) string { return strconv.FormatUint(uint64(u), 10) }
+
+// --- Extended GetProfile with aggregate stats (Story 7.2) ---
+
+func TestGetProfile_WithStats(t *testing.T) {
+	cases := []struct {
+		name     string
+		wins     int
+		losses   int
+		aband    int
+		expected int // totalGamesPlayed
+	}{
+		{"zero games", 0, 0, 0, 0},
+		{"mixed outcomes", 7, 3, 1, 11},
+		{"wins only", 4, 0, 0, 4},
+		{"abandoned only", 0, 0, 2, 2},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, matchRepo, e := setupUserHandlerWithMatches()
+			u := repo.addUser("alice", "alice@example.com", "en")
+			matchRepo.statsOverride = &struct{ wins, losses, abandoned int }{tc.wins, tc.losses, tc.aband}
+
+			token, err := auth.GenerateAccessToken(u.ID, testJWTSecret)
+			require.NoError(t, err)
+
+			rec := doGetProfile(e, strconvUint(u.ID), token)
+			require.Equal(t, http.StatusOK, rec.Code)
+
+			var resp map[string]json.RawMessage
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+			var data user.ProfileResponse
+			require.NoError(t, json.Unmarshal(resp["data"], &data))
+
+			assert.Equal(t, tc.wins, data.Wins)
+			assert.Equal(t, tc.losses, data.Losses)
+			assert.Equal(t, tc.aband, data.Abandoned)
+			assert.Equal(t, tc.expected, data.TotalGamesPlayed)
+			// Invariant: total == wins + losses + abandoned.
+			assert.Equal(t, data.Wins+data.Losses+data.Abandoned, data.TotalGamesPlayed,
+				"totalGamesPlayed invariant")
+			// Identity fields preserved.
+			assert.Equal(t, u.ID, data.ID)
+			assert.Equal(t, "alice", data.Username)
+			assert.Equal(t, "en", data.LanguagePreference)
+		})
+	}
+}
+
+func TestGetProfile_StatsDBError(t *testing.T) {
+	repo, matchRepo, e := setupUserHandlerWithMatches()
+	// Distinctive email so any partial-payload leak is obvious in the 500 body.
+	u := repo.addUser("alice", "alice-err-probe@example.com", "en")
+	matchRepo.statsErr = errors.New("db boom")
+
+	token, err := auth.GenerateAccessToken(u.ID, testJWTSecret)
+	require.NoError(t, err)
+
+	rec := doGetProfile(e, strconvUint(u.ID), token)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code,
+		"DB error must surface as 500, not silently zeroed")
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "INTERNAL_ERROR", errResp["error"]["code"])
+
+	// PII guard: the error-branch response body must not leak user fields either.
+	body := rec.Body.String()
+	assert.NotContains(t, body, "alice-err-probe@example.com", "email must never leak on 500")
+	assert.NotContains(t, body, "\"email\"", "email field must not appear on 500")
+	assert.NotContains(t, body, "passwordHash")
+	assert.NotContains(t, body, "password_hash")
+}
+
+func TestGetProfile_NeverLeaksPII(t *testing.T) {
+	repo, matchRepo, e := setupUserHandlerWithMatches()
+	// Use a distinctive email so any leak is obvious in the response body.
+	u := repo.addUser("alice", "alice-leak-probe@example.com", "en")
+	matchRepo.statsOverride = &struct{ wins, losses, abandoned int }{3, 1, 0}
+
+	token, err := auth.GenerateAccessToken(u.ID, testJWTSecret)
+	require.NoError(t, err)
+
+	rec := doGetProfile(e, strconvUint(u.ID), token)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	body := rec.Body.String()
+	assert.NotContains(t, body, "alice-leak-probe@example.com", "email must never leak")
+	assert.NotContains(t, body, "\"email\"", "email field must not appear")
+	assert.NotContains(t, body, "passwordHash")
+	assert.NotContains(t, body, "password_hash")
+	assert.NotContains(t, body, "deletedAt")
+}
+
+func TestGetProfile_AuthFailures_DoNotCallStats(t *testing.T) {
+	// 400 on bad id, 401 on missing token, 403 on foreign id — stats repo must
+	// not be invoked because the auth check rejects before the stats call.
+	t.Run("bad path id", func(t *testing.T) {
+		repo, matchRepo, e := setupUserHandlerWithMatches()
+		u := repo.addUser("alice", "alice@example.com", "en")
+		token, err := auth.GenerateAccessToken(u.ID, testJWTSecret)
+		require.NoError(t, err)
+
+		rec := doGetProfile(e, "abc", token)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Zero(t, matchRepo.getStatsCalls, "stats must not be queried on 400")
+	})
+
+	t.Run("missing token", func(t *testing.T) {
+		_, matchRepo, e := setupUserHandlerWithMatches()
+		rec := doGetProfile(e, "1", "")
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+		assert.Zero(t, matchRepo.getStatsCalls, "stats must not be queried on 401")
+	})
+
+	t.Run("foreign id", func(t *testing.T) {
+		repo, matchRepo, e := setupUserHandlerWithMatches()
+		repo.addUser("alice", "alice@example.com", "en")
+		repo.addUser("bob", "bob@example.com", "en")
+		token, err := auth.GenerateAccessToken(1, testJWTSecret)
+		require.NoError(t, err)
+
+		rec := doGetProfile(e, "2", token)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Zero(t, matchRepo.getStatsCalls, "stats must not be queried on 403")
+	})
+}
+
+// TestGetProfile_StatsMatchListTotal verifies the invariant from AC #2: the
+// sum wins+losses+abandoned computed by GetStatsForUser matches the total
+// returned by GetMatchesForUser for the same user, across a realistic seed.
+// Uses the mock's seed-driven stats path (statsOverride not set) so both
+// code paths exercise the same participation predicate.
+func TestGetProfile_StatsMatchListTotal(t *testing.T) {
+	repo, matchRepo, e := setupUserHandlerWithMatches()
+	viewer := repo.addUser("viewer", "v@example.com", "en")
+	p2 := repo.addUser("p2", "p2@example.com", "en")
+	p3 := repo.addUser("p3", "p3@example.com", "en")
+	p4 := repo.addUser("p4", "p4@example.com", "en")
+	bystander := repo.addUser("bystander", "b@example.com", "en")
+
+	// Viewer across multiple seats + team outcomes:
+	//  - seat 0 (Red), completed, Red wins -> win
+	//  - seat 0 (Red), completed, Blue wins -> loss
+	//  - seat 3 (Blue), completed, Blue wins -> win (exercises CASE at seat 3)
+	//  - seat 2 (Red), abandoned -> abandoned
+	//  - match not involving viewer (bystander-only) -> ignored in both paths
+	base := time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)
+	abandoner := viewer.ID
+	matchRepo.matches = []match.Match{
+		seedMatch(1, base, base.Add(25*time.Minute),
+			[4]uint{viewer.ID, p2.ID, p3.ID, p4.ID},
+			"completed", 0, nil, "bitola", "1001", 1020, 640, nil),
+		seedMatch(2, base.Add(-time.Hour), base.Add(-time.Hour+25*time.Minute),
+			[4]uint{viewer.ID, p2.ID, p3.ID, p4.ID},
+			"completed", 1, nil, "bitola", "1001", 500, 1020, nil),
+		seedMatch(3, base.Add(-2*time.Hour), base.Add(-2*time.Hour+30*time.Minute),
+			[4]uint{p2.ID, p3.ID, p4.ID, viewer.ID},
+			"completed", 1, nil, "bitola", "1001", 600, 1050, nil),
+		seedMatch(4, base.Add(-3*time.Hour), base.Add(-3*time.Hour+10*time.Minute),
+			[4]uint{p2.ID, p3.ID, viewer.ID, p4.ID},
+			"abandoned", 0, &abandoner, "bitola", "1001", 300, 400, nil),
+		seedMatch(5, base.Add(-4*time.Hour), base.Add(-4*time.Hour+20*time.Minute),
+			[4]uint{bystander.ID, p2.ID, p3.ID, p4.ID},
+			"completed", 0, nil, "bitola", "1001", 1001, 500, nil),
+	}
+
+	token, err := auth.GenerateAccessToken(viewer.ID, testJWTSecret)
+	require.NoError(t, err)
+
+	// Hit /profile — drives GetStatsForUser and returns aggregate counts.
+	profRec := doGetProfile(e, strconvUint(viewer.ID), token)
+	require.Equal(t, http.StatusOK, profRec.Code)
+	var resp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(profRec.Body.Bytes(), &resp))
+	var prof user.ProfileResponse
+	require.NoError(t, json.Unmarshal(resp["data"], &prof))
+
+	// Hit /matches — drives GetMatchesForUser and returns total count.
+	matchRec := doListMatches(e, strconvUint(viewer.ID), "limit=50", token)
+	require.Equal(t, http.StatusOK, matchRec.Code)
+	matchResp := decodeMatchesResponse(t, matchRec.Body.Bytes())
+
+	// AC #2 invariant: aggregate sum must equal matches total.
+	assert.Equal(t, int64(prof.TotalGamesPlayed), matchResp.Total,
+		"totalGamesPlayed must equal /matches total for same user")
+	assert.Equal(t, prof.Wins+prof.Losses+prof.Abandoned, prof.TotalGamesPlayed)
+
+	// Expected by construction: 2 wins, 1 loss, 1 abandoned, bystander ignored.
+	assert.Equal(t, 2, prof.Wins)
+	assert.Equal(t, 1, prof.Losses)
+	assert.Equal(t, 1, prof.Abandoned)
+
+	// Bystander's profile: sees only their one match (a win — seat 0 Red, Red wins).
+	byToken, err := auth.GenerateAccessToken(bystander.ID, testJWTSecret)
+	require.NoError(t, err)
+	byRec := doGetProfile(e, strconvUint(bystander.ID), byToken)
+	require.Equal(t, http.StatusOK, byRec.Code)
+	var byResp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(byRec.Body.Bytes(), &byResp))
+	var byProf user.ProfileResponse
+	require.NoError(t, json.Unmarshal(byResp["data"], &byProf))
+	assert.Equal(t, 1, byProf.Wins)
+	assert.Equal(t, 0, byProf.Losses)
+	assert.Equal(t, 0, byProf.Abandoned)
+	assert.Equal(t, 1, byProf.TotalGamesPlayed)
+}

@@ -14,8 +14,15 @@
   "profile": {
     "title": "Profil",
     "memberSince": "Član od {{date}}",
-    "stats": "Statistika",
-    "statsEmpty": "Statistika će se pojaviti nakon prvog meča",
+    "statsHeading": "Statistika",
+    "stats": {
+      "totalGamesPlayed": "Odigrane partije",
+      "wins": "Pobede",
+      "losses": "Porazi",
+      "winRate": "Procenat pobeda",
+      "winRateEmpty": "\u2014",
+      "error": "Neuspešno učitavanje statistike \u2014 pokušaj ponovo"
+    },
     "matchHistory": {
       "title": "Istorija mečeva",
       "empty": "Nema mečeva \u2014 pokreni Brzu igru",

@@ -1,6 +1,6 @@
 # Story 7.1: Match History Display
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

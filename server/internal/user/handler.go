@@ -17,6 +17,10 @@ type ProfileResponse struct {
 	Username           string    `json:"username"`
 	LanguagePreference string    `json:"languagePreference"`
 	CreatedAt          time.Time `json:"createdAt"`
+	TotalGamesPlayed   int       `json:"totalGamesPlayed"`
+	Wins               int       `json:"wins"`
+	Losses             int       `json:"losses"`
+	Abandoned          int       `json:"abandoned"`
 }
 
 type UpdatePreferencesRequest struct {
@@ -118,12 +122,21 @@ func (h *UserHandler) GetProfile(c echo.Context) error {
 		return apperr.ErrUserNotFound
 	}
 
+	wins, losses, abandoned, err := h.matchRepo.GetStatsForUser(authUserID)
+	if err != nil {
+		return fmt.Errorf("fetching profile stats: %w", err)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": ProfileResponse{
 			ID:                 u.ID,
 			Username:           u.Username,
 			LanguagePreference: u.LanguagePreference,
 			CreatedAt:          u.CreatedAt,
+			TotalGamesPlayed:   wins + losses + abandoned,
+			Wins:               wins,
+			Losses:             losses,
+			Abandoned:          abandoned,
 		},
 	})
 }

@@ -71,6 +71,17 @@ func (r *mockMatchRepo) GetMatchesForUser(userID uint, limit, offset int) ([]mat
 	return nil, 0, nil
 }
 
+func (r *mockMatchRepo) GetStatsForUser(userID uint) (int, int, int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.err != nil {
+		return 0, 0, 0, r.err
+	}
+	// Not exercised by session-manager tests — return zero counts.
+	_ = userID
+	return 0, 0, 0, nil
+}
+
 func (r *mockMatchRepo) getMatches() []*match.Match {
 	r.mu.Lock()
 	defer r.mu.Unlock()

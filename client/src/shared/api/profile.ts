@@ -5,6 +5,10 @@ export interface ProfileResponse {
   username: string;
   languagePreference: string;
   createdAt: string;
+  totalGamesPlayed: number;
+  wins: number;
+  losses: number;
+  abandoned: number;
 }
 
 export interface UpdatePreferencesRequest {
