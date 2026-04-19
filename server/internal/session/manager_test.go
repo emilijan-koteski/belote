@@ -79,19 +79,6 @@ func (r *mockMatchRepo) getMatches() []*match.Match {
 	return result
 }
 
-func (r *mockMatchRepo) getHandsFor(matchID uint) []match.HandResult {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	for i, m := range r.matches {
-		if m.ID == matchID {
-			result := make([]match.HandResult, len(r.hands[i]))
-			copy(result, r.hands[i])
-			return result
-		}
-	}
-	return nil
-}
-
 // --- Hub Adapter ---
 // The session manager expects *ws.Hub, but we need to test with a mock.
 // We'll create a real hub but intercept via SetActionHandler for integration testing.
