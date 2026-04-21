@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 
+import { ChatPanel } from "@/features/chat/ChatPanel";
 import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
 import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
 import { useWsConnectionState } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
+import { useChatStore } from "@/shared/stores/chatStore";
 import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { RoomPlayer } from "@/shared/types/apiTypes";
 
@@ -95,12 +97,16 @@ export function RoomLobby() {
     }
   }, [gameStarted, id, navigate]);
 
-  // Reset store on unmount
+  // Reset stores on unmount AND on :id change — React Router keeps RoomLobby
+  // mounted across /rooms/:id navigations, so a []-dep cleanup would let
+  // room-A chat leak into room-B's UI. Keying the cleanup on `id` fires it
+  // both when the route param changes and when the component unmounts.
   useEffect(() => {
     return () => {
       useRoomLobbyStore.getState().reset();
+      useChatStore.getState().clearRoom();
     };
-  }, []);
+  }, [id]);
 
   // Leave room on unmount if player joined and hasn't explicitly left
   useEffect(() => {
@@ -217,127 +223,142 @@ export function RoomLobby() {
   const ownerUsername = ownerPlayer?.username ?? t("lobby.roomLobby.seatOwner");
 
   return (
-    <div className="mx-auto max-w-2xl px-8 py-8" data-testid="room-lobby">
-      {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <Button variant="ghost" onClick={handleLeaveRoom} data-testid="back-to-lobby">
-          &larr; {t("lobby.roomLobby.backToLobby")}
-        </Button>
-        <h1 className="font-display text-2xl font-semibold text-text-primary">{room.name}</h1>
-        <Button variant="ghost" onClick={handleCopyLink} data-testid="copy-link">
-          {t("lobby.roomLobby.copyLink")}
-        </Button>
-      </div>
-
-      {/* Team labels */}
-      <div className="mb-4 grid grid-cols-2 gap-6">
-        <p className="text-center text-sm font-semibold text-team-red">
-          {t("lobby.roomLobby.teamRed")}
-        </p>
-        <p className="text-center text-sm font-semibold text-team-blue">
-          {t("lobby.roomLobby.teamBlue")}
-        </p>
-      </div>
-
-      {/* Player seats grid — 2 rows x 2 columns */}
-      <div className="mb-8 grid grid-cols-2 gap-6">
-        {SEAT_LAYOUT.map((row) =>
-          row.map((seatIndex) => {
-            const player = getPlayerAtSeat(players, seatIndex);
-            const team = getTeamForSeat(seatIndex);
-            const isCurrentUser =
-              player !== undefined && currentUser !== null && player.userId === currentUser.id;
-            const isSeatOwner = player !== undefined && player.userId === room.ownerId;
-            const isClickable = player === undefined || isCurrentUser;
-
-            const teamBorderClass = team === "red" ? "border-team-red" : "border-team-blue";
-
-            return (
-              <button
-                key={seatIndex}
-                type="button"
-                className={`flex min-h-24 flex-col items-center justify-center rounded-xl border-2 p-6 transition-colors ${
-                  player !== undefined
-                    ? `bg-surface ${teamBorderClass} ${isCurrentUser ? "ring-1 ring-accent" : ""} ${
-                        isClickable ? "cursor-pointer hover:bg-surface-elevated" : "cursor-default"
-                      }`
-                    : `border-dashed ${teamBorderClass} bg-surface/50 cursor-pointer hover:bg-surface/80`
-                }`}
-                onClick={() => {
-                  if (isClickable) {
-                    handleSelectSeat(seatIndex);
-                  }
-                }}
-                disabled={!isClickable}
-                data-testid={`player-seat-${seatIndex}`}
-              >
-                {player !== undefined ? (
-                  <div className="text-center">
-                    <span className="font-semibold text-text-primary">{player.username}</span>
-                    <div className="mt-1 flex items-center justify-center gap-2">
-                      {isCurrentUser && (
-                        <span className="text-xs text-accent">{t("lobby.roomLobby.seatYou")}</span>
-                      )}
-                      {isSeatOwner && (
-                        <span className="text-xs text-text-secondary">
-                          {t("lobby.roomLobby.seatOwner")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <span className="text-text-secondary">{t("lobby.roomLobby.seatEmpty")}</span>
-                )}
-              </button>
-            );
-          }),
-        )}
-      </div>
-
-      {/* Room config bar */}
-      <div className="mb-6">
-        <p className="text-sm text-text-secondary">
-          {variantLabel} &middot; {matchModeLabel} &middot; {timerLabel}
-        </p>
-      </div>
-
-      {/* Start Game / Waiting message */}
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          {room.isQuickPlay ? (
-            <p className="text-sm text-text-secondary" data-testid="auto-start-message">
-              {allSeated
-                ? t("lobby.roomLobby.autoStarting")
-                : t("lobby.roomLobby.autoStartMessage")}
-            </p>
-          ) : isOwner ? (
-            <Button
-              onClick={handleStartGame}
-              disabled={!allSeated || startGameMutation.isPending}
-              className={
-                allSeated && !startGameMutation.isPending ? "" : "opacity-40 cursor-not-allowed"
-              }
-              title={allSeated ? undefined : t("lobby.roomLobby.startGameDisabled")}
-              data-testid="start-game"
-            >
-              {startGameMutation.isPending
-                ? t("lobby.roomLobby.gameStarting")
-                : t("lobby.roomLobby.startGame")}
+    <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] md:items-start">
+        <div data-testid="room-lobby">
+          {/* Header */}
+          <div className="mb-8 flex items-center justify-between">
+            <Button variant="ghost" onClick={handleLeaveRoom} data-testid="back-to-lobby">
+              &larr; {t("lobby.roomLobby.backToLobby")}
             </Button>
-          ) : allSeated ? (
-            <p className="text-sm text-text-secondary" data-testid="waiting-for-start">
-              {t("lobby.roomLobby.waitingForOwner", { owner: ownerUsername })}
+            <h1 className="font-display text-2xl font-semibold text-text-primary">{room.name}</h1>
+            <Button variant="ghost" onClick={handleCopyLink} data-testid="copy-link">
+              {t("lobby.roomLobby.copyLink")}
+            </Button>
+          </div>
+
+          {/* Team labels */}
+          <div className="mb-4 grid grid-cols-2 gap-6">
+            <p className="text-center text-sm font-semibold text-team-red">
+              {t("lobby.roomLobby.teamRed")}
             </p>
-          ) : null}
+            <p className="text-center text-sm font-semibold text-team-blue">
+              {t("lobby.roomLobby.teamBlue")}
+            </p>
+          </div>
+
+          {/* Player seats grid — 2 rows x 2 columns */}
+          <div className="mb-8 grid grid-cols-2 gap-6">
+            {SEAT_LAYOUT.map((row) =>
+              row.map((seatIndex) => {
+                const player = getPlayerAtSeat(players, seatIndex);
+                const team = getTeamForSeat(seatIndex);
+                const isCurrentUser =
+                  player !== undefined && currentUser !== null && player.userId === currentUser.id;
+                const isSeatOwner = player !== undefined && player.userId === room.ownerId;
+                const isClickable = player === undefined || isCurrentUser;
+
+                const teamBorderClass = team === "red" ? "border-team-red" : "border-team-blue";
+
+                return (
+                  <button
+                    key={seatIndex}
+                    type="button"
+                    className={`flex min-h-24 flex-col items-center justify-center rounded-xl border-2 p-6 transition-colors ${
+                      player !== undefined
+                        ? `bg-surface ${teamBorderClass} ${isCurrentUser ? "ring-1 ring-accent" : ""} ${
+                            isClickable
+                              ? "cursor-pointer hover:bg-surface-elevated"
+                              : "cursor-default"
+                          }`
+                        : `border-dashed ${teamBorderClass} bg-surface/50 cursor-pointer hover:bg-surface/80`
+                    }`}
+                    onClick={() => {
+                      if (isClickable) {
+                        handleSelectSeat(seatIndex);
+                      }
+                    }}
+                    disabled={!isClickable}
+                    data-testid={`player-seat-${seatIndex}`}
+                  >
+                    {player !== undefined ? (
+                      <div className="text-center">
+                        <span className="font-semibold text-text-primary">{player.username}</span>
+                        <div className="mt-1 flex items-center justify-center gap-2">
+                          {isCurrentUser && (
+                            <span className="text-xs text-accent">
+                              {t("lobby.roomLobby.seatYou")}
+                            </span>
+                          )}
+                          {isSeatOwner && (
+                            <span className="text-xs text-text-secondary">
+                              {t("lobby.roomLobby.seatOwner")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-text-secondary">{t("lobby.roomLobby.seatEmpty")}</span>
+                    )}
+                  </button>
+                );
+              }),
+            )}
+          </div>
+
+          {/* Room config bar */}
+          <div className="mb-6">
+            <p className="text-sm text-text-secondary">
+              {variantLabel} &middot; {matchModeLabel} &middot; {timerLabel}
+            </p>
+          </div>
+
+          {/* Start Game / Waiting message */}
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              {room.isQuickPlay ? (
+                <p className="text-sm text-text-secondary" data-testid="auto-start-message">
+                  {allSeated
+                    ? t("lobby.roomLobby.autoStarting")
+                    : t("lobby.roomLobby.autoStartMessage")}
+                </p>
+              ) : isOwner ? (
+                <Button
+                  onClick={handleStartGame}
+                  disabled={!allSeated || startGameMutation.isPending}
+                  className={
+                    allSeated && !startGameMutation.isPending ? "" : "opacity-40 cursor-not-allowed"
+                  }
+                  title={allSeated ? undefined : t("lobby.roomLobby.startGameDisabled")}
+                  data-testid="start-game"
+                >
+                  {startGameMutation.isPending
+                    ? t("lobby.roomLobby.gameStarting")
+                    : t("lobby.roomLobby.startGame")}
+                </Button>
+              ) : allSeated ? (
+                <p className="text-sm text-text-secondary" data-testid="waiting-for-start">
+                  {t("lobby.roomLobby.waitingForOwner", { owner: ownerUsername })}
+                </p>
+              ) : null}
+            </div>
+            <Button
+              variant="ghost"
+              className="text-destructive"
+              onClick={handleLeaveRoom}
+              data-testid="leave-room"
+            >
+              {t("lobby.roomLobby.leaveRoom")}
+            </Button>
+          </div>
         </div>
-        <Button
-          variant="ghost"
-          className="text-destructive"
-          onClick={handleLeaveRoom}
-          data-testid="leave-room"
-        >
-          {t("lobby.roomLobby.leaveRoom")}
-        </Button>
+        {/* Right column: room-scoped chat for seated + unseated members.
+            Stacks below the lobby on small screens, sits to the right on md+. */}
+        <ChatPanel
+          channel="room"
+          roomId={room.id}
+          className="min-h-100 md:sticky md:top-8 md:h-[calc(100vh-4rem)]"
+        />
       </div>
     </div>
   );

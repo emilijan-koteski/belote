@@ -77,6 +77,12 @@
     "empty": "Još nema poruka \u2014 pozdravi.",
     "tooLong": "Poruke moraju imati 500 karaktera ili manje."
   },
+  "room": {
+    "chat": {
+      "title": "Ćaskanje u sobi",
+      "placeholder": "Ćaskaj za stolom\u2026"
+    }
+  },
   "rules": {
     "title": "Pravila",
     "comingSoon": "Pravila uskoro dolaze"

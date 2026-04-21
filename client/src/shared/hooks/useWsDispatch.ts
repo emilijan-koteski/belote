@@ -325,6 +325,12 @@ function dispatchSystemEvent(message: WsMessage): void {
       // next match doesn't see leaked history from the previous one.
       if (useGameStore.getState().roomId === null) return;
       useChatStore.getState().appendMatch(payload);
+    } else if (payload.scope === "room") {
+      // Defence in depth: drop stale room chat frames that arrive after the
+      // user has left the room page, so they don't bleed into the next
+      // room's history.
+      if (useRoomLobbyStore.getState().currentRoomId === null) return;
+      useChatStore.getState().appendRoom(payload);
     }
     return;
   }

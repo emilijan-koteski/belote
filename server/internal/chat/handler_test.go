@@ -61,6 +61,24 @@ func (g *fakeGame) MatchParticipants(matchID uint) ([4]uint, bool) {
 	return p, ok
 }
 
+type fakeRoom struct {
+	members map[uint][]uint // roomID → userIDs; absent means room unknown / not waiting
+}
+
+func newFakeRoom() *fakeRoom {
+	return &fakeRoom{members: make(map[uint][]uint)}
+}
+
+func (r *fakeRoom) RoomMembers(roomID uint) ([]uint, bool) {
+	m, ok := r.members[roomID]
+	if !ok {
+		return nil, false
+	}
+	out := make([]uint, len(m))
+	copy(out, m)
+	return out, true
+}
+
 type hubSpy struct {
 	mu        sync.Mutex
 	connected []uint
@@ -127,7 +145,7 @@ func TestHandler_GlobalMessage_BroadcastsToEligibleClients(t *testing.T) {
 	game := newFakeGame()
 	hub := &hubSpy{connected: []uint{10, 20, 30}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	client := &ws.Client{UserID: 10}
 	h.HandleAction(client, chatActionMessage(t, "global", "hello world"))
 
@@ -159,7 +177,7 @@ func TestHandler_GlobalMessage_ExcludesInGameUsers(t *testing.T) {
 
 	hub := &hubSpy{connected: []uint{10, 20, 30, 40}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	h.HandleAction(&ws.Client{UserID: 10}, chatActionMessage(t, "global", "hi"))
 
 	require.Equal(t, 1, hub.callCount())
@@ -177,7 +195,7 @@ func TestHandler_GlobalMessage_DroppedWhenSenderInGame(t *testing.T) {
 
 	hub := &hubSpy{connected: []uint{10, 20}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	h.HandleAction(&ws.Client{UserID: 10}, chatActionMessage(t, "global", "hi"))
 
 	assert.Equal(t, 0, hub.callCount(), "no broadcast when sender is in a game")
@@ -194,7 +212,7 @@ func TestHandler_GlobalMessage_SenderAlwaysReceivesOwnEcho(t *testing.T) {
 	game := newFakeGame()
 	hub := &hubSpy{connected: []uint{10, 20, 30}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 
 	// Capture the initial check, then flip the sender to in-game before
 	// the broadcast filter runs. Simulate by mutating the fake between
@@ -231,7 +249,7 @@ func TestHandler_RejectsEmpty(t *testing.T) {
 			game := newFakeGame()
 			hub := &hubSpy{connected: []uint{10, 20}}
 
-			h := chat.NewHandler(hub, repo, game)
+			h := chat.NewHandler(hub, repo, game, newFakeRoom())
 			h.HandleAction(&ws.Client{UserID: 10}, chatActionMessage(t, "global", tc.text))
 
 			assert.Equal(t, 0, hub.callCount())
@@ -245,7 +263,7 @@ func TestHandler_RejectsTooLong(t *testing.T) {
 	game := newFakeGame()
 	hub := &hubSpy{connected: []uint{10, 20}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	tooLong := strings.Repeat("x", 501)
 	h.HandleAction(&ws.Client{UserID: 10}, chatActionMessage(t, "global", tooLong))
 
@@ -267,7 +285,7 @@ func TestHandler_LengthCapIsRunesNotBytes(t *testing.T) {
 	game := newFakeGame()
 	hub := &hubSpy{connected: []uint{10, 20}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 
 	// 500 Cyrillic "ч" runes = 1000 bytes — would be rejected by len() check
 	cyrillic500 := strings.Repeat("ч", 500)
@@ -286,7 +304,7 @@ func TestHandler_IgnoresUnknownChannel(t *testing.T) {
 	game := newFakeGame()
 	hub := &hubSpy{connected: []uint{10, 20}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 
 	// Should not panic, should not broadcast
 	assert.NotPanics(t, func() {
@@ -317,7 +335,7 @@ func TestHandler_MatchMessage_BroadcastsToFourParticipants(t *testing.T) {
 	// must fan out to participants only, ignoring the hub snapshot.
 	hub := &hubSpy{connected: []uint{10, 20, 30, 40, 50, 60}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	h.HandleAction(&ws.Client{UserID: 10}, matchActionMessage(t, 7, "hi team"))
 
 	require.Equal(t, 1, hub.callCount())
@@ -345,7 +363,7 @@ func TestHandler_MatchMessage_SenderReceivesOwnEcho(t *testing.T) {
 	game.participants[7] = [4]uint{10, 20, 30, 40}
 	hub := &hubSpy{connected: []uint{10, 20, 30, 40}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	h.HandleAction(&ws.Client{UserID: 10}, matchActionMessage(t, 7, "own echo"))
 
 	call := hub.lastCall(t)
@@ -361,7 +379,7 @@ func TestHandler_MatchMessage_ExcludesNonParticipants(t *testing.T) {
 	// recipient list even though the hub reports them connected.
 	hub := &hubSpy{connected: []uint{10, 20, 30, 40, 50}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	h.HandleAction(&ws.Client{UserID: 10}, matchActionMessage(t, 7, "hi"))
 
 	call := hub.lastCall(t)
@@ -374,7 +392,7 @@ func TestHandler_MatchMessage_DroppedWhenMatchIDMissing(t *testing.T) {
 	game := newFakeGame()
 	hub := &hubSpy{connected: []uint{10, 20, 30, 40}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	// Build a match-channel request with no matchId at all.
 	msg := chatActionMessageRaw(t, ws.ChatMessageRequest{Channel: "match", Text: "hi"})
 	h.HandleAction(&ws.Client{UserID: 10}, msg)
@@ -388,7 +406,7 @@ func TestHandler_MatchMessage_DroppedWhenMatchUnknown(t *testing.T) {
 	game := newFakeGame() // no participants registered for any matchID
 	hub := &hubSpy{connected: []uint{10, 20, 30, 40}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	h.HandleAction(&ws.Client{UserID: 10}, matchActionMessage(t, 999, "hi"))
 
 	assert.Equal(t, 0, hub.callCount(), "no broadcast when matchId has no session")
@@ -401,7 +419,7 @@ func TestHandler_MatchMessage_DroppedWhenSenderNotParticipant(t *testing.T) {
 	game.participants[7] = [4]uint{10, 20, 30, 40}
 	hub := &hubSpy{connected: []uint{10, 20, 30, 40, 999}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	h.HandleAction(&ws.Client{UserID: 999}, matchActionMessage(t, 7, "hi"))
 
 	assert.Equal(t, 0, hub.callCount(),
@@ -415,7 +433,7 @@ func TestHandler_MatchMessage_RejectsEmptyAndTooLong(t *testing.T) {
 	game.participants[7] = [4]uint{10, 20, 30, 40}
 	hub := &hubSpy{connected: []uint{10, 20, 30, 40}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 
 	// Empty / whitespace-only rejected via the shared prologue.
 	for _, text := range []string{"", "   ", "\n\n"} {
@@ -439,7 +457,7 @@ func TestHandler_MatchMessage_ScopeStampedAsMatch(t *testing.T) {
 	game.participants[7] = [4]uint{10, 20, 30, 40}
 	hub := &hubSpy{connected: []uint{10, 20, 30, 40}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	h.HandleAction(&ws.Client{UserID: 10}, matchActionMessage(t, 7, "hi"))
 
 	call := hub.lastCall(t)
@@ -451,13 +469,176 @@ func TestHandler_MatchMessage_ScopeStampedAsMatch(t *testing.T) {
 		"match broadcast payload must carry scope=match for client dispatch")
 }
 
+// --- Room-scope chat tests ---
+
+func roomActionMessage(t *testing.T, roomID uint, text string) ws.WSMessage {
+	t.Helper()
+	return chatActionMessageRaw(t, ws.ChatMessageRequest{
+		Channel: "room",
+		RoomID:  &roomID,
+		Text:    text,
+	})
+}
+
+func TestHandler_RoomMessage_BroadcastsToAllMembers(t *testing.T) {
+	repo := newUserRepoStub()
+	repo.add(10, "alice")
+
+	game := newFakeGame()
+	fakeRooms := newFakeRoom()
+	// Room 5 has seated (10, 20) + unseated (30) members. Unseated (no seat)
+	// still receives and can send — room_players membership is the only gate.
+	fakeRooms.members[5] = []uint{10, 20, 30}
+
+	hub := &hubSpy{connected: []uint{10, 20, 30, 40}}
+
+	h := chat.NewHandler(hub, repo, game, fakeRooms)
+	h.HandleAction(&ws.Client{UserID: 10}, roomActionMessage(t, 5, "room ping"))
+
+	require.Equal(t, 1, hub.callCount())
+	call := hub.lastCall(t)
+	assert.ElementsMatch(t, []uint{10, 20, 30}, call.userIDs,
+		"broadcast goes to every room_players member including unseated")
+
+	var env ws.WSMessage
+	require.NoError(t, json.Unmarshal(call.msg, &env))
+	assert.Equal(t, ws.SystemChatMessage, env.Type)
+
+	var payload ws.ChatMessagePayload
+	require.NoError(t, json.Unmarshal(env.Payload, &payload))
+	assert.Equal(t, uint(10), payload.UserID)
+	assert.Equal(t, "alice", payload.Username)
+	assert.Equal(t, "room ping", payload.Message)
+	assert.Equal(t, "room", payload.Scope)
+	assert.NotEmpty(t, payload.Timestamp)
+}
+
+func TestHandler_RoomMessage_SenderReceivesOwnEcho(t *testing.T) {
+	repo := newUserRepoStub()
+	repo.add(10, "alice")
+	game := newFakeGame()
+	fakeRooms := newFakeRoom()
+	fakeRooms.members[5] = []uint{10, 20, 30}
+	hub := &hubSpy{connected: []uint{10, 20, 30}}
+
+	h := chat.NewHandler(hub, repo, game, fakeRooms)
+	h.HandleAction(&ws.Client{UserID: 10}, roomActionMessage(t, 5, "hi"))
+
+	call := hub.lastCall(t)
+	assert.Contains(t, call.userIDs, uint(10), "sender always included in room broadcast")
+}
+
+func TestHandler_RoomMessage_ExcludesNonMembers(t *testing.T) {
+	repo := newUserRepoStub()
+	repo.add(10, "alice")
+	game := newFakeGame()
+	fakeRooms := newFakeRoom()
+	fakeRooms.members[5] = []uint{10, 20, 30}
+	// User 99 is connected but NOT in the room — must not receive.
+	hub := &hubSpy{connected: []uint{10, 20, 30, 99}}
+
+	h := chat.NewHandler(hub, repo, game, fakeRooms)
+	h.HandleAction(&ws.Client{UserID: 10}, roomActionMessage(t, 5, "hi"))
+
+	call := hub.lastCall(t)
+	assert.NotContains(t, call.userIDs, uint(99), "non-room user excluded from broadcast")
+}
+
+func TestHandler_RoomMessage_DroppedWhenRoomIDMissing(t *testing.T) {
+	repo := newUserRepoStub()
+	repo.add(10, "alice")
+	game := newFakeGame()
+	fakeRooms := newFakeRoom()
+	fakeRooms.members[5] = []uint{10, 20}
+	hub := &hubSpy{connected: []uint{10, 20}}
+
+	h := chat.NewHandler(hub, repo, game, fakeRooms)
+	// channel:room with no roomId field at all
+	msg := chatActionMessageRaw(t, ws.ChatMessageRequest{Channel: "room", Text: "hi"})
+	h.HandleAction(&ws.Client{UserID: 10}, msg)
+
+	assert.Equal(t, 0, hub.callCount(), "no broadcast when roomId is nil")
+}
+
+func TestHandler_RoomMessage_DroppedWhenRoomUnknownOrNotWaiting(t *testing.T) {
+	repo := newUserRepoStub()
+	repo.add(10, "alice")
+	game := newFakeGame()
+	// Room 999 is not registered → RoomMembers returns (nil, false).
+	// fakeRoom semantics: absent from the map == unknown OR not waiting.
+	fakeRooms := newFakeRoom()
+	hub := &hubSpy{connected: []uint{10, 20}}
+
+	h := chat.NewHandler(hub, repo, game, fakeRooms)
+	h.HandleAction(&ws.Client{UserID: 10}, roomActionMessage(t, 999, "hi"))
+
+	assert.Equal(t, 0, hub.callCount(),
+		"no broadcast when room unknown or status != waiting")
+}
+
+func TestHandler_RoomMessage_DroppedWhenSenderNotMember(t *testing.T) {
+	repo := newUserRepoStub()
+	repo.add(99, "interloper")
+	game := newFakeGame()
+	fakeRooms := newFakeRoom()
+	fakeRooms.members[5] = []uint{10, 20, 30}
+	hub := &hubSpy{connected: []uint{10, 20, 30, 99}}
+
+	h := chat.NewHandler(hub, repo, game, fakeRooms)
+	h.HandleAction(&ws.Client{UserID: 99}, roomActionMessage(t, 5, "hi"))
+
+	assert.Equal(t, 0, hub.callCount(),
+		"sender not in room_players → silently dropped")
+}
+
+func TestHandler_RoomMessage_RejectsEmptyAndTooLong(t *testing.T) {
+	repo := newUserRepoStub()
+	repo.add(10, "alice")
+	game := newFakeGame()
+	fakeRooms := newFakeRoom()
+	fakeRooms.members[5] = []uint{10, 20}
+	hub := &hubSpy{connected: []uint{10, 20}}
+
+	h := chat.NewHandler(hub, repo, game, fakeRooms)
+
+	for _, text := range []string{"", "   ", "\n"} {
+		h.HandleAction(&ws.Client{UserID: 10}, roomActionMessage(t, 5, text))
+	}
+	assert.Equal(t, 0, hub.callCount(), "empty/whitespace rejected")
+
+	h.HandleAction(&ws.Client{UserID: 10}, roomActionMessage(t, 5, strings.Repeat("x", 501)))
+	assert.Equal(t, 0, hub.callCount(), "501-rune message rejected")
+
+	h.HandleAction(&ws.Client{UserID: 10}, roomActionMessage(t, 5, strings.Repeat("y", 500)))
+	assert.Equal(t, 1, hub.callCount(), "500-rune message accepted (boundary)")
+}
+
+func TestHandler_RoomMessage_RecipientInMatchStillReceives(t *testing.T) {
+	// The in-game exclusion applies ONLY to global chat. A room member
+	// who happens to be in an active game still gets their room chat.
+	repo := newUserRepoStub()
+	repo.add(10, "alice")
+	game := newFakeGame()
+	game.inGame[20] = true // recipient 20 is in a match
+	fakeRooms := newFakeRoom()
+	fakeRooms.members[5] = []uint{10, 20}
+	hub := &hubSpy{connected: []uint{10, 20}}
+
+	h := chat.NewHandler(hub, repo, game, fakeRooms)
+	h.HandleAction(&ws.Client{UserID: 10}, roomActionMessage(t, 5, "hi"))
+
+	call := hub.lastCall(t)
+	assert.Contains(t, call.userIDs, uint(20),
+		"in-game recipient still receives room chat — exclusion is global-scope only")
+}
+
 func TestHandler_IgnoresWrongActionType(t *testing.T) {
 	repo := newUserRepoStub()
 	repo.add(10, "alice")
 	game := newFakeGame()
 	hub := &hubSpy{connected: []uint{10, 20}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	wrongAction := ws.WSMessage{Type: ws.ActionPlayCard, Payload: json.RawMessage(`{}`)}
 	h.HandleAction(&ws.Client{UserID: 10}, wrongAction)
 
@@ -471,7 +652,7 @@ func TestHandler_InvalidPayload_NoBroadcast(t *testing.T) {
 	game := newFakeGame()
 	hub := &hubSpy{connected: []uint{10, 20}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	garbage := ws.WSMessage{Type: ws.ActionChatMessage, Payload: json.RawMessage(`not json`)}
 	h.HandleAction(&ws.Client{UserID: 10}, garbage)
 
@@ -483,7 +664,7 @@ func TestHandler_SenderNotFound_NoBroadcast(t *testing.T) {
 	game := newFakeGame()
 	hub := &hubSpy{connected: []uint{10, 20}}
 
-	h := chat.NewHandler(hub, repo, game)
+	h := chat.NewHandler(hub, repo, game, newFakeRoom())
 	h.HandleAction(&ws.Client{UserID: 10}, chatActionMessage(t, "global", "hi"))
 
 	assert.Equal(t, 0, hub.callCount())

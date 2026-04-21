@@ -20,7 +20,7 @@ vi.mock("@/shared/providers/WebSocketContext", () => ({
 beforeEach(() => {
   mockSendMessage.mockReset();
   mockConnectionState = "connected";
-  useChatStore.setState({ globalMessages: [], matchMessages: [] });
+  useChatStore.setState({ globalMessages: [], matchMessages: [], roomMessages: [] });
   // jsdom does not implement scrollIntoView; stub it
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -210,5 +210,84 @@ describe("ChatPanel (match channel)", () => {
     render(<ChatPanel channel="match" matchId={42} />);
     expect(screen.getByTestId("chat-empty")).toBeInTheDocument();
     expect(screen.queryByText("global")).not.toBeInTheDocument();
+  });
+});
+
+describe("ChatPanel (room channel)", () => {
+  it("renders messages from chatStore.roomMessages", () => {
+    useChatStore.setState({
+      roomMessages: [
+        {
+          userId: 11,
+          username: "carol",
+          message: "taking seat 2",
+          timestamp: "2026-04-22T12:00:00Z",
+          scope: "room",
+        },
+      ],
+    });
+
+    render(<ChatPanel channel="room" roomId={7} />);
+    const rows = screen.getAllByTestId("chat-message-row");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("carol");
+    expect(rows[0]).toHaveTextContent("taking seat 2");
+  });
+
+  it("sends action:chat_message with channel=room and roomId", () => {
+    render(<ChatPanel channel="room" roomId={7} />);
+
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "ready when you are" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(mockSendMessage).toHaveBeenCalledTimes(1);
+    expect(mockSendMessage).toHaveBeenCalledWith(ACTION_CHAT_MESSAGE, {
+      channel: "room",
+      roomId: 7,
+      text: "ready when you are",
+    });
+    expect(input.value).toBe("");
+  });
+
+  it("does NOT send when roomId is undefined", () => {
+    render(<ChatPanel channel="room" />);
+
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "no room id" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-positive roomId (0, negative, non-integer)", () => {
+    for (const invalid of [0, -1, 1.5, Number.NaN]) {
+      mockSendMessage.mockReset();
+      const { unmount } = render(<ChatPanel channel="room" roomId={invalid} />);
+      const input = screen.getByTestId("chat-input") as HTMLInputElement;
+      fireEvent.change(input, { target: { value: "x" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      expect(mockSendMessage).not.toHaveBeenCalled();
+      unmount();
+    }
+  });
+
+  it("does NOT surface globalMessages when channel=room", () => {
+    useChatStore.setState({
+      globalMessages: [
+        {
+          userId: 1,
+          username: "alice",
+          message: "global-only",
+          timestamp: "2026-04-22T10:00:00Z",
+          scope: "global",
+        },
+      ],
+      roomMessages: [],
+    });
+
+    render(<ChatPanel channel="room" roomId={7} />);
+    expect(screen.getByTestId("chat-empty")).toBeInTheDocument();
+    expect(screen.queryByText("global-only")).not.toBeInTheDocument();
   });
 });

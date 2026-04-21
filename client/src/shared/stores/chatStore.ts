@@ -7,6 +7,7 @@ const MAX_MESSAGES = 200;
 interface ChatState {
   globalMessages: ChatMessagePayload[];
   matchMessages: ChatMessagePayload[];
+  roomMessages: ChatMessagePayload[];
   // Monotonic count of match messages received since the last clear.
   // Unlike matchMessages.length (which plateaus at MAX_MESSAGES once the ring
   // buffer is full), this counter keeps incrementing so unread-badge tracking
@@ -14,8 +15,10 @@ interface ChatState {
   matchMessagesReceivedTotal: number;
   appendGlobal: (msg: ChatMessagePayload) => void;
   appendMatch: (msg: ChatMessagePayload) => void;
+  appendRoom: (msg: ChatMessagePayload) => void;
   clearGlobal: () => void;
   clearMatch: () => void;
+  clearRoom: () => void;
 }
 
 function appendWithCap(
@@ -32,6 +35,7 @@ function appendWithCap(
 export const useChatStore = create<ChatState>((set) => ({
   globalMessages: [],
   matchMessages: [],
+  roomMessages: [],
   matchMessagesReceivedTotal: 0,
   appendGlobal: (msg) =>
     set((state) => ({ globalMessages: appendWithCap(state.globalMessages, msg) })),
@@ -40,6 +44,8 @@ export const useChatStore = create<ChatState>((set) => ({
       matchMessages: appendWithCap(state.matchMessages, msg),
       matchMessagesReceivedTotal: state.matchMessagesReceivedTotal + 1,
     })),
+  appendRoom: (msg) => set((state) => ({ roomMessages: appendWithCap(state.roomMessages, msg) })),
   clearGlobal: () => set({ globalMessages: [] }),
   clearMatch: () => set({ matchMessages: [], matchMessagesReceivedTotal: 0 }),
+  clearRoom: () => set({ roomMessages: [] }),
 }));

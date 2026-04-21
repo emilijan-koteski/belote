@@ -11,26 +11,37 @@ import { ACTION_CHAT_MESSAGE } from "@/shared/types/wsEvents";
 
 const MAX_MESSAGE_LENGTH = 500;
 
-type ChatChannel = "global" | "match";
+type ChatChannel = "global" | "match" | "room";
 
 interface ChatPanelProps {
   className?: string;
   channel?: ChatChannel;
   matchId?: number;
+  roomId?: number;
 }
 
-export function ChatPanel({ className, channel = "global", matchId }: ChatPanelProps) {
+export function ChatPanel({ className, channel = "global", matchId, roomId }: ChatPanelProps) {
   const { t, i18n } = useTranslation();
   const sendMessage = useWsSendMessage();
   const connectionState = useWsConnectionState();
-  const messages = useChatStore((s) => (channel === "match" ? s.matchMessages : s.globalMessages));
+  const messages = useChatStore((s) => {
+    if (channel === "match") return s.matchMessages;
+    if (channel === "room") return s.roomMessages;
+    return s.globalMessages;
+  });
 
   const [draft, setDraft] = useState("");
   const listEndRef = useRef<HTMLDivElement | null>(null);
 
   const isConnected = connectionState === "connected";
-  const titleKey = channel === "match" ? "game.chat.title" : "chat.title";
-  const placeholderKey = channel === "match" ? "game.chat.placeholder" : "chat.placeholder";
+  const titleKey =
+    channel === "match" ? "game.chat.title" : channel === "room" ? "room.chat.title" : "chat.title";
+  const placeholderKey =
+    channel === "match"
+      ? "game.chat.placeholder"
+      : channel === "room"
+        ? "room.chat.placeholder"
+        : "chat.placeholder";
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -47,6 +58,9 @@ export function ChatPanel({ className, channel = "global", matchId }: ChatPanelP
       // bug doesn't waste frames on a guaranteed silent-drop path.
       if (typeof matchId !== "number" || !Number.isInteger(matchId) || matchId <= 0) return;
       payload = { channel: "match", matchId, text };
+    } else if (channel === "room") {
+      if (typeof roomId !== "number" || !Number.isInteger(roomId) || roomId <= 0) return;
+      payload = { channel: "room", roomId, text };
     } else {
       payload = { channel: "global", text };
     }

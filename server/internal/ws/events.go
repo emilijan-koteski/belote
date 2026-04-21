@@ -118,10 +118,10 @@ const ActionChatMessage = "action:chat_message"
 const SystemChatMessage = "system:chat_message"
 
 // ChatMessageRequest is the typed payload for ActionChatMessage (client → server).
-// Channel is "global" for lobby chat. "match" channel is reserved for Story 6.2.
 type ChatMessageRequest struct {
-	Channel string `json:"channel"`           // "global" (Story 6.1) | "match" (Story 6.2)
-	MatchID *uint  `json:"matchId,omitempty"` // required when channel == "match" (Story 6.2)
+	Channel string `json:"channel"`           // "global" | "match" | "room"
+	MatchID *uint  `json:"matchId,omitempty"` // required when channel == "match"
+	RoomID  *uint  `json:"roomId,omitempty"`  // required when channel == "room"
 	Text    string `json:"text"`
 }
 
@@ -131,7 +131,7 @@ type ChatMessagePayload struct {
 	Username  string `json:"username"`
 	Message   string `json:"message"`
 	Timestamp string `json:"timestamp"` // ISO 8601 (RFC3339) UTC
-	Scope     string `json:"scope"`     // "global" | "match"
+	Scope     string `json:"scope"`     // "global" | "match" | "room"
 }
 
 // --- General error events ---

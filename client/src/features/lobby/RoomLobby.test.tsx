@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FetchError } from "@/shared/api/axiosClient";
 import { useAuthStore } from "@/shared/stores/authStore";
+import { useChatStore } from "@/shared/stores/chatStore";
 import { QueryWrapper } from "@/test-utils";
 
 import { RoomLobby } from "./RoomLobby";
@@ -30,9 +31,10 @@ vi.mock("@/shared/api/rooms", () => ({
   startGame: vi.fn(),
 }));
 
-// Mock WebSocket connection state
+// Mock WebSocket connection state + sendMessage hook (ChatPanel pulls both)
 vi.mock("@/shared/providers/WebSocketContext", () => ({
   useWsConnectionState: () => "connected",
+  useWsSendMessage: () => vi.fn(),
 }));
 
 // Mock sonner toast
@@ -88,11 +90,14 @@ const defaultUser = {
 
 beforeEach(() => {
   mockLeaveRoom.mockResolvedValue(undefined);
+  // jsdom has no scrollIntoView — the nested ChatPanel calls it on mount.
+  Element.prototype.scrollIntoView = vi.fn();
 });
 
 afterEach(() => {
   vi.clearAllMocks();
   useAuthStore.setState({ user: null, token: null });
+  useChatStore.setState({ globalMessages: [], matchMessages: [], roomMessages: [] });
 });
 
 describe("RoomLobby", () => {
@@ -606,6 +611,66 @@ describe("RoomLobby", () => {
 
     expect(screen.queryByTestId("waiting-for-start")).not.toBeInTheDocument();
     expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
+  });
+
+  // --- Room-scoped chat ---
+
+  it("renders the room chat panel once the room is loaded", async () => {
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 1 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+      ],
+    });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("room-lobby")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("chat-panel")).toBeInTheDocument();
+  });
+
+  it("clears chatStore.roomMessages on unmount", async () => {
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 1 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+      ],
+    });
+
+    // Seed roomMessages to verify they get cleared
+    useChatStore.setState({
+      roomMessages: [
+        {
+          userId: 20,
+          username: "bob",
+          message: "hi",
+          timestamp: "2026-04-22T10:00:00Z",
+          scope: "room",
+        },
+      ],
+    });
+
+    const { unmount } = render(
+      <QueryWrapper>
+        <BrowserRouter>
+          <RoomLobby />
+        </BrowserRouter>
+      </QueryWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("room-lobby")).toBeInTheDocument();
+    });
+
+    unmount();
+
+    expect(useChatStore.getState().roomMessages).toHaveLength(0);
   });
 
   it("navigates to game when selectSeat returns gameStarted true", async () => {

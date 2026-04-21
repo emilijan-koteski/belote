@@ -258,8 +258,9 @@ export const ACTION_CHAT_MESSAGE = "action:chat_message" as const;
 export const SYSTEM_CHAT_MESSAGE = "system:chat_message" as const;
 
 export interface ChatMessageRequest {
-  channel: "global" | "match";
-  matchId?: number; // required when channel === "match" (Story 6.2)
+  channel: "global" | "match" | "room";
+  matchId?: number; // required when channel === "match"
+  roomId?: number; // required when channel === "room"
   text: string;
 }
 
@@ -268,7 +269,7 @@ export interface ChatMessagePayload {
   username: string;
   message: string;
   timestamp: string;
-  scope: "global" | "match";
+  scope: "global" | "match" | "room";
 }
 
 // --- General error events ---

@@ -20,6 +20,7 @@ describe("chatStore", () => {
     useChatStore.setState({
       globalMessages: [],
       matchMessages: [],
+      roomMessages: [],
       matchMessagesReceivedTotal: 0,
     });
   });
@@ -125,6 +126,51 @@ describe("chatStore", () => {
 
   it("appendGlobal does NOT affect matchMessagesReceivedTotal", () => {
     useChatStore.getState().appendGlobal(makeMessage());
+    expect(useChatStore.getState().matchMessagesReceivedTotal).toBe(0);
+  });
+
+  // --- Room partition ---
+
+  it("appendRoom adds a message to the room partition", () => {
+    useChatStore.getState().appendRoom(makeMessage({ scope: "room", message: "r1" }));
+    useChatStore.getState().appendRoom(makeMessage({ scope: "room", message: "r2" }));
+
+    const messages = useChatStore.getState().roomMessages;
+    expect(messages).toHaveLength(2);
+    expect(messages[1]!.message).toBe("r2");
+  });
+
+  it("appendRoom drops oldest when exceeding 200-message cap", () => {
+    for (let i = 0; i < 210; i++) {
+      useChatStore.getState().appendRoom(makeMessage({ scope: "room", message: `r-${i}` }));
+    }
+
+    const messages = useChatStore.getState().roomMessages;
+    expect(messages).toHaveLength(200);
+    expect(messages[0]!.message).toBe("r-10");
+    expect(messages[199]!.message).toBe("r-209");
+  });
+
+  it("clearRoom resets only the room partition", () => {
+    useChatStore.getState().appendGlobal(makeMessage());
+    useChatStore.getState().appendMatch(makeMessage({ scope: "match" }));
+    useChatStore.getState().appendRoom(makeMessage({ scope: "room" }));
+
+    useChatStore.getState().clearRoom();
+    const state = useChatStore.getState();
+    expect(state.roomMessages).toHaveLength(0);
+    expect(state.globalMessages).toHaveLength(1);
+    expect(state.matchMessages).toHaveLength(1);
+  });
+
+  it("partitions are independent: appendRoom does not touch global or match", () => {
+    useChatStore.getState().appendRoom(makeMessage({ scope: "room" }));
+    expect(useChatStore.getState().globalMessages).toHaveLength(0);
+    expect(useChatStore.getState().matchMessages).toHaveLength(0);
+  });
+
+  it("appendRoom does NOT affect matchMessagesReceivedTotal", () => {
+    useChatStore.getState().appendRoom(makeMessage({ scope: "room" }));
     expect(useChatStore.getState().matchMessagesReceivedTotal).toBe(0);
   });
 });

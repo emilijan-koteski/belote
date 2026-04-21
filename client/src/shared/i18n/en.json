@@ -77,6 +77,12 @@
     "empty": "No messages yet \u2014 say hi.",
     "tooLong": "Messages must be 500 characters or fewer."
   },
+  "room": {
+    "chat": {
+      "title": "Room Chat",
+      "placeholder": "Chat with the table\u2026"
+    }
+  },
   "rules": {
     "title": "Rules",
     "comingSoon": "Rules reference coming soon"

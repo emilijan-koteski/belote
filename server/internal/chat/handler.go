@@ -15,6 +15,7 @@ const (
 	maxMessageLength = 500
 	ChannelGlobal    = "global"
 	ChannelMatch     = "match"
+	ChannelRoom      = "room"
 )
 
 // GameMembership reports whether a user is currently in an active game session
@@ -25,6 +26,15 @@ type GameMembership interface {
 	MatchParticipants(matchID uint) ([4]uint, bool)
 }
 
+// RoomMembership resolves the member userIDs of a room for room-scoped chat.
+// Returns (userIDs, true) only when the room exists AND its status is
+// "waiting" (pre-match). Returns (nil, false) for unknown rooms or rooms
+// whose match has started/ended — room chat is a pre-match feature.
+// Wired in main.go to an adapter over room.RoomRepository.
+type RoomMembership interface {
+	RoomMembers(roomID uint) (userIDs []uint, waiting bool)
+}
+
 // Broadcaster is the subset of *ws.Hub that the chat handler depends on.
 // Defined as an interface to allow lightweight unit testing without spinning
 // up a real hub goroutine and websocket server.
@@ -33,20 +43,26 @@ type Broadcaster interface {
 	BroadcastToUsers(userIDs []uint, msg []byte)
 }
 
-// Handler processes action:chat_message events.
-// Match-scoped chat (channel == "match") is implemented in Story 6.2;
-// this handler ignores it for now and returns silently.
+// Handler processes action:chat_message events for all three scopes
+// (global, match, room).
 type Handler struct {
 	hub      Broadcaster
 	userRepo user.UserRepository
 	game     GameMembership
+	room     RoomMembership
 }
 
 // NewHandler creates a chat handler wired to the WebSocket broadcaster,
-// the user repository (for sender username lookup), and the session manager
-// (for in-game membership checks).
-func NewHandler(hub Broadcaster, userRepo user.UserRepository, game GameMembership) *Handler {
-	return &Handler{hub: hub, userRepo: userRepo, game: game}
+// the user repository (for sender username lookup), the session manager
+// (for in-game membership + match participant checks), and the room
+// membership resolver (for room-scoped chat recipient lists).
+func NewHandler(
+	hub Broadcaster,
+	userRepo user.UserRepository,
+	game GameMembership,
+	room RoomMembership,
+) *Handler {
+	return &Handler{hub: hub, userRepo: userRepo, game: game, room: room}
 }
 
 // HandleAction is the action handler entry point. Composed with
@@ -80,6 +96,8 @@ func (h *Handler) HandleAction(client *ws.Client, msg ws.WSMessage) {
 		h.handleGlobal(client.UserID, text)
 	case ChannelMatch:
 		h.handleMatch(client.UserID, req.MatchID, text)
+	case ChannelRoom:
+		h.handleRoom(client.UserID, req.RoomID, text)
 	default:
 		slog.Info("chat: unknown channel", "userID", client.UserID, "channel", req.Channel)
 	}
@@ -177,6 +195,57 @@ func (h *Handler) handleMatch(senderID uint, matchID *uint, text string) {
 	// echo). Hub.BroadcastToUsers silently skips disconnected IDs, which is the
 	// intended behaviour for players inside the reconnect window.
 	h.hub.BroadcastToUsers(participants[:], msgBytes)
+}
+
+func (h *Handler) handleRoom(senderID uint, roomID *uint, text string) {
+	if roomID == nil {
+		slog.Info("chat: room send dropped (missing roomId)", "userID", senderID)
+		return
+	}
+
+	members, waiting := h.room.RoomMembers(*roomID)
+	if !waiting {
+		slog.Info("chat: room send dropped (unknown room or not waiting)",
+			"userID", senderID, "roomID", *roomID)
+		return
+	}
+
+	// Authorise: sender must be one of the room members.
+	authorized := false
+	for _, uid := range members {
+		if uid == senderID {
+			authorized = true
+			break
+		}
+	}
+	if !authorized {
+		slog.Info("chat: room send dropped (sender not in room)",
+			"userID", senderID, "roomID", *roomID)
+		return
+	}
+
+	sender, err := h.userRepo.FindByID(senderID)
+	if err != nil || sender == nil {
+		slog.Warn("chat: room sender not found", "userID", senderID, "error", err)
+		return
+	}
+
+	payload := ws.ChatMessagePayload{
+		UserID:    sender.ID,
+		Username:  sender.Username,
+		Message:   text,
+		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+		Scope:     ChannelRoom,
+	}
+	msgBytes := buildMessage(ws.SystemChatMessage, payload)
+	if msgBytes == nil {
+		return
+	}
+
+	// Broadcast to all room members (sender included for own-echo).
+	// Hub.BroadcastToUsers silently skips disconnected IDs, which is the
+	// intended behaviour during transient disconnects.
+	h.hub.BroadcastToUsers(members, msgBytes)
 }
 
 func buildMessage(eventType string, payload interface{}) []byte {

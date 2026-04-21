@@ -94,7 +94,7 @@ describe("useWsDispatch", () => {
     queryClient.clear();
     useGameStore.getState().reset();
     useRoomLobbyStore.getState().reset();
-    useChatStore.setState({ globalMessages: [], matchMessages: [] });
+    useChatStore.setState({ globalMessages: [], matchMessages: [], roomMessages: [] });
     vi.restoreAllMocks();
   });
 
@@ -557,6 +557,59 @@ describe("useWsDispatch", () => {
     });
 
     expect(useChatStore.getState().matchMessages).toHaveLength(0);
+  });
+
+  it("appends system:chat_message with scope=room to chatStore.roomMessages when in a room", () => {
+    // Dispatcher requires roomLobbyStore.currentRoomId to be set (defence in depth)
+    useRoomLobbyStore.setState({ currentRoomId: 5 });
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:chat_message",
+      payload: {
+        userId: 7,
+        username: "alice",
+        message: "room ping",
+        timestamp: "2026-04-22T10:00:00Z",
+        scope: "room",
+      },
+    });
+
+    const state = useChatStore.getState();
+    expect(state.roomMessages).toHaveLength(1);
+    expect(state.roomMessages[0]).toMatchObject({
+      userId: 7,
+      username: "alice",
+      message: "room ping",
+      scope: "room",
+    });
+    expect(state.globalMessages).toHaveLength(0);
+    expect(state.matchMessages).toHaveLength(0);
+  });
+
+  it("drops scope=room payloads when roomLobbyStore.currentRoomId is null", () => {
+    // currentRoomId=null is the default from beforeEach reset — a stale room
+    // payload arriving after leaving the room must not leak into the next
+    // room's history.
+    expect(useRoomLobbyStore.getState().currentRoomId).toBeNull();
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:chat_message",
+      payload: {
+        userId: 7,
+        username: "alice",
+        message: "stale",
+        timestamp: "2026-04-22T10:00:00Z",
+        scope: "room",
+      },
+    });
+
+    expect(useChatStore.getState().roomMessages).toHaveLength(0);
   });
 
   it("scope=global does not leak into matchMessages (partition isolation)", () => {

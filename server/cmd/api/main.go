@@ -113,7 +113,11 @@ func main() {
 
 	// Chat handler — composed with sessionManager.HandleAction so a single
 	// hub action handler can route both game actions and chat messages.
-	chatHandler := chat.NewHandler(hub, userRepo, sessionManager)
+	// roomMembership is an inline adapter that resolves room recipients
+	// for room-scoped chat: returns members only while the room is in
+	// "waiting" status (pre-match).
+	roomMembership := &chatRoomMembership{repo: roomRepo}
+	chatHandler := chat.NewHandler(hub, userRepo, sessionManager, roomMembership)
 	hub.SetActionHandler(func(client *ws.Client, msg ws.WSMessage) {
 		if msg.Type == ws.ActionChatMessage {
 			chatHandler.HandleAction(client, msg)
@@ -171,6 +175,29 @@ func main() {
 
 func healthHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// chatRoomMembership adapts room.RoomRepository to chat.RoomMembership.
+// Returns userIDs only when the room exists AND its status is "waiting"
+// (pre-match). Enforces the server-side status gate for room-scoped chat.
+type chatRoomMembership struct {
+	repo room.RoomRepository
+}
+
+func (a *chatRoomMembership) RoomMembers(roomID uint) ([]uint, bool) {
+	r, err := a.repo.FindByID(roomID)
+	if err != nil || r == nil || r.Status != "waiting" {
+		return nil, false
+	}
+	players, err := a.repo.FindPlayersByRoomID(roomID)
+	if err != nil {
+		return nil, false
+	}
+	ids := make([]uint, 0, len(players))
+	for _, p := range players {
+		ids = append(ids, p.UserID)
+	}
+	return ids, true
 }
 
 func appErrorHandler(err error, c echo.Context) {
