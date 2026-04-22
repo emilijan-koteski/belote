@@ -224,7 +224,7 @@ export function RoomLobby() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] md:items-start">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div data-testid="room-lobby">
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">
@@ -354,11 +354,7 @@ export function RoomLobby() {
         </div>
         {/* Right column: room-scoped chat for seated + unseated members.
             Stacks below the lobby on small screens, sits to the right on md+. */}
-        <ChatPanel
-          channel="room"
-          roomId={room.id}
-          className="min-h-100 md:sticky md:top-8 md:h-[calc(100vh-4rem)]"
-        />
+        <ChatPanel channel="room" roomId={room.id} className="min-h-100" />
       </div>
     </div>
   );
