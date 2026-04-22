@@ -13,9 +13,22 @@ interface ChatState {
   // buffer is full), this counter keeps incrementing so unread-badge tracking
   // still sees every arrival. Reset to 0 by clearMatch.
   matchMessagesReceivedTotal: number;
+  // Whether the local user has sent at least one message in each channel
+  // since the channel was last cleared. Tracked explicitly (rather than
+  // derived from messages) so it latches through ring-buffer eviction — a
+  // busy global lobby can push the user's first message out of the
+  // MAX_MESSAGES window, but the placeholder should still reflect "already
+  // chatted". Reset by the corresponding clear* action so a new match or
+  // room gets a fresh invitation placeholder.
+  hasSentGlobal: boolean;
+  hasSentMatch: boolean;
+  hasSentRoom: boolean;
   appendGlobal: (msg: ChatMessagePayload) => void;
   appendMatch: (msg: ChatMessagePayload) => void;
   appendRoom: (msg: ChatMessagePayload) => void;
+  markSentGlobal: () => void;
+  markSentMatch: () => void;
+  markSentRoom: () => void;
   clearGlobal: () => void;
   clearMatch: () => void;
   clearRoom: () => void;
@@ -37,6 +50,9 @@ export const useChatStore = create<ChatState>((set) => ({
   matchMessages: [],
   roomMessages: [],
   matchMessagesReceivedTotal: 0,
+  hasSentGlobal: false,
+  hasSentMatch: false,
+  hasSentRoom: false,
   appendGlobal: (msg) =>
     set((state) => ({ globalMessages: appendWithCap(state.globalMessages, msg) })),
   appendMatch: (msg) =>
@@ -45,7 +61,10 @@ export const useChatStore = create<ChatState>((set) => ({
       matchMessagesReceivedTotal: state.matchMessagesReceivedTotal + 1,
     })),
   appendRoom: (msg) => set((state) => ({ roomMessages: appendWithCap(state.roomMessages, msg) })),
-  clearGlobal: () => set({ globalMessages: [] }),
-  clearMatch: () => set({ matchMessages: [], matchMessagesReceivedTotal: 0 }),
-  clearRoom: () => set({ roomMessages: [] }),
+  markSentGlobal: () => set({ hasSentGlobal: true }),
+  markSentMatch: () => set({ hasSentMatch: true }),
+  markSentRoom: () => set({ hasSentRoom: true }),
+  clearGlobal: () => set({ globalMessages: [], hasSentGlobal: false }),
+  clearMatch: () => set({ matchMessages: [], matchMessagesReceivedTotal: 0, hasSentMatch: false }),
+  clearRoom: () => set({ roomMessages: [], hasSentRoom: false }),
 }));

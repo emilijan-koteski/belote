@@ -29,6 +29,16 @@ export function ChatPanel({ className, channel = "global", matchId, roomId }: Ch
     if (channel === "room") return s.roomMessages;
     return s.globalMessages;
   });
+  const hasSentInChannel = useChatStore((s) => {
+    if (channel === "match") return s.hasSentMatch;
+    if (channel === "room") return s.hasSentRoom;
+    return s.hasSentGlobal;
+  });
+  const markSent = useChatStore((s) => {
+    if (channel === "match") return s.markSentMatch;
+    if (channel === "room") return s.markSentRoom;
+    return s.markSentGlobal;
+  });
 
   const [draft, setDraft] = useState("");
   const listEndRef = useRef<HTMLDivElement | null>(null);
@@ -36,12 +46,20 @@ export function ChatPanel({ className, channel = "global", matchId, roomId }: Ch
   const isConnected = connectionState === "connected";
   const titleKey =
     channel === "match" ? "game.chat.title" : channel === "room" ? "room.chat.title" : "chat.title";
-  const placeholderKey =
+  // Show the inviting "Say hi…" / channel-specific placeholder until the
+  // local user sends their first message, then switch to a terser "Message…"
+  // continuation. The flag is a latched store field, so it survives
+  // ring-buffer eviction (the user's opener scrolling out of a busy lobby)
+  // and panel unmount/remount within the same channel session. It resets
+  // when the channel is cleared — e.g. leaving a room or ending a match —
+  // so the next room/match starts with the invitation again.
+  const initialPlaceholderKey =
     channel === "match"
       ? "game.chat.placeholder"
       : channel === "room"
         ? "room.chat.placeholder"
         : "chat.placeholder";
+  const placeholderKey = hasSentInChannel ? "chat.placeholderAfterFirst" : initialPlaceholderKey;
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -65,6 +83,7 @@ export function ChatPanel({ className, channel = "global", matchId, roomId }: Ch
       payload = { channel: "global", text };
     }
     sendMessage(ACTION_CHAT_MESSAGE, payload);
+    markSent();
     setDraft("");
   }
 

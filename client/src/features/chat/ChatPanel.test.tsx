@@ -1,6 +1,6 @@
 import "@/shared/i18n/i18n";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useChatStore } from "@/shared/stores/chatStore";
@@ -20,7 +20,14 @@ vi.mock("@/shared/providers/WebSocketContext", () => ({
 beforeEach(() => {
   mockSendMessage.mockReset();
   mockConnectionState = "connected";
-  useChatStore.setState({ globalMessages: [], matchMessages: [], roomMessages: [] });
+  useChatStore.setState({
+    globalMessages: [],
+    matchMessages: [],
+    roomMessages: [],
+    hasSentGlobal: false,
+    hasSentMatch: false,
+    hasSentRoom: false,
+  });
   // jsdom does not implement scrollIntoView; stub it
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -132,6 +139,62 @@ describe("ChatPanel", () => {
     expect(mockSendMessage).not.toHaveBeenCalled();
   });
 
+  it("uses the initial 'Say hi…' placeholder until the local user sends a message", () => {
+    render(<ChatPanel />);
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    expect(input.placeholder).toBe("Say hi\u2026");
+  });
+
+  it("flips to 'Message…' placeholder after a successful send", () => {
+    render(<ChatPanel />);
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "hello" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(input.placeholder).toBe("Message\u2026");
+  });
+
+  it("latched placeholder survives ring-buffer eviction and unmount", () => {
+    // Send once — flag latches.
+    const { unmount } = render(<ChatPanel />);
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "hi" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(input.placeholder).toBe("Message\u2026");
+
+    // Flood the buffer with other users' messages (simulates ring-buffer
+    // eviction pushing the local user's opener out of the MAX_MESSAGES
+    // window). The placeholder must stay flipped because the flag is
+    // independent of the messages array.
+    act(() =>
+      useChatStore.setState({
+        globalMessages: Array.from({ length: 250 }, (_, i) => ({
+          userId: 1000 + i,
+          username: "flood",
+          message: `msg-${i}`,
+          timestamp: `2026-04-22T10:00:${String(i % 60).padStart(2, "0")}Z`,
+          scope: "global" as const,
+        })),
+      }),
+    );
+    unmount();
+
+    render(<ChatPanel />);
+    const remounted = screen.getByTestId("chat-input") as HTMLInputElement;
+    expect(remounted.placeholder).toBe("Message\u2026");
+  });
+
+  it("clearGlobal resets the placeholder to 'Say hi…'", () => {
+    useChatStore.setState({ hasSentGlobal: true });
+    const { rerender } = render(<ChatPanel />);
+    expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe(
+      "Message\u2026",
+    );
+
+    act(() => useChatStore.getState().clearGlobal());
+    rerender(<ChatPanel />);
+    expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe("Say hi\u2026");
+  });
+
   it("rejects messages over 500 characters", () => {
     render(<ChatPanel />);
     const input = screen.getByTestId("chat-input") as HTMLInputElement;
@@ -191,6 +254,28 @@ describe("ChatPanel (match channel)", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  it("flips match-channel placeholder to 'Message…' after a successful send", () => {
+    render(<ChatPanel channel="match" matchId={42} />);
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    expect(input.placeholder).toBe("Message your table\u2026");
+    fireEvent.change(input, { target: { value: "gg" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(input.placeholder).toBe("Message\u2026");
+  });
+
+  it("clearMatch resets the match placeholder — new match gets the invitation again", () => {
+    useChatStore.setState({ hasSentMatch: true });
+    const { rerender } = render(<ChatPanel channel="match" matchId={42} />);
+    expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe(
+      "Message\u2026",
+    );
+    act(() => useChatStore.getState().clearMatch());
+    rerender(<ChatPanel channel="match" matchId={43} />);
+    expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe(
+      "Message your table\u2026",
+    );
   });
 
   it("does NOT surface globalMessages when channel=match", () => {
@@ -270,6 +355,28 @@ describe("ChatPanel (room channel)", () => {
       expect(mockSendMessage).not.toHaveBeenCalled();
       unmount();
     }
+  });
+
+  it("flips room-channel placeholder to 'Message…' after a successful send", () => {
+    render(<ChatPanel channel="room" roomId={7} />);
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    expect(input.placeholder).toBe("Chat with the table\u2026");
+    fireEvent.change(input, { target: { value: "ready" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(input.placeholder).toBe("Message\u2026");
+  });
+
+  it("clearRoom resets the room placeholder — re-joining a room starts fresh", () => {
+    useChatStore.setState({ hasSentRoom: true });
+    const { rerender } = render(<ChatPanel channel="room" roomId={7} />);
+    expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe(
+      "Message\u2026",
+    );
+    act(() => useChatStore.getState().clearRoom());
+    rerender(<ChatPanel channel="room" roomId={7} />);
+    expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe(
+      "Chat with the table\u2026",
+    );
   });
 
   it("does NOT surface globalMessages when channel=room", () => {

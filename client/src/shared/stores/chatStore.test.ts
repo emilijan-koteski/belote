@@ -22,6 +22,9 @@ describe("chatStore", () => {
       matchMessages: [],
       roomMessages: [],
       matchMessagesReceivedTotal: 0,
+      hasSentGlobal: false,
+      hasSentMatch: false,
+      hasSentRoom: false,
     });
   });
 
@@ -172,5 +175,37 @@ describe("chatStore", () => {
   it("appendRoom does NOT affect matchMessagesReceivedTotal", () => {
     useChatStore.getState().appendRoom(makeMessage({ scope: "room" }));
     expect(useChatStore.getState().matchMessagesReceivedTotal).toBe(0);
+  });
+
+  // --- hasSent* placeholder flags ---
+
+  it("markSent flags are independent across channels", () => {
+    useChatStore.getState().markSentGlobal();
+    let state = useChatStore.getState();
+    expect(state.hasSentGlobal).toBe(true);
+    expect(state.hasSentMatch).toBe(false);
+    expect(state.hasSentRoom).toBe(false);
+
+    useChatStore.getState().markSentMatch();
+    useChatStore.getState().markSentRoom();
+    state = useChatStore.getState();
+    expect(state.hasSentMatch).toBe(true);
+    expect(state.hasSentRoom).toBe(true);
+  });
+
+  it("clear* resets the matching hasSent flag", () => {
+    useChatStore.setState({ hasSentGlobal: true, hasSentMatch: true, hasSentRoom: true });
+
+    useChatStore.getState().clearGlobal();
+    expect(useChatStore.getState().hasSentGlobal).toBe(false);
+    expect(useChatStore.getState().hasSentMatch).toBe(true);
+    expect(useChatStore.getState().hasSentRoom).toBe(true);
+
+    useChatStore.getState().clearMatch();
+    expect(useChatStore.getState().hasSentMatch).toBe(false);
+    expect(useChatStore.getState().hasSentRoom).toBe(true);
+
+    useChatStore.getState().clearRoom();
+    expect(useChatStore.getState().hasSentRoom).toBe(false);
   });
 });

@@ -72,6 +72,7 @@
   "chat": {
     "title": "Lobi chat",
     "placeholder": "Pozdravi\u2026",
+    "placeholderAfterFirst": "Poruka\u2026",
     "placeholderDisabled": "Ponovno povezivanje\u2026",
     "send": "Pošalji",
     "empty": "Još nema poruka \u2014 pozdravi.",
