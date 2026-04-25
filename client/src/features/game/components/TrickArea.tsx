@@ -17,18 +17,18 @@ function compassOffset(seat: number, myPlayerSeat: number): number {
 }
 
 const TRICK_CARD_POSITIONS: Record<number, string> = {
-  0: "bottom-0 left-1/2 -translate-x-1/2", // South
-  1: "top-1/2 left-0 -translate-y-1/2", // West
-  2: "top-0 left-1/2 -translate-x-1/2", // North
-  3: "top-1/2 right-0 -translate-y-1/2", // East
+  0: "bottom-0 left-1/2 -translate-x-1/2", // South (self)
+  1: "top-1/2 right-0 -translate-y-1/2", // East (next player counter-clockwise)
+  2: "top-0 left-1/2 -translate-x-1/2", // North (partner)
+  3: "top-1/2 left-0 -translate-y-1/2", // West (third player)
 };
 
 // Sweep destinations toward winning team's corner
 const SWEEP_POSITIONS: Record<number, string> = {
   0: "translate-y-[200%]", // South → off bottom
-  1: "-translate-x-[200%]", // West → off left
+  1: "translate-x-[200%]", // East → off right
   2: "-translate-y-[200%]", // North → off top
-  3: "translate-x-[200%]", // East → off right
+  3: "-translate-x-[200%]", // West → off left
 };
 
 export function TrickArea({ trick: rawTrick, winnerSeat, myPlayerSeat }: TrickAreaProps) {

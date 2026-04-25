@@ -51,9 +51,9 @@ function teamColor(seat: number): "red" | "blue" {
 
 const SEAT_POSITIONS: Record<number, string> = {
   0: "bottom-24 left-1/2 -translate-x-1/2", // South (self) - above hand cards
-  1: "left-4 top-1/2 -translate-y-1/2", // West
-  2: "top-4 left-1/2 -translate-x-1/2", // North
-  3: "right-4 top-1/2 -translate-y-1/2", // East
+  1: "right-4 top-1/2 -translate-y-1/2", // East (next player counter-clockwise)
+  2: "top-4 left-1/2 -translate-x-1/2", // North (partner)
+  3: "left-4 top-1/2 -translate-y-1/2", // West (third player)
 };
 
 export function GamePage() {

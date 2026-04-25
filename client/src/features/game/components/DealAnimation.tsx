@@ -9,14 +9,14 @@ interface DealAnimationProps {
   trumpCandidate: Card | null;
 }
 
-const COMPASS_LABELS = ["south", "west", "north", "east"] as const;
+const COMPASS_LABELS = ["south", "east", "north", "west"] as const;
 
 // Positions for card deal targets (relative to center)
 const DEAL_TARGETS: Record<string, string> = {
   south: "translate-y-[120px]",
-  west: "-translate-x-[120px]",
-  north: "-translate-y-[120px]",
   east: "translate-x-[120px]",
+  north: "-translate-y-[120px]",
+  west: "-translate-x-[120px]",
 };
 
 export function DealAnimation({ trumpCandidate }: DealAnimationProps) {

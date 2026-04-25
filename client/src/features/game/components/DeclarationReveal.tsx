@@ -16,9 +16,9 @@ interface DeclarationRevealProps {
 const PANEL_POSITIONS: Record<number, string> = {
   // Clearance for south is larger so self-declared reveals don't overlap own hand cards.
   0: "bottom-56 left-1/2 -translate-x-1/2", // South (self) — above seat
-  1: "left-28 top-1/2 -translate-y-1/2", // West — right of seat
+  1: "right-28 top-1/2 -translate-y-1/2", // East — left of seat
   2: "top-20 left-1/2 -translate-x-1/2", // North — below seat
-  3: "right-28 top-1/2 -translate-y-1/2", // East — left of seat
+  3: "left-28 top-1/2 -translate-y-1/2", // West — right of seat
 };
 
 function compassOffset(seat: number, myPlayerSeat: number): number {

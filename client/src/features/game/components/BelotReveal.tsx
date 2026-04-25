@@ -15,9 +15,9 @@ interface BelotRevealProps {
 
 const PANEL_POSITIONS: Record<number, string> = {
   0: "bottom-56 left-1/2 -translate-x-1/2", // South (self)
-  1: "left-28 top-1/2 -translate-y-1/2", // West
+  1: "right-28 top-1/2 -translate-y-1/2", // East
   2: "top-20 left-1/2 -translate-x-1/2", // North
-  3: "right-28 top-1/2 -translate-y-1/2", // East
+  3: "left-28 top-1/2 -translate-y-1/2", // West
 };
 
 function compassOffset(seat: number, myPlayerSeat: number): number {
