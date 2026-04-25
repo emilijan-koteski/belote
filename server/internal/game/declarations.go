@@ -163,12 +163,20 @@ func hasDeclarableCombinations(hand []Card) bool {
 // Returns winning team index (0=Red, 1=Blue) and total declaration points
 // for the winning team. Returns -1 and 0 if no declarations exist.
 //
-// Resolution rules:
-// 1. Compare each team's highest individual declaration by point value
-// 2. On tie: higher top card wins (using non-trump rank order)
-// 3. On tie: trump suit declaration wins
-// 4. On tie: team whose declaring player is earlier in play order wins
-// 5. Winning team scores sum of ALL their declarations
+// The winner is the team holding the SINGLE strongest declaration on the
+// table — never the team with the larger meld sum. Once the winning team is
+// chosen, the awarded total is the sum of that team's declarations only;
+// the losing team scores 0 regardless of how many melds they held.
+// Belot (K+Q of trump) is awarded separately via handleAnnounceBelot and
+// does not flow through this function.
+//
+// Resolution rules (applied to each team's strongest meld via declarationBeats):
+// 1. Pick each team's single strongest declaration
+// 2. Higher point value wins; on tie, four-of-a-kind beats sequence
+// 3. On tie among sequences: higher top card (non-trump rank order) wins
+// 4. On tie: trump-suit sequence beats non-trump
+// 5. On tie: team whose declaring player is earlier in play order wins
+// 6. Winning team scores the sum of ALL their declarations
 func resolveDeclarations(players [4]PlayerState, trumpSuit Suit, trickLeaderSeat int) (winningTeam int, totalPoints int) {
 	// Collect best declaration per team
 	type teamBest struct {

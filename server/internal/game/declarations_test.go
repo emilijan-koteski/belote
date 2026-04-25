@@ -219,20 +219,83 @@ func TestDeclarationResolution(t *testing.T) {
 	})
 
 	t.Run("only winning team declarations scored", func(t *testing.T) {
-		// Both teams declare, but only winning team gets points
+		// Red team total would be 40 (two tierces), Blue team total is 50 (quarte).
+		// Blue's best (50) beats Red's best (20), so Blue wins all 50 and Red gets 0.
 		decls := []game.Declaration{
-			{Type: game.DeclarationSequence, Cards: makeCards("7S", "8S", "9S"), PlayerSeat: 0, Value: 20},        // Red
-			{Type: game.DeclarationSequence, Cards: makeCards("7C", "8C", "9C"), PlayerSeat: 2, Value: 20},        // Red (teammate)
+			{Type: game.DeclarationSequence, Cards: makeCards("7S", "8S", "9S"), PlayerSeat: 0, Value: 20},       // Red
+			{Type: game.DeclarationSequence, Cards: makeCards("7C", "8C", "9C"), PlayerSeat: 2, Value: 20},       // Red (teammate)
 			{Type: game.DeclarationSequence, Cards: makeCards("JD", "QD", "KD", "AD"), PlayerSeat: 1, Value: 50}, // Blue
 		}
-		gs := testfixtures.NewGameWithDeclarations(decls)
-		require.NotNil(t, gs, "fixture should create valid state")
+		state := completeTrick1(t, decls)
 
-		// Red team total would be 40, Blue team total is 50
-		// But Blue's best (50) beats Red's best (20), so Blue wins all
-		// Blue gets 50, Red gets 0
-		assert.Equal(t, 50, decls[2].Value, "Blue's best should be 50")
+		assert.Equal(t, 0, state.DeclarationPoints[game.TeamRed], "Red gets 0 — best meld lost")
+		assert.Equal(t, 50, state.DeclarationPoints[game.TeamBlue], "Blue gets 50 — sum of winning team's melds")
+		assert.Empty(t, state.Players[0].Declarations, "Red seat 0 declarations cleared")
+		assert.Empty(t, state.Players[2].Declarations, "Red seat 2 declarations cleared")
+		assert.NotEmpty(t, state.Players[1].Declarations, "Blue seat 1 declarations preserved")
 	})
+
+	t.Run("only one team declared — wins with full sum", func(t *testing.T) {
+		decls := []game.Declaration{
+			{Type: game.DeclarationSequence, Cards: makeCards("7S", "8S", "9S"), PlayerSeat: 0, Value: 20},        // Red
+			{Type: game.DeclarationFourOfAKind, Cards: makeCards("TS", "TH", "TD", "TC"), PlayerSeat: 2, Value: 100}, // Red (teammate)
+		}
+		state := completeTrick1(t, decls)
+
+		assert.Equal(t, 120, state.DeclarationPoints[game.TeamRed], "Red wins with full sum 20+100")
+		assert.Equal(t, 0, state.DeclarationPoints[game.TeamBlue], "Blue gets 0 — no declarations")
+		assert.NotEmpty(t, state.Players[0].Declarations, "Red seat 0 declarations preserved")
+		assert.NotEmpty(t, state.Players[2].Declarations, "Red seat 2 declarations preserved")
+	})
+
+	// Regression: per Belote rules, declaration comparison uses each team's
+	// SINGLE strongest meld, never the team sum. Team A's two 100-pt Kares
+	// (sum=200) lose to Team B's lone 150-pt Kare-of-9.
+	t.Run("strongest single meld wins over higher team sum (Q+K vs 9)", func(t *testing.T) {
+		decls := []game.Declaration{
+			{Type: game.DeclarationFourOfAKind, Cards: makeCards("QS", "QH", "QD", "QC"), PlayerSeat: 0, Value: 100}, // Red
+			{Type: game.DeclarationFourOfAKind, Cards: makeCards("9S", "9H", "9D", "9C"), PlayerSeat: 1, Value: 150}, // Blue
+			{Type: game.DeclarationFourOfAKind, Cards: makeCards("KS", "KH", "KD", "KC"), PlayerSeat: 2, Value: 100}, // Red (teammate)
+		}
+		state := completeTrick1(t, decls)
+
+		assert.Equal(t, 0, state.DeclarationPoints[game.TeamRed], "Red gets 0 even though sum (200) > Blue's 150")
+		assert.Equal(t, 150, state.DeclarationPoints[game.TeamBlue], "Blue wins with its single strongest meld total")
+		assert.Empty(t, state.Players[0].Declarations, "Red seat 0 declarations cleared")
+		assert.Empty(t, state.Players[2].Declarations, "Red seat 2 declarations cleared")
+		assert.NotEmpty(t, state.Players[1].Declarations, "Blue seat 1 declarations preserved")
+	})
+}
+
+// completeTrick1 seats the given declarations on the standard NewGameFirstTrick
+// fixture and drives trick 1 to completion through legal plays so that
+// declaration resolution fires. Returns the post-resolution state. Belot is
+// pre-marked announced so the trick-end flow doesn't stall on the K/Q-trump
+// pair held by seat 0 in the fixture hands.
+func completeTrick1(t *testing.T, decls []game.Declaration) *game.GameState {
+	t.Helper()
+	state := testfixtures.NewGameWithDeclarations(decls)
+	state.BelotAnnounced = true
+
+	plays := []struct {
+		seat int
+		card game.Card
+	}{
+		{1, game.Card{Rank: game.Rank8, Suit: game.SuitDiamonds}},  // seat 1 leads diamonds
+		{2, game.Card{Rank: game.Rank9, Suit: game.SuitHearts}},    // seat 2 void in diamonds, opponent winning → trumps
+		{3, game.Card{Rank: game.RankTen, Suit: game.SuitDiamonds}}, // seat 3 follows diamonds (Bitola: TD overplays 8D)
+		{0, game.Card{Rank: game.Rank7, Suit: game.SuitClubs}},     // seat 0 void in diamonds, partner winning → free choice
+	}
+	for _, p := range plays {
+		card := p.card
+		next, err := game.ApplyAction(state, game.Action{
+			Type: game.ActionPlayCard, PlayerSeat: p.seat, Card: &card,
+		})
+		require.NoError(t, err, "seat %d play %v", p.seat, card)
+		state = next
+	}
+	require.True(t, state.DeclarationsResolved, "trick 1 must trigger declaration resolution")
+	return state
 }
 
 // --- Belot Bonus Tests (Task 8) ---
