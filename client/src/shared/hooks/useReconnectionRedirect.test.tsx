@@ -37,6 +37,7 @@ const minimalGameState: GameState = {
   trumpCallerSeat: null,
   biddingRound: 1,
   biddingPassCount: 0,
+  deck: [],
   activePlayerSeat: 0,
   trickNumber: 1,
   currentTrick: [],

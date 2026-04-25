@@ -243,17 +243,30 @@ func TestRound2FullPassReshuffle(t *testing.T) {
 	require.NotNil(t, result.TrumpCandidate, "new trump candidate should be revealed")
 	assert.Equal(t, 1, result.HandNumber, "hand number unchanged during reshuffle")
 
-	// Verify all 32 cards still distributed correctly
-	seen := make(map[string]bool)
-	for _, p := range result.Players {
-		assert.Len(t, p.Hand, 8, "each player should have 8 cards after re-deal")
-		for _, card := range p.Hand {
-			id := card.String()
-			assert.False(t, seen[id], "duplicate card after reshuffle: %s", id)
-			seen[id] = true
-		}
+	// Stage-1 sizes after re-deal.
+	for i, p := range result.Players {
+		assert.Len(t, p.Hand, 5, "seat %d should have 5 cards after stage-1 re-deal", i)
 	}
-	assert.Len(t, seen, 32, "all 32 cards should be accounted for")
+	assert.Len(t, result.Deck, 11, "Deck should hold 11 cards after re-deal")
+
+	// Card conservation: same 32 cards across hands + Deck + candidate, with
+	// no duplicates anywhere. Use the shared collectCards helper.
+	assertCardsAreFullDeck(t, collectCards(result))
+}
+
+// assertCardsAreFullDeck validates that the given slice contains every Bitola
+// card exactly once. Used to enforce card-conservation across stage-1, stage-2,
+// and reshuffle.
+func assertCardsAreFullDeck(t *testing.T, cards []game.Card) {
+	t.Helper()
+	require.Len(t, cards, 32, "expected exactly 32 cards across all locations")
+	seen := make(map[string]bool, 32)
+	for _, c := range cards {
+		id := c.String()
+		assert.False(t, seen[id], "duplicate card: %s", id)
+		seen[id] = true
+	}
+	assert.Len(t, seen, 32, "all 32 cards must be unique")
 }
 
 func TestErrNotYourTurn(t *testing.T) {
@@ -431,17 +444,130 @@ func TestMultipleReshuffles(t *testing.T) {
 	assert.Equal(t, 1, gs.BiddingRound)
 	assert.Equal(t, 0, gs.BiddingPassCount)
 
-	// Verify card integrity after multiple reshuffles
+	// Verify card integrity after multiple reshuffles: 5 per hand + 11 in Deck + 1 candidate.
 	seen := make(map[string]bool)
 	for _, p := range gs.Players {
-		assert.Len(t, p.Hand, 8)
+		assert.Len(t, p.Hand, 5)
 		for _, card := range p.Hand {
 			id := card.String()
 			assert.False(t, seen[id], "duplicate card: %s", id)
 			seen[id] = true
 		}
 	}
+	assert.Len(t, gs.Deck, 11)
+	for _, card := range gs.Deck {
+		id := card.String()
+		assert.False(t, seen[id], "duplicate card in deck: %s", id)
+		seen[id] = true
+	}
+	require.NotNil(t, gs.TrumpCandidate)
+	seen[gs.TrumpCandidate.String()] = true
 	assert.Len(t, seen, 32)
+}
+
+// TestPickTrumpStage2Rotation verifies the real-table card distribution rule:
+// the dealer rotates from (Dealer+1)%4 around the table dealing 3 to each
+// non-picker seat, 2 to the picker in their natural slot; the public
+// candidate is then appended to the picker's hand. Card-conservation:
+// every starting card is accounted for exactly once after the deal.
+func TestPickTrumpStage2Rotation(t *testing.T) {
+	tests := []struct {
+		name       string
+		passCount  int
+		picker     int
+		round2Suit *game.Suit
+	}{
+		{name: "round 1, picker = seat 1 (first bidder)", passCount: 0, picker: 1},
+		{name: "round 1, picker = seat 2", passCount: 1, picker: 2},
+		{name: "round 1, picker = seat 3", passCount: 2, picker: 3},
+		{name: "round 1, picker = seat 0 (last bidder)", passCount: 3, picker: 0},
+		{name: "round 2, picker = seat 1, suit = spades", passCount: 4, picker: 1, round2Suit: suitPtr(game.SuitSpades)},
+		{name: "round 2, picker = seat 0, suit = clubs", passCount: 7, picker: 0, round2Suit: suitPtr(game.SuitClubs)},
+		// Round-2 same-suit-as-candidate edge case: candidate is AH, picker
+		// chooses Hearts in round 2. Trump should still resolve to Hearts and
+		// distribution should match the round-1 layout for this picker seat.
+		{name: "round 2, picker = seat 1, suit = hearts (same as candidate)", passCount: 4, picker: 1, round2Suit: suitPtr(game.SuitHearts)},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gs := testfixtures.NewGameMidBidding(tc.passCount)
+
+			// Snapshot the starting card layout so we can verify conservation.
+			startingCards := collectCards(gs)
+
+			action := game.Action{
+				Type:       game.ActionPickTrump,
+				PlayerSeat: tc.picker,
+				Suit:       tc.round2Suit,
+			}
+
+			result, err := game.ApplyAction(gs, action)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+
+			// After stage-2 distribution: each hand has 8 cards, Deck empty, candidate cleared.
+			for i, p := range result.Players {
+				assert.Len(t, p.Hand, 8, "seat %d should have 8 cards after stage-2", i)
+			}
+			assert.Empty(t, result.Deck, "Deck should be cleared after stage-2")
+			assert.Nil(t, result.TrumpCandidate, "TrumpCandidate should be cleared after stage-2")
+
+			// Card conservation: same 32 cards across all hands now.
+			finalCards := collectCards(result)
+			assert.ElementsMatch(t, startingCards, finalCards, "all 32 cards preserved through stage-2")
+
+			// Trump locked correctly.
+			require.NotNil(t, result.TrumpSuit)
+			if tc.round2Suit != nil {
+				assert.Equal(t, *tc.round2Suit, *result.TrumpSuit, "round 2 trump matches action.Suit")
+			} else {
+				assert.Equal(t, game.SuitHearts, *result.TrumpSuit, "round 1 trump = candidate suit (hearts)")
+			}
+		})
+	}
+}
+
+// TestPickTrumpRound1_AppendsCandidateAndDealsCorrectCards spot-checks the
+// canonical round-1 first-bidder rotation against the deterministic fixture
+// layout, so a regression in the slice math is caught at the card level.
+func TestPickTrumpRound1_AppendsCandidateAndDealsCorrectCards(t *testing.T) {
+	gs := testfixtures.NewGameJustDealt()
+	candidate := *gs.TrumpCandidate // AH
+	expectedSeat1Adds := []game.Card{gs.Deck[0], gs.Deck[1], candidate}
+	expectedSeat2Adds := []game.Card{gs.Deck[2], gs.Deck[3], gs.Deck[4]}
+	expectedSeat3Adds := []game.Card{gs.Deck[5], gs.Deck[6], gs.Deck[7]}
+	expectedSeat0Adds := []game.Card{gs.Deck[8], gs.Deck[9], gs.Deck[10]}
+
+	result, err := game.ApplyAction(gs, game.Action{Type: game.ActionPickTrump, PlayerSeat: 1})
+	require.NoError(t, err)
+
+	// Each seat's final hand should be (their initial 5) ++ (the cards above).
+	assert.Equal(t, append(append([]game.Card{}, gs.Players[1].Hand...), expectedSeat1Adds...), result.Players[1].Hand,
+		"seat 1 (picker) gets Deck[0:2] + candidate after their initial 5")
+	assert.Equal(t, append(append([]game.Card{}, gs.Players[2].Hand...), expectedSeat2Adds...), result.Players[2].Hand,
+		"seat 2 gets Deck[2:5] after their initial 5")
+	assert.Equal(t, append(append([]game.Card{}, gs.Players[3].Hand...), expectedSeat3Adds...), result.Players[3].Hand,
+		"seat 3 gets Deck[5:8] after their initial 5")
+	assert.Equal(t, append(append([]game.Card{}, gs.Players[0].Hand...), expectedSeat0Adds...), result.Players[0].Hand,
+		"seat 0 gets Deck[8:11] after their initial 5")
+}
+
+// suitPtr is a one-line helper to take the address of a Suit literal.
+func suitPtr(s game.Suit) *game.Suit { return &s }
+
+// collectCards returns every card present anywhere in the game state:
+// hands, deck, and the visible trump candidate.
+func collectCards(gs *game.GameState) []game.Card {
+	out := make([]game.Card, 0, 32)
+	for i := range gs.Players {
+		out = append(out, gs.Players[i].Hand...)
+	}
+	out = append(out, gs.Deck...)
+	if gs.TrumpCandidate != nil {
+		out = append(out, *gs.TrumpCandidate)
+	}
+	return out
 }
 
 func TestRound1IgnoresActionSuit(t *testing.T) {

@@ -56,18 +56,29 @@ func handlePassTrump(state *GameState) (*GameState, error) {
 }
 
 // handlePickTrump processes a pick action during bidding.
+//
+// Stage-2 distribution (real-table rotation): walk seats from (Dealer+1)%4,
+// taking cards off the front of newState.Deck — 3 per non-picker seat, 2 in
+// the picker's slot. After the rotation, append the public TrumpCandidate to
+// the picker's hand. Then run instant-win detection against the final 8-card
+// hands and transition to PhasePlaying (or PhaseMatchEnd on instant-win).
 func handlePickTrump(state *GameState, action Action) (*GameState, error) {
+	// Defensive: stage-2 distribution requires both a public candidate and a
+	// full 11-card Deck. Either being missing means the state has skipped or
+	// already completed stage-1 — reject as wrong phase rather than panicking
+	// on a slice index later in the rotation.
+	if state.TrumpCandidate == nil || len(state.Deck) != 11 {
+		return nil, apperr.ErrWrongPhase
+	}
+
 	newState := cloneGameState(state)
 
 	if newState.BiddingRound == 1 {
-		// Round 1: trump is the candidate card's suit
-		if newState.TrumpCandidate == nil {
-			return nil, apperr.ErrWrongPhase
-		}
+		// Round 1: trump is the candidate card's suit (action.Suit ignored).
 		suit := newState.TrumpCandidate.Suit
 		newState.TrumpSuit = &suit
 	} else {
-		// Round 2: player picks any suit — action.Suit is required
+		// Round 2: player picks any suit — action.Suit is required.
 		if action.Suit == nil {
 			return nil, apperr.ErrInvalidBid
 		}
@@ -80,6 +91,30 @@ func handlePickTrump(state *GameState, action Action) (*GameState, error) {
 
 	seat := action.PlayerSeat
 	newState.TrumpCallerSeat = &seat
+
+	// Stage-2 distribution.
+	deck := newState.Deck
+	idx := 0
+	for i := 0; i < 4; i++ {
+		s := (newState.DealerSeat + 1 + i) % 4
+		n := 3
+		if s == seat {
+			n = 2
+		}
+		newState.Players[s].Hand = append(newState.Players[s].Hand, deck[idx:idx+n]...)
+		idx += n
+	}
+	newState.Players[seat].Hand = append(newState.Players[seat].Hand, *newState.TrumpCandidate)
+	newState.Deck = nil
+	newState.TrumpCandidate = nil
+
+	// Instant-win check against final 8-card hands.
+	if winnerTeam := checkInstantWin(newState); winnerTeam != nil {
+		newState.WinnerTeam = winnerTeam
+		newState.Phase = PhaseMatchEnd
+		return newState, nil
+	}
+
 	newState.Phase = PhasePlaying
 	newState.ActivePlayerSeat = (newState.DealerSeat + 1) % 4
 	newState.TrickNumber = 1
@@ -91,36 +126,45 @@ func handlePickTrump(state *GameState, action Action) (*GameState, error) {
 	return newState, nil
 }
 
-// reshuffleAndRedeal collects all cards, shuffles, rotates the dealer, and
-// re-deals using the standard 3+2+3 sequence.
+// reshuffleAndRedeal pools all 32 cards (hands + Deck + TrumpCandidate),
+// shuffles, rotates the dealer counter-clockwise, and re-runs stage-1.
+// Instant-win cannot be detected here — only stage-2 (post-pick) produces
+// the final 8-card hands needed for that check.
 func reshuffleAndRedeal(state *GameState) *GameState {
-	// Collect all 32 cards from players' hands
+	// Pool 32 cards: hands + remaining deck + visible candidate. If the pool
+	// is malformed (an upstream code path mishandled state and dropped cards),
+	// rebuild from a fresh deck instead of silently re-dealing a short pool —
+	// dealCards's stage-1 indexing assumes exactly 32 cards.
 	deck := make([]Card, 0, 32)
 	for i := range state.Players {
 		deck = append(deck, state.Players[i].Hand...)
 		state.Players[i].Hand = []Card{}
 	}
+	deck = append(deck, state.Deck...)
+	if state.TrumpCandidate != nil {
+		deck = append(deck, *state.TrumpCandidate)
+	}
+	if len(deck) != 32 {
+		deck = NewDeck()
+	}
+
+	// Reset bidding/trump artifacts before re-dealing.
+	state.Deck = nil
+	state.TrumpCandidate = nil
+	state.TrumpSuit = nil
+	state.TrumpCallerSeat = nil
 
 	// Shuffle and rotate dealer
 	ShuffleDeck(deck)
 	state.DealerSeat = (state.DealerSeat + 1) % 4
 
-	// Re-deal using existing deal logic
+	// Re-deal stage-1 (5 cards per seat + new candidate + 11-card Deck).
 	dealCards(state, deck)
-
-	// Check for instant-win (player holds all 8 trump cards)
-	if winnerTeam := checkInstantWin(state); winnerTeam != nil {
-		state.WinnerTeam = winnerTeam
-		state.Phase = PhaseMatchEnd
-		return state
-	}
 
 	// Reset bidding state
 	state.Phase = PhaseDealing
 	state.BiddingRound = 1
 	state.BiddingPassCount = 0
-	state.TrumpSuit = nil
-	state.TrumpCallerSeat = nil
 	state.ActivePlayerSeat = (state.DealerSeat + 1) % 4
 
 	return state
@@ -175,6 +219,7 @@ func cloneGameState(state *GameState) *GameState {
 
 	// Deep clone slice fields
 	newState.CurrentTrick = slices.Clone(state.CurrentTrick)
+	newState.Deck = slices.Clone(state.Deck)
 
 	// Deep clone player hands and declarations
 	for i := range newState.Players {

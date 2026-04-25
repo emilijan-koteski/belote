@@ -165,10 +165,12 @@ func TestHandScoring_MatchContinues(t *testing.T) {
 	assert.Equal(t, 2, result.HandNumber, "hand number should increment")
 	// Dealer rotates: was 0, now 1
 	assert.Equal(t, 1, result.DealerSeat, "dealer should rotate")
-	// Each player should have 8 cards (new deal)
+	// New deal is stage-1 (Bitola): 5 cards per seat, 11-card Deck, candidate visible.
 	for i, p := range result.Players {
-		assert.Len(t, p.Hand, 8, "player at seat %d should have 8 cards after new deal", i)
+		assert.Len(t, p.Hand, 5, "player at seat %d should have 5 cards after stage-1 re-deal", i)
 	}
+	assert.Len(t, result.Deck, 11, "Deck should hold 11 cards for stage-2 of the new hand")
+	require.NotNil(t, result.TrumpCandidate, "candidate revealed for the new hand")
 }
 
 func TestHandScoring_NewHandStateReset(t *testing.T) {
@@ -377,21 +379,91 @@ func TestMatchEnd_BlueTeamWins(t *testing.T) {
 // the plumbing (NewGame integration and partial-trump non-trigger).
 
 func TestInstantWin_NotTriggered_PartialTrump(t *testing.T) {
-	// Verify that having 7 (not 8) trump cards does NOT trigger instant-win.
+	// Build a stage-1 state where seat 1 (picker) is one card short of all 8
+	// hearts after stage-2: 5 initial hearts, candidate=7H, but Deck[0:2] has
+	// only ONE remaining heart and one non-heart. Picker ends with 7 hearts
+	// + 1 non-heart — strictly less than 8 trump → no instant-win.
 	gs := testfixtures.NewGameJustDealt()
-	// Swap: give seat 0 one Heart, give seat 1 one Spade
-	gs.Players[0].Hand[0] = game.Card{Rank: game.Rank7, Suit: game.SuitHearts}
-	gs.Players[1].Hand[0] = game.Card{Rank: game.Rank7, Suit: game.SuitSpades}
-
-	// Seat 1 now has 7 Hearts + 1 Spade — NOT all 8 trump
-	action := game.Action{
-		Type:       game.ActionPickTrump,
-		PlayerSeat: 1,
+	candidate := game.Card{Rank: game.Rank7, Suit: game.SuitHearts}
+	gs.TrumpCandidate = &candidate
+	gs.Players[1].Hand = []game.Card{
+		{Rank: game.Rank8, Suit: game.SuitHearts},
+		{Rank: game.Rank9, Suit: game.SuitHearts},
+		{Rank: game.RankTen, Suit: game.SuitHearts},
+		{Rank: game.RankJack, Suit: game.SuitHearts},
+		{Rank: game.RankQueen, Suit: game.SuitHearts},
 	}
-	result, err := game.ApplyAction(gs, action)
+	// Deck[0:2] = KH (heart) + QS (non-heart). Picker collects 7 hearts total,
+	// not 8. Remaining 9 deck cards are arbitrary unique non-duplicates.
+	gs.Deck = []game.Card{
+		{Rank: game.RankKing, Suit: game.SuitHearts},
+		{Rank: game.RankQueen, Suit: game.SuitSpades},
+		{Rank: game.RankKing, Suit: game.SuitSpades},
+		{Rank: game.RankAce, Suit: game.SuitSpades},
+		{Rank: game.RankAce, Suit: game.SuitHearts},
+		{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+		{Rank: game.RankKing, Suit: game.SuitDiamonds},
+		{Rank: game.RankAce, Suit: game.SuitDiamonds},
+		{Rank: game.RankQueen, Suit: game.SuitClubs},
+		{Rank: game.RankKing, Suit: game.SuitClubs},
+		{Rank: game.RankAce, Suit: game.SuitClubs},
+	}
+
+	result, err := game.ApplyAction(gs, game.Action{Type: game.ActionPickTrump, PlayerSeat: 1})
 	require.NoError(t, err)
-	assert.Equal(t, game.PhasePlaying, result.Phase, "game should proceed normally, no instant-win")
+	require.NotNil(t, result)
+	assert.Equal(t, game.PhasePlaying, result.Phase, "7 trump cards must NOT trigger instant-win")
 	assert.Nil(t, result.WinnerTeam)
+
+	// Sanity: picker actually holds 7 hearts (not 8).
+	hearts := 0
+	for _, c := range result.Players[1].Hand {
+		if c.Suit == game.SuitHearts {
+			hearts++
+		}
+	}
+	assert.Equal(t, 7, hearts, "picker should hold exactly 7 hearts (one short of instant-win)")
+}
+
+func TestInstantWin_TriggeredOnPick(t *testing.T) {
+	// Construct a stage-1 state where seat 1 holds 5 hearts and the deck's
+	// stage-2 slice for seat 1 is the remaining hearts (KH AH); together
+	// with the candidate (7H) seat 1 ends with all 8 hearts → instant-win.
+	gs := testfixtures.NewGameJustDealt()
+	// Override deck so seat 1's stage-2 slice [0:2] = remaining hearts; rest unused suits.
+	candidate := game.Card{Rank: game.Rank7, Suit: game.SuitHearts}
+	gs.TrumpCandidate = &candidate
+	// Seat 1 starts with 8H 9H TH JH QH (5 hearts; 7H is the candidate).
+	gs.Players[1].Hand = []game.Card{
+		{Rank: game.Rank8, Suit: game.SuitHearts},
+		{Rank: game.Rank9, Suit: game.SuitHearts},
+		{Rank: game.RankTen, Suit: game.SuitHearts},
+		{Rank: game.RankJack, Suit: game.SuitHearts},
+		{Rank: game.RankQueen, Suit: game.SuitHearts},
+	}
+	// Deck[0:2] = KH AH so picker (seat 1) collects every heart.
+	gs.Deck = []game.Card{
+		{Rank: game.RankKing, Suit: game.SuitHearts},
+		{Rank: game.RankAce, Suit: game.SuitHearts},
+		// Remaining 9 cards are non-hearts (any valid 9 cards we removed); use
+		// distinct cards so the deck has no duplicates.
+		{Rank: game.RankQueen, Suit: game.SuitSpades},
+		{Rank: game.RankKing, Suit: game.SuitSpades},
+		{Rank: game.RankAce, Suit: game.SuitSpades},
+		{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+		{Rank: game.RankKing, Suit: game.SuitDiamonds},
+		{Rank: game.RankAce, Suit: game.SuitDiamonds},
+		{Rank: game.RankQueen, Suit: game.SuitClubs},
+		{Rank: game.RankKing, Suit: game.SuitClubs},
+		{Rank: game.RankAce, Suit: game.SuitClubs},
+	}
+
+	result, err := game.ApplyAction(gs, game.Action{Type: game.ActionPickTrump, PlayerSeat: 1})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, game.PhaseMatchEnd, result.Phase, "instant-win should set match-end phase")
+	require.NotNil(t, result.WinnerTeam, "instant-win must populate WinnerTeam")
+	assert.Equal(t, game.TeamBlue, *result.WinnerTeam, "seat 1 holds all 8 hearts → Blue team wins")
 }
 
 // --- LastHandResult Tests (Story 4.6) ---
@@ -499,15 +571,18 @@ func TestLastHandResult_TotalsMatchTeamScoreDelta(t *testing.T) {
 }
 
 func TestInstantWin_FirstHand(t *testing.T) {
-	// NewGame uses random shuffle — verify it always returns a valid state.
-	// IF instant-win triggers (astronomically unlikely), WinnerTeam must be set.
-	for i := 0; i < 100; i++ {
+	// NewGame now performs only stage-1 (5 cards per seat + candidate +
+	// 11-card deck). Instant-win can't be detected at this point, so NewGame
+	// always returns PhaseDealing (auto-promoted to PhaseBidding by the
+	// session manager) and never sets WinnerTeam.
+	for range 50 {
 		gs := game.NewGame([4]uint{10, 20, 30, 40}, [4]string{"p1", "p2", "p3", "p4"}, game.VariantBitola, "1001", 1)
-		assert.True(t,
-			gs.Phase == game.PhaseDealing || gs.Phase == game.PhaseMatchEnd,
-			"NewGame should return PhaseDealing or PhaseMatchEnd, got %s", gs.Phase)
-		if gs.Phase == game.PhaseMatchEnd {
-			require.NotNil(t, gs.WinnerTeam, "WinnerTeam must be set if instant-win detected")
+		assert.Equal(t, game.PhaseDealing, gs.Phase, "NewGame returns PhaseDealing post stage-1")
+		assert.Nil(t, gs.WinnerTeam, "instant-win is deferred to stage-2 (post-pick)")
+		assert.Len(t, gs.Deck, 11, "11 cards remain for stage-2")
+		require.NotNil(t, gs.TrumpCandidate, "candidate revealed during stage-1")
+		for i, p := range gs.Players {
+			assert.Len(t, p.Hand, 5, "seat %d holds 5 cards after stage-1", i)
 		}
 	}
 }

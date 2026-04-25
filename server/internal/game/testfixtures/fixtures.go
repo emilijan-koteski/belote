@@ -6,19 +6,30 @@ import (
 	"github.com/emilijan/belote/server/internal/game"
 )
 
-// NewGameJustDealt returns a valid GameState in the bidding phase with all 4
-// players holding 8 cards. Uses a deterministic card distribution (no shuffle)
-// for reproducible tests.
+// NewGameJustDealt returns a valid GameState in the BIDDING phase after a
+// Bitola stage-1 deal: each player holds 5 cards, the trump candidate is
+// public (AH on the table), and 11 cards remain in Deck for stage-2
+// distribution after a player picks trump.
 //
-// Seat 0 (Red):  7S 8S 9S TS JS QS KS AS  (all Spades)
-// Seat 1 (Blue): 7H 8H 9H TH JH QH KH AH  (all Hearts)
-// Seat 2 (Red):  7D 8D 9D TD JD QD KD AD  (all Diamonds)
-// Seat 3 (Blue): 7C 8C 9C TC JC QC KC AC  (all Clubs)
+// Layout is deterministic — each seat holds 5 cards of its assigned suit;
+// the candidate is the Ace of Hearts; the Deck holds the remaining 11 cards
+// in deal order. The layout is engineered so that picking trump (in either
+// round, by any seat) never accidentally triggers instant-win, while still
+// allowing tests to mutate hand[0] for partial-trump scenarios.
 //
-// Trump candidate: 7H (Hearts)
-// Dealer: seat 0, Active bidder: seat 1
+//	Initial hands (5 cards each):
+//	  Seat 0 (Red):  7S 8S 9S TS JS   (5 Spades, low ranks)
+//	  Seat 1 (Blue): 7H 8H 9H TH JH   (5 Hearts, low ranks)
+//	  Seat 2 (Red):  7D 8D 9D TD JD   (5 Diamonds, low ranks)
+//	  Seat 3 (Blue): 7C 8C 9C TC JC   (5 Clubs, low ranks)
+//
+//	TrumpCandidate (public, on table): AH
+//
+//	Deck (11 cards, deal order): QS KS QH KH AS QD KD AD QC KC AC
+//
+// Dealer: seat 0, Active bidder: seat 1.
 func NewGameJustDealt() *game.GameState {
-	trumpCandidate := game.Card{Rank: game.Rank7, Suit: game.SuitHearts}
+	trumpCandidate := game.Card{Rank: game.RankAce, Suit: game.SuitHearts}
 
 	return &game.GameState{
 		RoomID:           1,
@@ -33,9 +44,10 @@ func NewGameJustDealt() *game.GameState {
 		ActivePlayerSeat: 1,
 		TrickNumber:      0,
 		CurrentTrick:     []game.TrickCard{},
+		Deck:             biddingDeck(),
 		Players: [4]game.PlayerState{
 			{
-				Hand:         spadesHand(),
+				Hand:         lowRanksOfSuit(game.SuitSpades),
 				Seat:         0,
 				UserID:       10,
 				Team:         "red",
@@ -43,7 +55,7 @@ func NewGameJustDealt() *game.GameState {
 				Connected:    true,
 			},
 			{
-				Hand:         heartsHand(),
+				Hand:         lowRanksOfSuit(game.SuitHearts),
 				Seat:         1,
 				UserID:       20,
 				Team:         "blue",
@@ -51,7 +63,7 @@ func NewGameJustDealt() *game.GameState {
 				Connected:    true,
 			},
 			{
-				Hand:         diamondsHand(),
+				Hand:         lowRanksOfSuit(game.SuitDiamonds),
 				Seat:         2,
 				UserID:       30,
 				Team:         "red",
@@ -59,7 +71,7 @@ func NewGameJustDealt() *game.GameState {
 				Connected:    true,
 			},
 			{
-				Hand:         clubsHand(),
+				Hand:         lowRanksOfSuit(game.SuitClubs),
 				Seat:         3,
 				UserID:       40,
 				Team:         "blue",
@@ -70,28 +82,35 @@ func NewGameJustDealt() *game.GameState {
 	}
 }
 
-func spadesHand() []game.Card {
-	return allRanksOfSuit(game.SuitSpades)
-}
-
-func heartsHand() []game.Card {
-	return allRanksOfSuit(game.SuitHearts)
-}
-
-func diamondsHand() []game.Card {
-	return allRanksOfSuit(game.SuitDiamonds)
-}
-
-func clubsHand() []game.Card {
-	return allRanksOfSuit(game.SuitClubs)
-}
-
-func allRanksOfSuit(suit game.Suit) []game.Card {
-	cards := make([]game.Card, 0, 8)
-	for _, rank := range game.AllRanks {
-		cards = append(cards, game.Card{Rank: rank, Suit: suit})
+// lowRanksOfSuit returns the five low cards (7..J) of the given suit, in
+// ascending order. Used as the stage-1 dealt hand in NewGameJustDealt.
+func lowRanksOfSuit(suit game.Suit) []game.Card {
+	return []game.Card{
+		{Rank: game.Rank7, Suit: suit},
+		{Rank: game.Rank8, Suit: suit},
+		{Rank: game.Rank9, Suit: suit},
+		{Rank: game.RankTen, Suit: suit},
+		{Rank: game.RankJack, Suit: suit},
 	}
-	return cards
+}
+
+// biddingDeck returns the 11-card stage-2 reserve for NewGameJustDealt.
+// Order is chosen so that no pick (round 1 or round 2, by any seat) ends
+// with all 8 cards of trump suit in one hand.
+func biddingDeck() []game.Card {
+	return []game.Card{
+		{Rank: game.RankQueen, Suit: game.SuitSpades},
+		{Rank: game.RankKing, Suit: game.SuitSpades},
+		{Rank: game.RankQueen, Suit: game.SuitHearts},
+		{Rank: game.RankKing, Suit: game.SuitHearts},
+		{Rank: game.RankAce, Suit: game.SuitSpades},
+		{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+		{Rank: game.RankKing, Suit: game.SuitDiamonds},
+		{Rank: game.RankAce, Suit: game.SuitDiamonds},
+		{Rank: game.RankQueen, Suit: game.SuitClubs},
+		{Rank: game.RankKing, Suit: game.SuitClubs},
+		{Rank: game.RankAce, Suit: game.SuitClubs},
+	}
 }
 
 // NewGameMidPlay returns a GameState in the playing phase at the specified

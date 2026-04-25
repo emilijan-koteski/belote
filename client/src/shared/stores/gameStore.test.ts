@@ -17,6 +17,7 @@ const mockGameState: GameState = {
   trumpCandidate: { rank: "K", suit: "S" },
   biddingRound: 1,
   biddingPassCount: 0,
+  deck: [],
   activePlayerSeat: 1,
   trickNumber: 0,
   currentTrick: [],

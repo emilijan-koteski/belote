@@ -34,6 +34,7 @@ const mockGameState: GameState = {
   trumpCandidate: null,
   biddingRound: 1,
   biddingPassCount: 0,
+  deck: [],
   activePlayerSeat: 0,
   trickNumber: 1,
   currentTrick: [],

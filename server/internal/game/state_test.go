@@ -127,7 +127,7 @@ func TestGameStateJSONCamelCaseKeys(t *testing.T) {
 	expectedKeys := []string{
 		"id", "roomId", "variant", "matchMode", "phase",
 		"handNumber", "dealerSeat", "trumpSuit", "trumpCallerSeat",
-		"trumpCandidate", "biddingRound", "biddingPassCount", "activePlayerSeat",
+		"trumpCandidate", "biddingRound", "biddingPassCount", "deck", "activePlayerSeat",
 		"trickNumber", "currentTrick", "leadSuit", "trickWinnerSeat",
 		"players", "teamScores", "handPoints", "declarationPoints", "tricksWon",
 		"turnExpiresAt",
@@ -170,13 +170,17 @@ func TestNewGame(t *testing.T) {
 		assert.Equal(t, 1, gs.BiddingRound)
 	})
 
-	t.Run("each player holds exactly 8 cards", func(t *testing.T) {
+	t.Run("each player holds exactly 5 cards (stage-1)", func(t *testing.T) {
 		for i, p := range gs.Players {
-			assert.Len(t, p.Hand, 8, "player at seat %d should have 8 cards", i)
+			assert.Len(t, p.Hand, 5, "player at seat %d should have 5 cards after stage-1", i)
 		}
 	})
 
-	t.Run("all 32 cards accounted for across all hands", func(t *testing.T) {
+	t.Run("Deck holds 11 cards for stage-2", func(t *testing.T) {
+		assert.Len(t, gs.Deck, 11, "stage-1 leaves 11 cards undealt for stage-2")
+	})
+
+	t.Run("all 32 cards accounted for across hands + deck + candidate", func(t *testing.T) {
 		seen := make(map[string]bool)
 		for _, p := range gs.Players {
 			for _, card := range p.Hand {
@@ -185,28 +189,32 @@ func TestNewGame(t *testing.T) {
 				seen[id] = true
 			}
 		}
+		for _, card := range gs.Deck {
+			id := card.String()
+			assert.False(t, seen[id], "duplicate card in deck: %s", id)
+			seen[id] = true
+		}
+		require.NotNil(t, gs.TrumpCandidate)
+		seen[gs.TrumpCandidate.String()] = true
 		assert.Len(t, seen, 32)
 	})
 
-	t.Run("trump candidate is set", func(t *testing.T) {
+	t.Run("trump candidate is set and not in any hand or deck", func(t *testing.T) {
 		require.NotNil(t, gs.TrumpCandidate)
 		assert.NotEmpty(t, gs.TrumpCandidate.Rank)
 		assert.NotEmpty(t, gs.TrumpCandidate.Suit)
-	})
 
-	t.Run("trump candidate exists in a player hand", func(t *testing.T) {
-		require.NotNil(t, gs.TrumpCandidate)
 		candidateID := gs.TrumpCandidate.String()
-		found := false
 		for _, p := range gs.Players {
 			for _, card := range p.Hand {
-				if card.String() == candidateID {
-					found = true
-					break
-				}
+				assert.NotEqual(t, candidateID, card.String(),
+					"candidate must NOT be in any hand during stage-1")
 			}
 		}
-		assert.True(t, found, "trump candidate %s should be in a player's hand", candidateID)
+		for _, card := range gs.Deck {
+			assert.NotEqual(t, candidateID, card.String(),
+				"candidate must NOT be in deck during stage-1")
+		}
 	})
 
 	t.Run("teams are assigned correctly", func(t *testing.T) {

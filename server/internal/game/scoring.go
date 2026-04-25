@@ -177,10 +177,19 @@ func startNewHand(state *GameState) {
 // checkInstantWin checks if any player holds all 8 cards of the trump suit after
 // dealing. Returns the winning team index, or nil if no instant-win.
 func checkInstantWin(state *GameState) *int {
-	if state.TrumpCandidate == nil {
+	// Prefer the locked trump (post-pick). Fall back to the candidate's suit
+	// when no trump has been chosen yet — that branch covers stage-1 states
+	// (where no hand can hold all 8 of any suit anyway) and direct fixture
+	// states used by package-internal tests.
+	var trumpSuit Suit
+	switch {
+	case state.TrumpSuit != nil:
+		trumpSuit = *state.TrumpSuit
+	case state.TrumpCandidate != nil:
+		trumpSuit = state.TrumpCandidate.Suit
+	default:
 		return nil
 	}
-	trumpSuit := state.TrumpCandidate.Suit
 	for i := range state.Players {
 		trumpCount := 0
 		for _, card := range state.Players[i].Hand {

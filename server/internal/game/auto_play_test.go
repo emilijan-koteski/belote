@@ -39,8 +39,8 @@ func TestAutoPlay(t *testing.T) {
 				gs.DeclarationsResolved = true
 				gs.BelotAnnounced = true
 				gs.TrickNumber = 1
-				// Seat 0 has all spades: 7S 8S 9S TS JS QS KS AS
-				// Sorted: all same suit S, rank order 7<8<9<T<J<Q<K<A → pick 7S
+				// Seat 0 has 5 spades from stage-1: 7S 8S 9S TS JS
+				// Sorted: same suit S, rank order 7<8<9<T<J → pick 7S
 				gs.ActivePlayerSeat = 0
 				return gs
 			},

@@ -71,11 +71,12 @@ func TestNewGameMidBidding(t *testing.T) {
 			assert.Equal(t, tc.expectedActive, gs.ActivePlayerSeat, "ActivePlayerSeat")
 			assert.Equal(t, 0, gs.DealerSeat, "DealerSeat should always be 0")
 
-			// Every fixture should have valid card distribution
+			// Mid-bidding: 5 cards per seat, 11 in Deck, candidate aside.
 			for i, p := range gs.Players {
-				assert.Len(t, p.Hand, 8, "player at seat %d should have 8 cards", i)
+				assert.Len(t, p.Hand, 5, "player at seat %d should have 5 cards", i)
 			}
 			require.NotNil(t, gs.TrumpCandidate)
+			assert.Len(t, gs.Deck, 11, "Deck should hold 11 stage-2 cards")
 		})
 	}
 
@@ -176,13 +177,17 @@ func TestNewGameJustDealt(t *testing.T) {
 		assert.Equal(t, game.PhaseBidding, gs.Phase)
 	})
 
-	t.Run("each player has 8 cards", func(t *testing.T) {
+	t.Run("each player has 5 cards (stage-1 deal)", func(t *testing.T) {
 		for i, p := range gs.Players {
-			assert.Len(t, p.Hand, 8, "player at seat %d should have 8 cards", i)
+			assert.Len(t, p.Hand, 5, "player at seat %d should have 5 cards", i)
 		}
 	})
 
-	t.Run("all 32 cards accounted for", func(t *testing.T) {
+	t.Run("Deck holds 11 cards for stage-2", func(t *testing.T) {
+		assert.Len(t, gs.Deck, 11)
+	})
+
+	t.Run("all 32 cards accounted for across hands + Deck + candidate", func(t *testing.T) {
 		seen := make(map[string]bool)
 		for _, p := range gs.Players {
 			for _, card := range p.Hand {
@@ -191,6 +196,13 @@ func TestNewGameJustDealt(t *testing.T) {
 				seen[id] = true
 			}
 		}
+		for _, card := range gs.Deck {
+			id := card.String()
+			assert.False(t, seen[id], "duplicate card in deck: %s", id)
+			seen[id] = true
+		}
+		require.NotNil(t, gs.TrumpCandidate)
+		seen[gs.TrumpCandidate.String()] = true
 		assert.Len(t, seen, 32)
 	})
 
@@ -211,7 +223,7 @@ func TestNewGameJustDealt(t *testing.T) {
 
 	t.Run("trump candidate is set", func(t *testing.T) {
 		require.NotNil(t, gs.TrumpCandidate)
-		assert.Equal(t, game.Rank7, gs.TrumpCandidate.Rank)
+		assert.Equal(t, game.RankAce, gs.TrumpCandidate.Rank)
 		assert.Equal(t, game.SuitHearts, gs.TrumpCandidate.Suit)
 	})
 
@@ -235,6 +247,46 @@ func TestNewGameJustDealt(t *testing.T) {
 			assert.Equal(t, gs.Players[i].Hand, gs2.Players[i].Hand, "hands should be identical across calls")
 		}
 	})
+}
+
+// TestNewGameJustDealt_NoInstantWinOnAnyPick is a fixture-property test that
+// verifies the "engineered to never trigger instant-win" claim documented in
+// NewGameJustDealt's docstring. It exhausts every (round, picker, suit)
+// combination supported by NewGameMidBidding and asserts none of them lead to
+// PhaseMatchEnd. This locks the docstring promise so any future tweak to the
+// fixture's deck order that breaks the property fails this test loudly.
+func TestNewGameJustDealt_NoInstantWinOnAnyPick(t *testing.T) {
+	allSuits := []game.Suit{game.SuitSpades, game.SuitHearts, game.SuitDiamonds, game.SuitClubs}
+
+	for passCount := 0; passCount <= 7; passCount++ {
+		gs := testfixtures.NewGameMidBidding(passCount)
+		picker := gs.ActivePlayerSeat
+
+		if gs.BiddingRound == 1 {
+			// Round 1: trump = candidate suit; action.Suit is ignored.
+			result, err := game.ApplyAction(gs, game.Action{Type: game.ActionPickTrump, PlayerSeat: picker})
+			require.NoError(t, err, "round 1 pick by seat %d (passCount=%d) should succeed", picker, passCount)
+			assert.NotEqual(t, game.PhaseMatchEnd, result.Phase,
+				"round 1 pick by seat %d (passCount=%d) must not trigger instant-win", picker, passCount)
+			assert.Nil(t, result.WinnerTeam, "round 1 pick by seat %d (passCount=%d) must leave WinnerTeam nil", picker, passCount)
+			continue
+		}
+
+		// Round 2: try every suit.
+		for _, suit := range allSuits {
+			s := suit
+			result, err := game.ApplyAction(gs, game.Action{
+				Type:       game.ActionPickTrump,
+				PlayerSeat: picker,
+				Suit:       &s,
+			})
+			require.NoError(t, err, "round 2 pick by seat %d suit=%s (passCount=%d)", picker, suit, passCount)
+			assert.NotEqual(t, game.PhaseMatchEnd, result.Phase,
+				"round 2 pick by seat %d suit=%s (passCount=%d) must not trigger instant-win", picker, suit, passCount)
+			assert.Nil(t, result.WinnerTeam,
+				"round 2 pick by seat %d suit=%s (passCount=%d) must leave WinnerTeam nil", picker, suit, passCount)
+		}
+	}
 }
 
 func TestNewGameLastTrick(t *testing.T) {

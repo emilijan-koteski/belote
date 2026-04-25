@@ -91,6 +91,7 @@ export interface GameState {
   trumpCandidate: Card | null;
   biddingRound: number;
   biddingPassCount: number;
+  deck: Card[];
   activePlayerSeat: number;
   trickNumber: number;
   currentTrick: TrickCard[];

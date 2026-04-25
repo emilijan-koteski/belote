@@ -40,6 +40,7 @@ function normalizeGameState(gs: GameState): GameState {
   return {
     ...gs,
     currentTrick: gs.currentTrick ?? [],
+    deck: gs.deck ?? [],
     players: gs.players.map((p) => ({
       ...p,
       hand: p.hand ?? [],

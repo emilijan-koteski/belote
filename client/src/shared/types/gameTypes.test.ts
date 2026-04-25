@@ -80,6 +80,7 @@ describe("gameTypes", () => {
         trumpCandidate: { rank: "7", suit: "H" },
         biddingRound: 1,
         biddingPassCount: 0,
+        deck: [],
         activePlayerSeat: 1,
         trickNumber: 0,
         currentTrick: [],
