@@ -4,7 +4,10 @@ package game
 // legally allowed to play, given the current game state. Implements Bitola
 // variant three-layer card play validation:
 //
-//  1. Follow suit if possible (over-trump if led suit is trump)
+//  1. Follow suit if possible — must overplay the highest led-suit card
+//     currently in the trick when the player has a higher led-suit card
+//     (applies whether the led suit is trump or not). Otherwise any
+//     same-suit card is legal.
 //  2. If void in led suit and opponent winning → must trump (over-trump if possible)
 //  3. If void in led suit and partner winning → any card (partner exemption)
 func legalCards(state *GameState, seat int) []Card {
@@ -25,12 +28,11 @@ func legalCards(state *GameState, seat int) []Card {
 	suitCards := filterBySuit(hand, ledSuit)
 
 	if len(suitCards) > 0 {
-		// Must follow suit
-		if ledSuit == trumpSuit {
-			// Led suit is trump — must over-trump if possible
-			if overTrumps := applyOverTrump(suitCards, state.CurrentTrick, trumpSuit); len(overTrumps) > 0 {
-				return overTrumps
-			}
+		// Must follow suit; must overplay the highest led-suit card on the
+		// table if the player can. Applies to both trump-led and non-trump-led
+		// tricks (Bitola: the iber rule extends to the led non-trump suit).
+		if higher := applyMustOverplayLedSuit(suitCards, state.CurrentTrick, ledSuit, trumpSuit); len(higher) > 0 {
+			return higher
 		}
 		return suitCards
 	}
@@ -48,6 +50,37 @@ func legalCards(state *GameState, seat int) []Card {
 
 	// Partner winning (or no trump held) — any card is legal
 	return hand
+}
+
+// applyMustOverplayLedSuit returns the led-suit cards in hand that are strictly
+// higher than the highest led-suit card currently in the trick. Uses
+// TrumpRankOrder when the led suit is trump, NonTrumpRankOrder otherwise.
+// Returns nil if no overplay exists or the trick contains no led-suit card
+// (the latter shouldn't happen when called with a non-empty trick, since the
+// first card defines the led suit).
+func applyMustOverplayLedSuit(suitCards []Card, trick []TrickCard, ledSuit, trumpSuit Suit) []Card {
+	rankOrder := NonTrumpRankOrder
+	if ledSuit == trumpSuit {
+		rankOrder = TrumpRankOrder
+	}
+	bestOrder := -1
+	for _, tc := range trick {
+		if tc.Card.Suit == ledSuit {
+			if order := rankOrder[tc.Card.Rank]; order > bestOrder {
+				bestOrder = order
+			}
+		}
+	}
+	if bestOrder < 0 {
+		return nil
+	}
+	var higher []Card
+	for _, c := range suitCards {
+		if rankOrder[c.Rank] > bestOrder {
+			higher = append(higher, c)
+		}
+	}
+	return higher
 }
 
 // isCardLegal checks whether a specific card is a legal play for the given seat.

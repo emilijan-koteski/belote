@@ -56,6 +56,24 @@ function applyOverTrump(trumpCards: Card[], trick: TrickCard[], trumpSuit: Suit)
   return trumpCards.filter((c) => TRUMP_RANK_ORDER[c.rank] > highestOrder);
 }
 
+function applyMustOverplayLedSuit(
+  suitCards: Card[],
+  trick: TrickCard[],
+  ledSuit: Suit,
+  trumpSuit: Suit,
+): Card[] {
+  const rankOrder = ledSuit === trumpSuit ? TRUMP_RANK_ORDER : NON_TRUMP_RANK_ORDER;
+  let bestOrder = -1;
+  for (const tc of trick) {
+    if (tc.card.suit === ledSuit) {
+      const order = rankOrder[tc.card.rank];
+      if (order > bestOrder) bestOrder = order;
+    }
+  }
+  if (bestOrder < 0) return [];
+  return suitCards.filter((c) => rankOrder[c.rank] > bestOrder);
+}
+
 function currentTrickWinnerSeat(trick: TrickCard[], trumpSuit: Suit): number {
   const first = trick[0];
   if (!first) return -1;
@@ -96,8 +114,9 @@ function isOpponentWinning(state: GameState, seat: number): boolean {
 /**
  * Mirror of server/internal/game/validation.go `legalCards`. Returns the subset
  * of the seat's hand that is legal to play given the current trick state.
- * Bitola variant: follow suit, over-trump when led suit is trump, trump
- * obligation when void in led suit and opponent is winning, partner exemption.
+ * Bitola variant: must overplay the highest led-suit card on the table when
+ * possible (whether trump or not), trump obligation when void in led suit and
+ * opponent is winning, partner exemption.
  */
 export function legalCards(state: GameState, seat: number): Card[] {
   const player = state.players[seat];
@@ -124,10 +143,8 @@ export function legalCards(state: GameState, seat: number): Card[] {
   const suitCards = filterBySuit(hand, ledSuit);
 
   if (suitCards.length > 0) {
-    if (ledSuit === trumpSuit) {
-      const overTrumps = applyOverTrump(suitCards, currentTrick, trumpSuit);
-      if (overTrumps.length > 0) return overTrumps;
-    }
+    const higher = applyMustOverplayLedSuit(suitCards, currentTrick, ledSuit, trumpSuit);
+    if (higher.length > 0) return higher;
     return suitCards;
   }
 

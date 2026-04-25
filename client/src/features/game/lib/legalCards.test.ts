@@ -101,7 +101,9 @@ describe("legalCards", () => {
     expect(legalCards(state, 0)).toEqual(myHand);
   });
 
-  it("must follow led suit if holding any", () => {
+  it("must follow led suit and overplay highest non-trump led-suit card on the table", () => {
+    // Trump is clubs; spades led with QS, then opponent KS (non-trump rank
+    // order: K=5, Q=4). Hand has TS (6), 7S (0). Must overplay → only TS.
     const myHand = hand(["7S", "TS", "KD", "AC"]);
     const state = makeState({
       mySeat: 3,
@@ -110,7 +112,69 @@ describe("legalCards", () => {
       leadSuit: "S",
       currentTrick: [trickCard("QS", 0), trickCard("KS", 1), trickCard("7H", 2)],
     });
-    expect(legalCards(state, 3).map((c) => `${c.rank}${c.suit}`)).toEqual(["7S", "TS"]);
+    expect(legalCards(state, 3).map((c) => `${c.rank}${c.suit}`)).toEqual(["TS"]);
+  });
+
+  it("falls back to all led non-trump suit cards when no overplay exists", () => {
+    // Trump is diamonds; hearts led with KH. Hand: 7H (0), 8H (1) — both
+    // below KH (5). No overplay possible → both 7H and 8H are legal (rule 2).
+    const myHand = hand(["7H", "8H"]);
+    const state = makeState({
+      mySeat: 2,
+      myHand,
+      trumpSuit: "D",
+      leadSuit: "H",
+      currentTrick: [trickCard("KH", 1)],
+    });
+    expect(legalCards(state, 2).map((c) => `${c.rank}${c.suit}`)).toEqual(["7H", "8H"]);
+  });
+
+  it("must overplay led non-trump even when an opponent already trumped", () => {
+    // Trump is diamonds. Hearts led with KH; seat 3 (opponent of seat 2)
+    // trumped with 7D. Hand has 8H, AH. The trump in trick does not change
+    // the led-suit overplay obligation: highest hearts on table is still KH,
+    // so AH (7) must be played; 8H (1) is excluded.
+    const myHand = hand(["8H", "AH", "KC"]);
+    const state = makeState({
+      mySeat: 2,
+      myHand,
+      trumpSuit: "D",
+      leadSuit: "H",
+      currentTrick: [trickCard("KH", 1), trickCard("7D", 3)],
+    });
+    expect(legalCards(state, 2).map((c) => `${c.rank}${c.suit}`)).toEqual(["AH"]);
+  });
+
+  it("multiple higher led-suit cards — all strictly higher are legal", () => {
+    // Trump=diamonds. Hearts led with JH (non-trump rank 3). Hand has QH (4),
+    // KH (5), AH (7) — all strictly higher than JH. The helper must return
+    // every overplay, not just the maximum.
+    const myHand = hand(["QH", "KH", "AH", "8C"]);
+    const state = makeState({
+      mySeat: 1,
+      myHand,
+      trumpSuit: "D",
+      leadSuit: "H",
+      currentTrick: [trickCard("JH", 0)],
+    });
+    expect(legalCards(state, 1).map((c) => `${c.rank}${c.suit}`)).toEqual(["QH", "KH", "AH"]);
+  });
+
+  it("must overplay led non-trump even when highest card on table came from partner", () => {
+    // Partner exemption applies only to void-in-led-suit (rule 3). When the
+    // player has led-suit cards, the overplay rule still applies regardless
+    // of who played the current high card.
+    // Trump=diamonds. Seat 2 (partner of seat 0) led KH; seat 1 (opp) plays 7H.
+    // Seat 0's hand: 8H, AH. Must overplay → only AH.
+    const myHand = hand(["8H", "AH"]);
+    const state = makeState({
+      mySeat: 0,
+      myHand,
+      trumpSuit: "D",
+      leadSuit: "H",
+      currentTrick: [trickCard("KH", 2), trickCard("7H", 1)],
+    });
+    expect(legalCards(state, 0).map((c) => `${c.rank}${c.suit}`)).toEqual(["AH"]);
   });
 
   it("must over-trump when led suit is trump and over-trump exists", () => {
