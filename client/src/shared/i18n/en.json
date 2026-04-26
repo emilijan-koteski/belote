@@ -212,7 +212,12 @@
     "trumpIndicator": {
       "trump": "Trump",
       "label": "Trump suit: {{suit}}",
-      "labelWithTeam": "Trump suit: {{suit}}, called by {{team}} team"
+      "labelWithTeam": "Trump suit: {{suit}}, called by {{team}} team",
+      "labelWithCaller": "Trump suit: {{suit}}, called by {{team}} team ({{name}})"
+    },
+    "dealerIndicator": {
+      "dealer": "Dealer",
+      "label": "Dealer: {{name}}"
     },
     "trumpPrompt": {
       "titleRound1": "Trump Candidate",

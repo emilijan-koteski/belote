@@ -24,6 +24,7 @@ import { BelotPrompt } from "./components/BelotPrompt";
 import { BelotReveal } from "./components/BelotReveal";
 import { CapotAnimation } from "./components/CapotAnimation";
 import { DealAnimation } from "./components/DealAnimation";
+import { DealerIndicator } from "./components/DealerIndicator";
 import { DeclarationPrompt } from "./components/DeclarationPrompt";
 import { DeclarationReveal } from "./components/DeclarationReveal";
 import { HandCards } from "./components/HandCards";
@@ -372,12 +373,26 @@ export function GamePage() {
         lastTrickTeam={scoreRevealData?.lastTrickTeam}
       />
 
-      {/* Trump indicator - top right, visible only during play and later (AC 4.4.5) */}
-      <div className="absolute top-4 right-16 z-10">
+      {/* Dealer + trump indicators - top right, stacked vertically.
+          Trump indicator is gated to play phases (AC 4.4.5); the dealer
+          indicator is visible whenever the dealer's seat resolves to a player. */}
+      <div className="absolute top-4 right-16 z-10 flex flex-col items-end gap-2">
+        {(() => {
+          const dealerName = gameState.players.find(
+            (p) => p.seat === gameState.dealerSeat,
+          )?.username;
+          return dealerName ? <DealerIndicator dealerName={dealerName} /> : null;
+        })()}
         {gameState.trumpSuit && gameState.phase !== "dealing" && gameState.phase !== "bidding" && (
           <TrumpIndicator
             trumpSuit={gameState.trumpSuit}
             trumpCallerSeat={gameState.trumpCallerSeat}
+            trumpCallerName={
+              gameState.trumpCallerSeat !== null
+                ? (gameState.players.find((p) => p.seat === gameState.trumpCallerSeat)?.username ??
+                  null)
+                : null
+            }
           />
         )}
       </div>

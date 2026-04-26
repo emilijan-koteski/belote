@@ -64,4 +64,28 @@ describe("TrumpIndicator", () => {
     expect(screen.queryByTestId("trump-caller-team")).not.toBeInTheDocument();
     expect(screen.getByTestId("trump-indicator").className).not.toContain("border-team-");
   });
+
+  it("renders the trump caller's name alongside the team badge", () => {
+    render(<TrumpIndicator trumpSuit="S" trumpCallerSeat={0} trumpCallerName="Marko" />);
+    const nameEl = screen.getByTestId("trump-caller-name");
+    expect(nameEl).toBeInTheDocument();
+    expect(nameEl.textContent).toBe("Marko");
+    expect(screen.getByTestId("trump-indicator")).toHaveAttribute("aria-label");
+  });
+
+  it("omits the player name when trumpCallerName is empty or missing", () => {
+    const { rerender } = render(<TrumpIndicator trumpSuit="S" trumpCallerSeat={0} />);
+    expect(screen.queryByTestId("trump-caller-name")).not.toBeInTheDocument();
+
+    rerender(<TrumpIndicator trumpSuit="S" trumpCallerSeat={0} trumpCallerName="" />);
+    expect(screen.queryByTestId("trump-caller-name")).not.toBeInTheDocument();
+
+    rerender(<TrumpIndicator trumpSuit="S" trumpCallerSeat={0} trumpCallerName={null} />);
+    expect(screen.queryByTestId("trump-caller-name")).not.toBeInTheDocument();
+  });
+
+  it("omits the player name when no caller seat is set even if a name is provided", () => {
+    render(<TrumpIndicator trumpSuit="S" trumpCallerSeat={null} trumpCallerName="Marko" />);
+    expect(screen.queryByTestId("trump-caller-name")).not.toBeInTheDocument();
+  });
 });
