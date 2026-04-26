@@ -1,0 +1,21 @@
+# Default: auto-detect text vs binary; text files use LF in the working tree
+# on every OS. Overrides Windows core.autocrlf=true so Go's gofmt and other
+# LF-strict tools stop flagging files as needing reformatting.
+* text=auto eol=lf
+
+# Windows-native shells must keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Common binaries
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.gz   binary
+*.woff binary
+*.woff2 binary
