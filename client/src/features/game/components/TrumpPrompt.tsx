@@ -80,8 +80,10 @@ export function TrumpPrompt({
             : t("game.trumpPrompt.titleRound2")}
         </h2>
 
-        {/* Round 1: show trump candidate card */}
-        {biddingRound === 1 && trumpCandidate && (
+        {/* Trump candidate card — visible in both rounds. In round 2 the
+            picker still inherits this card as their 8th card after picking,
+            so it stays on screen alongside the suit-selection grid. */}
+        {trumpCandidate && (
           <div className="flex justify-center mb-4">
             <PlayingCard card={trumpCandidate} state="default" size="lg" withTransition={false} />
           </div>

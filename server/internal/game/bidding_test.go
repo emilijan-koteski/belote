@@ -495,6 +495,8 @@ func TestPickTrumpStage2Rotation(t *testing.T) {
 
 			// Snapshot the starting card layout so we can verify conservation.
 			startingCards := collectCards(gs)
+			require.NotNil(t, gs.TrumpCandidate, "fixture must have a face-up candidate")
+			originalCandidate := *gs.TrumpCandidate
 
 			action := game.Action{
 				Type:       game.ActionPickTrump,
@@ -512,6 +514,21 @@ func TestPickTrumpStage2Rotation(t *testing.T) {
 			}
 			assert.Empty(t, result.Deck, "Deck should be cleared after stage-2")
 			assert.Nil(t, result.TrumpCandidate, "TrumpCandidate should be cleared after stage-2")
+
+			// The originally face-up candidate transfers to the picker's hand
+			// in BOTH rounds — round 2 still inherits the candidate even
+			// though the suit is freely chosen. Assert exactly-once so a
+			// future fixture regression that puts a duplicate of the
+			// candidate into the picker's stage-1 hand can't silently
+			// satisfy the membership check.
+			candidateCount := 0
+			for _, c := range result.Players[tc.picker].Hand {
+				if c == originalCandidate {
+					candidateCount++
+				}
+			}
+			assert.Equal(t, 1, candidateCount,
+				"picker should receive the originally face-up candidate exactly once")
 
 			// Card conservation: same 32 cards across all hands now.
 			finalCards := collectCards(result)

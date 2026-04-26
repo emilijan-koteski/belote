@@ -80,10 +80,26 @@ describe("TrumpPrompt", () => {
     expect(screen.queryByTestId("trump-prompt-pass")).not.toBeInTheDocument();
   });
 
+  it("does not render the candidate card for round 2 non-active bidder", () => {
+    render(
+      <TrumpPrompt
+        trumpCandidate={trumpCandidate}
+        biddingRound={2}
+        isActiveBidder={false}
+        onPick={vi.fn()}
+        onPass={vi.fn()}
+      />,
+    );
+    // Non-active bidders see only the waiting indicator — no candidate card,
+    // no suit buttons, no PICK/PASS.
+    expect(screen.queryByTestId(/^playing-card-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("trump-prompt-suit-S")).not.toBeInTheDocument();
+  });
+
   it("shows suit buttons in round 2 for active bidder", () => {
     render(
       <TrumpPrompt
-        trumpCandidate={null}
+        trumpCandidate={trumpCandidate}
         biddingRound={2}
         isActiveBidder={true}
         onPick={vi.fn()}
@@ -101,7 +117,7 @@ describe("TrumpPrompt", () => {
     const onPick = vi.fn();
     render(
       <TrumpPrompt
-        trumpCandidate={null}
+        trumpCandidate={trumpCandidate}
         biddingRound={2}
         isActiveBidder={true}
         onPick={onPick}
@@ -110,6 +126,50 @@ describe("TrumpPrompt", () => {
     );
     await user.click(screen.getByTestId("trump-prompt-suit-H"));
     expect(onPick).toHaveBeenCalledWith("H");
+  });
+
+  it("renders the trump candidate card in round 2 for active bidder", () => {
+    render(
+      <TrumpPrompt
+        trumpCandidate={trumpCandidate}
+        biddingRound={2}
+        isActiveBidder={true}
+        onPick={vi.fn()}
+        onPass={vi.fn()}
+      />,
+    );
+    // The originally face-up candidate (KH) is given to the picker as their
+    // 8th card after they choose a suit, so it must stay visible alongside
+    // the suit-selection grid.
+    expect(screen.getByTestId("playing-card-KH")).toBeInTheDocument();
+  });
+
+  it("renders the trump candidate card in round 1 for active bidder", () => {
+    render(
+      <TrumpPrompt
+        trumpCandidate={trumpCandidate}
+        biddingRound={1}
+        isActiveBidder={true}
+        onPick={vi.fn()}
+        onPass={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("playing-card-KH")).toBeInTheDocument();
+  });
+
+  it("does not render a candidate card when trumpCandidate is null", () => {
+    render(
+      <TrumpPrompt
+        trumpCandidate={null}
+        biddingRound={2}
+        isActiveBidder={true}
+        onPick={vi.fn()}
+        onPass={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId(/^playing-card-/)).not.toBeInTheDocument();
+    // Suit buttons still render so the player isn't blocked from picking.
+    expect(screen.getByTestId("trump-prompt-suit-S")).toBeInTheDocument();
   });
 
   it("has role dialog and aria-modal", () => {
