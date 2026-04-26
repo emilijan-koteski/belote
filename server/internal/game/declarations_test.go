@@ -237,7 +237,7 @@ func TestDeclarationResolution(t *testing.T) {
 
 	t.Run("only one team declared — wins with full sum", func(t *testing.T) {
 		decls := []game.Declaration{
-			{Type: game.DeclarationSequence, Cards: makeCards("7S", "8S", "9S"), PlayerSeat: 0, Value: 20},        // Red
+			{Type: game.DeclarationSequence, Cards: makeCards("7S", "8S", "9S"), PlayerSeat: 0, Value: 20},           // Red
 			{Type: game.DeclarationFourOfAKind, Cards: makeCards("TS", "TH", "TD", "TC"), PlayerSeat: 2, Value: 100}, // Red (teammate)
 		}
 		state := completeTrick1(t, decls)
@@ -281,8 +281,8 @@ func completeTrick1(t *testing.T, decls []game.Declaration) *game.GameState {
 		seat int
 		card game.Card
 	}{
-		{1, game.Card{Rank: game.Rank8, Suit: game.SuitDiamonds}},  // seat 1 leads diamonds
-		{2, game.Card{Rank: game.Rank9, Suit: game.SuitHearts}},    // seat 2 void in diamonds, opponent winning → trumps
+		{1, game.Card{Rank: game.Rank8, Suit: game.SuitDiamonds}},   // seat 1 leads diamonds
+		{2, game.Card{Rank: game.Rank9, Suit: game.SuitHearts}},     // seat 2 void in diamonds, opponent winning → trumps
 		{3, game.Card{Rank: game.RankTen, Suit: game.SuitDiamonds}}, // seat 3 follows diamonds (Bitola: TD overplays 8D)
 		{0, game.Card{Rank: game.RankQueen, Suit: game.SuitHearts}}, // seat 0 void in diamonds with trump K+Q — must cut; QH < 9H so falls through to any-trump
 	}

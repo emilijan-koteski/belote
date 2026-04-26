@@ -100,8 +100,8 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 	wsHandler := &ws.WSHandler{
-		Hub:            hub,
-		JWTSecret:      cfg.JWTSecret,
+		Hub:             hub,
+		JWTSecret:       cfg.JWTSecret,
 		AcceptedOrigins: cfg.CORSOrigins,
 	}
 	e.GET("/ws", wsHandler.HandleWS)

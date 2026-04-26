@@ -93,16 +93,16 @@ const (
 
 // Action type constants for player actions.
 const (
-	ActionPlayCard     = "play_card"
-	ActionPickTrump    = "pick_trump"
-	ActionPassTrump    = "pass_trump"
+	ActionPlayCard      = "play_card"
+	ActionPickTrump     = "pick_trump"
+	ActionPassTrump     = "pass_trump"
 	ActionDeclare       = "declare"
 	ActionSkipDeclare   = "skip_declare"
 	ActionAnnounceBelot = "announce_belot"
 	ActionSkipBelot     = "skip_belot"
 	ActionPause         = "pause"
-	ActionUnpause      = "unpause"
-	ActionOwnerUnpause = "owner_unpause"
+	ActionUnpause       = "unpause"
+	ActionOwnerUnpause  = "owner_unpause"
 )
 
 // Action represents a player action submitted to the rules engine.

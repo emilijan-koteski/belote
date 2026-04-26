@@ -70,15 +70,15 @@ func (r *mockRepoForLobby) RunInTransaction(fn func(room.RoomRepository) error) 
 // Unused but required by interface
 func (r *mockRepoForLobby) Create(_ *room.Room) error                                { return nil }
 func (r *mockRepoForLobby) Update(rm *room.Room) error                               { r.rooms[rm.ID] = rm; return nil }
-func (r *mockRepoForLobby) FindByCode(_ string) (*room.Room, error)                   { return nil, nil }
-func (r *mockRepoForLobby) FindByStatus(_ string) ([]room.Room, error)                { return nil, nil }
-func (r *mockRepoForLobby) AddPlayer(_ *room.RoomPlayer) error                        { return nil }
-func (r *mockRepoForLobby) IncrementPlayerCount(_ uint) error                         { return nil }
-func (r *mockRepoForLobby) UpdatePlayerSeat(_ uint, _ uint, _ int, _ string) error    { return nil }
-func (r *mockRepoForLobby) ClearPlayerSeat(_ uint, _ uint) error                      { return nil }
-func (r *mockRepoForLobby) FindPlayerBySeat(_ uint, _ int) (*room.RoomPlayer, error)  { return nil, nil }
-func (r *mockRepoForLobby) FindQuickPlayRoom() (*room.Room, error)                    { return nil, nil }
-func (r *mockRepoForLobby) UpdateStatus(_ uint, _ string) error                       { return nil }
+func (r *mockRepoForLobby) FindByCode(_ string) (*room.Room, error)                  { return nil, nil }
+func (r *mockRepoForLobby) FindByStatus(_ string) ([]room.Room, error)               { return nil, nil }
+func (r *mockRepoForLobby) AddPlayer(_ *room.RoomPlayer) error                       { return nil }
+func (r *mockRepoForLobby) IncrementPlayerCount(_ uint) error                        { return nil }
+func (r *mockRepoForLobby) UpdatePlayerSeat(_ uint, _ uint, _ int, _ string) error   { return nil }
+func (r *mockRepoForLobby) ClearPlayerSeat(_ uint, _ uint) error                     { return nil }
+func (r *mockRepoForLobby) FindPlayerBySeat(_ uint, _ int) (*room.RoomPlayer, error) { return nil, nil }
+func (r *mockRepoForLobby) FindQuickPlayRoom() (*room.Room, error)                   { return nil, nil }
+func (r *mockRepoForLobby) UpdateStatus(_ uint, _ string) error                      { return nil }
 
 func setupLobbyTest() (*mockRepoForLobby, *room.LobbyDisconnectHandler) {
 	repo := newMockRepoForLobby()

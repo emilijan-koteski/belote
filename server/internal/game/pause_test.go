@@ -13,11 +13,11 @@ import (
 
 func TestPause(t *testing.T) {
 	tests := []struct {
-		name          string
-		setup         func() *game.GameState
-		action        game.Action
-		wantErr       *apperr.AppError
-		assertState   func(t *testing.T, gs *game.GameState)
+		name        string
+		setup       func() *game.GameState
+		action      game.Action
+		wantErr     *apperr.AppError
+		assertState func(t *testing.T, gs *game.GameState)
 	}{
 		{
 			name: "pause from playing phase succeeds",

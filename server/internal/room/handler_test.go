@@ -21,10 +21,10 @@ import (
 // --- Mock Repository ---
 
 type mockRoomRepo struct {
-	rooms      []*room.Room
-	players    []*room.RoomPlayer
-	nextID     uint
-	nextPID    uint
+	rooms   []*room.Room
+	players []*room.RoomPlayer
+	nextID  uint
+	nextPID uint
 }
 
 func newMockRoomRepo() *mockRoomRepo {

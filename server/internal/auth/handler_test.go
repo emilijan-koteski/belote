@@ -12,9 +12,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"github.com/emilijan/belote/server/internal/apperr"
 	"github.com/emilijan/belote/server/internal/user"
