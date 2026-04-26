@@ -289,9 +289,11 @@ func TestPlayCardOverTrump(t *testing.T) {
 	})
 }
 
-// TestPlayCardPartnerExemption tests that any card is legal when partner is winning.
-func TestPlayCardPartnerExemption(t *testing.T) {
-	t.Run("partner winning - any card legal including non-trump", func(t *testing.T) {
+// TestPlayCardVoidPartnerWinning tests that even when the partner is currently
+// winning the trick, a void player who holds trump must cut. Bitola has no
+// partner-winning exemption.
+func TestPlayCardVoidPartnerWinning(t *testing.T) {
+	t.Run("partner winning - void with trump must cut, non-trump rejected", func(t *testing.T) {
 		gs := testfixtures.NewGameMidPlay(1)
 		// Seat 0 (Red) leads with AS (highest non-trump spade)
 		leadAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
@@ -306,11 +308,18 @@ func TestPlayCardPartnerExemption(t *testing.T) {
 		require.NoError(t, err)
 
 		// Seat 2 (Red) — partner seat 0 is winning with AS.
-		// Void in spades, partner winning — any card is legal.
-		nonTrumpAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
+		// Seat 2 is void in spades and holds trump hearts (KH, QH, 8H, 7H).
+		// Non-trump AD is illegal — must cut.
+		nonTrumpAttempt := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
 			Card: &game.Card{Rank: game.RankAce, Suit: game.SuitDiamonds}}
-		result, err := game.ApplyAction(gs, nonTrumpAction)
+		_, err = game.ApplyAction(gs, nonTrumpAttempt)
+		assert.ErrorIs(t, err, apperr.ErrIllegalPlay,
+			"non-trump play must be rejected: void in led suit with trump in hand")
 
+		// Trump 7H is legal (any-trump fallback when no trump on table).
+		legalTrump := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
+			Card: &game.Card{Rank: game.Rank7, Suit: game.SuitHearts}}
+		result, err := game.ApplyAction(gs, legalTrump)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		assert.Len(t, result.CurrentTrick, 3)
@@ -353,14 +362,26 @@ func TestPlayCardNoTrumpHeld(t *testing.T) {
 func TestTrickResolution(t *testing.T) {
 	t.Run("4th card triggers resolution - winner gets points and leads next", func(t *testing.T) {
 		gs := testfixtures.NewGameMidPlay(1)
-		// Play 4 cards: all spades
+		// Override seat 2's hand to have no trumps so the void-no-trump branch
+		// applies: AD remains a legal play and seat 0 (AS) still wins the trick.
+		gs.Players[2].Hand = []game.Card{
+			{Rank: game.RankAce, Suit: game.SuitDiamonds},
+			{Rank: game.RankTen, Suit: game.SuitDiamonds},
+			{Rank: game.RankKing, Suit: game.SuitDiamonds},
+			{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+			{Rank: game.RankAce, Suit: game.SuitClubs},
+			{Rank: game.RankTen, Suit: game.SuitClubs},
+			{Rank: game.RankKing, Suit: game.SuitClubs},
+			{Rank: game.RankQueen, Suit: game.SuitClubs},
+		}
+		// Play 4 cards: spades led, seat 2 void in spades and trumps → AD legal.
 		cards := []struct {
 			seat int
 			card game.Card
 		}{
 			{0, game.Card{Rank: game.RankAce, Suit: game.SuitSpades}},   // 11 pts
 			{1, game.Card{Rank: game.RankJack, Suit: game.SuitSpades}},  // 2 pts
-			{2, game.Card{Rank: game.RankAce, Suit: game.SuitDiamonds}}, // void, partner winning, any card
+			{2, game.Card{Rank: game.RankAce, Suit: game.SuitDiamonds}}, // void, no trump, any card
 			{3, game.Card{Rank: game.RankJack, Suit: game.SuitDiamonds}},
 		}
 
@@ -613,28 +634,23 @@ func TestPlayCardStateImmutability(t *testing.T) {
 	})
 }
 
-// TestFull8TrickHand plays a complete 8-trick hand and verifies total points = 152.
+// TestFull8TrickHand plays a complete 8-trick hand and verifies that the
+// game progresses through scoring under the no-partner-exemption rule.
 func TestFull8TrickHand(t *testing.T) {
-	t.Run("all 32 cards played total 152 points", func(t *testing.T) {
+	t.Run("all 32 cards played, hand ends with scoring", func(t *testing.T) {
 		gs := testfixtures.NewGameMidPlay(1)
 
-		// Play all 8 tricks systematically using the fixture's card distribution.
-		// Trump is Hearts. Seat 0 leads each trick with a spade (until exhausted).
-		// We need to carefully play legal cards for each trick.
-
-		// Trick 1: Seat 0 leads AS (Spade lead)
-		// Seat 1: 9S (follow), Seat 2: AD (void-partner winning-any), Seat 3: JD (void-any)
-		// Winner: AS (seat 0), Points: 11+0+11+2=24
+		// Trick 1: seat 0 leads AS, seat 2 (void in spades, holds trumps) must
+		// cut with lowest trump 7H — seat 2 wins (Red).
 		trick1 := []struct {
 			seat int
 			card game.Card
 		}{
 			{0, game.Card{Rank: game.RankAce, Suit: game.SuitSpades}},
 			{1, game.Card{Rank: game.Rank9, Suit: game.SuitSpades}},
-			{2, game.Card{Rank: game.RankAce, Suit: game.SuitDiamonds}},
+			{2, game.Card{Rank: game.Rank7, Suit: game.SuitHearts}}, // void in S, must trump
 			{3, game.Card{Rank: game.RankJack, Suit: game.SuitDiamonds}},
 		}
-
 		state := gs
 		for _, c := range trick1 {
 			action := game.Action{Type: game.ActionPlayCard, PlayerSeat: c.seat, Card: &c.card}
@@ -643,17 +659,17 @@ func TestFull8TrickHand(t *testing.T) {
 			require.NoError(t, err, "trick 1 seat %d", c.seat)
 		}
 		assert.Equal(t, 2, state.TrickNumber)
-		assert.Equal(t, 0, state.ActivePlayerSeat) // seat 0 won
+		assert.Equal(t, 2, state.ActivePlayerSeat) // 7H trump wins → seat 2
 
-		// Trick 2: Seat 0 leads TS
+		// Trick 2: seat 2 leads AC; everyone follows.
 		trick2 := []struct {
 			seat int
 			card game.Card
 		}{
-			{0, game.Card{Rank: game.RankTen, Suit: game.SuitSpades}},
-			{1, game.Card{Rank: game.Rank8, Suit: game.SuitSpades}},
-			{2, game.Card{Rank: game.RankTen, Suit: game.SuitDiamonds}},
-			{3, game.Card{Rank: game.Rank9, Suit: game.SuitDiamonds}},
+			{2, game.Card{Rank: game.RankAce, Suit: game.SuitClubs}},
+			{3, game.Card{Rank: game.Rank9, Suit: game.SuitClubs}},
+			{0, game.Card{Rank: game.Rank7, Suit: game.SuitClubs}},
+			{1, game.Card{Rank: game.Rank8, Suit: game.SuitClubs}},
 		}
 		for _, c := range trick2 {
 			action := game.Action{Type: game.ActionPlayCard, PlayerSeat: c.seat, Card: &c.card}
@@ -661,16 +677,18 @@ func TestFull8TrickHand(t *testing.T) {
 			state, err = game.ApplyAction(state, action)
 			require.NoError(t, err, "trick 2 seat %d", c.seat)
 		}
+		assert.Equal(t, 2, state.ActivePlayerSeat) // AC wins → seat 2
 
-		// Trick 3: Seat 0 leads KS
+		// Trick 3: seat 2 leads TC. Seat 0 void in clubs, holds trumps → must
+		// cut with TH. Seat 1 void in clubs, must over-trump TH → 9H.
 		trick3 := []struct {
 			seat int
 			card game.Card
 		}{
-			{0, game.Card{Rank: game.RankKing, Suit: game.SuitSpades}},
-			{1, game.Card{Rank: game.Rank7, Suit: game.SuitSpades}},
-			{2, game.Card{Rank: game.RankKing, Suit: game.SuitHearts}}, // void, opponent 1 winning — must trump
-			{3, game.Card{Rank: game.Rank8, Suit: game.SuitDiamonds}},  // any card
+			{2, game.Card{Rank: game.RankTen, Suit: game.SuitClubs}},
+			{3, game.Card{Rank: game.RankJack, Suit: game.SuitClubs}},
+			{0, game.Card{Rank: game.RankTen, Suit: game.SuitHearts}},
+			{1, game.Card{Rank: game.Rank9, Suit: game.SuitHearts}},
 		}
 		for _, c := range trick3 {
 			action := game.Action{Type: game.ActionPlayCard, PlayerSeat: c.seat, Card: &c.card}
@@ -678,18 +696,19 @@ func TestFull8TrickHand(t *testing.T) {
 			state, err = game.ApplyAction(state, action)
 			require.NoError(t, err, "trick 3 seat %d", c.seat)
 		}
-		// KH (trump) wins — seat 2
-		assert.Equal(t, 2, state.ActivePlayerSeat)
+		assert.Equal(t, 1, state.ActivePlayerSeat) // 9H over-trumps TH → seat 1
 
-		// Trick 4: Seat 2 leads QH (trump)
+		// Trick 4: seat 1 leads JH (top trump). Seat 2 has only lower trumps,
+		// any-trump fallback → 8H. Seat 3 void trump → any (7D). Seat 0 must
+		// follow trump, only AH, doesn't beat JH, any-trump fallback → AH.
 		trick4 := []struct {
 			seat int
 			card game.Card
 		}{
-			{2, game.Card{Rank: game.RankQueen, Suit: game.SuitHearts}},
-			{3, game.Card{Rank: game.Rank7, Suit: game.SuitDiamonds}},  // no trump, any
-			{0, game.Card{Rank: game.RankAce, Suit: game.SuitHearts}},  // trump AH, over-trump
-			{1, game.Card{Rank: game.RankJack, Suit: game.SuitHearts}}, // trump JH > AH, over-trump
+			{1, game.Card{Rank: game.RankJack, Suit: game.SuitHearts}},
+			{2, game.Card{Rank: game.Rank8, Suit: game.SuitHearts}},
+			{3, game.Card{Rank: game.Rank7, Suit: game.SuitDiamonds}},
+			{0, game.Card{Rank: game.RankAce, Suit: game.SuitHearts}},
 		}
 		for _, c := range trick4 {
 			action := game.Action{Type: game.ActionPlayCard, PlayerSeat: c.seat, Card: &c.card}
@@ -697,18 +716,19 @@ func TestFull8TrickHand(t *testing.T) {
 			state, err = game.ApplyAction(state, action)
 			require.NoError(t, err, "trick 4 seat %d", c.seat)
 		}
-		// JH (trump order 7) wins — seat 1
-		assert.Equal(t, 1, state.ActivePlayerSeat)
+		assert.Equal(t, 1, state.ActivePlayerSeat) // JH wins → seat 1
 
-		// Trick 5: Seat 1 leads 9H (trump)
+		// Trick 5: seat 1 leads QD. Seat 2 holds AD + TD — must follow and
+		// overplay QD with TD (lowest overplay). Seat 3 follows D (low),
+		// seat 0 must follow D and overplay → KD.
 		trick5 := []struct {
 			seat int
 			card game.Card
 		}{
-			{1, game.Card{Rank: game.Rank9, Suit: game.SuitHearts}},
-			{2, game.Card{Rank: game.Rank8, Suit: game.SuitHearts}},   // can't over-trump, still must play trump
-			{3, game.Card{Rank: game.RankKing, Suit: game.SuitClubs}}, // no trump, any
-			{0, game.Card{Rank: game.RankTen, Suit: game.SuitHearts}}, // can't over-trump 9H(order 6), play lower
+			{1, game.Card{Rank: game.RankQueen, Suit: game.SuitDiamonds}},
+			{2, game.Card{Rank: game.RankTen, Suit: game.SuitDiamonds}},
+			{3, game.Card{Rank: game.Rank8, Suit: game.SuitDiamonds}},
+			{0, game.Card{Rank: game.RankKing, Suit: game.SuitDiamonds}},
 		}
 		for _, c := range trick5 {
 			action := game.Action{Type: game.ActionPlayCard, PlayerSeat: c.seat, Card: &c.card}
@@ -716,18 +736,18 @@ func TestFull8TrickHand(t *testing.T) {
 			state, err = game.ApplyAction(state, action)
 			require.NoError(t, err, "trick 5 seat %d", c.seat)
 		}
-		// 9H (trump order 6) wins — seat 1
-		assert.Equal(t, 1, state.ActivePlayerSeat)
+		assert.Equal(t, 2, state.ActivePlayerSeat) // QH trump wins → seat 2
 
-		// Trick 6: Seat 1 leads QD
+		// Trick 6: seat 2 leads AD. Seat 3 follows D. Seats 0 and 1 are void
+		// in diamonds and hold no trumps → any card.
 		trick6 := []struct {
 			seat int
 			card game.Card
 		}{
-			{1, game.Card{Rank: game.RankQueen, Suit: game.SuitDiamonds}},
-			{2, game.Card{Rank: game.Rank7, Suit: game.SuitHearts}},      // void in D, opponent winning, must trump
-			{3, game.Card{Rank: game.RankQueen, Suit: game.SuitClubs}},   // any
-			{0, game.Card{Rank: game.RankKing, Suit: game.SuitDiamonds}}, // follow suit
+			{2, game.Card{Rank: game.RankAce, Suit: game.SuitDiamonds}},
+			{3, game.Card{Rank: game.Rank9, Suit: game.SuitDiamonds}},
+			{0, game.Card{Rank: game.RankQueen, Suit: game.SuitSpades}},
+			{1, game.Card{Rank: game.Rank7, Suit: game.SuitSpades}},
 		}
 		for _, c := range trick6 {
 			action := game.Action{Type: game.ActionPlayCard, PlayerSeat: c.seat, Card: &c.card}
@@ -735,18 +755,17 @@ func TestFull8TrickHand(t *testing.T) {
 			state, err = game.ApplyAction(state, action)
 			require.NoError(t, err, "trick 6 seat %d", c.seat)
 		}
-		// 7H (trump) wins — seat 2
-		assert.Equal(t, 2, state.ActivePlayerSeat)
+		assert.Equal(t, 2, state.ActivePlayerSeat) // AD wins → seat 2
 
-		// Trick 7: Seat 2 leads AC
+		// Trick 7: seat 2 leads KH (trump). All others void in trump and any-card.
 		trick7 := []struct {
 			seat int
 			card game.Card
 		}{
-			{2, game.Card{Rank: game.RankAce, Suit: game.SuitClubs}},
-			{3, game.Card{Rank: game.RankJack, Suit: game.SuitClubs}}, // follow suit
-			{0, game.Card{Rank: game.Rank7, Suit: game.SuitClubs}},    // follow suit
-			{1, game.Card{Rank: game.Rank8, Suit: game.SuitClubs}},    // follow suit
+			{2, game.Card{Rank: game.RankKing, Suit: game.SuitHearts}},
+			{3, game.Card{Rank: game.RankKing, Suit: game.SuitClubs}},
+			{0, game.Card{Rank: game.RankKing, Suit: game.SuitSpades}},
+			{1, game.Card{Rank: game.RankJack, Suit: game.SuitSpades}},
 		}
 		for _, c := range trick7 {
 			action := game.Action{Type: game.ActionPlayCard, PlayerSeat: c.seat, Card: &c.card}
@@ -754,18 +773,17 @@ func TestFull8TrickHand(t *testing.T) {
 			state, err = game.ApplyAction(state, action)
 			require.NoError(t, err, "trick 7 seat %d", c.seat)
 		}
-		// AC wins — seat 2
-		assert.Equal(t, 2, state.ActivePlayerSeat)
+		assert.Equal(t, 2, state.ActivePlayerSeat) // KH wins → seat 2
 
-		// Trick 8: Seat 2 leads TC
+		// Trick 8: each player has one card.
 		trick8 := []struct {
 			seat int
 			card game.Card
 		}{
-			{2, game.Card{Rank: game.RankTen, Suit: game.SuitClubs}},
-			{3, game.Card{Rank: game.Rank9, Suit: game.SuitClubs}},      // follow suit
-			{0, game.Card{Rank: game.RankQueen, Suit: game.SuitSpades}}, // void, partner winning, any
-			{1, game.Card{Rank: game.RankJack, Suit: game.SuitSpades}},  // void, opponent winning — no trump, any
+			{2, game.Card{Rank: game.RankQueen, Suit: game.SuitHearts}},
+			{3, game.Card{Rank: game.RankQueen, Suit: game.SuitClubs}},
+			{0, game.Card{Rank: game.RankTen, Suit: game.SuitSpades}},
+			{1, game.Card{Rank: game.Rank8, Suit: game.SuitSpades}},
 		}
 		for _, c := range trick8 {
 			action := game.Action{Type: game.ActionPlayCard, PlayerSeat: c.seat, Card: &c.card}

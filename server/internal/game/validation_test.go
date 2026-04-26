@@ -96,9 +96,11 @@ func TestValidationFourthPlayer(t *testing.T) {
 	})
 }
 
-// TestValidationPartnerTrumped tests partner exemption when partner played trump.
+// TestValidationPartnerTrumped tests that the must-overplay rule still applies
+// when partner played the highest card so far — Bitola has no partner-winning
+// exemption for void-in-led-suit either (covered separately).
 func TestValidationPartnerTrumped(t *testing.T) {
-	t.Run("partner trumped and is winning - any card legal", func(t *testing.T) {
+	t.Run("partner trumped and is winning - has led suit, must follow", func(t *testing.T) {
 		gs := testfixtures.NewGameMidPlay(1)
 		// Seat 1 (Blue) leads spade, Seat 2 (Red) trumps (partner to seat 0)
 		gs.ActivePlayerSeat = 1
@@ -108,7 +110,7 @@ func TestValidationPartnerTrumped(t *testing.T) {
 		}{
 			{1, game.Card{Rank: game.RankJack, Suit: game.SuitSpades}},
 			{2, game.Card{Rank: game.RankKing, Suit: game.SuitHearts}}, // trump, wins
-			{3, game.Card{Rank: game.Rank7, Suit: game.SuitDiamonds}},  // any card
+			{3, game.Card{Rank: game.Rank7, Suit: game.SuitDiamonds}},  // any card (void, no trump)
 		}
 
 		state := gs
@@ -120,9 +122,7 @@ func TestValidationPartnerTrumped(t *testing.T) {
 		}
 
 		// Seat 0 (Red) — partner seat 2 trumped and is winning.
-		// Spade was led. Seat 0 has spades but also other suits.
-		// Must follow suit (has spades) — partner exemption only applies when void.
-		// So seat 0 must play a spade.
+		// Spade was led. Seat 0 has spades; must follow suit regardless of partner state.
 		validSpade := game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
 			Card: &game.Card{Rank: game.RankAce, Suit: game.SuitSpades}}
 		result, err := game.ApplyAction(state, validSpade)
@@ -142,56 +142,6 @@ func TestValidationPartnerTrumped(t *testing.T) {
 		result, err = game.ApplyAction(state2, illegalNonSpade)
 		assert.ErrorIs(t, err, apperr.ErrIllegalPlay)
 		assert.Nil(t, result)
-	})
-
-	t.Run("void in led suit and partner trumped winning - any card legal", func(t *testing.T) {
-		gs := testfixtures.NewGameMidPlay(1)
-		// Setup: seat 0 leads spade, seat 1 (Blue, void in spades) trumps,
-		// seat 2 (Red) follows spade, seat 3 (Blue, partner of seat 1) is void
-		// in spades. Partner seat 1 is winning with trump → any card legal.
-		// Give seat 1 no spades but a trump.
-		gs.Players[1].Hand = []game.Card{
-			{Rank: game.Rank9, Suit: game.SuitHearts}, // trump order 6
-			{Rank: game.Rank8, Suit: game.SuitClubs},
-			{Rank: game.Rank9, Suit: game.SuitClubs},
-			{Rank: game.RankQueen, Suit: game.SuitDiamonds},
-			{Rank: game.RankJack, Suit: game.SuitDiamonds},
-			{Rank: game.Rank9, Suit: game.SuitDiamonds},
-			{Rank: game.Rank8, Suit: game.SuitDiamonds},
-			{Rank: game.Rank7, Suit: game.SuitDiamonds},
-		}
-
-		// Seat 0 (Red) leads QS
-		leadAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
-			Card: &game.Card{Rank: game.RankQueen, Suit: game.SuitSpades}}
-		gs, err := game.ApplyAction(gs, leadAction)
-		require.NoError(t, err)
-
-		// Seat 1 (Blue) void in spades, opponent Red winning → trumps with 9H
-		trumpAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
-			Card: &game.Card{Rank: game.Rank9, Suit: game.SuitHearts}}
-		gs, err = game.ApplyAction(gs, trumpAction)
-		require.NoError(t, err)
-
-		// Seat 2 (Red) void in spades, opponent Blue winning → must trump.
-		// Must over-trump 9H(6). Seat 2 has KH(3), QH(2), 8H(1), 7H(0). None beat 9H(6).
-		// So any trump is legal.
-		seat2Trump := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
-			Card: &game.Card{Rank: game.RankKing, Suit: game.SuitHearts}}
-		gs, err = game.ApplyAction(gs, seat2Trump)
-		require.NoError(t, err)
-
-		// Seat 3 (Blue) is void in spades, no trump. Partner seat 1 (Blue) trumped with 9H.
-		// Current trick winner: 9H (seat 1, Blue, trump order 6) beats KH (seat 2, Red, order 3).
-		// Wait — 9H order 6 > KH order 3. Seat 1 (Blue) is still winning.
-		// Seat 3 is Blue team → partner winning → any card legal.
-		// Seat 3 has no trump → any card legal anyway, but the partner exemption is the reason.
-		anyCard := game.Action{Type: game.ActionPlayCard, PlayerSeat: 3,
-			Card: &game.Card{Rank: game.RankKing, Suit: game.SuitClubs}}
-		result, err := game.ApplyAction(gs, anyCard)
-
-		require.NoError(t, err, "partner trumped and winning — any card should be legal")
-		require.NotNil(t, result)
 	})
 }
 
@@ -371,6 +321,213 @@ func TestValidationMustOverplayLedSuit(t *testing.T) {
 		// Seat 0: AS overplays — legal.
 		result, err := game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
 			Card: &game.Card{Rank: game.RankAce, Suit: game.SuitSpades}})
+		require.NoError(t, err)
+		require.NotNil(t, result)
+	})
+
+	t.Run("img_two: void with trump, partner already trumped — must over-trump", func(t *testing.T) {
+		// Trump = Hearts. Trick: cvetanka leads 9C, emilijan trumps QH, irena
+		// follows 7C, kiro to play. Kiro is void in clubs and holds 9H + TH
+		// (both higher than QH(2)). Diamonds in hand must be illegal; only the
+		// over-trumps are legal. Seats CCW: 1 → 2 → 3 → 0 — kiro is seat 0
+		// playing fourth.
+		setup := func() *game.GameState {
+			gs := testfixtures.NewGameMidPlay(1)
+			gs.ActivePlayerSeat = 1
+			gs.Players[0].Hand = []game.Card{
+				{Rank: game.Rank9, Suit: game.SuitHearts},   // trump order 6
+				{Rank: game.RankTen, Suit: game.SuitHearts}, // trump order 4
+				{Rank: game.Rank8, Suit: game.SuitDiamonds},
+				{Rank: game.RankTen, Suit: game.SuitDiamonds},
+				{Rank: game.RankJack, Suit: game.SuitDiamonds},
+				{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+				{Rank: game.RankAce, Suit: game.SuitDiamonds},
+			}
+			gs.Players[1].Hand = []game.Card{
+				{Rank: game.Rank9, Suit: game.SuitClubs},
+				{Rank: game.Rank8, Suit: game.SuitClubs},
+			}
+			gs.Players[2].Hand = []game.Card{
+				{Rank: game.RankQueen, Suit: game.SuitHearts}, // trump order 2
+				{Rank: game.RankAce, Suit: game.SuitDiamonds},
+			}
+			gs.Players[3].Hand = []game.Card{
+				{Rank: game.Rank7, Suit: game.SuitClubs}, // only club
+				{Rank: game.RankKing, Suit: game.SuitDiamonds},
+			}
+
+			gs, err := game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
+				Card: &game.Card{Rank: game.Rank9, Suit: game.SuitClubs}})
+			require.NoError(t, err)
+			gs, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
+				Card: &game.Card{Rank: game.RankQueen, Suit: game.SuitHearts}})
+			require.NoError(t, err)
+			gs, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 3,
+				Card: &game.Card{Rank: game.Rank7, Suit: game.SuitClubs}})
+			require.NoError(t, err)
+			return gs
+		}
+
+		// Each diamond must be rejected.
+		for _, illegalRank := range []game.Rank{game.Rank8, game.RankTen, game.RankJack, game.RankQueen, game.RankAce} {
+			_, err := game.ApplyAction(setup(), game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
+				Card: &game.Card{Rank: illegalRank, Suit: game.SuitDiamonds}})
+			assert.ErrorIs(t, err, apperr.ErrIllegalPlay, "%s of D must be illegal: void in clubs with over-trump available", illegalRank)
+		}
+
+		// Each over-trump (9H, TH) must be accepted.
+		for _, legalRank := range []game.Rank{game.Rank9, game.RankTen} {
+			result, err := game.ApplyAction(setup(), game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
+				Card: &game.Card{Rank: legalRank, Suit: game.SuitHearts}})
+			require.NoError(t, err, "%s of H must over-trump QH", legalRank)
+			require.NotNil(t, result)
+		}
+	})
+
+	t.Run("img_three: void in non-trump, partner winning, has one trump — only that trump", func(t *testing.T) {
+		// Trump = Spades. Trick: 9C, TC, AC by three players. Emilijan to play
+		// (seat 0), holds 8S (only trump) plus J♦ K♦. No trump on table; partner
+		// is currently winning AC. Under new rule, the single trump 8S must be
+		// the only legal play; diamonds are illegal.
+		gs := testfixtures.NewGameMidPlay(1)
+		spades := game.SuitSpades
+		gs.TrumpSuit = &spades
+		callerSeat := 0
+		gs.TrumpCallerSeat = &callerSeat
+		gs.ActivePlayerSeat = 1
+		gs.Players[0].Hand = []game.Card{
+			{Rank: game.Rank8, Suit: game.SuitSpades},
+			{Rank: game.RankJack, Suit: game.SuitDiamonds},
+			{Rank: game.RankKing, Suit: game.SuitDiamonds},
+		}
+		gs.Players[1].Hand = []game.Card{
+			{Rank: game.Rank9, Suit: game.SuitClubs},
+			{Rank: game.Rank7, Suit: game.SuitDiamonds},
+		}
+		gs.Players[2].Hand = []game.Card{
+			{Rank: game.RankAce, Suit: game.SuitClubs},
+			{Rank: game.RankQueen, Suit: game.SuitDiamonds},
+		}
+		gs.Players[3].Hand = []game.Card{
+			{Rank: game.RankTen, Suit: game.SuitClubs},
+			{Rank: game.Rank8, Suit: game.SuitDiamonds},
+		}
+
+		gs, err := game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
+			Card: &game.Card{Rank: game.Rank9, Suit: game.SuitClubs}})
+		require.NoError(t, err)
+		gs, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
+			Card: &game.Card{Rank: game.RankAce, Suit: game.SuitClubs}})
+		require.NoError(t, err)
+		gs, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 3,
+			Card: &game.Card{Rank: game.RankTen, Suit: game.SuitClubs}})
+		require.NoError(t, err)
+
+		// JD/KD illegal — must trump.
+		_, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
+			Card: &game.Card{Rank: game.RankJack, Suit: game.SuitDiamonds}})
+		assert.ErrorIs(t, err, apperr.ErrIllegalPlay, "JD must be illegal: void in clubs, has 8S trump")
+		_, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
+			Card: &game.Card{Rank: game.RankKing, Suit: game.SuitDiamonds}})
+		assert.ErrorIs(t, err, apperr.ErrIllegalPlay, "KD must be illegal: void in clubs, has 8S trump")
+
+		// 8S legal — only trump in hand.
+		result, err := game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
+			Card: &game.Card{Rank: game.Rank8, Suit: game.SuitSpades}})
+		require.NoError(t, err)
+		require.NotNil(t, result)
+	})
+
+	t.Run("img_four: void in non-trump, no trump on table yet — only trumps legal", func(t *testing.T) {
+		// Trump = Hearts. Trick: seat 1 leads 7S, seat 2 follows 9S (overplay),
+		// seat 3 has no spades and no trumps → any card. Then seat 0 (kiro)
+		// plays — void in spades, holds multiple hearts plus diamonds. Diamonds
+		// must be illegal; every trump must be legal (no over-trump constraint
+		// because no trump is on the table yet).
+		setup := func() *game.GameState {
+			gs := testfixtures.NewGameMidPlay(1)
+			gs.ActivePlayerSeat = 1
+			gs.Players[0].Hand = []game.Card{
+				{Rank: game.Rank7, Suit: game.SuitHearts},
+				{Rank: game.Rank8, Suit: game.SuitHearts},
+				{Rank: game.RankTen, Suit: game.SuitHearts},
+				{Rank: game.RankKing, Suit: game.SuitHearts},
+				{Rank: game.Rank7, Suit: game.SuitDiamonds},
+				{Rank: game.Rank8, Suit: game.SuitDiamonds},
+				{Rank: game.RankTen, Suit: game.SuitDiamonds},
+			}
+			gs.Players[1].Hand = []game.Card{
+				{Rank: game.Rank7, Suit: game.SuitSpades},
+			}
+			gs.Players[2].Hand = []game.Card{
+				{Rank: game.Rank9, Suit: game.SuitSpades},
+				{Rank: game.RankAce, Suit: game.SuitDiamonds},
+			}
+			gs.Players[3].Hand = []game.Card{
+				{Rank: game.RankKing, Suit: game.SuitClubs},
+				{Rank: game.RankQueen, Suit: game.SuitClubs},
+			}
+
+			gs, err := game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
+				Card: &game.Card{Rank: game.Rank7, Suit: game.SuitSpades}})
+			require.NoError(t, err)
+			gs, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
+				Card: &game.Card{Rank: game.Rank9, Suit: game.SuitSpades}})
+			require.NoError(t, err)
+			gs, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 3,
+				Card: &game.Card{Rank: game.RankKing, Suit: game.SuitClubs}})
+			require.NoError(t, err)
+			return gs
+		}
+
+		for _, illegalRank := range []game.Rank{game.Rank7, game.Rank8, game.RankTen} {
+			_, err := game.ApplyAction(setup(), game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
+				Card: &game.Card{Rank: illegalRank, Suit: game.SuitDiamonds}})
+			assert.ErrorIs(t, err, apperr.ErrIllegalPlay, "%s of D must be illegal: must trump", illegalRank)
+		}
+
+		for _, legalRank := range []game.Rank{game.Rank7, game.Rank8, game.RankTen, game.RankKing} {
+			result, err := game.ApplyAction(setup(), game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
+				Card: &game.Card{Rank: legalRank, Suit: game.SuitHearts}})
+			require.NoError(t, err, "%s of H must be legal", legalRank)
+			require.NotNil(t, result)
+		}
+	})
+
+	t.Run("void in led suit, no trump in hand — any card legal", func(t *testing.T) {
+		// Sanity branch 2b: when player is void in led suit AND holds no trump,
+		// the original "any card" rule still applies.
+		gs := testfixtures.NewGameMidPlay(1)
+		gs.ActivePlayerSeat = 0
+		gs.Players[0].Hand = []game.Card{
+			{Rank: game.RankAce, Suit: game.SuitSpades},
+			{Rank: game.RankKing, Suit: game.SuitClubs},
+		}
+		gs.Players[1].Hand = []game.Card{
+			{Rank: game.Rank8, Suit: game.SuitDiamonds},
+		}
+		gs.Players[2].Hand = []game.Card{
+			{Rank: game.RankAce, Suit: game.SuitDiamonds},
+		}
+		gs.Players[3].Hand = []game.Card{
+			{Rank: game.Rank7, Suit: game.SuitClubs},
+		}
+
+		// Seat 0 leads diamonds wait — seat 0 has no diamonds. Reset: seat 1 leads.
+		gs.ActivePlayerSeat = 1
+		gs, err := game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
+			Card: &game.Card{Rank: game.Rank8, Suit: game.SuitDiamonds}})
+		require.NoError(t, err)
+		gs, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
+			Card: &game.Card{Rank: game.RankAce, Suit: game.SuitDiamonds}})
+		require.NoError(t, err)
+		gs, err = game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 3,
+			Card: &game.Card{Rank: game.Rank7, Suit: game.SuitClubs}})
+		require.NoError(t, err)
+
+		// Seat 0 void in diamonds, no hearts (no trump). Spade or Club legal.
+		result, err := game.ApplyAction(gs, game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
+			Card: &game.Card{Rank: game.RankKing, Suit: game.SuitClubs}})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 	})

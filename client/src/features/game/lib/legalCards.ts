@@ -22,16 +22,8 @@ const NON_TRUMP_RANK_ORDER: Record<Rank, number> = {
   "7": 0,
 };
 
-function teamForSeat(seat: number): number {
-  return seat % 2;
-}
-
 function filterBySuit(hand: Card[], suit: Suit): Card[] {
   return hand.filter((c) => c.suit === suit);
-}
-
-function cardStrength(card: Card, trumpSuit: Suit): number {
-  return card.suit === trumpSuit ? TRUMP_RANK_ORDER[card.rank] : NON_TRUMP_RANK_ORDER[card.rank];
 }
 
 function highestTrumpInTrick(trick: TrickCard[], trumpSuit: Suit): Rank | null {
@@ -74,49 +66,13 @@ function applyMustOverplayLedSuit(
   return suitCards.filter((c) => rankOrder[c.rank] > bestOrder);
 }
 
-function currentTrickWinnerSeat(trick: TrickCard[], trumpSuit: Suit): number {
-  const first = trick[0];
-  if (!first) return -1;
-  const ledSuit = first.card.suit;
-  let bestSeat = first.playerSeat;
-  let bestIsTrump = first.card.suit === trumpSuit;
-  let bestOrder = cardStrength(first.card, trumpSuit);
-
-  for (let i = 1; i < trick.length; i++) {
-    const tc = trick[i];
-    if (!tc) continue;
-    const isTrump = tc.card.suit === trumpSuit;
-    const isLed = tc.card.suit === ledSuit;
-    const order = cardStrength(tc.card, trumpSuit);
-
-    if (isTrump && !bestIsTrump) {
-      bestSeat = tc.playerSeat;
-      bestIsTrump = true;
-      bestOrder = order;
-    } else if (isTrump && bestIsTrump && order > bestOrder) {
-      bestSeat = tc.playerSeat;
-      bestOrder = order;
-    } else if (!isTrump && !bestIsTrump && isLed && order > bestOrder) {
-      bestSeat = tc.playerSeat;
-      bestOrder = order;
-    }
-  }
-  return bestSeat;
-}
-
-function isOpponentWinning(state: GameState, seat: number): boolean {
-  const currentTrick = state.currentTrick ?? [];
-  if (currentTrick.length === 0 || state.trumpSuit === null) return false;
-  const winnerSeat = currentTrickWinnerSeat(currentTrick, state.trumpSuit);
-  return teamForSeat(winnerSeat) !== teamForSeat(seat);
-}
-
 /**
  * Mirror of server/internal/game/validation.go `legalCards`. Returns the subset
  * of the seat's hand that is legal to play given the current trick state.
  * Bitola variant: must overplay the highest led-suit card on the table when
- * possible (whether trump or not), trump obligation when void in led suit and
- * opponent is winning, partner exemption.
+ * possible (whether trump or not); when void in led suit, must cut with trump
+ * if any trump is held (over-trump if possible, otherwise any trump) — no
+ * partner-winning exemption; otherwise any card is legal.
  */
 export function legalCards(state: GameState, seat: number): Card[] {
   const player = state.players[seat];
@@ -149,7 +105,7 @@ export function legalCards(state: GameState, seat: number): Card[] {
   }
 
   const trumpCards = filterBySuit(hand, trumpSuit);
-  if (isOpponentWinning(state, seat) && trumpCards.length > 0) {
+  if (trumpCards.length > 0) {
     const overTrumps = applyOverTrump(trumpCards, currentTrick, trumpSuit);
     if (overTrumps.length > 0) return overTrumps;
     return trumpCards;

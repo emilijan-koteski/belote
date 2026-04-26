@@ -237,29 +237,12 @@ describe("legalCards", () => {
     expect(legalCards(state, 1).map((c) => `${c.rank}${c.suit}`)).toEqual(["JC"]);
   });
 
-  it("partner exemption: void in led suit, partner winning → any card", () => {
-    // Seat 0 led TD. Partner (seat 2) trumped with JC (winning).
-    // I'm seat 0... wait — seat 0 led. Let me use seat 2 instead. Actually:
-    // Seat 1 leads TD. Seat 2 (opponent of seat 1) takes with JC. Seat 3 (partner of seat 1).
-    // For seat 3: partner would be seat 1, but seat 1 led and is losing. Let me re-pick.
-    //
-    // Cleaner: seat 0 leads. Seat 1 plays. Seat 2 (partner of 0) trumps. Seat 3's turn.
-    // Seat 3 is partner of seat 1 (both Blue). But seat 2 is winning, so seat 3 must trump.
-    //
-    // Correct scenario: seat 0 leads TD. Seat 1 plays 7D. Seat 2 (partner of 0) trumps 8C.
-    // Now seat 3 plays — seat 3 is opponent of seat 2, so opponent-winning check runs.
-    // For partner-winning, I need winning seat's team == my team.
-    //
-    // Use: seat 1 leads TD. Seat 2 plays 7D. Seat 3 (partner of 1) trumps JC. Seat 0's turn.
-    // Seat 0 is partner of seat 2 (both Red, seats 0+2). Winner is seat 3 (Blue) — opponent.
-    // Wrong again. Let me be explicit:
-    //   Team Red = seats 0, 2; Team Blue = seats 1, 3
-    //   Partner of seat 0 = seat 2; partner of seat 1 = seat 3.
-    //
-    // Scenario for partner winning: seat 2 (Red) leads, seat 3 plays, seat 0 (partner of 2) plays.
-    // Use: seat 2 leads TD. Seat 3 plays 7D. I'm seat 0 (partner of seat 2).
-    // Winning seat = seat 2 (led TD, no trump played). Seat 2 team = 0 = my team → partner winning.
-    // I'm void in diamonds, void or not of trump — any card legal.
+  it("void in led suit with trump in hand → must cut even when partner is winning", () => {
+    // Bitola variant has no partner-winning exemption: a void player who holds
+    // any trump must cut. Seat 2 leads TD; seat 3 plays 7D. Seat 0 (partner of
+    // seat 2 — Red team) is void in D and holds trump clubs 8C/9C plus AH.
+    // No trump is on the table yet, so the over-trump filter falls through and
+    // both trumps are legal; AH (non-trump) must be excluded.
     const myHand = hand(["8C", "9C", "AH"]);
     const state = makeState({
       mySeat: 0,
@@ -269,7 +252,73 @@ describe("legalCards", () => {
       currentTrick: [trickCard("TD", 2), trickCard("7D", 3)],
     });
     const ids = legalCards(state, 0).map((c) => `${c.rank}${c.suit}`);
-    expect(ids.sort()).toEqual(["8C", "9C", "AH"]);
+    expect(ids.sort()).toEqual(["8C", "9C"]);
+  });
+
+  it("img_two: void with trump, partner already trumped — must over-trump, diamonds illegal", () => {
+    // Trump = Hearts. Trick: cvetanka(seat 1) 9C, emilijan(seat 2) QH (trump),
+    // irena(seat 3) 7C. Kiro(seat 0) is void in clubs and holds 9H + TH (over-
+    // trump QH(2)) plus diamonds. Only the over-trumps are legal.
+    const myHand = hand(["9H", "TH", "8D", "TD", "JD", "QD", "AD"]);
+    const state = makeState({
+      mySeat: 0,
+      myHand,
+      trumpSuit: "H",
+      leadSuit: "C",
+      currentTrick: [trickCard("9C", 1), trickCard("QH", 2), trickCard("7C", 3)],
+    });
+    const ids = legalCards(state, 0).map((c) => `${c.rank}${c.suit}`);
+    expect(ids.sort()).toEqual(["9H", "TH"]);
+  });
+
+  it("img_three: void with one trump, partner winning non-trump — only that trump", () => {
+    // Trump = Spades. Trick: cvetanka(seat 1) 9C, kiro(seat 2) AC (partner of
+    // seat 0 — Red), irena(seat 3) TC. Emilijan(seat 0) is void in clubs and
+    // holds the single trump 8S plus J♦ + K♦. With no trump on the table yet,
+    // the only legal play is 8S; both diamonds must be excluded.
+    const myHand = hand(["8S", "JD", "KD"]);
+    const state = makeState({
+      mySeat: 0,
+      myHand,
+      trumpSuit: "S",
+      leadSuit: "C",
+      currentTrick: [trickCard("9C", 1), trickCard("AC", 2), trickCard("TC", 3)],
+    });
+    const ids = legalCards(state, 0).map((c) => `${c.rank}${c.suit}`);
+    expect(ids).toEqual(["8S"]);
+  });
+
+  it("img_four: void in non-trump, no trump on table yet — every trump legal, no non-trumps", () => {
+    // Trump = Hearts. Trick: irena(seat 1) 7S, cvetanka(seat 2) 9S, partner
+    // emilijan(seat 3) plays a club (no spades, no trumps). Kiro(seat 0) is
+    // void in spades and holds four hearts plus three diamonds. With no trump
+    // on the table, every heart in hand is legal and every diamond is illegal.
+    const myHand = hand(["7H", "8H", "TH", "KH", "7D", "8D", "TD"]);
+    const state = makeState({
+      mySeat: 0,
+      myHand,
+      trumpSuit: "H",
+      leadSuit: "S",
+      currentTrick: [trickCard("7S", 1), trickCard("9S", 2), trickCard("KC", 3)],
+    });
+    const ids = legalCards(state, 0).map((c) => `${c.rank}${c.suit}`);
+    expect(ids.sort()).toEqual(["7H", "8H", "KH", "TH"]);
+  });
+
+  it("void with trump, partner already winning with a trump — falls through to any trump", () => {
+    // Branch fallback: void in led suit, has trumps, but none over-trumps the
+    // highest trump on the table (which happens to belong to partner). Must
+    // still cut — non-trump card stays illegal.
+    const myHand = hand(["QH", "KH", "7C"]);
+    const state = makeState({
+      mySeat: 0,
+      myHand,
+      trumpSuit: "H",
+      leadSuit: "S",
+      currentTrick: [trickCard("AS", 1), trickCard("9H", 2)],
+    });
+    const ids = legalCards(state, 0).map((c) => `${c.rank}${c.suit}`);
+    expect(ids.sort()).toEqual(["KH", "QH"]);
   });
 
   it("void in led suit, no trump held → any card", () => {

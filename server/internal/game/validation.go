@@ -2,14 +2,17 @@ package game
 
 // legalCards returns the set of cards that the player at the given seat is
 // legally allowed to play, given the current game state. Implements Bitola
-// variant three-layer card play validation:
+// variant card play validation:
 //
 //  1. Follow suit if possible — must overplay the highest led-suit card
 //     currently in the trick when the player has a higher led-suit card
 //     (applies whether the led suit is trump or not). Otherwise any
 //     same-suit card is legal.
-//  2. If void in led suit and opponent winning → must trump (over-trump if possible)
-//  3. If void in led suit and partner winning → any card (partner exemption)
+//  2. If void in led suit and the player holds at least one trump → must
+//     cut. Over-trump the highest trump on the table if possible; otherwise
+//     any trump is legal. Non-trumps are illegal in this branch — Bitola has
+//     no partner-winning exemption.
+//  3. If void in led suit and the player holds no trump → any card is legal.
 func legalCards(state *GameState, seat int) []Card {
 	hand := state.Players[seat].Hand
 
@@ -37,18 +40,17 @@ func legalCards(state *GameState, seat int) []Card {
 		return suitCards
 	}
 
-	// Cannot follow suit — check trump obligation
+	// Void in led suit — must cut with trump if any trump is held, regardless
+	// of who is currently winning the trick (Bitola has no partner exemption).
 	trumpCards := filterBySuit(hand, trumpSuit)
-
-	if isOpponentWinning(state, seat) && len(trumpCards) > 0 {
-		// Must play trump; over-trump if possible
+	if len(trumpCards) > 0 {
 		if overTrumps := applyOverTrump(trumpCards, state.CurrentTrick, trumpSuit); len(overTrumps) > 0 {
 			return overTrumps
 		}
 		return trumpCards
 	}
 
-	// Partner winning (or no trump held) — any card is legal
+	// Void in led suit and no trump held — any card is legal.
 	return hand
 }
 
@@ -127,16 +129,6 @@ func highestTrumpInTrick(trick []TrickCard, trumpSuit Suit) *Rank {
 		}
 	}
 	return best
-}
-
-// isOpponentWinning returns true if the team currently winning the trick is the
-// opponent of the given seat.
-func isOpponentWinning(state *GameState, seat int) bool {
-	if len(state.CurrentTrick) == 0 || state.TrumpSuit == nil {
-		return false
-	}
-	winnerSeat := currentTrickWinnerSeat(state.CurrentTrick, *state.TrumpSuit)
-	return TeamForSeat(winnerSeat) != TeamForSeat(seat)
 }
 
 // currentTrickWinnerSeat determines which player is currently winning among
