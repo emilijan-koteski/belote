@@ -181,11 +181,27 @@
       "gameStarting": "Igra počinje...",
       "autoStartMessage": "Igra počinje automatski kada svi igrači sednu",
       "autoStarting": "Igra počinje...",
+      "kickIconLabel": "Izbaci {{username}}",
+      "kickConfirm": {
+        "title": "Izbaciti igrača?",
+        "body": "Izbaciti {{username}} iz sobe?",
+        "confirm": "Izbaci",
+        "cancel": "Otkaži"
+      },
+      "kickedToast": "Izbačeni ste iz sobe {{name}}",
+      "swapMode": {
+        "enter": "Izaberi mesto za zamenu"
+      },
       "errors": {
         "seatFailed": "Neuspešan izbor mesta — pokušajte ponovo",
         "startFailed": "Neuspešno pokretanje — pokušajte ponovo",
         "notOwner": "Samo vlasnik sobe može da započne",
-        "notAllSeated": "Sva 4 igrača moraju da sednu da bi počelo"
+        "notOwnerAction": "To može samo vlasnik sobe",
+        "notAllSeated": "Sva 4 igrača moraju da sednu da bi počelo",
+        "roomStarted": "Igra je već počela — izbacivanje i zamena mesta više nisu dostupni.",
+        "seatNotOccupied": "Izaberi dva zauzeta mesta za zamenu.",
+        "kickFailed": "Neuspešno izbacivanje igrača — pokušajte ponovo",
+        "swapFailed": "Neuspešna zamena mesta — pokušajte ponovo"
       }
     }
   },

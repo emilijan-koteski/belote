@@ -181,11 +181,27 @@
       "gameStarting": "Game starting...",
       "autoStartMessage": "Game starts automatically when all players are seated",
       "autoStarting": "Starting game...",
+      "kickIconLabel": "Kick {{username}}",
+      "kickConfirm": {
+        "title": "Kick player?",
+        "body": "Kick {{username}} from the room?",
+        "confirm": "Kick",
+        "cancel": "Cancel"
+      },
+      "kickedToast": "You were removed from room {{name}}",
+      "swapMode": {
+        "enter": "Pick a seat to swap with"
+      },
       "errors": {
         "seatFailed": "Failed to select seat — try again",
         "startFailed": "Failed to start game — try again",
         "notOwner": "Only the room owner can start the game",
-        "notAllSeated": "All 4 players must be seated to start"
+        "notOwnerAction": "Only the room owner can do that",
+        "notAllSeated": "All 4 players must be seated to start",
+        "roomStarted": "The game has already started — kick and seat-swap are no longer available.",
+        "seatNotOccupied": "Pick two seated players to swap.",
+        "kickFailed": "Failed to remove player — try again",
+        "swapFailed": "Failed to swap seats — try again"
       }
     }
   },

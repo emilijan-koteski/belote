@@ -691,4 +691,47 @@ describe("useWsDispatch", () => {
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
   });
+
+  it("dispatches system:room_kicked to roomLobbyStore when currentRoomId matches", () => {
+    useRoomLobbyStore.getState().setCurrentRoomId(5);
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:room_kicked",
+      payload: { roomId: 5, reason: "kicked_by_owner" },
+    });
+
+    expect(useRoomLobbyStore.getState().kickedFromRoomId).toBe(5);
+  });
+
+  it("ignores system:room_kicked for a different room", () => {
+    useRoomLobbyStore.getState().setCurrentRoomId(9);
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:room_kicked",
+      payload: { roomId: 5, reason: "kicked_by_owner" },
+    });
+
+    expect(useRoomLobbyStore.getState().kickedFromRoomId).toBeNull();
+  });
+
+  it("ignores system:room_kicked when currentRoomId is null", () => {
+    // currentRoomId=null means the user is not viewing any room. Setting
+    // kickedFromRoomId here would persist as a sticky flag and trip on a
+    // later re-entry to the same room — so the dispatcher requires a
+    // positive room match.
+    expect(useRoomLobbyStore.getState().currentRoomId).toBeNull();
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:room_kicked",
+      payload: { roomId: 5, reason: "kicked_by_owner" },
+    });
+
+    expect(useRoomLobbyStore.getState().kickedFromRoomId).toBeNull();
+  });
 });

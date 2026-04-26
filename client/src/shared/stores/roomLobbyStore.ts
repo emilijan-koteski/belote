@@ -7,6 +7,7 @@ interface RoomLobbyState {
   players: RoomPlayer[];
   gameStarted: boolean;
   currentRoomId: number | null;
+  kickedFromRoomId: number | null;
 
   setRoom: (room: Room | null) => void;
   setPlayers: (players: RoomPlayer[]) => void;
@@ -20,6 +21,7 @@ interface RoomLobbyState {
     previousSeat: number | null,
   ) => void;
   setGameStarted: (started: boolean) => void;
+  setKickedFromRoom: (roomId: number | null) => void;
   reset: () => void;
 }
 
@@ -28,6 +30,7 @@ const initialState = {
   players: [],
   gameStarted: false,
   currentRoomId: null,
+  kickedFromRoomId: null,
 };
 
 export const useRoomLobbyStore = create<RoomLobbyState>((set) => ({
@@ -59,21 +62,14 @@ export const useRoomLobbyStore = create<RoomLobbyState>((set) => ({
         : state.room,
     })),
 
-  updatePlayerSeat: (userId, seat, team, previousSeat) =>
+  updatePlayerSeat: (userId, seat, team, _previousSeat) =>
     set((state) => ({
-      players: state.players.map((p) => {
-        if (p.userId === userId) {
-          return { ...p, seat, team };
-        }
-        // If another player was in the previous seat, clear it (shouldn't happen normally)
-        if (previousSeat !== null && p.seat === previousSeat && p.userId !== userId) {
-          return { ...p, seat: null, team: null };
-        }
-        return p;
-      }),
+      players: state.players.map((p) => (p.userId === userId ? { ...p, seat, team } : p)),
     })),
 
   setGameStarted: (gameStarted) => set({ gameStarted }),
+
+  setKickedFromRoom: (kickedFromRoomId) => set({ kickedFromRoomId }),
 
   reset: () => set(initialState),
 }));

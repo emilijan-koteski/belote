@@ -118,6 +118,14 @@ const SystemRoomUpdated = "system:room_updated"
 // --- Room player events ---
 const SystemPlayerJoined = "system:player_joined"
 const SystemPlayerLeft = "system:player_left"
+const SystemRoomKicked = "system:room_kicked"
+
+// RoomKickedPayload is the typed payload for SystemRoomKicked events,
+// sent only to the kicked user's WebSocket connection.
+type RoomKickedPayload struct {
+	RoomID uint   `json:"roomId"`
+	Reason string `json:"reason"`
+}
 
 // --- Seat and game events ---
 const SystemSeatUpdated = "system:seat_updated"

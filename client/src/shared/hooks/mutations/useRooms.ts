@@ -5,12 +5,19 @@ import {
   createRoom,
   getRoomByCode,
   joinRoom,
+  kickPlayer,
   leaveRoom,
   quickPlay,
   selectSeat,
   startGame,
+  swapSeats,
 } from "@/shared/api/rooms";
-import type { CreateRoomRequest, Room, SelectSeatResponse } from "@/shared/types/apiTypes";
+import type {
+  CreateRoomRequest,
+  Room,
+  RoomPlayer,
+  SelectSeatResponse,
+} from "@/shared/types/apiTypes";
 
 export function useCreateRoomMutation() {
   const queryClient = useQueryClient();
@@ -57,6 +64,22 @@ export function useStartGameMutation() {
 export function useQuickPlayMutation() {
   return useMutation({
     mutationFn: (signal?: AbortSignal) => quickPlay(signal),
+  });
+}
+
+export function useKickPlayerMutation() {
+  return useMutation<{ playerCount: number }, Error, { roomId: number; userId: number }>({
+    mutationFn: ({ roomId, userId }) => kickPlayer(roomId, userId),
+  });
+}
+
+export function useSwapSeatsMutation() {
+  return useMutation<
+    { players: RoomPlayer[] },
+    Error,
+    { roomId: number; seatA: number; seatB: number }
+  >({
+    mutationFn: ({ roomId, seatA, seatB }) => swapSeats(roomId, seatA, seatB),
   });
 }
 

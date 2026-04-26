@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { UserX } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
@@ -7,9 +8,19 @@ import { ChatPanel } from "@/features/chat/ChatPanel";
 import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
+import {
+  useKickPlayerMutation,
   useLeaveRoomMutation,
   useSelectSeatMutation,
   useStartGameMutation,
+  useSwapSeatsMutation,
 } from "@/shared/hooks/mutations/useRooms";
 import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
 import { useWsConnectionState } from "@/shared/providers/WebSocketContext";
@@ -57,14 +68,26 @@ export function RoomLobby() {
   const storeRoom = useRoomLobbyStore((s) => s.room);
   const storePlayers = useRoomLobbyStore((s) => s.players);
   const gameStarted = useRoomLobbyStore((s) => s.gameStarted);
+  const kickedFromRoomId = useRoomLobbyStore((s) => s.kickedFromRoomId);
 
   const hasLeftRef = useRef(false);
   const hasJoinedRef = useRef(false);
+
+  // Owner-only transient UI state — kept local instead of pushed into a store
+  // because nothing outside RoomLobby cares about it.
+  const [swapSourceSeat, setSwapSourceSeat] = useState<number | null>(null);
+  const [kickConfirm, setKickConfirm] = useState<{
+    seat: number;
+    userId: number;
+    username: string;
+  } | null>(null);
 
   // Mutations
   const selectSeatMutation = useSelectSeatMutation();
   const startGameMutation = useStartGameMutation();
   const leaveRoomMutation = useLeaveRoomMutation();
+  const kickPlayerMutation = useKickPlayerMutation();
+  const swapSeatsMutation = useSwapSeatsMutation();
 
   // Seed roomLobbyStore from query data
   useEffect(() => {
@@ -96,6 +119,36 @@ export function RoomLobby() {
       navigate(`/game/${id}`);
     }
   }, [gameStarted, id, navigate]);
+
+  // Handle system:room_kicked — toast + redirect kicked user back to /lobby.
+  // Suppress the unmount auto-leave: the server has already removed us, so
+  // the cleanup `/leave` would 404; setting hasLeftRef before navigate keeps
+  // the cleanup quiet.
+  useEffect(() => {
+    if (kickedFromRoomId !== null && id && kickedFromRoomId === Number(id)) {
+      hasLeftRef.current = true;
+      toast.error(t("lobby.roomLobby.kickedToast", { name: storeRoom?.name ?? "" }));
+      useRoomLobbyStore.getState().setKickedFromRoom(null);
+      navigate("/lobby");
+    }
+  }, [kickedFromRoomId, id, navigate, storeRoom?.name, t]);
+
+  // Clear swap-mode whenever the room exits "waiting" status — owner controls
+  // disappear in the same render, so a stale source-seat must not survive.
+  useEffect(() => {
+    if (storeRoom && storeRoom.status !== "waiting") {
+      setSwapSourceSeat(null);
+    }
+  }, [storeRoom]);
+
+  // Clear swap-mode if the source player vacates their seat (left the room or
+  // moved seats while we were deciding) — otherwise the next click would fire
+  // a swap with an empty source seat and trip SEAT_NOT_OCCUPIED.
+  useEffect(() => {
+    if (swapSourceSeat !== null && getPlayerAtSeat(storePlayers, swapSourceSeat) === undefined) {
+      setSwapSourceSeat(null);
+    }
+  }, [storePlayers, swapSourceSeat]);
 
   // Reset stores on unmount AND on :id change — React Router keeps RoomLobby
   // mounted across /rooms/:id navigations, so a []-dep cleanup would let
@@ -140,6 +193,12 @@ export function RoomLobby() {
 
   const handleSelectSeat = async (seatIndex: number) => {
     if (!storeRoom) return;
+    // If the owner is in swap-mode, route the click to the swap target handler
+    // instead of the regular seat-select path.
+    if (swapSourceSeat !== null) {
+      handleSwapTarget(seatIndex);
+      return;
+    }
     try {
       const data = await selectSeatMutation.mutateAsync({ roomId: storeRoom.id, seat: seatIndex });
       // Update players from response (in case WS hasn't arrived yet)
@@ -154,6 +213,75 @@ export function RoomLobby() {
         toast.error(t("lobby.roomLobby.seatTaken"));
       } else {
         toast.error(t("lobby.roomLobby.errors.seatFailed"));
+      }
+    }
+  };
+
+  const handleSwapTarget = async (targetSeat: number) => {
+    if (!storeRoom || swapSourceSeat === null) return;
+
+    // Click the source again, an empty seat, or any non-other-seated seat
+    // cancels swap mode without firing the API.
+    const targetPlayer = getPlayerAtSeat(players, targetSeat);
+    const isCurrentUser =
+      targetPlayer !== undefined && currentUser !== null && targetPlayer.userId === currentUser.id;
+    if (
+      targetSeat === swapSourceSeat ||
+      targetPlayer === undefined ||
+      isCurrentUser ||
+      swapSeatsMutation.isPending
+    ) {
+      setSwapSourceSeat(null);
+      return;
+    }
+
+    const seatA = swapSourceSeat;
+    setSwapSourceSeat(null);
+    try {
+      await swapSeatsMutation.mutateAsync({
+        roomId: storeRoom.id,
+        seatA,
+        seatB: targetSeat,
+      });
+    } catch (err) {
+      if (err instanceof FetchError) {
+        if (err.code === "NOT_ROOM_OWNER") {
+          toast.error(t("lobby.roomLobby.errors.notOwnerAction"));
+        } else if (err.code === "ROOM_NOT_WAITING") {
+          toast.error(t("lobby.roomLobby.errors.roomStarted"));
+        } else if (err.code === "SEAT_NOT_OCCUPIED") {
+          toast.error(t("lobby.roomLobby.errors.seatNotOccupied"));
+        } else {
+          toast.error(t("lobby.roomLobby.errors.swapFailed"));
+        }
+      } else {
+        toast.error(t("lobby.roomLobby.errors.swapFailed"));
+      }
+    }
+  };
+
+  const handleKickConfirm = async () => {
+    if (!storeRoom || !kickConfirm) return;
+    const target = kickConfirm;
+    setKickConfirm(null);
+    try {
+      await kickPlayerMutation.mutateAsync({
+        roomId: storeRoom.id,
+        userId: target.userId,
+      });
+      // Server WS broadcast (system:player_left) converges store state — no
+      // optimistic update.
+    } catch (err) {
+      if (err instanceof FetchError) {
+        if (err.code === "NOT_ROOM_OWNER") {
+          toast.error(t("lobby.roomLobby.errors.notOwnerAction"));
+        } else if (err.code === "ROOM_NOT_WAITING") {
+          toast.error(t("lobby.roomLobby.errors.roomStarted"));
+        } else {
+          toast.error(t("lobby.roomLobby.errors.kickFailed"));
+        }
+      } else {
+        toast.error(t("lobby.roomLobby.errors.kickFailed"));
       }
     }
   };
@@ -256,51 +384,113 @@ export function RoomLobby() {
                 const isCurrentUser =
                   player !== undefined && currentUser !== null && player.userId === currentUser.id;
                 const isSeatOwner = player !== undefined && player.userId === room.ownerId;
-                const isClickable = player === undefined || isCurrentUser;
+                const isWaiting = room.status === "waiting";
+                const ownerCanKick = isOwner && isWaiting && player !== undefined && !isSeatOwner;
+                const isSwapSource = swapSourceSeat === seatIndex;
+                const inSwapMode = swapSourceSeat !== null;
+                // Owner can drive the click into either select-seat (default) or swap-mode.
+                const ownerCanInitiateSwap =
+                  isOwner && isWaiting && player !== undefined && !isCurrentUser && !inSwapMode;
+                const isClickable =
+                  player === undefined || isCurrentUser || ownerCanInitiateSwap || inSwapMode;
+                // Disable the affected tile while its mutation is in flight so a
+                // double-click can't fire duplicate requests. Identify the
+                // affected tile via the mutation's variables (the only seat the
+                // user clicks should reflect pending state — not every seat).
+                const kickPendingForThisSeat =
+                  kickPlayerMutation.isPending &&
+                  player !== undefined &&
+                  kickPlayerMutation.variables?.userId === player.userId;
+                const swapPendingForThisSeat =
+                  swapSeatsMutation.isPending &&
+                  (swapSeatsMutation.variables?.seatA === seatIndex ||
+                    swapSeatsMutation.variables?.seatB === seatIndex);
+                const isPendingForThisSeat = kickPendingForThisSeat || swapPendingForThisSeat;
 
                 const teamBorderClass = team === "red" ? "border-team-red" : "border-team-blue";
 
                 return (
-                  <button
-                    key={seatIndex}
-                    type="button"
-                    className={`flex min-h-24 flex-col items-center justify-center rounded-xl border-2 p-6 transition-colors ${
-                      player !== undefined
-                        ? `bg-surface ${teamBorderClass} ${isCurrentUser ? "ring-1 ring-accent" : ""} ${
-                            isClickable
-                              ? "cursor-pointer hover:bg-surface-elevated"
-                              : "cursor-default"
-                          }`
-                        : `border-dashed ${teamBorderClass} bg-surface/50 cursor-pointer hover:bg-surface/80`
-                    }`}
-                    onClick={() => {
-                      if (isClickable) {
-                        handleSelectSeat(seatIndex);
-                      }
-                    }}
-                    disabled={!isClickable}
-                    data-testid={`player-seat-${seatIndex}`}
-                  >
-                    {player !== undefined ? (
-                      <div className="text-center">
-                        <span className="font-semibold text-text-primary">{player.username}</span>
-                        <div className="mt-1 flex items-center justify-center gap-2">
-                          {isCurrentUser && (
-                            <span className="text-xs text-accent">
-                              {t("lobby.roomLobby.seatYou")}
-                            </span>
-                          )}
-                          {isSeatOwner && (
-                            <span className="text-xs text-text-secondary">
-                              {t("lobby.roomLobby.seatOwner")}
-                            </span>
+                  <div key={seatIndex} className="group relative">
+                    <button
+                      type="button"
+                      className={`flex min-h-24 w-full flex-col items-center justify-center rounded-xl border-2 p-6 transition-colors ${
+                        player !== undefined
+                          ? `bg-surface ${teamBorderClass} ${isCurrentUser ? "ring-1 ring-accent" : ""} ${
+                              isSwapSource ? "ring-2 ring-accent" : ""
+                            } ${
+                              isClickable
+                                ? "cursor-pointer hover:bg-surface-elevated"
+                                : "cursor-default"
+                            }`
+                          : `border-dashed ${teamBorderClass} bg-surface/50 cursor-pointer hover:bg-surface/80`
+                      } ${isPendingForThisSeat ? "opacity-60 pointer-events-none" : ""}`}
+                      onClick={() => {
+                        if (inSwapMode) {
+                          handleSwapTarget(seatIndex);
+                          return;
+                        }
+                        if (ownerCanInitiateSwap) {
+                          setSwapSourceSeat(seatIndex);
+                          return;
+                        }
+                        if (isClickable) {
+                          handleSelectSeat(seatIndex);
+                        }
+                      }}
+                      disabled={!isClickable || isPendingForThisSeat}
+                      data-testid={`player-seat-${seatIndex}`}
+                    >
+                      {player !== undefined ? (
+                        <div className="text-center">
+                          <span className="font-semibold text-text-primary">{player.username}</span>
+                          <div className="mt-1 flex items-center justify-center gap-2">
+                            {isCurrentUser && (
+                              <span className="text-xs text-accent">
+                                {t("lobby.roomLobby.seatYou")}
+                              </span>
+                            )}
+                            {isSeatOwner && (
+                              <span className="text-xs text-text-secondary">
+                                {t("lobby.roomLobby.seatOwner")}
+                              </span>
+                            )}
+                          </div>
+                          {isSwapSource && (
+                            <p className="mt-2 text-xs text-text-secondary">
+                              {t("lobby.roomLobby.swapMode.enter")}
+                            </p>
                           )}
                         </div>
-                      </div>
-                    ) : (
-                      <span className="text-text-secondary">{t("lobby.roomLobby.seatEmpty")}</span>
+                      ) : (
+                        <span className="text-text-secondary">
+                          {t("lobby.roomLobby.seatEmpty")}
+                        </span>
+                      )}
+                    </button>
+                    {ownerCanKick && (
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 rounded-md p-1 text-text-secondary opacity-0 transition-opacity hover:bg-surface-elevated hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={t("lobby.roomLobby.kickIconLabel", {
+                          username: player.username,
+                        })}
+                        data-testid={`kick-player-${seatIndex}`}
+                        disabled={kickPlayerMutation.isPending}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // If we're in swap-mode, cancel swap and proceed to kick dialog.
+                          setSwapSourceSeat(null);
+                          setKickConfirm({
+                            seat: seatIndex,
+                            userId: player.userId,
+                            username: player.username,
+                          });
+                        }}
+                      >
+                        <UserX className="h-4 w-4" />
+                      </button>
                     )}
-                  </button>
+                  </div>
                 );
               }),
             )}
@@ -356,6 +546,42 @@ export function RoomLobby() {
             Stacks below the lobby on small screens, sits to the right on md+. */}
         <ChatPanel channel="room" roomId={room.id} className="min-h-100" />
       </div>
+
+      {/* Owner kick confirmation dialog */}
+      <Dialog
+        open={kickConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setKickConfirm(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>{t("lobby.roomLobby.kickConfirm.title")}</DialogTitle>
+            <DialogDescription>
+              {t("lobby.roomLobby.kickConfirm.body", {
+                username: kickConfirm?.username ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setKickConfirm(null)}
+              data-testid="kick-cancel"
+            >
+              {t("lobby.roomLobby.kickConfirm.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleKickConfirm}
+              disabled={kickPlayerMutation.isPending}
+              data-testid="kick-confirm"
+            >
+              {t("lobby.roomLobby.kickConfirm.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

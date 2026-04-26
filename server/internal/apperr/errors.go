@@ -72,6 +72,9 @@ var (
 	ErrNotAllSeated              = NewAppError("NOT_ALL_SEATED", "all 4 players must be seated to start", http.StatusBadRequest)
 	ErrGameNotStartable          = NewAppError("GAME_NOT_STARTABLE", "room is not in waiting status", http.StatusConflict)
 	ErrReconnectWindowOutOfRange = NewAppError("RECONNECT_WINDOW_OUT_OF_RANGE", "reconnect window must be between 30 and 300 seconds", http.StatusBadRequest)
+	ErrRoomNotWaiting            = NewAppError("ROOM_NOT_WAITING", "this action is only available before the game starts", http.StatusConflict)
+	ErrCannotKickSelf            = NewAppError("CANNOT_KICK_SELF", "the room owner cannot kick themselves", http.StatusBadRequest)
+	ErrSeatNotOccupied           = NewAppError("SEAT_NOT_OCCUPIED", "seat must be occupied to be swapped", http.StatusConflict)
 
 	// Game domain errors
 	ErrWrongPhase              = NewAppError("WRONG_PHASE", "action not valid in current game phase", http.StatusBadRequest)

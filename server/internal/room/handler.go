@@ -738,6 +738,258 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 	})
 }
 
+type KickPlayerRequest struct {
+	UserID uint `json:"userId"`
+}
+
+func (h *RoomHandler) KickPlayer(c echo.Context) error {
+	ownerID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	var req KickPlayerRequest
+	if err := c.Bind(&req); err != nil {
+		return apperr.ErrBadRequest
+	}
+	if req.UserID == 0 {
+		return apperr.ErrBadRequest
+	}
+
+	// Capture the kicked player's username before the transaction removes them
+	var kickedUsername string
+	prePlayers, _ := h.repo.FindPlayersByRoomID(uint(roomID))
+	for _, p := range prePlayers {
+		if p.UserID == req.UserID {
+			kickedUsername = p.Username
+			break
+		}
+	}
+
+	var postRoom *Room
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		r, err := tx.FindByID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("finding room: %w", err)
+		}
+		if r == nil {
+			return apperr.ErrRoomNotFound
+		}
+		if r.Status != "waiting" {
+			return apperr.ErrRoomNotWaiting
+		}
+		if r.OwnerID != ownerID {
+			return apperr.ErrNotRoomOwner
+		}
+		if req.UserID == r.OwnerID {
+			return apperr.ErrCannotKickSelf
+		}
+
+		target, err := tx.FindPlayerRoom(req.UserID)
+		if err != nil {
+			return fmt.Errorf("finding target player room: %w", err)
+		}
+		if target == nil || target.RoomID != uint(roomID) {
+			return apperr.ErrNotInRoom
+		}
+
+		if err := tx.RemovePlayer(uint(roomID), req.UserID); err != nil {
+			return err
+		}
+		if err := tx.DecrementPlayerCount(uint(roomID)); err != nil {
+			return fmt.Errorf("decrementing player count: %w", err)
+		}
+
+		fresh, err := tx.FindByID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("re-fetching room after kick: %w", err)
+		}
+		postRoom = fresh
+		return nil
+	}); err != nil {
+		if errors.Is(err, apperr.ErrRoomNotFound) ||
+			errors.Is(err, apperr.ErrRoomNotWaiting) ||
+			errors.Is(err, apperr.ErrNotRoomOwner) ||
+			errors.Is(err, apperr.ErrCannotKickSelf) ||
+			errors.Is(err, apperr.ErrNotInRoom) {
+			return err
+		}
+		return fmt.Errorf("kicking player: %w", err)
+	}
+
+	// If the post-tx re-fetch returned nil (e.g. concurrent room cleanup), bail
+	// out of the broadcast/response branches that need PlayerCount rather than
+	// dereferencing a nil pointer.
+	if postRoom == nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	// Broadcast: kicked user gets system:room_kicked
+	h.broadcastToUsers([]uint{req.UserID}, ws.SystemRoomKicked, ws.RoomKickedPayload{
+		RoomID: uint(roomID),
+		Reason: "kicked_by_owner",
+	})
+
+	// Broadcast: remaining members get system:player_left
+	remainingPlayers, broadcastErr := h.repo.FindPlayersByRoomID(uint(roomID))
+	if broadcastErr == nil {
+		userIDs := make([]uint, 0, len(remainingPlayers))
+		for _, p := range remainingPlayers {
+			userIDs = append(userIDs, p.UserID)
+		}
+		h.broadcastToUsers(userIDs, ws.SystemPlayerLeft, map[string]interface{}{
+			"roomId":      roomID,
+			"userId":      req.UserID,
+			"username":    kickedUsername,
+			"playerCount": postRoom.PlayerCount,
+		})
+
+		// Broadcast: lobby browse page gets system:room_updated
+		h.broadcastRoomUpdated(postRoom)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": map[string]interface{}{"playerCount": postRoom.PlayerCount},
+	})
+}
+
+type SwapSeatsRequest struct {
+	SeatA *int `json:"seatA"`
+	SeatB *int `json:"seatB"`
+}
+
+func (h *RoomHandler) SwapSeats(c echo.Context) error {
+	ownerID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	var req SwapSeatsRequest
+	if err := c.Bind(&req); err != nil {
+		return apperr.ErrBadRequest
+	}
+	if req.SeatA == nil || req.SeatB == nil {
+		return apperr.ErrInvalidSeat
+	}
+	seatA := *req.SeatA
+	seatB := *req.SeatB
+	if seatA < 0 || seatA > 3 || seatB < 0 || seatB > 3 || seatA == seatB {
+		return apperr.ErrInvalidSeat
+	}
+
+	type swapped struct {
+		userID       uint
+		username     string
+		seat         int
+		team         string
+		previousSeat int
+	}
+	var swapA, swapB swapped
+
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		r, err := tx.FindByID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("finding room: %w", err)
+		}
+		if r == nil {
+			return apperr.ErrRoomNotFound
+		}
+		if r.Status != "waiting" {
+			return apperr.ErrRoomNotWaiting
+		}
+		if r.OwnerID != ownerID {
+			return apperr.ErrNotRoomOwner
+		}
+
+		pA, err := tx.FindPlayerBySeat(uint(roomID), seatA)
+		if err != nil {
+			return fmt.Errorf("finding player at seatA: %w", err)
+		}
+		pB, err := tx.FindPlayerBySeat(uint(roomID), seatB)
+		if err != nil {
+			return fmt.Errorf("finding player at seatB: %w", err)
+		}
+		if pA == nil || pB == nil {
+			return apperr.ErrSeatNotOccupied
+		}
+
+		newSeatA := seatB
+		newSeatB := seatA
+		teamA := teamForSeat(newSeatA)
+		teamB := teamForSeat(newSeatB)
+
+		if err := tx.UpdatePlayerSeat(uint(roomID), pA.UserID, newSeatA, teamA); err != nil {
+			return fmt.Errorf("updating seatA player: %w", err)
+		}
+		if err := tx.UpdatePlayerSeat(uint(roomID), pB.UserID, newSeatB, teamB); err != nil {
+			return fmt.Errorf("updating seatB player: %w", err)
+		}
+
+		swapA = swapped{
+			userID:       pA.UserID,
+			username:     pA.Username,
+			seat:         newSeatA,
+			team:         teamA,
+			previousSeat: seatA,
+		}
+		swapB = swapped{
+			userID:       pB.UserID,
+			username:     pB.Username,
+			seat:         newSeatB,
+			team:         teamB,
+			previousSeat: seatB,
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, apperr.ErrRoomNotFound) ||
+			errors.Is(err, apperr.ErrRoomNotWaiting) ||
+			errors.Is(err, apperr.ErrNotRoomOwner) ||
+			errors.Is(err, apperr.ErrSeatNotOccupied) ||
+			errors.Is(err, apperr.ErrInvalidSeat) {
+			return err
+		}
+		return fmt.Errorf("swapping seats: %w", err)
+	}
+
+	players, err := h.repo.FindPlayersByRoomID(uint(roomID))
+	if err != nil {
+		return fmt.Errorf("fetching players after swap: %w", err)
+	}
+
+	// Broadcast TWO ordered system:seat_updated events to every room member.
+	// Multi-event sequences are sent as separate messages, never batched.
+	h.broadcastToRoom(uint(roomID), ws.SystemSeatUpdated, map[string]interface{}{
+		"roomId":       roomID,
+		"userId":       swapA.userID,
+		"username":     swapA.username,
+		"seat":         swapA.seat,
+		"team":         swapA.team,
+		"previousSeat": swapA.previousSeat,
+	})
+	h.broadcastToRoom(uint(roomID), ws.SystemSeatUpdated, map[string]interface{}{
+		"roomId":       roomID,
+		"userId":       swapB.userID,
+		"username":     swapB.username,
+		"seat":         swapB.seat,
+		"team":         swapB.team,
+		"previousSeat": swapB.previousSeat,
+	})
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": PlayersResponse{Players: players},
+	})
+}
+
 func (h *RoomHandler) StartGame(c echo.Context) error {
 	userID, err := auth.GetUserID(c)
 	if err != nil {

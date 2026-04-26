@@ -3,6 +3,7 @@ import type {
   CreateRoomRequest,
   Room,
   RoomDetail,
+  RoomPlayer,
   SelectSeatResponse,
 } from "@/shared/types/apiTypes";
 
@@ -40,4 +41,16 @@ export function startGame(roomId: number): Promise<Room> {
 
 export function quickPlay(signal?: AbortSignal): Promise<Room> {
   return axiosClient.post("/rooms/quick-play", undefined, { signal });
+}
+
+export function kickPlayer(roomId: number, userId: number): Promise<{ playerCount: number }> {
+  return axiosClient.post(`/rooms/${roomId}/kick`, { userId });
+}
+
+export function swapSeats(
+  roomId: number,
+  seatA: number,
+  seatB: number,
+): Promise<{ players: RoomPlayer[] }> {
+  return axiosClient.post(`/rooms/${roomId}/swap-seats`, { seatA, seatB });
 }

@@ -21,6 +21,7 @@ import type {
   PlayerJoinedPayload,
   PlayerLeftPayload,
   PlayerReconnectedPayload,
+  RoomKickedPayload,
   SeatUpdatedPayload,
   TrickResolvedPayload,
   TrumpSelectedPayload,
@@ -55,6 +56,7 @@ import {
   SYSTEM_PLAYER_JOINED,
   SYSTEM_PLAYER_LEFT,
   SYSTEM_ROOM_CREATED,
+  SYSTEM_ROOM_KICKED,
   SYSTEM_ROOM_UPDATED,
   SYSTEM_SEAT_UPDATED,
 } from "@/shared/types/wsEvents";
@@ -307,6 +309,17 @@ function dispatchSystemEvent(message: WsMessage): void {
     const store = useRoomLobbyStore.getState();
     if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
     store.setGameStarted(true);
+    return;
+  }
+
+  if (type === SYSTEM_ROOM_KICKED) {
+    const payload = message.payload as RoomKickedPayload;
+    const store = useRoomLobbyStore.getState();
+    // Require a positive room match. A null currentRoomId means the user is
+    // not currently viewing any room — processing the event would set a sticky
+    // kickedFromRoomId that traps them on a later re-entry to the same room.
+    if (store.currentRoomId !== payload.roomId) return;
+    store.setKickedFromRoom(payload.roomId);
     return;
   }
 

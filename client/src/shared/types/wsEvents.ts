@@ -223,6 +223,12 @@ export interface RoomUpdatedPayload {
 // --- Room player events ---
 export const SYSTEM_PLAYER_JOINED = "system:player_joined" as const;
 export const SYSTEM_PLAYER_LEFT = "system:player_left" as const;
+export const SYSTEM_ROOM_KICKED = "system:room_kicked" as const;
+
+export interface RoomKickedPayload {
+  roomId: number;
+  reason: string;
+}
 
 export interface PlayerJoinedPayload {
   roomId: number;

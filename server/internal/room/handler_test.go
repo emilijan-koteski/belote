@@ -273,6 +273,8 @@ func setupTest() (*echo.Echo, *mockRoomRepo) {
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
 	api.POST("/rooms/:id/start", handler.StartGame)
+	api.POST("/rooms/:id/kick", handler.KickPlayer)
+	api.POST("/rooms/:id/swap-seats", handler.SwapSeats)
 
 	return e, repo
 }
@@ -294,6 +296,8 @@ func setupTestWithBroadcast() (*echo.Echo, *mockRoomRepo, *mockBroadcaster) {
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
 	api.POST("/rooms/:id/start", handler.StartGame)
+	api.POST("/rooms/:id/kick", handler.KickPlayer)
+	api.POST("/rooms/:id/swap-seats", handler.SwapSeats)
 
 	return e, repo, broadcaster
 }
@@ -1957,4 +1961,440 @@ func TestCreateRoom_BroadcastsRoomCreated(t *testing.T) {
 	var roomName string
 	require.NoError(t, json.Unmarshal(payload["name"], &roomName))
 	assert.Equal(t, "Broadcast Room", roomName)
+}
+
+// --- KickPlayer Tests ---
+
+func doKickPlayer(e *echo.Echo, id string, body string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/kick", strings.NewReader(body))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+func msgTypeOf(t *testing.T, raw []byte) string {
+	t.Helper()
+	var msg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(raw, &msg))
+	var msgType string
+	require.NoError(t, json.Unmarshal(msg["type"], &msgType))
+	return msgType
+}
+
+func TestKickPlayer_Success(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+
+	r := &room.Room{Name: "Kick Test", OwnerID: 100, Status: "waiting", PlayerCount: 3}
+	require.NoError(t, repo.Create(r))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 300, Username: "P3"}))
+
+	token := validToken(100)
+	rec := doKickPlayer(e, "1", `{"userId": 200}`, token)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	// Player count decremented
+	updated, _ := repo.FindByID(r.ID)
+	require.NotNil(t, updated)
+	assert.Equal(t, 2, updated.PlayerCount)
+
+	// 200 removed from room_players
+	prooms, _ := repo.FindPlayersByRoomID(r.ID)
+	require.Len(t, prooms, 2)
+	for _, p := range prooms {
+		assert.NotEqual(t, uint(200), p.UserID)
+	}
+
+	// Response shape
+	var resp map[string]map[string]interface{}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, float64(2), resp["data"]["playerCount"])
+
+	// Three broadcasts: kicked user, remaining members, lobby-wide
+	require.Len(t, broadcaster.calls, 2, "expected 2 BroadcastToUsers calls")
+	require.Len(t, broadcaster.allCalls, 1, "expected 1 BroadcastAll call (room_updated)")
+
+	// First call goes to the kicked user with system:room_kicked
+	assert.ElementsMatch(t, []uint{200}, broadcaster.calls[0].userIDs)
+	assert.Equal(t, "system:room_kicked", msgTypeOf(t, broadcaster.calls[0].msg))
+
+	// Second call goes to the remaining members with system:player_left
+	assert.ElementsMatch(t, []uint{100, 300}, broadcaster.calls[1].userIDs)
+	assert.Equal(t, "system:player_left", msgTypeOf(t, broadcaster.calls[1].msg))
+
+	// Lobby-wide broadcast is system:room_updated
+	assert.Equal(t, "system:room_updated", msgTypeOf(t, broadcaster.allCalls[0].msg))
+
+	// Verify kick payload contents
+	var kickMsg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.calls[0].msg, &kickMsg))
+	var kickPayload map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(kickMsg["payload"], &kickPayload))
+	var reason string
+	require.NoError(t, json.Unmarshal(kickPayload["reason"], &reason))
+	assert.Equal(t, "kicked_by_owner", reason)
+
+	// Verify player_left payload includes the kicked user's username
+	var leftMsg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.calls[1].msg, &leftMsg))
+	var leftPayload map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(leftMsg["payload"], &leftPayload))
+	var leftUserID float64
+	require.NoError(t, json.Unmarshal(leftPayload["userId"], &leftUserID))
+	assert.Equal(t, float64(200), leftUserID)
+	var leftUsername string
+	require.NoError(t, json.Unmarshal(leftPayload["username"], &leftUsername))
+	assert.Equal(t, "P2", leftUsername)
+	var pc float64
+	require.NoError(t, json.Unmarshal(leftPayload["playerCount"], &pc))
+	assert.Equal(t, float64(2), pc)
+}
+
+func TestKickPlayer_NotOwner(t *testing.T) {
+	e, repo := setupTest()
+
+	r := &room.Room{Name: "Kick NotOwner", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	require.NoError(t, repo.Create(r))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
+
+	token := validToken(200) // not the owner
+	rec := doKickPlayer(e, "1", `{"userId": 100}`, token)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_ROOM_OWNER", errResp["error"]["code"])
+
+	// State unchanged
+	updated, _ := repo.FindByID(r.ID)
+	assert.Equal(t, 2, updated.PlayerCount)
+}
+
+func TestKickPlayer_RoomNotWaiting(t *testing.T) {
+	e, repo := setupTest()
+
+	r := &room.Room{Name: "Kick Playing", OwnerID: 100, Status: "playing", PlayerCount: 4}
+	require.NoError(t, repo.Create(r))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
+
+	token := validToken(100)
+	rec := doKickPlayer(e, "1", `{"userId": 200}`, token)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "ROOM_NOT_WAITING", errResp["error"]["code"])
+
+	// State unchanged
+	updated, _ := repo.FindByID(r.ID)
+	assert.Equal(t, 4, updated.PlayerCount)
+}
+
+func TestKickPlayer_MissingUserID(t *testing.T) {
+	e, repo := setupTest()
+
+	r := &room.Room{Name: "Kick Bad Body", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	require.NoError(t, repo.Create(r))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner"}))
+
+	token := validToken(100)
+
+	// missing userId
+	rec := doKickPlayer(e, "1", `{}`, token)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "BAD_REQUEST", errResp["error"]["code"])
+
+	// userId == 0
+	rec2 := doKickPlayer(e, "1", `{"userId": 0}`, token)
+	assert.Equal(t, http.StatusBadRequest, rec2.Code)
+	var errResp2 map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec2.Body.Bytes(), &errResp2))
+	assert.Equal(t, "BAD_REQUEST", errResp2["error"]["code"])
+}
+
+func TestKickPlayer_CannotKickSelf(t *testing.T) {
+	e, repo := setupTest()
+
+	r := &room.Room{Name: "Kick Self", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	require.NoError(t, repo.Create(r))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
+
+	token := validToken(100)
+	rec := doKickPlayer(e, "1", `{"userId": 100}`, token)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "CANNOT_KICK_SELF", errResp["error"]["code"])
+}
+
+func TestKickPlayer_NotInRoom(t *testing.T) {
+	e, repo := setupTest()
+
+	r := &room.Room{Name: "Kick Stranger", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	require.NoError(t, repo.Create(r))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
+
+	token := validToken(100)
+	// userID 999 is not a member of this room
+	rec := doKickPlayer(e, "1", `{"userId": 999}`, token)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_IN_ROOM", errResp["error"]["code"])
+}
+
+// TestKickPlayer_PreviousOwnerLosesPermission locks in TOCTOU behaviour:
+// after the original owner leaves and ownership transfers, the original
+// owner's authorization no longer survives the in-tx ownership re-check.
+func TestKickPlayer_PreviousOwnerLosesPermission(t *testing.T) {
+	e, repo := setupTest()
+
+	r := &room.Room{Name: "Kick Race", OwnerID: 100, Status: "waiting", PlayerCount: 3}
+	require.NoError(t, repo.Create(r))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "A"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "B"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 300, Username: "C"}))
+
+	// A leaves first — ownership transfers to B (200)
+	leaveRec := doLeaveRoom(e, "1", validToken(100))
+	require.Equal(t, http.StatusOK, leaveRec.Code)
+	updated, _ := repo.FindByID(r.ID)
+	require.Equal(t, uint(200), updated.OwnerID)
+
+	// A (no longer owner) attempts to kick C — must return 403.
+	// In the mock, A is no longer a member, but the owner-check inside the tx
+	// is what matters: A's userID != current OwnerID == 200.
+	rec := doKickPlayer(e, "1", `{"userId": 300}`, validToken(100))
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_ROOM_OWNER", errResp["error"]["code"])
+}
+
+func TestKickPlayer_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+	rec := doKickPlayer(e, "1", `{"userId": 200}`, "")
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// --- SwapSeats Tests ---
+
+func doSwapSeats(e *echo.Echo, id string, body string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/swap-seats", strings.NewReader(body))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+// seedSeatedRoom seeds a room with the owner at seat 0 and three other
+// players at seats 1, 2, 3 (red/blue/red/blue).
+func seedSeatedRoom(t *testing.T, repo *mockRoomRepo) *room.Room {
+	t.Helper()
+	r := &room.Room{Name: "Swap Test", OwnerID: 100, Status: "waiting", PlayerCount: 4}
+	require.NoError(t, repo.Create(r))
+	seats := []int{0, 1, 2, 3}
+	teams := []string{"red", "blue", "red", "blue"}
+	users := []uint{100, 200, 300, 400}
+	names := []string{"Owner", "P2", "P3", "P4"}
+	for i, uid := range users {
+		seat := seats[i]
+		team := teams[i]
+		require.NoError(t, repo.AddPlayer(&room.RoomPlayer{
+			RoomID:   r.ID,
+			UserID:   uid,
+			Username: names[i],
+			Seat:     &seat,
+			Team:     &team,
+		}))
+	}
+	return r
+}
+
+func TestSwapSeats_Success(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+	r := seedSeatedRoom(t, repo)
+
+	token := validToken(100) // owner
+	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 1}`, token)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	// User 100 should now be at seat 1 (blue), user 200 at seat 0 (red)
+	players, _ := repo.FindPlayersByRoomID(r.ID)
+	for _, p := range players {
+		switch p.UserID {
+		case 100:
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 1, *p.Seat)
+			require.NotNil(t, p.Team)
+			assert.Equal(t, "blue", *p.Team)
+		case 200:
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 0, *p.Seat)
+			require.NotNil(t, p.Team)
+			assert.Equal(t, "red", *p.Team)
+		}
+	}
+
+	// Two ordered seat_updated broadcasts, no lobby-wide broadcast
+	require.Len(t, broadcaster.calls, 2, "expected exactly two BroadcastToUsers calls")
+	assert.Empty(t, broadcaster.allCalls, "swap must NOT trigger room_updated lobby-wide broadcast")
+
+	for _, call := range broadcaster.calls {
+		assert.Equal(t, "system:seat_updated", msgTypeOf(t, call.msg))
+		// Each broadcast goes to all 4 room members
+		assert.ElementsMatch(t, []uint{100, 200, 300, 400}, call.userIDs)
+	}
+
+	// First broadcast describes user-100's move (seat 0 → seat 1, prev 0)
+	var msgA map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.calls[0].msg, &msgA))
+	var pA map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msgA["payload"], &pA))
+	var userIdA float64
+	require.NoError(t, json.Unmarshal(pA["userId"], &userIdA))
+	assert.Equal(t, float64(100), userIdA)
+	var seatA float64
+	require.NoError(t, json.Unmarshal(pA["seat"], &seatA))
+	assert.Equal(t, float64(1), seatA)
+	var prevSeatA float64
+	require.NoError(t, json.Unmarshal(pA["previousSeat"], &prevSeatA))
+	assert.Equal(t, float64(0), prevSeatA)
+
+	// Second broadcast describes user-200's move (seat 1 → seat 0, prev 1)
+	var msgB map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.calls[1].msg, &msgB))
+	var pB map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msgB["payload"], &pB))
+	var userIdB float64
+	require.NoError(t, json.Unmarshal(pB["userId"], &userIdB))
+	assert.Equal(t, float64(200), userIdB)
+	var seatBVal float64
+	require.NoError(t, json.Unmarshal(pB["seat"], &seatBVal))
+	assert.Equal(t, float64(0), seatBVal)
+	var prevSeatB float64
+	require.NoError(t, json.Unmarshal(pB["previousSeat"], &prevSeatB))
+	assert.Equal(t, float64(1), prevSeatB)
+}
+
+func TestSwapSeats_CrossTeamRecomputesTeam(t *testing.T) {
+	e, repo, _ := setupTestWithBroadcast()
+	seedSeatedRoom(t, repo)
+
+	token := validToken(100)
+	// seat 0 (red) ↔ seat 3 (blue)
+	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 3}`, token)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	players, _ := repo.FindPlayersByRoomID(1)
+	for _, p := range players {
+		switch p.UserID {
+		case 100:
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 3, *p.Seat)
+			assert.Equal(t, "blue", *p.Team)
+		case 400:
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 0, *p.Seat)
+			assert.Equal(t, "red", *p.Team)
+		}
+	}
+}
+
+func TestSwapSeats_NotOwner(t *testing.T) {
+	e, repo := setupTest()
+	seedSeatedRoom(t, repo)
+
+	token := validToken(200) // not the owner
+	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 1}`, token)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_ROOM_OWNER", errResp["error"]["code"])
+}
+
+func TestSwapSeats_RoomNotWaiting(t *testing.T) {
+	e, repo := setupTest()
+	r := seedSeatedRoom(t, repo)
+	r.Status = "playing"
+
+	token := validToken(100)
+	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 1}`, token)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "ROOM_NOT_WAITING", errResp["error"]["code"])
+}
+
+func TestSwapSeats_InvalidSeat(t *testing.T) {
+	e, repo := setupTest()
+	seedSeatedRoom(t, repo)
+
+	token := validToken(100)
+
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"missing seatA", `{"seatB": 1}`},
+		{"missing seatB", `{"seatA": 0}`},
+		{"missing both", `{}`},
+		{"equal seats", `{"seatA": 0, "seatB": 0}`},
+		{"out of range high", `{"seatA": 4, "seatB": 1}`},
+		{"out of range negative", `{"seatA": -1, "seatB": 1}`},
+		{"both out of range", `{"seatA": 99, "seatB": 100}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := doSwapSeats(e, "1", tc.body, token)
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			var errResp map[string]map[string]string
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+			assert.Equal(t, "INVALID_SEAT", errResp["error"]["code"])
+		})
+	}
+}
+
+func TestSwapSeats_SeatNotOccupied(t *testing.T) {
+	e, repo := setupTest()
+
+	r := &room.Room{Name: "Swap Empty", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	require.NoError(t, repo.Create(r))
+	seat0 := 0
+	red := "red"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner", Seat: &seat0, Team: &red}))
+	// Second player not yet seated
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
+
+	token := validToken(100)
+	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 1}`, token)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "SEAT_NOT_OCCUPIED", errResp["error"]["code"])
+}
+
+func TestSwapSeats_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 1}`, "")
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }

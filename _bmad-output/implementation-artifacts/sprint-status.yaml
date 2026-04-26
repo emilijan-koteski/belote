@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-06
-last_updated: "2026-04-19"  # Story 7.2 code review complete — 3 patches applied (win-rate denominator includes abandoned; stats error branch; PII guard on 500); 2 items deferred (D87/D88)
+last_updated: "2026-04-26"  # Story 8-1 done (room owner pre-game controls; review patches applied); epic-8 in-progress
 project: belote
 project_key: NOKEY
 tracking_system: file-system
@@ -103,8 +103,8 @@ development_status:
   epic-7-retrospective: optional
 
   # --- Epic 8: Game Table Enhancements (Phase 2) ---
-  epic-8: backlog
-  8-1-room-owner-pre-game-controls: backlog
+  epic-8: in-progress
+  8-1-room-owner-pre-game-controls: done
   8-2-team-surrender: backlog
   8-3-in-game-emotes: backlog
   epic-8-retrospective: optional
