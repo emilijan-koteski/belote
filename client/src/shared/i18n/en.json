@@ -215,6 +215,10 @@
       "labelWithTeam": "Trump suit: {{suit}}, called by {{team}} team",
       "labelWithCaller": "Trump suit: {{suit}}, called by {{team}} team ({{name}})"
     },
+    "trumpReveal": {
+      "title": "{{name}} took trump",
+      "unknownPlayer": "Trump taken"
+    },
     "dealerIndicator": {
       "dealer": "Dealer",
       "label": "Dealer: {{name}}"

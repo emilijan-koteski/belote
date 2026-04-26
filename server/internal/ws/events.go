@@ -46,6 +46,16 @@ type CardPlayedPayload struct {
 	AutoPlayed bool   `json:"autoPlayed"`
 }
 
+// TrumpSelectedPayload is the typed payload for EventTrumpSelected events.
+// CardID carries the originally face-up trumpCandidate the picker absorbed —
+// the post-pick GameState clears trumpCandidate to nil, so this event is the
+// only place clients can read it.
+type TrumpSelectedPayload struct {
+	PlayerSeat int    `json:"playerSeat"`
+	TrumpSuit  string `json:"trumpSuit"`
+	CardID     string `json:"cardId"`
+}
+
 // BelotAnnouncedPayload is the typed payload for EventBelotAnnounced events.
 // CardID is the K/Q of trump that was just played and triggered the announcement.
 type BelotAnnouncedPayload struct {

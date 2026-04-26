@@ -116,6 +116,9 @@ export interface MatchEndPayload {
 export interface TrumpSelectedPayload {
   playerSeat: number;
   trumpSuit: string;
+  // Originally face-up trump candidate the picker absorbed. The post-pick
+  // GameState clears trumpCandidate, so this event is the only carrier.
+  cardId: string;
 }
 
 export interface DeclarationsResolvedPayload {

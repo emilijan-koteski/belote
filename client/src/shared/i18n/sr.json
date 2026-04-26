@@ -215,6 +215,10 @@
       "labelWithTeam": "Adut: {{suit}}, zvao {{team}} tim",
       "labelWithCaller": "Adut: {{suit}}, zvao {{team}} tim ({{name}})"
     },
+    "trumpReveal": {
+      "title": "{{name}} je uzeo aduta",
+      "unknownPlayer": "Adut uzet"
+    },
     "dealerIndicator": {
       "dealer": "Delilac",
       "label": "Delilac: {{name}}"

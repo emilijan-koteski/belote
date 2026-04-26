@@ -23,6 +23,7 @@ import type {
   PlayerReconnectedPayload,
   SeatUpdatedPayload,
   TrickResolvedPayload,
+  TrumpSelectedPayload,
   WsMessage,
 } from "@/shared/types/wsEvents";
 import {
@@ -179,8 +180,16 @@ function dispatchGameEvent(message: WsMessage): void {
   }
 
   if (type === EVENT_TRUMP_SELECTED) {
-    // Informational only — the full event:game_state that follows carries all updated fields
-    // (activePlayerSeat, trumpSuit, phase, trumpCallerSeat, etc.)
+    // Drives the table-wide TrumpReveal dialog. The full event:game_state that
+    // follows carries the persistent fields (trumpSuit, trumpCallerSeat, phase,
+    // activePlayerSeat); the cardId here is the originally face-up
+    // trumpCandidate the picker absorbed and lives only on this event.
+    const payload = message.payload as TrumpSelectedPayload;
+    if (!payload.cardId || payload.cardId.length < 2) {
+      console.warn("WS: ignoring malformed event:trump_selected payload", payload);
+      return;
+    }
+    store.setTrumpReveal(payload);
     return;
   }
 

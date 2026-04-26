@@ -466,11 +466,23 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 
 	case game.ActionPickTrump:
 		if newState.TrumpSuit != nil {
-			trumpSelected := map[string]interface{}{
-				"playerSeat": action.PlayerSeat,
-				"trumpSuit":  string(*newState.TrumpSuit),
+			// oldState.TrumpCandidate is the face-up card the picker took;
+			// ApplyAction clears it on newState, so source from oldState.
+			// handlePickTrump rejects the action with ErrWrongPhase when
+			// TrumpCandidate is nil, so the nil branch here is a defensive
+			// guard for future code paths — log loudly rather than emit a
+			// payload the client will silently drop on its length-2 guard.
+			if oldState.TrumpCandidate == nil {
+				slog.Warn("session: trump_selected suppressed; oldState.TrumpCandidate is nil",
+					"playerSeat", action.PlayerSeat)
+			} else {
+				trumpSelected := ws.TrumpSelectedPayload{
+					PlayerSeat: action.PlayerSeat,
+					TrumpSuit:  string(*newState.TrumpSuit),
+					CardID:     oldState.TrumpCandidate.String(),
+				}
+				m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventTrumpSelected, trumpSelected))
 			}
-			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventTrumpSelected, trumpSelected))
 		}
 		// Always follow with full state so clients leave the bidding UI and
 		// sync activePlayerSeat/phase/trumpCallerSeat. Without this, a

@@ -7,6 +7,7 @@ import type {
   HandScoredPayload,
   MatchAbandonedPayload,
   MatchEndPayload,
+  TrumpSelectedPayload,
 } from "@/shared/types/wsEvents";
 
 interface GameStoreState {
@@ -17,6 +18,7 @@ interface GameStoreState {
   lastError: string | null;
   declarationReveal: DeclarationsResolvedPayload | null;
   belotReveal: BelotAnnouncedPayload | null;
+  trumpReveal: TrumpSelectedPayload | null;
   scoreRevealData: HandScoredPayload | null;
   matchEndData: MatchEndPayload | null;
   matchAbandonedData: MatchAbandonedPayload | null;
@@ -27,6 +29,7 @@ interface GameStoreState {
   setLastError: (error: string | null) => void;
   setDeclarationReveal: (payload: DeclarationsResolvedPayload | null) => void;
   setBelotReveal: (payload: BelotAnnouncedPayload | null) => void;
+  setTrumpReveal: (payload: TrumpSelectedPayload | null) => void;
   setScoreRevealData: (data: HandScoredPayload | null) => void;
   setMatchEndData: (data: MatchEndPayload | null) => void;
   setMatchAbandonedData: (data: MatchAbandonedPayload | null) => void;
@@ -57,6 +60,7 @@ const initialState = {
   lastError: null,
   declarationReveal: null,
   belotReveal: null,
+  trumpReveal: null,
   scoreRevealData: null,
   matchEndData: null,
   matchAbandonedData: null,
@@ -77,6 +81,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setDeclarationReveal: (declarationReveal) => set({ declarationReveal }),
 
   setBelotReveal: (belotReveal) => set({ belotReveal }),
+
+  setTrumpReveal: (trumpReveal) => set({ trumpReveal }),
 
   setScoreRevealData: (scoreRevealData) => set({ scoreRevealData }),
 

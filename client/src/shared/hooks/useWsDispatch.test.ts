@@ -384,6 +384,41 @@ describe("useWsDispatch", () => {
     expect(state.matchEndData?.matchDurationSec).toBe(300);
   });
 
+  it("dispatches event:trump_selected to gameStore.trumpReveal", () => {
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:trump_selected",
+      payload: { playerSeat: 2, trumpSuit: "S", cardId: "7S" },
+    });
+
+    const reveal = useGameStore.getState().trumpReveal;
+    expect(reveal).not.toBeNull();
+    expect(reveal?.playerSeat).toBe(2);
+    expect(reveal?.trumpSuit).toBe("S");
+    expect(reveal?.cardId).toBe("7S");
+  });
+
+  it("ignores malformed event:trump_selected payloads (cardId guard)", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:trump_selected",
+      payload: { playerSeat: 2, trumpSuit: "S", cardId: "" },
+    });
+    dispatch({
+      type: "event:trump_selected",
+      payload: { playerSeat: 2, trumpSuit: "S", cardId: "X" },
+    });
+
+    expect(useGameStore.getState().trumpReveal).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   // --- Room lobby event dispatch tests ---
 
   it("dispatches system:player_joined to roomLobbyStore", () => {

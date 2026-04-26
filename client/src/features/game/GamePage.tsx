@@ -39,6 +39,7 @@ import { ScoreReveal } from "./components/ScoreReveal";
 import { TrickArea } from "./components/TrickArea";
 import { TrumpIndicator } from "./components/TrumpIndicator";
 import { TrumpPrompt } from "./components/TrumpPrompt";
+import { TrumpReveal } from "./components/TrumpReveal";
 import { detectDeclarations } from "./lib/declarations";
 import { legalCardIds } from "./lib/legalCards";
 
@@ -75,6 +76,8 @@ export function GamePage() {
   const setDeclarationReveal = useGameStore((s) => s.setDeclarationReveal);
   const belotReveal = useGameStore((s) => s.belotReveal);
   const setBelotReveal = useGameStore((s) => s.setBelotReveal);
+  const trumpReveal = useGameStore((s) => s.trumpReveal);
+  const setTrumpReveal = useGameStore((s) => s.setTrumpReveal);
   const scoreRevealData = useGameStore((s) => s.scoreRevealData);
   const setScoreRevealData = useGameStore((s) => s.setScoreRevealData);
   const matchEndData = useGameStore((s) => s.matchEndData);
@@ -279,6 +282,10 @@ export function GamePage() {
   const handleBelotRevealComplete = useCallback(() => {
     setBelotReveal(null);
   }, [setBelotReveal]);
+
+  const handleTrumpRevealComplete = useCallback(() => {
+    setTrumpReveal(null);
+  }, [setTrumpReveal]);
 
   const handleCapotComplete = useCallback(() => {
     setOverlayPhase("score_reveal");
@@ -546,6 +553,19 @@ export function GamePage() {
           cardId={belotReveal.cardId}
           isKing={belotReveal.cardId.startsWith("K")}
           onComplete={handleBelotRevealComplete}
+        />
+      )}
+
+      {/* Trump-take reveal — table-wide dialog showing the picker and the
+          originally face-up trumpCandidate. Keyed on payload so a reshuffle-
+          then-pick sequence remounts cleanly. */}
+      {trumpReveal && (
+        <TrumpReveal
+          key={`${trumpReveal.playerSeat}-${trumpReveal.cardId}`}
+          playerSeat={trumpReveal.playerSeat}
+          cardId={trumpReveal.cardId}
+          players={gameState.players}
+          onComplete={handleTrumpRevealComplete}
         />
       )}
 
