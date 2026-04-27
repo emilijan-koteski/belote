@@ -17,6 +17,9 @@ import {
   ACTION_PICK_TRUMP,
   ACTION_PLAY_CARD,
   ACTION_SKIP_DECLARE,
+  ACTION_SURRENDER_ACCEPT,
+  ACTION_SURRENDER_DECLINE,
+  ACTION_SURRENDER_REQUEST,
   ACTION_UNPAUSE,
 } from "@/shared/types/wsEvents";
 
@@ -36,6 +39,9 @@ import { ReconnectOverlay } from "./components/ReconnectOverlay";
 import { ReshuffleAnimation } from "./components/ReshuffleAnimation";
 import { ScorePanel } from "./components/ScorePanel";
 import { ScoreReveal } from "./components/ScoreReveal";
+import { SurrenderButton } from "./components/SurrenderButton";
+import { SurrenderOpponentBanner } from "./components/SurrenderOpponentBanner";
+import { SurrenderPrompt } from "./components/SurrenderPrompt";
 import { TrickArea } from "./components/TrickArea";
 import { TrumpIndicator } from "./components/TrumpIndicator";
 import { TrumpPrompt } from "./components/TrumpPrompt";
@@ -166,6 +172,11 @@ export function GamePage() {
     }
   }, [currentPhase]);
 
+  // Track whether the most recent client action was a surrender so the next
+  // ErrInvalidAction / ErrWrongPhase rejection can route to the
+  // surrender-specific i18n strings instead of the generic ones.
+  const surrenderActionInFlightRef = useRef(false);
+
   // Error toast display — uses same mapping as useWsDispatch error routing.
   // Timer is tracked via ref (not effect cleanup) so the 3 s auto-dismiss isn't
   // cancelled by the re-run triggered by setLastError(null).
@@ -180,7 +191,15 @@ export function GamePage() {
       "error:no_active_pause": "game.errors.noActivePause",
       "error:not_room_owner": "game.errors.notRoomOwner",
     };
-    const i18nKey = ERROR_I18N[lastError];
+    const SURRENDER_ERROR_I18N: Record<string, string> = {
+      "error:invalid_action": "game.surrender.errors.actionRequired",
+      "error:wrong_phase": "game.surrender.errors.wrongPhase",
+    };
+    const surrenderKey = surrenderActionInFlightRef.current
+      ? SURRENDER_ERROR_I18N[lastError]
+      : undefined;
+    surrenderActionInFlightRef.current = false;
+    const i18nKey = surrenderKey ?? ERROR_I18N[lastError];
     setLastError(null);
     if (!i18nKey) return;
     if (errorToastTimerRef.current !== null) {
@@ -271,6 +290,21 @@ export function GamePage() {
     sendMessage(ACTION_OWNER_UNPAUSE, {});
   }, [sendMessage]);
 
+  const handleSurrenderRequest = useCallback(() => {
+    surrenderActionInFlightRef.current = true;
+    sendMessage(ACTION_SURRENDER_REQUEST, {});
+  }, [sendMessage]);
+
+  const handleSurrenderAccept = useCallback(() => {
+    surrenderActionInFlightRef.current = true;
+    sendMessage(ACTION_SURRENDER_ACCEPT, {});
+  }, [sendMessage]);
+
+  const handleSurrenderDecline = useCallback(() => {
+    surrenderActionInFlightRef.current = true;
+    sendMessage(ACTION_SURRENDER_DECLINE, {});
+  }, [sendMessage]);
+
   const handleReshuffleComplete = useCallback(() => {
     setShowReshuffle(false);
   }, []);
@@ -332,6 +366,34 @@ export function GamePage() {
     (gameState.phase === "playing" || gameState.phase === "bidding") &&
     myPlayerSeat !== null &&
     !gameState.pauseUsed?.[myPlayerSeat];
+
+  // Surrender state (Story 8.2)
+  const surrenderProposerSeat = gameState.surrenderProposerSeat;
+  const isProposer = surrenderProposerSeat !== null && surrenderProposerSeat === myPlayerSeat;
+  const isPartnerOfProposer =
+    surrenderProposerSeat !== null &&
+    myPlayerSeat !== null &&
+    (surrenderProposerSeat + 2) % 4 === myPlayerSeat;
+  const isOpponentOfProposer =
+    surrenderProposerSeat !== null && myPlayerSeat !== null && !isProposer && !isPartnerOfProposer;
+  const showSurrenderControls =
+    myPlayerSeat !== null && (gameState.phase === "playing" || gameState.phase === "bidding");
+  const canSurrenderRequest =
+    showSurrenderControls &&
+    surrenderProposerSeat === null &&
+    myPlayerSeat !== null &&
+    !gameState.surrenderUsed?.[myPlayerSeat];
+  const proposerPlayer =
+    surrenderProposerSeat !== null
+      ? gameState.players.find((p) => p.seat === surrenderProposerSeat)
+      : undefined;
+  const proposerUsername = proposerPlayer?.username ?? t("game.surrender.unknownProposer");
+
+  const surrenderedByUsername =
+    matchEndData?.outcomeReason === "surrender" &&
+    typeof matchEndData.surrenderedBySeat === "number"
+      ? gameState.players.find((p) => p.seat === matchEndData.surrenderedBySeat)?.username
+      : undefined;
 
   // Compute playable card IDs — block during prompts and pause
   const isMyTurn =
@@ -448,18 +510,44 @@ export function GamePage() {
         />
       </div>
 
-      {/* Pause button - bottom left */}
+      {/* Pause + surrender controls — bottom-left stack */}
       {(gameState.phase === "playing" || gameState.phase === "bidding") && (
-        <button
-          className="absolute bottom-4 left-4 z-10 border border-border text-text-secondary font-body text-sm px-3 py-1.5 rounded-lg hover:text-text-primary hover:border-text-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          onClick={handlePause}
-          disabled={!canPause}
-          data-testid="pause-button"
-        >
-          {gameState.pauseUsed?.[myPlayerSeat]
-            ? t("game.pause.pauseUsed")
-            : t("game.pause.pauseButton")}
-        </button>
+        <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2">
+          <button
+            className="border border-border text-text-secondary font-body text-sm px-3 py-1.5 rounded-lg hover:text-text-primary hover:border-text-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={handlePause}
+            disabled={!canPause}
+            data-testid="pause-button"
+          >
+            {gameState.pauseUsed?.[myPlayerSeat]
+              ? t("game.pause.pauseUsed")
+              : t("game.pause.pauseButton")}
+          </button>
+
+          <SurrenderButton
+            canRequest={canSurrenderRequest}
+            isExhausted={!!gameState.surrenderUsed?.[myPlayerSeat]}
+            isPending={surrenderProposerSeat !== null}
+            onConfirm={handleSurrenderRequest}
+          />
+        </div>
+      )}
+
+      {/* Surrender prompt — partner-only, modal. Suppress while a match-end
+          / match-abandoned overlay is up so the prompt's focus trap doesn't
+          swallow Tab navigation to the Return-to-Lobby button. */}
+      {isPartnerOfProposer && matchEndData === null && matchAbandonedData === null && (
+        <SurrenderPrompt
+          proposerUsername={proposerUsername}
+          onAccept={handleSurrenderAccept}
+          onDecline={handleSurrenderDecline}
+        />
+      )}
+
+      {/* Surrender opponent banner — non-modal status strip. Same overlay
+          gate as the prompt. */}
+      {isOpponentOfProposer && matchEndData === null && matchAbandonedData === null && (
+        <SurrenderOpponentBanner proposerUsername={proposerUsername} />
       )}
 
       {/* Pause overlay */}
@@ -586,7 +674,11 @@ export function GamePage() {
 
       {/* Match result overlay */}
       {overlayPhase === "match_result" && matchEndData !== null && (
-        <MatchResult data={matchEndData} onReturnToLobby={handleReturnToLobby} />
+        <MatchResult
+          data={matchEndData}
+          onReturnToLobby={handleReturnToLobby}
+          surrenderedByUsername={surrenderedByUsername}
+        />
       )}
 
       {/* Error toast */}

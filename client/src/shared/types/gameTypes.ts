@@ -30,7 +30,10 @@ export type ActionType =
   | "decline_belot"
   | "pause"
   | "unpause"
-  | "owner_unpause";
+  | "owner_unpause"
+  | "surrender_request"
+  | "surrender_accept"
+  | "surrender_decline";
 
 export type DeclarationType = "sequence" | "four_of_a_kind";
 
@@ -114,6 +117,8 @@ export interface GameState {
   pausedPlayers: [boolean, boolean, boolean, boolean];
   pauseUsed: [boolean, boolean, boolean, boolean];
   turnTimeRemaining: number;
+  surrenderProposerSeat: number | null;
+  surrenderUsed: [boolean, boolean, boolean, boolean];
   disconnectedSeat: number;
   reconnectExpiresAt: string | null;
 }

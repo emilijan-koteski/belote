@@ -11,9 +11,13 @@ vi.mock("react-i18next", () => ({
         "game.matchResult.returnToLobby": "Return to Lobby",
         "game.score.red": "Red",
         "game.score.blue": "Blue",
+        "game.surrender.unknownProposer": "your opponent",
       };
       if (key === "game.matchResult.winner" && opts) {
         return `${opts.team} Wins!`;
+      }
+      if (key === "game.matchResult.surrenderNote" && opts) {
+        return `${opts.username} surrendered the match`;
       }
       return translations[key] ?? key;
     },
@@ -67,5 +71,35 @@ describe("MatchResult", () => {
 
     await userEvent.click(screen.getByTestId("match-result-lobby-btn"));
     expect(onReturn).toHaveBeenCalledOnce();
+  });
+
+  it("does NOT render surrender note for natural match-end", () => {
+    render(<MatchResult data={matchData} onReturnToLobby={vi.fn()} />);
+    expect(screen.queryByTestId("match-result-surrender-note")).toBeNull();
+  });
+
+  it("renders surrender note when outcomeReason is 'surrender'", () => {
+    const surrenderData: MatchEndPayload = {
+      ...matchData,
+      outcomeReason: "surrender",
+      surrenderedBySeat: 1,
+    };
+    render(
+      <MatchResult data={surrenderData} onReturnToLobby={vi.fn()} surrenderedByUsername="alice" />,
+    );
+    const note = screen.getByTestId("match-result-surrender-note");
+    expect(note).toBeInTheDocument();
+    expect(note).toHaveTextContent("alice surrendered the match");
+  });
+
+  it("falls back to unknownProposer when surrender username is missing", () => {
+    const surrenderData: MatchEndPayload = {
+      ...matchData,
+      outcomeReason: "surrender",
+      surrenderedBySeat: 1,
+    };
+    render(<MatchResult data={surrenderData} onReturnToLobby={vi.fn()} />);
+    const note = screen.getByTestId("match-result-surrender-note");
+    expect(note).toHaveTextContent(/your opponent/);
   });
 });

@@ -19,6 +19,7 @@ type Match struct {
 	CompletedAt   time.Time    `gorm:"not null" json:"completedAt"`
 	Status        string       `gorm:"size:20;not null;default:completed" json:"status"`
 	AbandonedBy   *uint        `gorm:"index" json:"abandonedBy,omitempty"`
+	SurrenderedBy *uint        `gorm:"index" json:"surrenderedBy,omitempty"`
 	CreatedAt     time.Time    `json:"createdAt"`
 	Hands         []HandResult `gorm:"foreignKey:MatchID;constraint:OnDelete:CASCADE" json:"-"`
 }

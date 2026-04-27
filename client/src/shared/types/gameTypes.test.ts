@@ -139,6 +139,8 @@ describe("gameTypes", () => {
         previousPhase: "" as const,
         pausedPlayers: [false, false, false, false] as [boolean, boolean, boolean, boolean],
         pauseUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
+        surrenderProposerSeat: null,
+        surrenderUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
         turnTimeRemaining: 0,
         ownerSeat: 0,
         disconnectedSeat: -1,

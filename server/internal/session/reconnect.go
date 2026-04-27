@@ -58,6 +58,22 @@ func (m *Manager) HandleDisconnect(userID uint) {
 
 	slog.Info("session: player disconnected", "roomID", roomID, "userID", userID, "seat", seat)
 
+	// Story 8.2: clear pending surrender proposal if the proposer or the
+	// proposer's partner is disconnecting — partner can no longer act on the
+	// prompt while in PhaseDisconnected, so leaving the pointer set would
+	// strand the partner's UI. Capture the proposer seat for a follow-up
+	// event:surrender_declined broadcast so all four clients drop the
+	// prompt/banner. The proposer's SurrenderUsed flag stays consumed.
+	clearedSurrenderProposer := -1
+	if gs.SurrenderProposerSeat != nil {
+		proposer := *gs.SurrenderProposerSeat
+		partner := (proposer + 2) % 4
+		if seat == proposer || seat == partner {
+			clearedSurrenderProposer = proposer
+			gs.SurrenderProposerSeat = nil
+		}
+	}
+
 	// [F5] Track whether we auto-cleared a pause — if so, TurnTimeRemaining
 	// is already preserved from the original pause and should not be overwritten.
 	pauseWasAutoCleared := false
@@ -141,6 +157,14 @@ func (m *Manager) HandleDisconnect(userID uint) {
 	disconnectMsg := buildMessage(ws.EventPlayerDisconnected, disconnectPayload)
 	stateMsg := buildMessage(ws.EventGameState, gs)
 
+	var surrenderDeclinedMsg []byte
+	if clearedSurrenderProposer >= 0 {
+		surrenderDeclinedMsg = buildMessage(ws.EventSurrenderDeclined, ws.SurrenderDeclinedPayload{
+			ProposerSeat:  clearedSurrenderProposer,
+			DecliningSeat: seat,
+		})
+	}
+
 	session.mu.Unlock()
 
 	// Broadcast to remaining 3 players (exclude disconnected player)
@@ -149,6 +173,10 @@ func (m *Manager) HandleDisconnect(userID uint) {
 		if i != seat {
 			remainingPlayers = append(remainingPlayers, uid)
 		}
+	}
+	if surrenderDeclinedMsg != nil {
+		// Drop the pending prompt/banner before disconnect overlay takes over.
+		m.hub.BroadcastToUsers(remainingPlayers, surrenderDeclinedMsg)
 	}
 	m.hub.BroadcastToUsers(remainingPlayers, disconnectMsg)
 	m.hub.BroadcastToUsers(remainingPlayers, stateMsg)
@@ -275,6 +303,12 @@ func (m *Manager) handleReconnectTimeout(session *Session, generation uint64) {
 	// Clear disconnect fields
 	gs.DisconnectedSeat = -1
 	gs.ReconnectExpiresAt = nil
+	// Story 8.2: clear any surrender proposal that survived from before the
+	// disconnect. If HandleDisconnect already cleared it (proposer or partner
+	// was the disconnecting seat) this is a no-op; otherwise (proposer and
+	// partner both stayed connected) we still must drop it before the
+	// abandoned overlay mounts so the SurrenderPrompt doesn't ride along.
+	gs.SurrenderProposerSeat = nil
 
 	// Cancel any active timers
 	session.cancelReconnectTimer()

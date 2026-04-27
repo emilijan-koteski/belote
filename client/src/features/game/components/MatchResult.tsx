@@ -6,9 +6,14 @@ import type { MatchEndPayload } from "@/shared/types/wsEvents";
 interface MatchResultProps {
   data: MatchEndPayload;
   onReturnToLobby: () => void;
+  // Resolved username for data.surrenderedBySeat. Optional — falls back to
+  // game.surrender.unknownProposer when undefined and outcomeReason is
+  // "surrender" (e.g. a race where gameState was cleared before the overlay
+  // mounted). Has no effect for natural match-ends.
+  surrenderedByUsername?: string;
 }
 
-export function MatchResult({ data, onReturnToLobby }: MatchResultProps) {
+export function MatchResult({ data, onReturnToLobby, surrenderedByUsername }: MatchResultProps) {
   const { t } = useTranslation();
 
   const teamName = data.winnerTeam === 0 ? t("game.score.red") : t("game.score.blue");
@@ -35,11 +40,22 @@ export function MatchResult({ data, onReturnToLobby }: MatchResultProps) {
         </h2>
 
         <p
-          className={`font-display text-3xl font-bold ${teamColorClass} mb-6`}
+          className={`font-display text-3xl font-bold ${teamColorClass} mb-2`}
           data-testid="match-result-winner"
         >
           {t("game.matchResult.winner", { team: teamName })}
         </p>
+
+        {data.outcomeReason === "surrender" && (
+          <p
+            className="text-text-secondary font-body text-sm mb-6"
+            data-testid="match-result-surrender-note"
+          >
+            {t("game.matchResult.surrenderNote", {
+              username: surrenderedByUsername ?? t("game.surrender.unknownProposer"),
+            })}
+          </p>
+        )}
 
         {/* Final Scores */}
         <div className="flex items-center justify-center gap-4 mb-6">

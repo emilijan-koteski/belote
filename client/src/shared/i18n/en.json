@@ -318,7 +318,33 @@
       "title": "Match Complete",
       "winner": "{{team}} Wins!",
       "duration": "Match Duration",
-      "returnToLobby": "Return to Lobby"
+      "returnToLobby": "Return to Lobby",
+      "surrenderNote": "{{username}} surrendered the match"
+    },
+    "surrender": {
+      "requestButton": "Surrender",
+      "exhausted": "Surrender used",
+      "pending": "Surrender pending…",
+      "confirm": {
+        "title": "Surrender the match?",
+        "body": "Your teammate must accept. If they decline, your one surrender attempt is consumed.",
+        "confirm": "Propose surrender",
+        "cancel": "Cancel"
+      },
+      "prompt": {
+        "title": "Your teammate wants to surrender",
+        "body": "{{username}} is proposing to forfeit the match. Accepting ends the match as a win for the opponents.",
+        "accept": "Accept surrender",
+        "decline": "Decline"
+      },
+      "opponentBanner": "{{username}} is proposing to surrender",
+      "declinedToast": "Surrender declined — play continues",
+      "errors": {
+        "exhausted": "You have already used your surrender for this match.",
+        "actionRequired": "Resolve the pending surrender proposal first.",
+        "wrongPhase": "Surrender is only available during a live hand."
+      },
+      "unknownProposer": "your opponent"
     },
     "pause": {
       "title": "Game Paused",

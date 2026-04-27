@@ -23,6 +23,8 @@ import type {
   PlayerReconnectedPayload,
   RoomKickedPayload,
   SeatUpdatedPayload,
+  SurrenderDeclinedPayload,
+  SurrenderProposedPayload,
   TrickResolvedPayload,
   TrumpSelectedPayload,
   WsMessage,
@@ -36,6 +38,7 @@ import {
   ERROR_NOT_YOUR_TURN,
   ERROR_PAUSE_EXHAUSTED,
   ERROR_PLAYER_DISCONNECTED,
+  ERROR_SURRENDER_EXHAUSTED,
   ERROR_WRONG_PHASE,
   EVENT_BELOT_ANNOUNCED,
   EVENT_CARD_PLAYED,
@@ -48,6 +51,8 @@ import {
   EVENT_MATCH_END,
   EVENT_PLAYER_DISCONNECTED,
   EVENT_PLAYER_RECONNECTED,
+  EVENT_SURRENDER_DECLINED,
+  EVENT_SURRENDER_PROPOSED,
   EVENT_TRICK_RESOLVED,
   EVENT_TRUMP_SELECTED,
   SYSTEM_AUTHENTICATED,
@@ -257,6 +262,27 @@ function dispatchGameEvent(message: WsMessage): void {
     store.setMatchAbandonedData(payload);
     return;
   }
+
+  if (type === EVENT_SURRENDER_PROPOSED) {
+    // Defence in depth: only surface a proposal if the user is in an active
+    // match (Story 8.1 dispatcher hardening pattern).
+    if (store.gameState === null) return;
+    const payload = message.payload as SurrenderProposedPayload;
+    store.setSurrenderProposed(payload);
+    // Full game state update follows via event:game_state — clears the
+    // pending flag on resolve.
+    return;
+  }
+
+  if (type === EVENT_SURRENDER_DECLINED) {
+    if (store.gameState === null) return;
+    const payload = message.payload as SurrenderDeclinedPayload;
+    store.setSurrenderDeclined(payload);
+    toast.info(i18n.t("game.surrender.declinedToast"), { duration: 3000 });
+    // Full game state update follows via event:game_state — clears
+    // surrenderProposerSeat so the prompt/banner unmount.
+    return;
+  }
 }
 
 function dispatchSystemEvent(message: WsMessage): void {
@@ -372,6 +398,17 @@ const GAME_ERROR_TYPES: Set<string> = new Set([
 
 function dispatchErrorEvent(message: WsMessage): void {
   const payload = message.payload as { code?: string; message?: string };
+
+  // Surrender-exhausted has its own dedicated toast (the UI gates already
+  // prevent reaching this branch in the happy path; defence in depth).
+  // Mirror the GAME_ERROR_TYPES lastError write so debug/store consumers see
+  // the event before the early return.
+  if (message.type === ERROR_SURRENDER_EXHAUSTED) {
+    useGameStore.getState().setLastError(message.type);
+    toast.error(i18n.t("game.surrender.errors.exhausted"));
+    return;
+  }
+
   if (GAME_ERROR_TYPES.has(message.type)) {
     useGameStore.getState().setLastError(message.type);
   }

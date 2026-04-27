@@ -103,6 +103,14 @@ const (
 	ActionPause         = "pause"
 	ActionUnpause       = "unpause"
 	ActionOwnerUnpause  = "owner_unpause"
+
+	// Surrender actions (Story 8.2). Each player may initiate at most one
+	// surrender request per match; the proposer's partner accepts (ends match
+	// as opponent win) or declines (consumes the proposer's attempt, play
+	// resumes).
+	ActionSurrenderRequest = "surrender_request"
+	ActionSurrenderAccept  = "surrender_accept"
+	ActionSurrenderDecline = "surrender_decline"
 )
 
 // Action represents a player action submitted to the rules engine.

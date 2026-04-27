@@ -25,6 +25,21 @@ func ApplyAction(state *GameState, action Action) (*GameState, error) {
 		return handleOwnerUnpause(state, action)
 	}
 
+	// Surrender actions (Story 8.2) are matched at the same dispatch level as
+	// pause/unpause so that accept/decline can resolve a pending proposal even
+	// if the rules engine would otherwise reject the current phase. Each
+	// handler enforces its own phase rule (request requires PhasePlaying or
+	// PhaseBidding; accept/decline require a pending proposal).
+	if action.Type == ActionSurrenderRequest {
+		return handleSurrenderRequest(state, action)
+	}
+	if action.Type == ActionSurrenderAccept {
+		return handleSurrenderAccept(state, action)
+	}
+	if action.Type == ActionSurrenderDecline {
+		return handleSurrenderDecline(state, action)
+	}
+
 	switch state.Phase {
 	case PhaseBidding:
 		return handleBidding(state, action)

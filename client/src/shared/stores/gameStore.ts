@@ -7,6 +7,8 @@ import type {
   HandScoredPayload,
   MatchAbandonedPayload,
   MatchEndPayload,
+  SurrenderDeclinedPayload,
+  SurrenderProposedPayload,
   TrumpSelectedPayload,
 } from "@/shared/types/wsEvents";
 
@@ -22,6 +24,8 @@ interface GameStoreState {
   scoreRevealData: HandScoredPayload | null;
   matchEndData: MatchEndPayload | null;
   matchAbandonedData: MatchAbandonedPayload | null;
+  surrenderProposed: SurrenderProposedPayload | null;
+  surrenderDeclined: SurrenderDeclinedPayload | null;
 
   setGameState: (state: GameState) => void;
   setMyPlayerSeat: (seat: number) => void;
@@ -33,6 +37,8 @@ interface GameStoreState {
   setScoreRevealData: (data: HandScoredPayload | null) => void;
   setMatchEndData: (data: MatchEndPayload | null) => void;
   setMatchAbandonedData: (data: MatchAbandonedPayload | null) => void;
+  setSurrenderProposed: (payload: SurrenderProposedPayload | null) => void;
+  setSurrenderDeclined: (payload: SurrenderDeclinedPayload | null) => void;
   clearGame: () => void;
   reset: () => void;
 }
@@ -64,6 +70,8 @@ const initialState = {
   scoreRevealData: null,
   matchEndData: null,
   matchAbandonedData: null,
+  surrenderProposed: null,
+  surrenderDeclined: null,
 };
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -89,6 +97,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setMatchEndData: (matchEndData) => set({ matchEndData }),
 
   setMatchAbandonedData: (matchAbandonedData) => set({ matchAbandonedData }),
+
+  setSurrenderProposed: (surrenderProposed) => set({ surrenderProposed }),
+
+  setSurrenderDeclined: (surrenderDeclined) => set({ surrenderDeclined }),
 
   clearGame: () => set(initialState),
 

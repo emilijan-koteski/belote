@@ -40,6 +40,15 @@ export const ACTION_PAUSE = "action:pause" as const;
 export const ACTION_UNPAUSE = "action:unpause" as const;
 export const ACTION_OWNER_UNPAUSE = "action:owner_unpause" as const;
 
+// --- Surrender actions (Story 8.2) ---
+export const ACTION_SURRENDER_REQUEST = "action:surrender_request" as const;
+export const ACTION_SURRENDER_ACCEPT = "action:surrender_accept" as const;
+export const ACTION_SURRENDER_DECLINE = "action:surrender_decline" as const;
+
+export type SurrenderRequestPayload = Record<string, never>;
+export type SurrenderAcceptPayload = Record<string, never>;
+export type SurrenderDeclinePayload = Record<string, never>;
+
 export interface PlayCardPayload {
   cardId: string;
 }
@@ -111,6 +120,12 @@ export interface MatchEndPayload {
   redFinalScore: number;
   blueFinalScore: number;
   matchDurationSec: number;
+  // Optional fields added by Story 8.2 — natural-end matches omit both via
+  // server-side omitempty so existing readers continue to work.
+  // surrenderedBySeat is a seat index (0..3); the persistence column
+  // match.SurrenderedBy holds a userID — distinct fields, distinct names.
+  outcomeReason?: "surrender";
+  surrenderedBySeat?: number;
 }
 
 export interface TrumpSelectedPayload {
@@ -169,6 +184,22 @@ export interface MatchAbandonedPayload {
   matchDurationSec: number;
 }
 
+// --- Surrender events (server -> client, Story 8.2) ---
+export const EVENT_SURRENDER_PROPOSED = "event:surrender_proposed" as const;
+export const EVENT_SURRENDER_DECLINED = "event:surrender_declined" as const;
+
+export interface SurrenderProposedPayload {
+  proposerSeat: number;
+  proposerTeam: number;
+  proposerUsername: string;
+  partnerSeat: number;
+}
+
+export interface SurrenderDeclinedPayload {
+  proposerSeat: number;
+  decliningSeat: number;
+}
+
 // --- Game error events (server -> client) ---
 export const ERROR_INVALID_ACTION = "error:invalid_action" as const;
 export const ERROR_NOT_YOUR_TURN = "error:not_your_turn" as const;
@@ -178,6 +209,7 @@ export const ERROR_PAUSE_EXHAUSTED = "error:pause_exhausted" as const;
 export const ERROR_NO_ACTIVE_PAUSE = "error:no_active_pause" as const;
 export const ERROR_NOT_ROOM_OWNER = "error:not_room_owner" as const;
 export const ERROR_PLAYER_DISCONNECTED = "error:player_disconnected" as const;
+export const ERROR_SURRENDER_EXHAUSTED = "error:surrender_exhausted" as const;
 
 export interface GameErrorPayload {
   code: string;

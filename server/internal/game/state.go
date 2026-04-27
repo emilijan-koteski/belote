@@ -101,6 +101,10 @@ type GameState struct {
 	PauseUsed         [4]bool `json:"pauseUsed"`         // Which seats have used their one-time pause
 	TurnTimeRemaining int64   `json:"turnTimeRemaining"` // Milliseconds remaining on turn timer when paused/disconnected
 
+	// Surrender state (Story 8.2)
+	SurrenderProposerSeat *int    `json:"surrenderProposerSeat"` // nil when no proposal pending; seat of the proposer otherwise
+	SurrenderUsed         [4]bool `json:"surrenderUsed"`         // each seat may initiate a surrender at most once per match
+
 	// Disconnect state
 	DisconnectedSeat   int        `json:"disconnectedSeat"`   // Seat index of disconnected player (-1 if none)
 	ReconnectExpiresAt *time.Time `json:"reconnectExpiresAt"` // Absolute timestamp when reconnect window closes

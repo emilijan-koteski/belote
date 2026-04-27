@@ -97,6 +97,8 @@ const minimalGameState: GameState = {
   ownerSeat: -1,
   pausedPlayers: [false, false, false, false],
   pauseUsed: [false, false, false, false],
+  surrenderProposerSeat: null,
+  surrenderUsed: [false, false, false, false],
   previousPhase: "",
   disconnectedSeat: -1,
   reconnectExpiresAt: null,

@@ -318,7 +318,33 @@
       "title": "Meč završen",
       "winner": "{{team}} pobeđuje!",
       "duration": "Trajanje meča",
-      "returnToLobby": "Nazad u lobi"
+      "returnToLobby": "Nazad u lobi",
+      "surrenderNote": "{{username}} je predao meč"
+    },
+    "surrender": {
+      "requestButton": "Predaja",
+      "exhausted": "Predaja iskorišćena",
+      "pending": "Predaja na čekanju…",
+      "confirm": {
+        "title": "Predati meč?",
+        "body": "Tvoj saigrač mora da prihvati. Ako odbije, tvoj jedini pokušaj predaje je iskorišćen.",
+        "confirm": "Predloži predaju",
+        "cancel": "Otkaži"
+      },
+      "prompt": {
+        "title": "Tvoj saigrač želi da preda meč",
+        "body": "{{username}} predlaže da predate meč. Ako prihvatiš, meč se završava kao pobeda protivnika.",
+        "accept": "Prihvati predaju",
+        "decline": "Odbij"
+      },
+      "opponentBanner": "{{username}} predlaže predaju",
+      "declinedToast": "Predaja odbijena — igra se nastavlja",
+      "errors": {
+        "exhausted": "Već si iskoristio svoju predaju za ovaj meč.",
+        "actionRequired": "Prvo razreši predlog predaje koji je u toku.",
+        "wrongPhase": "Predaja je dostupna samo tokom žive ruke."
+      },
+      "unknownProposer": "protivnik"
     },
     "pause": {
       "title": "Igra pauzirana",

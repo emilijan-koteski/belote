@@ -83,6 +83,8 @@ function makeState(args: {
     previousPhase: "",
     pausedPlayers: [false, false, false, false],
     pauseUsed: [false, false, false, false],
+    surrenderProposerSeat: null,
+    surrenderUsed: [false, false, false, false],
     turnTimeRemaining: 30,
     disconnectedSeat: -1,
     reconnectExpiresAt: null,

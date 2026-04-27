@@ -1,6 +1,19 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Stub sonner so toast assertions can run; the real module exports more than
+// these methods but the dispatcher only touches `info`/`warning`/`success`/`error`.
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+    warning: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+import { toast } from "sonner";
+
 import { queryClient } from "@/shared/api/queryClient";
 import { queryKeys } from "@/shared/api/queryKeys";
 import { useChatStore } from "@/shared/stores/chatStore";
@@ -84,6 +97,8 @@ const mockGameState: GameState = {
   previousPhase: "" as const,
   pausedPlayers: [false, false, false, false] as [boolean, boolean, boolean, boolean],
   pauseUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
+  surrenderProposerSeat: null,
+  surrenderUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
   turnTimeRemaining: 0,
   ownerSeat: 0,
   disconnectedSeat: -1,
@@ -733,5 +748,132 @@ describe("useWsDispatch", () => {
     });
 
     expect(useRoomLobbyStore.getState().kickedFromRoomId).toBeNull();
+  });
+
+  // --- Surrender (Story 8.2) ---
+
+  it("dispatches event:surrender_proposed to gameStore.surrenderProposed", () => {
+    useGameStore.getState().setGameState(mockGameState);
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:surrender_proposed",
+      payload: {
+        proposerSeat: 0,
+        proposerTeam: 0,
+        proposerUsername: "Alice",
+        partnerSeat: 2,
+      },
+    });
+
+    const state = useGameStore.getState();
+    expect(state.surrenderProposed).not.toBeNull();
+    expect(state.surrenderProposed?.proposerSeat).toBe(0);
+    expect(state.surrenderProposed?.partnerSeat).toBe(2);
+  });
+
+  it("ignores event:surrender_proposed when no active game state", () => {
+    // Defence in depth — gameState=null means no active match, so the
+    // proposal must not surface in the store.
+    expect(useGameStore.getState().gameState).toBeNull();
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:surrender_proposed",
+      payload: {
+        proposerSeat: 0,
+        proposerTeam: 0,
+        proposerUsername: "Alice",
+        partnerSeat: 2,
+      },
+    });
+
+    expect(useGameStore.getState().surrenderProposed).toBeNull();
+  });
+
+  it("dispatches event:surrender_declined to gameStore.surrenderDeclined", () => {
+    useGameStore.getState().setGameState(mockGameState);
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:surrender_declined",
+      payload: { proposerSeat: 0, decliningSeat: 2 },
+    });
+
+    const declined = useGameStore.getState().surrenderDeclined;
+    expect(declined).not.toBeNull();
+    expect(declined?.proposerSeat).toBe(0);
+    expect(declined?.decliningSeat).toBe(2);
+  });
+
+  it("propagates outcomeReason+surrenderedBySeat through event:match_end", () => {
+    useGameStore.getState().setGameState(mockGameState);
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:match_end",
+      payload: {
+        winnerTeam: 1,
+        redFinalScore: 420,
+        blueFinalScore: 600,
+        matchDurationSec: 280,
+        outcomeReason: "surrender",
+        surrenderedBySeat: 0,
+      },
+    });
+
+    const data = useGameStore.getState().matchEndData;
+    expect(data?.outcomeReason).toBe("surrender");
+    expect(data?.surrenderedBySeat).toBe(0);
+  });
+
+  it("does NOT crash on error:surrender_exhausted", () => {
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    expect(() =>
+      dispatch({
+        type: "error:surrender_exhausted",
+        payload: { code: "SURRENDER_EXHAUSTED", message: "already used" },
+      }),
+    ).not.toThrow();
+  });
+
+  it("surfaces toast.error on error:surrender_exhausted", () => {
+    vi.mocked(toast.error).mockClear();
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "error:surrender_exhausted",
+      payload: { code: "SURRENDER_EXHAUSTED", message: "already used" },
+    });
+
+    // i18next without an initialized bundle in this test suite returns the
+    // resolved key path or undefined depending on setup; the load-bearing
+    // assertion is that the dispatcher calls toast.error exactly once for
+    // this event type, which the previous "does NOT crash" test missed.
+    expect(toast.error).toHaveBeenCalledTimes(1);
+  });
+
+  it("writes ERROR_SURRENDER_EXHAUSTED to gameStore.lastError", () => {
+    expect(useGameStore.getState().lastError).toBeNull();
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "error:surrender_exhausted",
+      payload: { code: "SURRENDER_EXHAUSTED", message: "already used" },
+    });
+
+    expect(useGameStore.getState().lastError).toBe("error:surrender_exhausted");
   });
 });

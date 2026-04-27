@@ -11,9 +11,11 @@ import type { GameState } from "@/shared/types/gameTypes";
 
 import { GamePage } from "./GamePage";
 
-// Mock WebSocket context hooks
+// Mock WebSocket context hooks. The send-message hook returns a stable spy so
+// surrender flow tests can assert outgoing actions.
+const mockSendMessage = vi.fn();
 vi.mock("@/shared/providers/WebSocketContext", () => ({
-  useWsSendMessage: () => vi.fn(),
+  useWsSendMessage: () => mockSendMessage,
   useWsConnectionState: () => "connected" as const,
 }));
 
@@ -93,6 +95,8 @@ const mockGameState: GameState = {
   previousPhase: "" as const,
   pausedPlayers: [false, false, false, false] as [boolean, boolean, boolean, boolean],
   pauseUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
+  surrenderProposerSeat: null,
+  surrenderUsed: [false, false, false, false] as [boolean, boolean, boolean, boolean],
   turnTimeRemaining: 0,
   ownerSeat: 0,
   disconnectedSeat: -1,
@@ -110,6 +114,7 @@ function renderGamePage() {
 describe("GamePage", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    mockSendMessage.mockClear();
     useGameStore.getState().reset();
     useAuthStore.setState({
       token: "test-token",
@@ -262,6 +267,115 @@ describe("GamePage", () => {
     });
 
     expect(screen.getByTestId("error-toast")).toHaveTextContent("It's not your turn");
+  });
+
+  // --- Surrender integration tests (Task 9.6) ---
+
+  it("shows SurrenderButton in playing phase, hides in match_end", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    const { rerender } = renderGamePage();
+    expect(screen.getByTestId("surrender-button")).toBeInTheDocument();
+
+    act(() => {
+      useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
+      useGameStore.getState().setMatchEndData({
+        winnerTeam: 0,
+        redFinalScore: 1020,
+        blueFinalScore: 850,
+        matchDurationSec: 300,
+      });
+    });
+    rerender(
+      <BrowserRouter>
+        <GamePage />
+      </BrowserRouter>,
+    );
+
+    expect(screen.queryByTestId("surrender-button")).not.toBeInTheDocument();
+  });
+
+  it("shows SurrenderPrompt for the partner when surrenderProposerSeat is set", () => {
+    // Local player is seat 2 (Carol); proposer is seat 0 (Alice). Partner of
+    // proposer is (0 + 2) % 4 == 2, i.e. the local player.
+    useAuthStore.setState({
+      token: "test-token",
+      user: {
+        id: 30,
+        email: "c@b.com",
+        username: "Carol",
+        languagePreference: "en",
+        createdAt: "",
+      },
+      isLoading: false,
+    });
+    useGameStore.getState().setGameState({ ...mockGameState, surrenderProposerSeat: 0 });
+    useGameStore.getState().setMyPlayerSeat(2);
+
+    renderGamePage();
+
+    expect(screen.getByTestId("surrender-prompt")).toBeInTheDocument();
+    expect(screen.queryByTestId("surrender-opponent-banner")).not.toBeInTheDocument();
+  });
+
+  it("shows SurrenderOpponentBanner for opponents when surrenderProposerSeat is set", () => {
+    // Local player is seat 1 (Bob, Blue team); proposer is seat 0 (Alice, Red).
+    useAuthStore.setState({
+      token: "test-token",
+      user: {
+        id: 20,
+        email: "b@b.com",
+        username: "Bob",
+        languagePreference: "en",
+        createdAt: "",
+      },
+      isLoading: false,
+    });
+    useGameStore.getState().setGameState({ ...mockGameState, surrenderProposerSeat: 0 });
+    useGameStore.getState().setMyPlayerSeat(1);
+
+    renderGamePage();
+
+    expect(screen.getByTestId("surrender-opponent-banner")).toBeInTheDocument();
+    expect(screen.queryByTestId("surrender-prompt")).not.toBeInTheDocument();
+  });
+
+  it("hides SurrenderPrompt when surrenderProposerSeat clears", () => {
+    useAuthStore.setState({
+      token: "test-token",
+      user: {
+        id: 30,
+        email: "c@b.com",
+        username: "Carol",
+        languagePreference: "en",
+        createdAt: "",
+      },
+      isLoading: false,
+    });
+    useGameStore.getState().setGameState({ ...mockGameState, surrenderProposerSeat: 0 });
+    useGameStore.getState().setMyPlayerSeat(2);
+
+    renderGamePage();
+    expect(screen.getByTestId("surrender-prompt")).toBeInTheDocument();
+
+    act(() => {
+      useGameStore.getState().setGameState({ ...mockGameState, surrenderProposerSeat: null });
+    });
+
+    expect(screen.queryByTestId("surrender-prompt")).not.toBeInTheDocument();
+  });
+
+  it("sends action:surrender_request after confirm dialog", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage();
+
+    fireEvent.click(screen.getByTestId("surrender-button"));
+    fireEvent.click(screen.getByTestId("surrender-confirm"));
+
+    expect(mockSendMessage).toHaveBeenCalledWith("action:surrender_request", {});
   });
 
   it("shows confirm dialog on browser back button and stays if declined", () => {

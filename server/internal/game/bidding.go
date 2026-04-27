@@ -216,6 +216,10 @@ func cloneGameState(state *GameState) *GameState {
 		v := *state.LastHandResult
 		newState.LastHandResult = &v
 	}
+	if state.SurrenderProposerSeat != nil {
+		v := *state.SurrenderProposerSeat
+		newState.SurrenderProposerSeat = &v
+	}
 
 	// Deep clone slice fields
 	newState.CurrentTrick = slices.Clone(state.CurrentTrick)

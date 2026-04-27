@@ -216,9 +216,29 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 			newState.TurnTimeRemaining = 0
 		}
 	} else if newState.Phase == game.PhasePlaying || newState.Phase == game.PhaseBidding {
-		// Normal turn — set expiry and start timer
-		m.setTurnExpiry(session, newState)
-		m.startTimerLocked(session)
+		if action.Type == game.ActionSurrenderRequest || action.Type == game.ActionSurrenderDecline {
+			// Story 8.2 AC#1: per-move turn timer keeps running on the active
+			// player. Surrender request/decline never advance the turn — restore
+			// the pre-action expiry and restart the cancelled timer with the
+			// remaining duration so the active player does not gain free time.
+			if session.timerStyle == "per-move" && oldState.TurnExpiresAt != nil {
+				newState.TurnExpiresAt = oldState.TurnExpiresAt
+				newState.TimerDurationSec = oldState.TimerDurationSec
+				remaining := time.Until(*oldState.TurnExpiresAt)
+				if remaining > 0 {
+					session.timerGeneration++
+					gen := session.timerGeneration
+					expectedSeat := newState.ActivePlayerSeat
+					session.turnTimer = time.AfterFunc(remaining, func() {
+						m.handleTimerExpiry(session, gen, expectedSeat)
+					})
+				}
+			}
+		} else {
+			// Normal turn — set expiry and start timer
+			m.setTurnExpiry(session, newState)
+			m.startTimerLocked(session)
+		}
 	}
 
 	session.gameState = newState
@@ -235,7 +255,17 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 
 	// Check for match completion
 	if newState.Phase == game.PhaseMatchEnd {
-		m.handleMatchEnd(session, newState)
+		// Story 8.2: when accepting surrender, the proposer seat lives on
+		// oldState (newState clears it). Resolve to userID for persistence.
+		var surrenderedBy *uint
+		if action.Type == game.ActionSurrenderAccept && oldState.SurrenderProposerSeat != nil {
+			proposerSeat := *oldState.SurrenderProposerSeat
+			if proposerSeat >= 0 && proposerSeat < 4 {
+				uid := playerIDs[proposerSeat]
+				surrenderedBy = &uid
+			}
+		}
+		m.handleMatchEnd(session, newState, surrenderedBy)
 	}
 }
 
@@ -446,14 +476,9 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventHandScored, handScored))
 		}
 
-		// Check if match ended
+		// Check if match ended (natural end via final card play)
 		if newState.Phase == game.PhaseMatchEnd {
-			matchEnd := map[string]interface{}{
-				"winnerTeam":       safeDerefInt(newState.WinnerTeam),
-				"redFinalScore":    newState.TeamScores[game.TeamRed],
-				"blueFinalScore":   newState.TeamScores[game.TeamBlue],
-				"matchDurationSec": int(time.Since(startedAt).Seconds()),
-			}
+			matchEnd := buildMatchEndPayload(oldState, newState, action, startedAt)
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchEnd, matchEnd))
 		}
 
@@ -530,6 +555,54 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 			PausedPlayers: newState.PausedPlayers,
 		}
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGamePaused, paused))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+
+	case game.ActionSurrenderRequest:
+		// Story 8.2 — broadcast typed proposed payload, then authoritative
+		// state so opponents/proposer pick up surrenderProposerSeat. Per
+		// project-context: separate ordered messages, never batched.
+		proposerSeat := action.PlayerSeat
+		var proposerUsername string
+		if proposerSeat >= 0 && proposerSeat < 4 {
+			proposerUsername = newState.Players[proposerSeat].Username
+		}
+		proposed := ws.SurrenderProposedPayload{
+			ProposerSeat:     proposerSeat,
+			ProposerTeam:     game.TeamForSeat(proposerSeat),
+			ProposerUsername: proposerUsername,
+			PartnerSeat:      (proposerSeat + 2) % 4,
+		}
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventSurrenderProposed, proposed))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+
+	case game.ActionSurrenderDecline:
+		// Proposer is no longer in newState (cleared on decline) — read it
+		// from oldState. Per FR28a the proposer's attempt remains consumed.
+		// Defensive: rules engine rejects decline when no proposal is pending,
+		// so a nil proposer here is unreachable; suppress the broadcast and
+		// rely on the authoritative state event rather than ship a malformed
+		// payload (proposerSeat=-1) over the wire.
+		if oldState.SurrenderProposerSeat != nil {
+			declined := ws.SurrenderDeclinedPayload{
+				ProposerSeat:  *oldState.SurrenderProposerSeat,
+				DecliningSeat: action.PlayerSeat,
+			}
+			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventSurrenderDeclined, declined))
+		} else {
+			slog.Warn("session: surrender_declined broadcast suppressed; oldState.SurrenderProposerSeat is nil",
+				"decliningSeat", action.PlayerSeat)
+		}
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+
+	case game.ActionSurrenderAccept:
+		// Match-end transition path. Emit event:match_end FIRST (matching the
+		// natural-end ordering established in case ActionPlayCard), then the
+		// authoritative state. handleMatchEnd at HandleAction's call-site
+		// runs after this for persistence + room cleanup.
+		if newState.Phase == game.PhaseMatchEnd {
+			matchEnd := buildMatchEndPayload(oldState, newState, action, startedAt)
+			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchEnd, matchEnd))
+		}
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 
 	case game.ActionUnpause, game.ActionOwnerUnpause:
@@ -629,7 +702,10 @@ func (m *Manager) bufferHandResultIfScored(session *Session, oldState, newState 
 
 // handleMatchEnd persists the match record, updates room status, and removes the session.
 // Uses the passed newState (not session.gameState) to avoid data races.
-func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState) {
+// surrenderedBy is the userID of the player who initiated the accepted surrender,
+// or nil for natural match-end. The match Status stays "completed" in both cases —
+// the column is the load-bearing signal Story 9.6 (honor system) will consume.
+func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState, surrenderedBy *uint) {
 	winnerTeam := 0
 	if finalState.WinnerTeam != nil {
 		winnerTeam = *finalState.WinnerTeam
@@ -649,6 +725,7 @@ func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState) {
 		StartedAt:     session.startedAt,
 		CompletedAt:   time.Now(),
 		Status:        "completed",
+		SurrenderedBy: surrenderedBy,
 	}
 
 	// Copy buffered hand results under RLock to avoid holding the lock during I/O.
@@ -697,6 +774,8 @@ func (m *Manager) sendGameError(userID uint, err error) {
 		eventType = ws.ErrorNotRoomOwner
 	case errors.Is(err, apperr.ErrPlayerDisconnected):
 		eventType = ws.ErrorPlayerDisconnected
+	case errors.Is(err, apperr.ErrSurrenderExhausted):
+		eventType = ws.ErrorSurrenderExhausted
 	}
 	m.sendError(userID, eventType, err.Error())
 }
@@ -847,9 +926,11 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 	// Buffer per-hand scoring for persistence at match end
 	m.bufferHandResultIfScored(session, oldState, newState)
 
-	// Check for match completion
+	// Check for match completion. Auto-play never produces a surrender (the
+	// per-move timer doesn't auto-resolve a pending proposal — see AC #13),
+	// so surrenderedBy is always nil here.
 	if newState.Phase == game.PhaseMatchEnd {
-		m.handleMatchEnd(session, newState)
+		m.handleMatchEnd(session, newState, nil)
 	}
 }
 
@@ -858,6 +939,25 @@ func safeDerefInt(p *int) int {
 		return 0
 	}
 	return *p
+}
+
+// buildMatchEndPayload constructs the typed event:match_end payload. For a
+// surrender accept the optional outcomeReason/surrenderedBySeat fields are
+// populated; for any natural end they are omitted (omitempty drops them) so
+// existing wire-format readers see no change.
+func buildMatchEndPayload(oldState, newState *game.GameState, action game.Action, startedAt time.Time) ws.MatchEndPayload {
+	payload := ws.MatchEndPayload{
+		WinnerTeam:       safeDerefInt(newState.WinnerTeam),
+		RedFinalScore:    newState.TeamScores[game.TeamRed],
+		BlueFinalScore:   newState.TeamScores[game.TeamBlue],
+		MatchDurationSec: int(time.Since(startedAt).Seconds()),
+	}
+	if action.Type == game.ActionSurrenderAccept && oldState != nil && oldState.SurrenderProposerSeat != nil {
+		proposerSeat := *oldState.SurrenderProposerSeat
+		payload.OutcomeReason = "surrender"
+		payload.SurrenderedBySeat = &proposerSeat
+	}
+	return payload
 }
 
 func cardsToIDs(cards []game.Card) []string {

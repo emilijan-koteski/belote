@@ -25,6 +25,11 @@ const ActionPause = "action:pause"
 const ActionUnpause = "action:unpause"
 const ActionOwnerUnpause = "action:owner_unpause"
 
+// --- Surrender actions (Story 8.2) ---
+const ActionSurrenderRequest = "action:surrender_request"
+const ActionSurrenderAccept = "action:surrender_accept"
+const ActionSurrenderDecline = "action:surrender_decline"
+
 // --- Game state events (server -> client) ---
 const EventGameState = "event:game_state"
 const EventCardPlayed = "event:card_played"
@@ -101,6 +106,42 @@ type MatchAbandonedPayload struct {
 	MatchDurationSec  int `json:"matchDurationSec"`
 }
 
+// MatchEndPayload is the typed payload for EventMatchEnd events.
+// OutcomeReason and SurrenderedBySeat are additive fields — natural-end
+// matches omit both via omitempty so the wire format is unchanged for
+// existing clients. SurrenderedBySeat carries a seat index (0..3) when
+// OutcomeReason == "surrender". The name disambiguates this seat-index
+// field from the persistence column `match.SurrenderedBy` which holds a
+// userID (uint).
+type MatchEndPayload struct {
+	WinnerTeam        int    `json:"winnerTeam"`
+	RedFinalScore     int    `json:"redFinalScore"`
+	BlueFinalScore    int    `json:"blueFinalScore"`
+	MatchDurationSec  int    `json:"matchDurationSec"`
+	OutcomeReason     string `json:"outcomeReason,omitempty"`     // "" (natural) | "surrender"
+	SurrenderedBySeat *int   `json:"surrenderedBySeat,omitempty"` // seat index, only when outcomeReason == "surrender"
+}
+
+// --- Surrender events (Story 8.2) ---
+const EventSurrenderProposed = "event:surrender_proposed"
+const EventSurrenderDeclined = "event:surrender_declined"
+
+// SurrenderProposedPayload is the typed payload for EventSurrenderProposed events.
+// Sent to all four player WS connections when a player initiates surrender.
+type SurrenderProposedPayload struct {
+	ProposerSeat     int    `json:"proposerSeat"`
+	ProposerTeam     int    `json:"proposerTeam"`
+	ProposerUsername string `json:"proposerUsername"`
+	PartnerSeat      int    `json:"partnerSeat"`
+}
+
+// SurrenderDeclinedPayload is the typed payload for EventSurrenderDeclined events.
+// Sent to all four player WS connections when the partner declines.
+type SurrenderDeclinedPayload struct {
+	ProposerSeat  int `json:"proposerSeat"`
+	DecliningSeat int `json:"decliningSeat"`
+}
+
 // --- Game error events (server -> client) ---
 const ErrorInvalidAction = "error:invalid_action"
 const ErrorNotYourTurn = "error:not_your_turn"
@@ -110,6 +151,7 @@ const ErrorPauseExhausted = "error:pause_exhausted"
 const ErrorNoActivePause = "error:no_active_pause"
 const ErrorNotRoomOwner = "error:not_room_owner"
 const ErrorPlayerDisconnected = "error:player_disconnected"
+const ErrorSurrenderExhausted = "error:surrender_exhausted"
 
 // --- Room events ---
 const SystemRoomCreated = "system:room_created"

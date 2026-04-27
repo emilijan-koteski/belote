@@ -90,6 +90,8 @@ var (
 	ErrDeclarationNotAvailable = NewAppError("DECLARATION_NOT_AVAILABLE", "no declarable combinations in hand", http.StatusBadRequest)
 	ErrBelotNotAvailable       = NewAppError("BELOT_NOT_AVAILABLE", "belot announcement not available", http.StatusBadRequest)
 	ErrActionRequired          = NewAppError("ACTION_REQUIRED", "pending action must be resolved first", http.StatusBadRequest)
+	ErrInvalidAction           = NewAppError("INVALID_ACTION", "action is not valid in this context", http.StatusBadRequest)
+	ErrSurrenderExhausted      = NewAppError("SURRENDER_EXHAUSTED", "player has already used their surrender for this match", http.StatusConflict)
 
 	// WebSocket domain errors
 	ErrWSAuthTimeout    = NewAppError("WS_AUTH_TIMEOUT", "WebSocket authentication timed out", http.StatusUnauthorized)

@@ -647,3 +647,249 @@ func TestBufferHandResultIfScored_Noop_NilHandResult(t *testing.T) {
 
 	assert.Empty(t, mgr.HandResults(903))
 }
+
+// --- Surrender (Story 8.2) ---
+
+func TestSurrender_RequestSucceeds(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	require.NoError(t, mgr.StartGame(800, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	// Bidding phase is valid for surrender.
+	state := mgr.GetStateSnapshot(800)
+	require.NotNil(t, state)
+	assert.Equal(t, game.PhaseBidding, state.Phase)
+
+	client := &ws.Client{UserID: 10} // seat 0
+	mgr.HandleAction(client, ws.WSMessage{
+		Type:    "action:surrender_request",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	newState := mgr.GetStateSnapshot(800)
+	require.NotNil(t, newState)
+	require.NotNil(t, newState.SurrenderProposerSeat)
+	assert.Equal(t, 0, *newState.SurrenderProposerSeat)
+	assert.True(t, newState.SurrenderUsed[0])
+	assert.Equal(t, game.PhaseBidding, newState.Phase, "phase unchanged on request")
+	assert.True(t, mgr.HasSession(800), "session continues during pending proposal")
+}
+
+func TestSurrender_AcceptPersistsMatchAsCompleted(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	require.NoError(t, mgr.StartGame(801, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	// Seat 0 (Red) requests surrender.
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    "action:surrender_request",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	// Seat 2 (partner of seat 0) accepts.
+	mgr.HandleAction(&ws.Client{UserID: 30}, ws.WSMessage{
+		Type:    "action:surrender_accept",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(100 * time.Millisecond)
+
+	// Match record persisted with surrendered_by = seat 0's userID;
+	// status stays "completed" (not "surrendered").
+	matches := repo.getMatches()
+	require.Len(t, matches, 1)
+	m := matches[0]
+	assert.Equal(t, "completed", m.Status)
+	assert.Equal(t, 1, m.WinnerTeam, "Blue (team 1) wins because Red surrendered")
+	require.NotNil(t, m.SurrenderedBy)
+	assert.Equal(t, uint(10), *m.SurrenderedBy)
+	assert.Nil(t, m.AbandonedBy, "AbandonedBy stays nil for surrender end")
+
+	// Session removed.
+	assert.False(t, mgr.HasSession(801))
+}
+
+func TestSurrender_DeclineKeepsSessionActive(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	require.NoError(t, mgr.StartGame(802, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	// Seat 0 requests
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    "action:surrender_request",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	// Seat 2 (partner) declines
+	mgr.HandleAction(&ws.Client{UserID: 30}, ws.WSMessage{
+		Type:    "action:surrender_decline",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	state := mgr.GetStateSnapshot(802)
+	require.NotNil(t, state)
+	assert.Nil(t, state.SurrenderProposerSeat)
+	assert.True(t, state.SurrenderUsed[0], "proposer's attempt remains consumed on decline")
+	assert.True(t, mgr.HasSession(802))
+
+	// No match record persisted.
+	assert.Empty(t, repo.getMatches())
+}
+
+func TestSurrender_ExhaustedAfterDecline(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	require.NoError(t, mgr.StartGame(803, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    "action:surrender_request",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+	mgr.HandleAction(&ws.Client{UserID: 30}, ws.WSMessage{
+		Type:    "action:surrender_decline",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	// Seat 0 retries — should be rejected, state unchanged.
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    "action:surrender_request",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	state := mgr.GetStateSnapshot(803)
+	require.NotNil(t, state)
+	assert.Nil(t, state.SurrenderProposerSeat, "second request rejected; no new proposer")
+	assert.True(t, state.SurrenderUsed[0])
+}
+
+func TestSurrender_SecondRequestWhilePending_Rejected(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	require.NoError(t, mgr.StartGame(804, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    "action:surrender_request",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	// Seat 1 (different player, still has their own attempt) requests while
+	// seat 0's proposal is pending.
+	mgr.HandleAction(&ws.Client{UserID: 20}, ws.WSMessage{
+		Type:    "action:surrender_request",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	state := mgr.GetStateSnapshot(804)
+	require.NotNil(t, state)
+	require.NotNil(t, state.SurrenderProposerSeat)
+	assert.Equal(t, 0, *state.SurrenderProposerSeat, "first proposer unaffected")
+	assert.False(t, state.SurrenderUsed[1], "rejected request must not consume seat 1's attempt")
+}
+
+func TestSurrender_NonPartnerAccept_Rejected(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	require.NoError(t, mgr.StartGame(805, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	// Seat 0 requests
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    "action:surrender_request",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	// Seat 1 (opponent) tries to accept — must be rejected.
+	mgr.HandleAction(&ws.Client{UserID: 20}, ws.WSMessage{
+		Type:    "action:surrender_accept",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	state := mgr.GetStateSnapshot(805)
+	require.NotNil(t, state)
+	assert.NotEqual(t, game.PhaseMatchEnd, state.Phase, "non-partner cannot accept")
+	require.NotNil(t, state.SurrenderProposerSeat, "proposal still pending")
+	assert.True(t, mgr.HasSession(805))
+	assert.Empty(t, repo.getMatches())
+}
+
+func TestSurrender_PauseInteraction_PreservesProposal(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	require.NoError(t, mgr.StartGame(806, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	// Seat 0 requests surrender
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    "action:surrender_request",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	// Seat 1 pauses
+	mgr.HandleAction(&ws.Client{UserID: 20}, ws.WSMessage{
+		Type:    "action:pause",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	paused := mgr.GetStateSnapshot(806)
+	require.NotNil(t, paused)
+	assert.Equal(t, game.PhasePaused, paused.Phase)
+	require.NotNil(t, paused.SurrenderProposerSeat, "surrender proposal survives pause")
+	assert.Equal(t, 0, *paused.SurrenderProposerSeat)
+
+	// Seat 1 unpauses (clears their own pause)
+	mgr.HandleAction(&ws.Client{UserID: 20}, ws.WSMessage{
+		Type:    "action:unpause",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(30 * time.Millisecond)
+
+	resumed := mgr.GetStateSnapshot(806)
+	require.NotNil(t, resumed)
+	assert.NotEqual(t, game.PhasePaused, resumed.Phase)
+	require.NotNil(t, resumed.SurrenderProposerSeat, "proposal still pending after unpause")
+}
