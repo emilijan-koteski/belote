@@ -4,6 +4,7 @@ import type { GameState } from "@/shared/types/gameTypes";
 import type {
   BelotAnnouncedPayload,
   DeclarationsResolvedPayload,
+  EmoteID,
   HandScoredPayload,
   MatchAbandonedPayload,
   MatchEndPayload,
@@ -11,6 +12,15 @@ import type {
   SurrenderProposedPayload,
   TrumpSelectedPayload,
 } from "@/shared/types/wsEvents";
+
+// Per-seat ephemeral emote slot. The receivedAt stamp doubles as a remount
+// key so a second emote on the same seat replaces the first cleanly.
+export interface ActiveEmote {
+  emote: EmoteID;
+  receivedAt: number;
+}
+
+export type ActiveEmotesMap = Record<0 | 1 | 2 | 3, ActiveEmote | null>;
 
 interface GameStoreState {
   gameState: GameState | null;
@@ -26,6 +36,7 @@ interface GameStoreState {
   matchAbandonedData: MatchAbandonedPayload | null;
   surrenderProposed: SurrenderProposedPayload | null;
   surrenderDeclined: SurrenderDeclinedPayload | null;
+  activeEmotes: ActiveEmotesMap;
 
   setGameState: (state: GameState) => void;
   setMyPlayerSeat: (seat: number) => void;
@@ -39,6 +50,7 @@ interface GameStoreState {
   setMatchAbandonedData: (data: MatchAbandonedPayload | null) => void;
   setSurrenderProposed: (payload: SurrenderProposedPayload | null) => void;
   setSurrenderDeclined: (payload: SurrenderDeclinedPayload | null) => void;
+  setActiveEmote: (seat: number, emote: EmoteID | null) => void;
   clearGame: () => void;
   reset: () => void;
 }
@@ -72,6 +84,7 @@ const initialState = {
   matchAbandonedData: null,
   surrenderProposed: null,
   surrenderDeclined: null,
+  activeEmotes: { 0: null, 1: null, 2: null, 3: null } as ActiveEmotesMap,
 };
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -101,6 +114,19 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setSurrenderProposed: (surrenderProposed) => set({ surrenderProposed }),
 
   setSurrenderDeclined: (surrenderDeclined) => set({ surrenderDeclined }),
+
+  setActiveEmote: (seat, emote) =>
+    set((state) => {
+      // Defensive: out-of-range seat is a noop. The dispatcher already
+      // validates this server payload, but the setter must not corrupt the
+      // map shape if a test or stray caller passes a bad index.
+      if (seat !== 0 && seat !== 1 && seat !== 2 && seat !== 3) return state;
+      const slot = seat as 0 | 1 | 2 | 3;
+      const next: ActiveEmote | null = emote === null ? null : { emote, receivedAt: Date.now() };
+      return {
+        activeEmotes: { ...state.activeEmotes, [slot]: next } as ActiveEmotesMap,
+      };
+    }),
 
   clearGame: () => set(initialState),
 

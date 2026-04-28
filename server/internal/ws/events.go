@@ -177,6 +177,53 @@ const SystemGameStarted = "system:game_started"
 const ActionChatMessage = "action:chat_message"
 const SystemChatMessage = "system:chat_message"
 
+// --- Emote events (Story 8.3) ---
+const ActionEmote = "action:emote"
+const SystemEmote = "system:emote"
+
+// EmoteID is the canonical identifier for a preset in-game emote.
+// Wire format is the snake_case string; the typed constants below are the
+// single source of truth for the whitelist.
+type EmoteID string
+
+const (
+	EmoteThumbsUp EmoteID = "thumbs_up"
+	EmoteClap     EmoteID = "clap"
+	EmoteLaugh    EmoteID = "laugh"
+	EmoteThinking EmoteID = "thinking"
+	EmoteFacepalm EmoteID = "facepalm"
+	EmoteHeart    EmoteID = "heart"
+)
+
+// ValidEmoteIDs is the O(1) whitelist used by the emote handler to reject
+// unknown IDs. Mirrors the EMOTE_IDS array on the client; both sides must
+// stay in sync (project-rule: WS contract files updated in the same commit).
+var ValidEmoteIDs = map[EmoteID]struct{}{
+	EmoteThumbsUp: {},
+	EmoteClap:     {},
+	EmoteLaugh:    {},
+	EmoteThinking: {},
+	EmoteFacepalm: {},
+	EmoteHeart:    {},
+}
+
+// EmoteRequest is the typed payload for ActionEmote (client → server).
+// Emote is decoded as a plain string and validated against ValidEmoteIDs by
+// the handler — keeping the request loose lets the handler log the raw value
+// on rejection without needing to round-trip through EmoteID.
+type EmoteRequest struct {
+	Emote string `json:"emote"`
+}
+
+// EmotePayload is the typed payload for SystemEmote (server → client).
+// PlayerSeat is the sender's seat (0..3) resolved by the server; the
+// receiving client looks up the username from gameState.players, so this
+// payload deliberately omits username (different from ChatMessagePayload).
+type EmotePayload struct {
+	PlayerSeat int     `json:"playerSeat"`
+	Emote      EmoteID `json:"emote"`
+}
+
 // ChatMessageRequest is the typed payload for ActionChatMessage (client → server).
 type ChatMessageRequest struct {
 	Channel string `json:"channel"`           // "global" | "match" | "room"

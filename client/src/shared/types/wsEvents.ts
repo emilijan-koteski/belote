@@ -298,6 +298,34 @@ export interface GameStartedPayload {
 export const ACTION_CHAT_MESSAGE = "action:chat_message" as const;
 export const SYSTEM_CHAT_MESSAGE = "system:chat_message" as const;
 
+// --- Emote events (Story 8.3) ---
+export const ACTION_EMOTE = "action:emote" as const;
+export const SYSTEM_EMOTE = "system:emote" as const;
+
+// EmoteID — canonical wire-format identifier. String-literal union (not enum)
+// per project rule against TypeScript `enum`. Mirrors the Go EmoteID type.
+export type EmoteID = "thumbs_up" | "clap" | "laugh" | "thinking" | "facepalm" | "heart";
+
+// EMOTE_IDS — single source of truth for picker iteration order and the
+// dispatcher's whitelist check. Frozen so consumers cannot mutate it.
+export const EMOTE_IDS: readonly EmoteID[] = Object.freeze([
+  "thumbs_up",
+  "clap",
+  "laugh",
+  "thinking",
+  "facepalm",
+  "heart",
+] as const);
+
+export interface EmoteRequest {
+  emote: EmoteID;
+}
+
+export interface EmotePayload {
+  playerSeat: number;
+  emote: EmoteID;
+}
+
 export interface ChatMessageRequest {
   channel: "global" | "match" | "room";
   matchId?: number; // required when channel === "match"

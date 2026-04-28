@@ -876,4 +876,75 @@ describe("useWsDispatch", () => {
 
     expect(useGameStore.getState().lastError).toBe("error:surrender_exhausted");
   });
+
+  // --- Emote (Story 8.3) ---
+
+  it("writes a valid system:emote payload to gameStore.activeEmotes", () => {
+    useGameStore.getState().setGameState(mockGameState);
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:emote",
+      payload: { playerSeat: 2, emote: "thumbs_up" },
+    });
+
+    const slot = useGameStore.getState().activeEmotes[2];
+    expect(slot).not.toBeNull();
+    expect(slot?.emote).toBe("thumbs_up");
+    expect(typeof slot?.receivedAt).toBe("number");
+  });
+
+  it("ignores malformed system:emote payloads (defensive validation)", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    const malformedPayloads: unknown[] = [
+      null,
+      undefined,
+      {},
+      { playerSeat: -1, emote: "thumbs_up" },
+      { playerSeat: 4, emote: "thumbs_up" },
+      { playerSeat: "2", emote: "thumbs_up" },
+      { playerSeat: 0, emote: "shrug" },
+      { playerSeat: 0, emote: 42 },
+      { playerSeat: 0 /* no emote */ },
+    ];
+
+    for (const payload of malformedPayloads) {
+      dispatch({ type: "system:emote", payload });
+    }
+
+    // No slots written.
+    expect(useGameStore.getState().activeEmotes).toEqual({
+      0: null,
+      1: null,
+      2: null,
+      3: null,
+    });
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("ignores system:emote when no active game state (defence in depth)", () => {
+    expect(useGameStore.getState().gameState).toBeNull();
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "system:emote",
+      payload: { playerSeat: 0, emote: "clap" },
+    });
+
+    expect(useGameStore.getState().activeEmotes).toEqual({
+      0: null,
+      1: null,
+      2: null,
+      3: null,
+    });
+  });
 });

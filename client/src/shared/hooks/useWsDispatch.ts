@@ -12,6 +12,7 @@ import type {
   CardPlayedPayload,
   ChatMessagePayload,
   DeclarationsResolvedPayload,
+  EmotePayload,
   GameResumedPayload,
   GameStartedPayload,
   HandScoredPayload,
@@ -30,6 +31,7 @@ import type {
   WsMessage,
 } from "@/shared/types/wsEvents";
 import {
+  EMOTE_IDS,
   ERROR_AUTH_FAILED,
   ERROR_ILLEGAL_PLAY,
   ERROR_INVALID_ACTION,
@@ -57,6 +59,7 @@ import {
   EVENT_TRUMP_SELECTED,
   SYSTEM_AUTHENTICATED,
   SYSTEM_CHAT_MESSAGE,
+  SYSTEM_EMOTE,
   SYSTEM_GAME_STARTED,
   SYSTEM_PLAYER_JOINED,
   SYSTEM_PLAYER_LEFT,
@@ -380,6 +383,28 @@ function dispatchSystemEvent(message: WsMessage): void {
       if (useRoomLobbyStore.getState().currentRoomId === null) return;
       useChatStore.getState().appendRoom(payload);
     }
+    return;
+  }
+
+  // Emote events (Story 8.3) — ephemeral per-seat broadcast, not part of
+  // GameState. Mirrors the chat-message defensive-validation pattern.
+  if (type === SYSTEM_EMOTE) {
+    const payload = message.payload as EmotePayload;
+    if (
+      typeof payload?.playerSeat !== "number" ||
+      payload.playerSeat < 0 ||
+      payload.playerSeat > 3 ||
+      typeof payload?.emote !== "string" ||
+      !EMOTE_IDS.includes(payload.emote)
+    ) {
+      console.warn("WS: ignoring malformed system:emote payload", payload);
+      return;
+    }
+    // Defence in depth (Story 8.1 dispatcher hardening): only commit when the
+    // user is in an active match. A stray emote frame after clearGame() must
+    // not seed the next match's bubble state.
+    if (useGameStore.getState().gameState === null) return;
+    useGameStore.getState().setActiveEmote(payload.playerSeat, payload.emote);
     return;
   }
 }

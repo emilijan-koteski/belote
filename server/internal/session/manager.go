@@ -334,6 +334,31 @@ func (m *Manager) MatchParticipants(roomID uint) ([4]uint, bool) {
 	return s.playerIDs, true
 }
 
+// MatchParticipantsByUser resolves an active session via the sender's userID
+// and returns the four participants alongside the sender's seat index. Used
+// by the emote handler, which receives no matchID in its request payload —
+// looking up the session through userToRoom keeps the caller decoupled from
+// the manager's internal indexing.
+// Returns ([4]uint{}, -1, false) when the user is not in any active session.
+func (m *Manager) MatchParticipantsByUser(userID uint) ([4]uint, int, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	roomID, ok := m.userToRoom[userID]
+	if !ok {
+		return [4]uint{}, -1, false
+	}
+	s, ok := m.sessions[roomID]
+	if !ok {
+		return [4]uint{}, -1, false
+	}
+	for i, uid := range s.playerIDs {
+		if uid == userID {
+			return s.playerIDs, i, true
+		}
+	}
+	return [4]uint{}, -1, false
+}
+
 // parseAction converts a WS message into a game.Action for the rules engine.
 func (m *Manager) parseAction(userID uint, session *Session, msg ws.WSMessage) (game.Action, error) {
 	// Find seat for this user (playerIDs is immutable after StartGame)

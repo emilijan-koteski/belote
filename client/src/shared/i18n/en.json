@@ -321,6 +321,20 @@
       "returnToLobby": "Return to Lobby",
       "surrenderNote": "{{username}} surrendered the match"
     },
+    "emote": {
+      "button": "Send emote",
+      "picker": {
+        "title": "Pick an emote"
+      },
+      "names": {
+        "thumbsUp": "Thumbs up",
+        "clap": "Clap",
+        "laugh": "Laugh",
+        "thinking": "Thinking",
+        "facepalm": "Facepalm",
+        "heart": "Heart"
+      }
+    },
     "surrender": {
       "requestButton": "Surrender",
       "exhausted": "Surrender used",

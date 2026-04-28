@@ -11,6 +11,7 @@ import {
   ACTION_ANNOUNCE_BELOT,
   ACTION_DECLARE,
   ACTION_DECLINE_BELOT,
+  ACTION_EMOTE,
   ACTION_OWNER_UNPAUSE,
   ACTION_PASS_TRUMP,
   ACTION_PAUSE,
@@ -21,6 +22,7 @@ import {
   ACTION_SURRENDER_DECLINE,
   ACTION_SURRENDER_REQUEST,
   ACTION_UNPAUSE,
+  type EmoteID,
 } from "@/shared/types/wsEvents";
 
 import { BelotPrompt } from "./components/BelotPrompt";
@@ -30,6 +32,8 @@ import { DealAnimation } from "./components/DealAnimation";
 import { DealerIndicator } from "./components/DealerIndicator";
 import { DeclarationPrompt } from "./components/DeclarationPrompt";
 import { DeclarationReveal } from "./components/DeclarationReveal";
+import { EmoteBubble } from "./components/EmoteBubble";
+import { EmotePickerButton } from "./components/EmotePickerButton";
 import { HandCards } from "./components/HandCards";
 import { MatchChatSidebar } from "./components/MatchChatSidebar";
 import { MatchResult } from "./components/MatchResult";
@@ -90,6 +94,8 @@ export function GamePage() {
   const setMatchEndData = useGameStore((s) => s.setMatchEndData);
   const matchAbandonedData = useGameStore((s) => s.matchAbandonedData);
   const setMatchAbandonedData = useGameStore((s) => s.setMatchAbandonedData);
+  const activeEmotes = useGameStore((s) => s.activeEmotes);
+  const setActiveEmote = useGameStore((s) => s.setActiveEmote);
 
   const [showReshuffle, setShowReshuffle] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
@@ -289,6 +295,13 @@ export function GamePage() {
   const handleOwnerUnpause = useCallback(() => {
     sendMessage(ACTION_OWNER_UNPAUSE, {});
   }, [sendMessage]);
+
+  const handleSendEmote = useCallback(
+    (emote: EmoteID) => {
+      sendMessage(ACTION_EMOTE, { emote });
+    },
+    [sendMessage],
+  );
 
   const handleSurrenderRequest = useCallback(() => {
     surrenderActionInFlightRef.current = true;
@@ -659,6 +672,39 @@ export function GamePage() {
 
       {/* Match chat sidebar — collapsible right-edge panel broadcasting to the 4 participants */}
       <MatchChatSidebar />
+
+      {/* Emote picker — placed one slot below the match-chat toggle. Hidden
+          during paused/disconnected/match-end so overlays own the screen. */}
+      {(gameState.phase === "dealing" ||
+        gameState.phase === "bidding" ||
+        gameState.phase === "playing") &&
+        matchEndData === null &&
+        matchAbandonedData === null && (
+          <div className="fixed top-32 right-2 z-30">
+            <EmotePickerButton onSend={handleSendEmote} />
+          </div>
+        )}
+
+      {/* Emote bubbles — one per seat that has an active emote. Suppressed
+          when an overlay or pause owns the screen; the store still records
+          the latest emote so that re-emergence renders the next live one. */}
+      {matchEndData === null &&
+        matchAbandonedData === null &&
+        gameState.phase !== "paused" &&
+        gameState.phase !== "disconnected" &&
+        gameState.players.map((player) => {
+          const slot = activeEmotes[player.seat as 0 | 1 | 2 | 3];
+          if (slot === null) return null;
+          const compass = compassOffset(player.seat, myPlayerSeat) as 0 | 1 | 2 | 3;
+          return (
+            <EmoteBubble
+              key={`${player.seat}-${slot.receivedAt}`}
+              emote={slot.emote}
+              compassPosition={compass}
+              onDismiss={() => setActiveEmote(player.seat, null)}
+            />
+          );
+        })}
 
       {/* Capot animation overlay */}
       {overlayPhase === "capot_animation" &&

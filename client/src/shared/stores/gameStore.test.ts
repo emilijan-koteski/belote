@@ -157,6 +157,61 @@ describe("gameStore", () => {
     expect(state.isLoading).toBe(false);
   });
 
+  it("initializes activeEmotes with all four slots null", () => {
+    const state = useGameStore.getState();
+    expect(state.activeEmotes).toEqual({ 0: null, 1: null, 2: null, 3: null });
+  });
+
+  it("setActiveEmote writes a per-seat slot with a receivedAt stamp", () => {
+    useGameStore.getState().setActiveEmote(2, "thumbs_up");
+
+    const slot = useGameStore.getState().activeEmotes[2];
+    expect(slot).not.toBeNull();
+    expect(slot?.emote).toBe("thumbs_up");
+    expect(typeof slot?.receivedAt).toBe("number");
+    // Other seats untouched
+    expect(useGameStore.getState().activeEmotes[0]).toBeNull();
+    expect(useGameStore.getState().activeEmotes[1]).toBeNull();
+    expect(useGameStore.getState().activeEmotes[3]).toBeNull();
+  });
+
+  it("setActiveEmote replaces an existing slot without leaking the previous value", () => {
+    useGameStore.getState().setActiveEmote(1, "clap");
+    const first = useGameStore.getState().activeEmotes[1];
+
+    useGameStore.getState().setActiveEmote(1, "laugh");
+    const second = useGameStore.getState().activeEmotes[1];
+
+    expect(second?.emote).toBe("laugh");
+    // The slot must be a fresh object — mutating the previous one would
+    // break React's reference-equality re-render guard.
+    expect(second).not.toBe(first);
+  });
+
+  it("setActiveEmote(seat, null) clears the slot", () => {
+    useGameStore.getState().setActiveEmote(0, "heart");
+    expect(useGameStore.getState().activeEmotes[0]).not.toBeNull();
+
+    useGameStore.getState().setActiveEmote(0, null);
+    expect(useGameStore.getState().activeEmotes[0]).toBeNull();
+  });
+
+  it("clearGame zeroes all four emote slots", () => {
+    useGameStore.getState().setActiveEmote(0, "thumbs_up");
+    useGameStore.getState().setActiveEmote(1, "clap");
+    useGameStore.getState().setActiveEmote(2, "laugh");
+    useGameStore.getState().setActiveEmote(3, "heart");
+
+    useGameStore.getState().clearGame();
+
+    expect(useGameStore.getState().activeEmotes).toEqual({
+      0: null,
+      1: null,
+      2: null,
+      3: null,
+    });
+  });
+
   it("replaces gameState on subsequent setGameState calls", () => {
     useGameStore.getState().setGameState(mockGameState);
 

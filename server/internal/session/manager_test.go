@@ -319,6 +319,45 @@ func TestIsUserInGame(t *testing.T) {
 	assert.False(t, mgr.IsUserInGame(40))
 }
 
+func TestMatchParticipantsByUser(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	// No session yet → (zero, -1, false) for every userID.
+	ids, seat, ok := mgr.MatchParticipantsByUser(10)
+	assert.False(t, ok)
+	assert.Equal(t, -1, seat)
+	assert.Equal(t, [4]uint{}, ids)
+
+	// After StartGame → resolves to (participants, seat, true) for each player.
+	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+
+	for expectedSeat, userID := range []uint{10, 20, 30, 40} {
+		ids, seat, ok := mgr.MatchParticipantsByUser(userID)
+		require.True(t, ok, "user %d should resolve to an active session", userID)
+		assert.Equal(t, [4]uint{10, 20, 30, 40}, ids)
+		assert.Equal(t, expectedSeat, seat,
+			"user %d expected at seat %d", userID, expectedSeat)
+	}
+
+	// Non-participant → (zero, -1, false).
+	ids, seat, ok = mgr.MatchParticipantsByUser(999)
+	assert.False(t, ok)
+	assert.Equal(t, -1, seat)
+	assert.Equal(t, [4]uint{}, ids)
+
+	// After RemoveSession → all participants stop resolving.
+	mgr.RemoveSession(100)
+	for _, userID := range []uint{10, 20, 30, 40} {
+		_, _, ok := mgr.MatchParticipantsByUser(userID)
+		assert.False(t, ok, "user %d should no longer resolve after session removal", userID)
+	}
+}
+
 func TestMatchParticipants(t *testing.T) {
 	hub := ws.NewHub()
 	go hub.Run()

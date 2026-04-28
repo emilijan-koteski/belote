@@ -21,6 +21,7 @@ import (
 	"github.com/emilijan/belote/server/internal/auth"
 	"github.com/emilijan/belote/server/internal/chat"
 	"github.com/emilijan/belote/server/internal/config"
+	"github.com/emilijan/belote/server/internal/emote"
 	"github.com/emilijan/belote/server/internal/match"
 	"github.com/emilijan/belote/server/internal/room"
 	"github.com/emilijan/belote/server/internal/session"
@@ -118,9 +119,17 @@ func main() {
 	// "waiting" status (pre-match).
 	roomMembership := &chatRoomMembership{repo: roomRepo}
 	chatHandler := chat.NewHandler(hub, userRepo, sessionManager, roomMembership)
+	emoteHandler := emote.NewHandler(hub, sessionManager)
 	hub.SetActionHandler(func(client *ws.Client, msg ws.WSMessage) {
 		if msg.Type == ws.ActionChatMessage {
 			chatHandler.HandleAction(client, msg)
+			return
+		}
+		// Emote handler is wired BEFORE sessionManager.HandleAction so the
+		// rules engine never sees action:emote — parseAction would otherwise
+		// reject it as an unknown action type and emit error:invalid_action.
+		if msg.Type == ws.ActionEmote {
+			emoteHandler.HandleAction(client, msg)
 			return
 		}
 		sessionManager.HandleAction(client, msg)

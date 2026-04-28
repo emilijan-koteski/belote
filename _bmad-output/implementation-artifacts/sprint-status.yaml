@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-06
-last_updated: "2026-04-27"  # Story 8-2 done (team surrender, code review applied)
+last_updated: "2026-04-28"  # Story 8-3 done (in-game emotes — review patches applied)
 project: belote
 project_key: NOKEY
 tracking_system: file-system
@@ -106,7 +106,7 @@ development_status:
   epic-8: in-progress
   8-1-room-owner-pre-game-controls: done
   8-2-team-surrender: done
-  8-3-in-game-emotes: backlog
+  8-3-in-game-emotes: done
   epic-8-retrospective: optional
 
   # --- Epic 9: Player Economy & Progression (Phase 2) ---

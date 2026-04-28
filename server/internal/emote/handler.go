@@ -1,0 +1,120 @@
+package emote
+
+import (
+	"encoding/json"
+	"log/slog"
+	"sync"
+	"time"
+
+	"github.com/emilijan/belote/server/internal/ws"
+)
+
+// rateLimitWindow is the per-user cooldown between accepted emotes. The
+// matching client-side throttle uses the same value for instant UX feedback;
+// the server check is the authoritative gate.
+const rateLimitWindow = 3 * time.Second
+
+// Broadcaster is the subset of *ws.Hub that the emote handler depends on.
+// Mirrors the chat-handler abstraction so the unit tests can swap a spy in
+// place of the real hub goroutine.
+type Broadcaster interface {
+	BroadcastToUsers(userIDs []uint, msg []byte)
+}
+
+// GameMembership resolves the four match participants for a sender by their
+// userID. The emote payload carries no matchID, so the handler relies on
+// userToRoom indexing inside the session manager — wired to *session.Manager
+// in main.go.
+type GameMembership interface {
+	MatchParticipantsByUser(userID uint) (participants [4]uint, seat int, ok bool)
+}
+
+// Handler processes action:emote events: validates the emote whitelist,
+// enforces the per-user rate limit, and broadcasts system:emote to all four
+// match participants (sender included for the own-echo).
+type Handler struct {
+	hub  Broadcaster
+	game GameMembership
+
+	mu          sync.Mutex
+	lastEmoteAt map[uint]time.Time
+}
+
+// NewHandler creates an emote handler wired to the WebSocket broadcaster and
+// the session manager (for in-game membership + participant lookup).
+func NewHandler(hub Broadcaster, game GameMembership) *Handler {
+	return &Handler{
+		hub:         hub,
+		game:        game,
+		lastEmoteAt: make(map[uint]time.Time),
+	}
+}
+
+// HandleAction is the action handler entry point. Composed with
+// session.Manager.HandleAction in main.go via a dispatch closure.
+// Returns silently for any msg.Type other than ws.ActionEmote so the
+// composite caller can route every action through it without filtering.
+func (h *Handler) HandleAction(client *ws.Client, msg ws.WSMessage) {
+	if msg.Type != ws.ActionEmote {
+		return
+	}
+
+	var req ws.EmoteRequest
+	if err := json.Unmarshal(msg.Payload, &req); err != nil {
+		slog.Info("emote: invalid payload", "userID", client.UserID, "error", err)
+		return
+	}
+
+	if _, ok := ws.ValidEmoteIDs[ws.EmoteID(req.Emote)]; !ok {
+		slog.Info("emote: unknown id", "userID", client.UserID, "emote", req.Emote)
+		return
+	}
+
+	participants, seat, ok := h.game.MatchParticipantsByUser(client.UserID)
+	if !ok {
+		slog.Info("emote: sender not in active match", "userID", client.UserID)
+		return
+	}
+
+	if !h.acceptRateLimited(client.UserID, time.Now()) {
+		slog.Info("emote: rate-limited", "userID", client.UserID)
+		return
+	}
+
+	payload := ws.EmotePayload{
+		PlayerSeat: seat,
+		Emote:      ws.EmoteID(req.Emote),
+	}
+	msgBytes := buildMessage(ws.SystemEmote, payload)
+	if msgBytes == nil {
+		return
+	}
+	h.hub.BroadcastToUsers(participants[:], msgBytes)
+}
+
+// acceptRateLimited atomically checks the per-user cooldown and stamps the
+// new send timestamp on success. Returns false when the previous emote from
+// this user was within rateLimitWindow.
+func (h *Handler) acceptRateLimited(userID uint, now time.Time) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if last, ok := h.lastEmoteAt[userID]; ok && now.Sub(last) < rateLimitWindow {
+		return false
+	}
+	h.lastEmoteAt[userID] = now
+	return true
+}
+
+func buildMessage(eventType string, payload interface{}) []byte {
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("emote: marshal payload failed", "type", eventType, "error", err)
+		return nil
+	}
+	msg, err := json.Marshal(ws.WSMessage{Type: eventType, Payload: payloadBytes})
+	if err != nil {
+		slog.Error("emote: marshal message failed", "type", eventType, "error", err)
+		return nil
+	}
+	return msg
+}

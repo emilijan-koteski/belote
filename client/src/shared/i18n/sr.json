@@ -321,6 +321,20 @@
       "returnToLobby": "Nazad u lobi",
       "surrenderNote": "{{username}} je predao meč"
     },
+    "emote": {
+      "button": "Pošalji emotikon",
+      "picker": {
+        "title": "Izaberi emotikon"
+      },
+      "names": {
+        "thumbsUp": "Palac gore",
+        "clap": "Aplauz",
+        "laugh": "Smeh",
+        "thinking": "Razmišljanje",
+        "facepalm": "Glavom u ruke",
+        "heart": "Srce"
+      }
+    },
     "surrender": {
       "requestButton": "Predaja",
       "exhausted": "Predaja iskorišćena",

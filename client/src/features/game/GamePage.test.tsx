@@ -378,6 +378,119 @@ describe("GamePage", () => {
     expect(mockSendMessage).toHaveBeenCalledWith("action:surrender_request", {});
   });
 
+  // --- Emote integration tests (Story 8.3) ---
+
+  it("shows the emote toggle during the playing phase", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage();
+
+    expect(screen.getByTestId("emote-toggle")).toBeInTheDocument();
+  });
+
+  it("hides the emote toggle when match has ended", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    const { rerender } = renderGamePage();
+
+    act(() => {
+      useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
+      useGameStore.getState().setMatchEndData({
+        winnerTeam: 0,
+        redFinalScore: 1020,
+        blueFinalScore: 850,
+        matchDurationSec: 300,
+      });
+    });
+    rerender(
+      <BrowserRouter>
+        <GamePage />
+      </BrowserRouter>,
+    );
+
+    expect(screen.queryByTestId("emote-toggle")).not.toBeInTheDocument();
+  });
+
+  it("sends action:emote when a tile is clicked", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage();
+
+    fireEvent.click(screen.getByTestId("emote-toggle"));
+    fireEvent.click(screen.getByTestId("emote-tile-thumbs_up"));
+
+    expect(mockSendMessage).toHaveBeenCalledWith("action:emote", { emote: "thumbs_up" });
+  });
+
+  it("renders an emote bubble at the correct compass position for an opponent", () => {
+    // Local player at seat 0 (South). Opponent at seat 2 emotes — bubble
+    // should appear at compass 2 (North) from the receiver's perspective.
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage();
+
+    act(() => {
+      useGameStore.getState().setActiveEmote(2, "clap");
+    });
+
+    expect(screen.getByTestId("emote-bubble-2")).toBeInTheDocument();
+  });
+
+  it("renders the sender's own bubble at South (compass 0)", () => {
+    // Local player is seat 1 (Bob). Their own emote should anchor to South
+    // (compass 0) regardless of the absolute seat index.
+    useAuthStore.setState({
+      token: "test-token",
+      user: {
+        id: 20,
+        email: "b@b.com",
+        username: "Bob",
+        languagePreference: "en",
+        createdAt: "",
+      },
+      isLoading: false,
+    });
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(1);
+
+    renderGamePage();
+
+    act(() => {
+      useGameStore.getState().setActiveEmote(1, "heart");
+    });
+
+    expect(screen.getByTestId("emote-bubble-0")).toBeInTheDocument();
+  });
+
+  it("suppresses emote bubbles while the match-end overlay is up", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    const { rerender } = renderGamePage();
+
+    act(() => {
+      useGameStore.getState().setActiveEmote(2, "laugh");
+      useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
+      useGameStore.getState().setMatchEndData({
+        winnerTeam: 0,
+        redFinalScore: 1020,
+        blueFinalScore: 850,
+        matchDurationSec: 300,
+      });
+    });
+    rerender(
+      <BrowserRouter>
+        <GamePage />
+      </BrowserRouter>,
+    );
+
+    expect(screen.queryByTestId("emote-bubble-2")).not.toBeInTheDocument();
+  });
+
   it("shows confirm dialog on browser back button and stays if declined", () => {
     useGameStore.getState().setGameState(mockGameState);
     useGameStore.getState().setMyPlayerSeat(0);
