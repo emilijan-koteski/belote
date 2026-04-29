@@ -16,6 +16,7 @@ interface FieldErrors {
   email?: string;
   username?: string;
   password?: string;
+  consent?: string;
 }
 
 export function RegisterPage() {
@@ -27,6 +28,7 @@ export function RegisterPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   function validateEmail(value: string): string | undefined {
@@ -65,9 +67,15 @@ export function RegisterPage() {
     const emailError = validateEmail(email);
     const usernameError = validateUsername(username);
     const passwordError = validatePassword(password);
+    const consentError = acceptedTerms ? undefined : t("auth.register.errors.consentRequired");
 
-    if (emailError || usernameError || passwordError) {
-      setErrors({ email: emailError, username: usernameError, password: passwordError });
+    if (emailError || usernameError || passwordError || consentError) {
+      setErrors({
+        email: emailError,
+        username: usernameError,
+        password: passwordError,
+        consent: consentError,
+      });
       return;
     }
 
@@ -188,10 +196,57 @@ export function RegisterPage() {
             )}
           </div>
 
+          <div>
+            <label className="flex cursor-pointer items-start gap-2 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 cursor-pointer accent-primary"
+                checked={acceptedTerms}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setAcceptedTerms(checked);
+                  if (checked) {
+                    setErrors((prev) => ({ ...prev, consent: undefined }));
+                  }
+                }}
+                aria-invalid={!!errors.consent}
+                data-testid="consent-checkbox"
+              />
+              <span>
+                {t("auth.register.consent.prefix")}
+                <Link
+                  to="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                  data-testid="terms-link"
+                >
+                  {t("auth.register.consent.termsLink")}
+                </Link>
+                {t("auth.register.consent.and")}
+                <Link
+                  to="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                  data-testid="privacy-link"
+                >
+                  {t("auth.register.consent.privacyLink")}
+                </Link>
+                {t("auth.register.consent.suffix")}
+              </span>
+            </label>
+            {errors.consent && (
+              <p className="mt-1 text-xs text-destructive" data-testid="consent-error">
+                {errors.consent}
+              </p>
+            )}
+          </div>
+
           <Button
             type="submit"
             className="mt-2 h-10 w-full bg-primary text-primary-foreground font-semibold hover:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed"
-            disabled={registerMutation.isPending}
+            disabled={registerMutation.isPending || !acceptedTerms}
             data-testid="submit-button"
           >
             {registerMutation.isPending

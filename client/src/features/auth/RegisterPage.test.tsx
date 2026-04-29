@@ -47,6 +47,29 @@ describe("RegisterPage", () => {
     expect(screen.getByTestId("password-input")).toBeInTheDocument();
     expect(screen.getByTestId("submit-button")).toBeInTheDocument();
     expect(screen.getByTestId("login-link")).toBeInTheDocument();
+    expect(screen.getByTestId("consent-checkbox")).toBeInTheDocument();
+    expect(screen.getByTestId("terms-link")).toHaveAttribute("href", "/terms");
+    expect(screen.getByTestId("privacy-link")).toHaveAttribute("href", "/privacy");
+  });
+
+  it("disables submit until the consent checkbox is checked", async () => {
+    renderRegisterPage();
+    const user = userEvent.setup();
+
+    expect(screen.getByTestId("submit-button")).toBeDisabled();
+
+    await user.click(screen.getByTestId("consent-checkbox"));
+
+    expect(screen.getByTestId("submit-button")).not.toBeDisabled();
+  });
+
+  it("opens terms and privacy links in a new tab", () => {
+    renderRegisterPage();
+
+    expect(screen.getByTestId("terms-link")).toHaveAttribute("target", "_blank");
+    expect(screen.getByTestId("terms-link")).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getByTestId("privacy-link")).toHaveAttribute("target", "_blank");
+    expect(screen.getByTestId("privacy-link")).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("shows validation error on blur for empty email", async () => {
@@ -120,11 +143,52 @@ describe("RegisterPage", () => {
     await user.type(screen.getByTestId("email-input"), "test@example.com");
     await user.type(screen.getByTestId("username-input"), "testuser");
     await user.type(screen.getByTestId("password-input"), "password123");
+    await user.click(screen.getByTestId("consent-checkbox"));
     await user.click(screen.getByTestId("submit-button"));
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/lobby");
     });
+  });
+
+  it("blocks submit and shows consent error when checkbox is not checked", async () => {
+    renderRegisterPage();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByTestId("email-input"), "test@example.com");
+    await user.type(screen.getByTestId("username-input"), "testuser");
+    await user.type(screen.getByTestId("password-input"), "password123");
+
+    expect(screen.getByTestId("submit-button")).toBeDisabled();
+
+    fireEvent.submit(screen.getByTestId("register-form"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("consent-error")).toHaveTextContent(
+        "You must accept the Terms of Service and Privacy Policy",
+      );
+    });
+
+    expect(mockRegister).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("clears the consent error once the checkbox is checked", async () => {
+    renderRegisterPage();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByTestId("email-input"), "test@example.com");
+    await user.type(screen.getByTestId("username-input"), "testuser");
+    await user.type(screen.getByTestId("password-input"), "password123");
+    fireEvent.submit(screen.getByTestId("register-form"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("consent-error")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId("consent-checkbox"));
+
+    expect(screen.queryByTestId("consent-error")).not.toBeInTheDocument();
   });
 
   it("displays inline error for EMAIL_TAKEN server response", async () => {
@@ -138,6 +202,7 @@ describe("RegisterPage", () => {
     await user.type(screen.getByTestId("email-input"), "taken@example.com");
     await user.type(screen.getByTestId("username-input"), "testuser");
     await user.type(screen.getByTestId("password-input"), "password123");
+    await user.click(screen.getByTestId("consent-checkbox"));
     await user.click(screen.getByTestId("submit-button"));
 
     await waitFor(() => {
@@ -158,6 +223,7 @@ describe("RegisterPage", () => {
     await user.type(screen.getByTestId("email-input"), "test@example.com");
     await user.type(screen.getByTestId("username-input"), "takenuser");
     await user.type(screen.getByTestId("password-input"), "password123");
+    await user.click(screen.getByTestId("consent-checkbox"));
     await user.click(screen.getByTestId("submit-button"));
 
     await waitFor(() => {
@@ -213,6 +279,7 @@ describe("RegisterPage", () => {
     await user.type(screen.getByTestId("email-input"), "test@example.com");
     await user.type(screen.getByTestId("username-input"), "testuser");
     await user.type(screen.getByTestId("password-input"), "password123");
+    await user.click(screen.getByTestId("consent-checkbox"));
     await user.click(screen.getByTestId("submit-button"));
 
     await waitFor(() => {

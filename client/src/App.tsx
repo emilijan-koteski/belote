@@ -4,6 +4,8 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { RegisterPage } from "@/features/auth/RegisterPage";
 import { GamePage } from "@/features/game/GamePage";
 import { LeaderboardPage } from "@/features/leaderboard/LeaderboardPage";
+import { PrivacyPage } from "@/features/legal/PrivacyPage";
+import { TermsPage } from "@/features/legal/TermsPage";
 import { LobbyPage } from "@/features/lobby/LobbyPage";
 import { RoomLobby } from "@/features/lobby/RoomLobby";
 import { ProfilePage } from "@/features/profile/ProfilePage";
@@ -31,6 +33,8 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route element={<GuestRoute />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

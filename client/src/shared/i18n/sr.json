@@ -90,6 +90,20 @@
     "title": "Pravila",
     "comingSoon": "Pravila uskoro dolaze"
   },
+  "legal": {
+    "wipBadge": "U izradi",
+    "back": "Nazad",
+    "terms": {
+      "title": "Uslovi korišćenja",
+      "wipNotice": "Ovo je aplikacija u izradi koja se koristi samo za testiranje.",
+      "comingSoon": "Puni uslovi korišćenja se pripremaju i biće objavljeni ovde uskoro."
+    },
+    "privacy": {
+      "title": "Politika privatnosti",
+      "wipNotice": "Ovo je aplikacija u izradi koja se koristi samo za testiranje.",
+      "comingSoon": "Puna politika privatnosti se priprema i biće objavljena ovde uskoro."
+    }
+  },
   "lobby": {
     "title": "Lobi",
     "quickPlay": "Brza igra",
@@ -422,6 +436,13 @@
       "submitButton": "Kreiraj nalog",
       "submitting": "Kreiranje...",
       "loginLink": "Već imate nalog? Prijavite se",
+      "consent": {
+        "prefix": "Prihvatam ",
+        "termsLink": "Uslove korišćenja",
+        "and": " i ",
+        "privacyLink": "Politiku privatnosti",
+        "suffix": "."
+      },
       "errors": {
         "emailRequired": "Email je obavezan",
         "emailInvalid": "Unesite validnu email adresu",
@@ -434,6 +455,7 @@
         "passwordRequired": "Lozinka je obavezna",
         "passwordTooShort": "Lozinka mora imati najmanje 8 karaktera",
         "passwordTooLong": "Lozinka može imati najviše 72 karaktera",
+        "consentRequired": "Morate prihvatiti Uslove korišćenja i Politiku privatnosti",
         "registrationFailed": "Registracija nije uspela. Pokušajte ponovo."
       }
     }
