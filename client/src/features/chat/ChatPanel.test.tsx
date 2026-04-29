@@ -207,6 +207,184 @@ describe("ChatPanel", () => {
     expect(mockSendMessage).not.toHaveBeenCalled();
     expect(screen.getByTestId("chat-too-long")).toBeInTheDocument();
   });
+
+  it("clear-chat button empties the message list and is disabled when empty", () => {
+    useChatStore.setState({
+      globalMessages: [
+        {
+          userId: 1,
+          username: "alice",
+          message: "hi",
+          timestamp: "2026-04-29T10:00:00Z",
+          scope: "global",
+        },
+      ],
+    });
+
+    render(<ChatPanel />);
+    expect(screen.getAllByTestId("chat-message-row")).toHaveLength(1);
+
+    const clearBtn = screen.getByTestId("chat-clear-button") as HTMLButtonElement;
+    expect(clearBtn.disabled).toBe(false);
+    act(() => fireEvent.click(clearBtn));
+
+    expect(useChatStore.getState().globalMessages).toEqual([]);
+    expect(screen.getByTestId("chat-empty")).toBeInTheDocument();
+    expect((screen.getByTestId("chat-clear-button") as HTMLButtonElement).disabled).toBe(true);
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  it("typing /cc and pressing Enter clears chat without sending a network message", () => {
+    useChatStore.setState({
+      globalMessages: [
+        {
+          userId: 1,
+          username: "alice",
+          message: "old",
+          timestamp: "2026-04-29T10:00:00Z",
+          scope: "global",
+        },
+      ],
+    });
+
+    render(<ChatPanel />);
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "/cc" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(mockSendMessage).not.toHaveBeenCalled();
+    expect(useChatStore.getState().globalMessages).toEqual([]);
+    expect(input.value).toBe("");
+  });
+
+  it("/cc match is case-insensitive and trims surrounding whitespace", () => {
+    useChatStore.setState({
+      globalMessages: [
+        {
+          userId: 1,
+          username: "alice",
+          message: "old",
+          timestamp: "2026-04-29T10:00:00Z",
+          scope: "global",
+        },
+      ],
+    });
+    render(<ChatPanel />);
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "  /CC  " } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(mockSendMessage).not.toHaveBeenCalled();
+    expect(useChatStore.getState().globalMessages).toEqual([]);
+  });
+
+  it("'/cc hello' is sent as a normal message — only the bare command clears", () => {
+    render(<ChatPanel />);
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "/cc hello" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(mockSendMessage).toHaveBeenCalledWith(ACTION_CHAT_MESSAGE, {
+      channel: "global",
+      text: "/cc hello",
+    });
+  });
+
+  it("clear-chat button operates on the active channel only — other channels untouched", () => {
+    useChatStore.setState({
+      globalMessages: [
+        {
+          userId: 1,
+          username: "alice",
+          message: "global-msg",
+          timestamp: "2026-04-29T10:00:00Z",
+          scope: "global",
+        },
+      ],
+      matchMessages: [
+        {
+          userId: 2,
+          username: "bob",
+          message: "match-msg",
+          timestamp: "2026-04-29T10:01:00Z",
+          scope: "match",
+        },
+      ],
+      roomMessages: [
+        {
+          userId: 3,
+          username: "carol",
+          message: "room-msg",
+          timestamp: "2026-04-29T10:02:00Z",
+          scope: "room",
+        },
+      ],
+    });
+
+    render(<ChatPanel channel="match" matchId={42} />);
+    act(() => fireEvent.click(screen.getByTestId("chat-clear-button")));
+
+    expect(useChatStore.getState().matchMessages).toEqual([]);
+    expect(useChatStore.getState().globalMessages).toHaveLength(1);
+    expect(useChatStore.getState().roomMessages).toHaveLength(1);
+  });
+
+  it("clear-chat button resets the placeholder back to the channel invitation", () => {
+    // Latch the post-first-send placeholder, then clear via the button.
+    useChatStore.setState({
+      hasSentGlobal: true,
+      globalMessages: [
+        {
+          userId: 1,
+          username: "alice",
+          message: "x",
+          timestamp: "2026-04-29T10:00:00Z",
+          scope: "global",
+        },
+      ],
+    });
+    render(<ChatPanel />);
+    expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe("Message…");
+
+    act(() => fireEvent.click(screen.getByTestId("chat-clear-button")));
+    expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe("Say hi…");
+  });
+
+  it("/cc command resets the placeholder back to 'Say hi…'", () => {
+    useChatStore.setState({ hasSentGlobal: true });
+    render(<ChatPanel />);
+    const input = screen.getByTestId("chat-input") as HTMLInputElement;
+    expect(input.placeholder).toBe("Message…");
+
+    fireEvent.change(input, { target: { value: "/cc" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(input.placeholder).toBe("Say hi…");
+  });
+
+  it("clear-chat button returns focus to the input so keyboard users don't get stranded", () => {
+    useChatStore.setState({
+      globalMessages: [
+        {
+          userId: 1,
+          username: "alice",
+          message: "x",
+          timestamp: "2026-04-29T10:00:00Z",
+          scope: "global",
+        },
+      ],
+    });
+    render(<ChatPanel />);
+    const button = screen.getByTestId("chat-clear-button");
+    const input = screen.getByTestId("chat-input");
+    button.focus();
+    expect(document.activeElement).toBe(button);
+
+    act(() => fireEvent.click(button));
+    expect(document.activeElement).toBe(input);
+  });
 });
 
 describe("ChatPanel (match channel)", () => {

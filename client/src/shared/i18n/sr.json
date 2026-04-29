@@ -76,7 +76,9 @@
     "placeholderDisabled": "Ponovno povezivanje\u2026",
     "send": "Pošalji",
     "empty": "Još nema poruka \u2014 pozdravi.",
-    "tooLong": "Poruke moraju imati 500 karaktera ili manje."
+    "tooLong": "Poruke moraju imati 500 karaktera ili manje.",
+    "clearAriaLabel": "Obriši ćaskanje",
+    "clearTooltip": "Obriši ćaskanje (ili ukucaj /cc)"
   },
   "room": {
     "chat": {

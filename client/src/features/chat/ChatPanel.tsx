@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -10,6 +11,9 @@ import type { ChatMessageRequest } from "@/shared/types/wsEvents";
 import { ACTION_CHAT_MESSAGE } from "@/shared/types/wsEvents";
 
 const MAX_MESSAGE_LENGTH = 500;
+// Slash command for clearing chat locally. Match exactly (case-insensitive) so
+// "/cc hello" stays a normal message — guards against accidental data loss.
+const CLEAR_COMMAND = "/cc";
 
 type ChatChannel = "global" | "match" | "room";
 
@@ -39,9 +43,24 @@ export function ChatPanel({ className, channel = "global", matchId, roomId }: Ch
     if (channel === "room") return s.markSentRoom;
     return s.markSentGlobal;
   });
+  const clearChannel = useChatStore((s) => {
+    if (channel === "match") return s.clearMatch;
+    if (channel === "room") return s.clearRoom;
+    return s.clearGlobal;
+  });
 
   const [draft, setDraft] = useState("");
   const listEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Clear messages + draft, then return focus to the input. The clear button
+  // disables itself (messages.length === 0) immediately after, so without this
+  // handoff keyboard users land on <body>.
+  function clearChannelAndRefocus() {
+    clearChannel();
+    setDraft("");
+    inputRef.current?.focus();
+  }
 
   const isConnected = connectionState === "connected";
   const titleKey =
@@ -67,7 +86,16 @@ export function ChatPanel({ className, channel = "global", matchId, roomId }: Ch
 
   function handleSubmit() {
     const text = draft.trim();
-    if (!text || text.length > MAX_MESSAGE_LENGTH || !isConnected) return;
+    if (!text || text.length > MAX_MESSAGE_LENGTH) return;
+
+    // Local /cc clear — works regardless of WS state since it only mutates
+    // client-side store. Sending a network message would be wasteful here.
+    if (text.toLowerCase() === CLEAR_COMMAND) {
+      clearChannelAndRefocus();
+      return;
+    }
+
+    if (!isConnected) return;
 
     let payload: ChatMessageRequest;
     if (channel === "match") {
@@ -102,8 +130,21 @@ export function ChatPanel({ className, channel = "global", matchId, roomId }: Ch
       className={cn("flex flex-col rounded-lg border border-border bg-surface", className)}
       data-testid="chat-panel"
     >
-      <div className="border-b border-border px-4 py-3">
+      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
         <h3 className="font-display text-base font-semibold text-text-primary">{t(titleKey)}</h3>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={clearChannelAndRefocus}
+          disabled={messages.length === 0}
+          aria-label={t("chat.clearAriaLabel")}
+          title={t("chat.clearTooltip")}
+          className="h-7 w-7 shrink-0"
+          data-testid="chat-clear-button"
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3" data-testid="chat-message-list">
@@ -138,6 +179,7 @@ export function ChatPanel({ className, channel = "global", matchId, roomId }: Ch
 
       <div className="flex gap-2 border-t border-border px-4 py-3">
         <Input
+          ref={inputRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}

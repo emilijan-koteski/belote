@@ -76,7 +76,9 @@
     "placeholderDisabled": "Reconnecting\u2026",
     "send": "Send",
     "empty": "No messages yet \u2014 say hi.",
-    "tooLong": "Messages must be 500 characters or fewer."
+    "tooLong": "Messages must be 500 characters or fewer.",
+    "clearAriaLabel": "Clear chat",
+    "clearTooltip": "Clear chat (or type /cc)"
   },
   "room": {
     "chat": {
