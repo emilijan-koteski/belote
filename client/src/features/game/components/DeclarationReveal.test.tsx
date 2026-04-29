@@ -44,14 +44,7 @@ const mockPayload: DeclarationsResolvedPayload = {
 
 describe("DeclarationReveal", () => {
   it("renders panel with winner team label and cards", () => {
-    render(
-      <DeclarationReveal
-        payload={mockPayload}
-        myPlayerSeat={0}
-        players={mockPlayers}
-        onComplete={vi.fn()}
-      />,
-    );
+    render(<DeclarationReveal payload={mockPayload} players={mockPlayers} onComplete={vi.fn()} />);
     expect(screen.getByTestId("declaration-reveal")).toBeInTheDocument();
     const label = screen.getByTestId("declaration-reveal-team");
     expect(label).toHaveAttribute("data-team", "1");
@@ -61,15 +54,40 @@ describe("DeclarationReveal", () => {
     expect(screen.getByTestId("playing-card-AD")).toBeInTheDocument();
   });
 
-  it("does not render any +total number", () => {
-    render(
-      <DeclarationReveal
-        payload={mockPayload}
-        myPlayerSeat={0}
-        players={mockPlayers}
-        onComplete={vi.fn()}
-      />,
+  it("centers the panel regardless of winning declarer's seat", () => {
+    const eastWinner: DeclarationsResolvedPayload = {
+      winnerTeam: 1,
+      declarations: [
+        { playerSeat: 1, type: "sequence", value: 50, cards: ["JD", "QD", "KD", "AD"] },
+      ],
+    };
+    const northWinner: DeclarationsResolvedPayload = {
+      winnerTeam: 0,
+      declarations: [
+        { playerSeat: 2, type: "sequence", value: 50, cards: ["JD", "QD", "KD", "AD"] },
+      ],
+    };
+    const expectedCenterClasses = ["top-1/2", "left-1/2", "-translate-x-1/2", "-translate-y-1/2"];
+
+    const { rerender } = render(
+      <DeclarationReveal payload={eastWinner} players={mockPlayers} onComplete={vi.fn()} />,
     );
+    let panel = screen.getByTestId("declaration-reveal");
+    for (const cls of expectedCenterClasses) {
+      expect(panel.className).toContain(cls);
+    }
+
+    rerender(
+      <DeclarationReveal payload={northWinner} players={mockPlayers} onComplete={vi.fn()} />,
+    );
+    panel = screen.getByTestId("declaration-reveal");
+    for (const cls of expectedCenterClasses) {
+      expect(panel.className).toContain(cls);
+    }
+  });
+
+  it("does not render any +total number", () => {
+    render(<DeclarationReveal payload={mockPayload} players={mockPlayers} onComplete={vi.fn()} />);
     expect(screen.queryByText(/\+50/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\+100/)).not.toBeInTheDocument();
   });
@@ -79,14 +97,7 @@ describe("DeclarationReveal", () => {
       winnerTeam: null,
       declarations: [],
     };
-    render(
-      <DeclarationReveal
-        payload={payload}
-        myPlayerSeat={0}
-        players={mockPlayers}
-        onComplete={vi.fn()}
-      />,
-    );
+    render(<DeclarationReveal payload={payload} players={mockPlayers} onComplete={vi.fn()} />);
     expect(screen.queryByTestId("declaration-reveal")).not.toBeInTheDocument();
   });
 
@@ -98,14 +109,7 @@ describe("DeclarationReveal", () => {
         { playerSeat: 0, type: "four_of_a_kind", value: 200, cards: ["JC", "JH", "JD", "JS"] },
       ],
     };
-    render(
-      <DeclarationReveal
-        payload={payload}
-        myPlayerSeat={0}
-        players={mockPlayers}
-        onComplete={vi.fn()}
-      />,
-    );
+    render(<DeclarationReveal payload={payload} players={mockPlayers} onComplete={vi.fn()} />);
     expect(screen.getByTestId("playing-card-QS")).toBeInTheDocument();
     expect(screen.getByTestId("playing-card-JC")).toBeInTheDocument();
     expect(screen.getByTestId("playing-card-JH")).toBeInTheDocument();
@@ -121,14 +125,7 @@ describe("DeclarationReveal", () => {
         { playerSeat: 2, type: "four_of_a_kind", value: 200, cards: ["JC", "JH", "JD", "JS"] },
       ],
     };
-    render(
-      <DeclarationReveal
-        payload={payload}
-        myPlayerSeat={0}
-        players={mockPlayers}
-        onComplete={vi.fn()}
-      />,
-    );
+    render(<DeclarationReveal payload={payload} players={mockPlayers} onComplete={vi.fn()} />);
     const declarers = screen.getAllByTestId("declaration-reveal-declarer");
     expect(declarers).toHaveLength(2);
     expect(declarers[0]).toHaveAttribute("data-seat", "0");
@@ -142,9 +139,7 @@ describe("DeclarationReveal", () => {
       winnerTeam: 1,
       declarations: [{ playerSeat: 3, type: "sequence", value: 50, cards: ["JD", "QD", "KD"] }],
     };
-    render(
-      <DeclarationReveal payload={payload} myPlayerSeat={0} players={[]} onComplete={vi.fn()} />,
-    );
+    render(<DeclarationReveal payload={payload} players={[]} onComplete={vi.fn()} />);
     expect(screen.getByTestId("declaration-reveal-declarer")).toHaveTextContent("#3");
   });
 
@@ -152,12 +147,7 @@ describe("DeclarationReveal", () => {
     vi.useFakeTimers();
     const onComplete = vi.fn();
     render(
-      <DeclarationReveal
-        payload={mockPayload}
-        myPlayerSeat={0}
-        players={mockPlayers}
-        onComplete={onComplete}
-      />,
+      <DeclarationReveal payload={mockPayload} players={mockPlayers} onComplete={onComplete} />,
     );
     vi.advanceTimersByTime(7900);
     expect(onComplete).not.toHaveBeenCalled();
@@ -179,12 +169,7 @@ describe("DeclarationReveal", () => {
     vi.useFakeTimers();
     const onComplete = vi.fn();
     render(
-      <DeclarationReveal
-        payload={mockPayload}
-        myPlayerSeat={0}
-        players={mockPlayers}
-        onComplete={onComplete}
-      />,
+      <DeclarationReveal payload={mockPayload} players={mockPlayers} onComplete={onComplete} />,
     );
     vi.advanceTimersByTime(1600);
     expect(onComplete).toHaveBeenCalledOnce();

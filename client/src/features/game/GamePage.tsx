@@ -639,7 +639,6 @@ export function GamePage() {
       {declarationReveal && (
         <DeclarationReveal
           payload={declarationReveal}
-          myPlayerSeat={myPlayerSeat}
           players={gameState.players}
           onComplete={handleDeclarationRevealComplete}
         />

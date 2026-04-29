@@ -8,21 +8,8 @@ import { PlayingCard } from "./PlayingCard";
 
 interface DeclarationRevealProps {
   payload: DeclarationsResolvedPayload;
-  myPlayerSeat: number;
   players: readonly PlayerState[];
   onComplete: () => void;
-}
-
-const PANEL_POSITIONS: Record<number, string> = {
-  // Clearance for south is larger so self-declared reveals don't overlap own hand cards.
-  0: "bottom-56 left-1/2 -translate-x-1/2", // South (self) — above seat
-  1: "right-28 top-1/2 -translate-y-1/2", // East — left of seat
-  2: "top-20 left-1/2 -translate-x-1/2", // North — below seat
-  3: "left-28 top-1/2 -translate-y-1/2", // West — right of seat
-};
-
-function compassOffset(seat: number, myPlayerSeat: number): number {
-  return (seat - myPlayerSeat + 4) % 4;
 }
 
 function parseCardId(id: string) {
@@ -33,12 +20,7 @@ function declarationLabelKey(type: string): "sequenceShort" | "fourOfAKindShort"
   return type === "four_of_a_kind" ? "fourOfAKindShort" : "sequenceShort";
 }
 
-export function DeclarationReveal({
-  payload,
-  myPlayerSeat,
-  players,
-  onComplete,
-}: DeclarationRevealProps) {
+export function DeclarationReveal({ payload, players, onComplete }: DeclarationRevealProps) {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
 
@@ -61,14 +43,12 @@ export function DeclarationReveal({
     return null;
   }
 
-  const winnerSeat = firstDeclaration.playerSeat;
-  const compass = compassOffset(winnerSeat, myPlayerSeat);
   const teamName =
     payload.winnerTeam === 0 ? t("game.declaration.teamRed") : t("game.declaration.teamBlue");
 
   return (
     <div
-      className={`absolute ${PANEL_POSITIONS[compass]} pointer-events-none z-20`}
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
       data-testid="declaration-reveal"
     >
       <div
