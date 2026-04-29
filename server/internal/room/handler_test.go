@@ -1453,7 +1453,7 @@ func doQuickPlay(e *echo.Echo, token string) *httptest.ResponseRecorder {
 }
 
 func TestQuickPlay_CreatesNewRoom(t *testing.T) {
-	e, _ := setupTest()
+	e, repo := setupTest()
 	token := validToken(10)
 
 	rec := doQuickPlay(e, token)
@@ -1463,24 +1463,39 @@ func TestQuickPlay_CreatesNewRoom(t *testing.T) {
 	var resp map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
-	var data room.Room
+	var data struct {
+		Room        room.Room `json:"room"`
+		Seat        int       `json:"seat"`
+		GameStarted bool      `json:"gameStarted"`
+	}
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
-	assert.True(t, data.IsQuickPlay)
-	assert.Equal(t, "bitola", data.Variant)
-	assert.Equal(t, "1001", data.MatchMode)
-	assert.Equal(t, "relaxed", data.TimerStyle)
-	assert.Equal(t, "waiting", data.Status)
-	assert.Equal(t, 1, data.PlayerCount)
-	assert.Equal(t, uint(10), data.OwnerID)
-	assert.Contains(t, data.Name, "Quick Play ")
-	assert.Len(t, data.Code, 6)
+	assert.True(t, data.Room.IsQuickPlay)
+	assert.Equal(t, "bitola", data.Room.Variant)
+	assert.Equal(t, "1001", data.Room.MatchMode)
+	assert.Equal(t, "relaxed", data.Room.TimerStyle)
+	assert.Equal(t, "waiting", data.Room.Status)
+	assert.Equal(t, 1, data.Room.PlayerCount)
+	assert.Equal(t, uint(10), data.Room.OwnerID)
+	assert.Contains(t, data.Room.Name, "Quick Play ")
+	assert.Len(t, data.Room.Code, 6)
+
+	// Auto-seat: first joiner lands at seat 0 (red).
+	assert.Equal(t, 0, data.Seat)
+	assert.False(t, data.GameStarted)
+
+	require.Len(t, repo.players, 1)
+	require.NotNil(t, repo.players[0].Seat)
+	assert.Equal(t, 0, *repo.players[0].Seat)
+	require.NotNil(t, repo.players[0].Team)
+	assert.Equal(t, "red", *repo.players[0].Team)
 }
 
 func TestQuickPlay_JoinsExistingRoom(t *testing.T) {
 	e, repo := setupTest()
 
-	// Create an existing Quick Play room owned by user 20
+	// Create an existing Quick Play room owned by user 20, who is already
+	// auto-seated at seat 0 (the state Quick Play leaves a single-player room in).
 	existingRoom := &room.Room{
 		Name:        "Quick Play ABC123",
 		Code:        "ABC123",
@@ -1493,7 +1508,9 @@ func TestQuickPlay_JoinsExistingRoom(t *testing.T) {
 		PlayerCount: 1,
 	}
 	_ = repo.Create(existingRoom)
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: existingRoom.ID, UserID: 20})
+	seat0 := 0
+	red := "red"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: existingRoom.ID, UserID: 20, Seat: &seat0, Team: &red})
 
 	token := validToken(30)
 	rec := doQuickPlay(e, token)
@@ -1503,11 +1520,32 @@ func TestQuickPlay_JoinsExistingRoom(t *testing.T) {
 	var resp map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
-	var data room.Room
+	var data struct {
+		Room        room.Room `json:"room"`
+		Seat        int       `json:"seat"`
+		GameStarted bool      `json:"gameStarted"`
+	}
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
-	assert.Equal(t, existingRoom.ID, data.ID)
-	assert.Equal(t, 2, data.PlayerCount)
+	assert.Equal(t, existingRoom.ID, data.Room.ID)
+	assert.Equal(t, 2, data.Room.PlayerCount)
+	// Joiner gets the next empty seat (1 → blue) since seat 0 is taken.
+	assert.Equal(t, 1, data.Seat)
+	assert.False(t, data.GameStarted)
+
+	// Verify the joining player record has seat 1 / team blue.
+	var joinerSeat *int
+	var joinerTeam *string
+	for _, p := range repo.players {
+		if p.UserID == 30 {
+			joinerSeat = p.Seat
+			joinerTeam = p.Team
+		}
+	}
+	require.NotNil(t, joinerSeat)
+	assert.Equal(t, 1, *joinerSeat)
+	require.NotNil(t, joinerTeam)
+	assert.Equal(t, "blue", *joinerTeam)
 }
 
 func TestQuickPlay_AlreadyInRoom(t *testing.T) {
@@ -1574,12 +1612,130 @@ func TestQuickPlay_SkipsNonQuickPlayRooms(t *testing.T) {
 	var resp map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
-	var data room.Room
+	var data struct {
+		Room        room.Room `json:"room"`
+		Seat        int       `json:"seat"`
+		GameStarted bool      `json:"gameStarted"`
+	}
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
-	// Should create a new room, not join the manual one
-	assert.NotEqual(t, manualRoom.ID, data.ID)
-	assert.True(t, data.IsQuickPlay)
+	// Should create a new room, not join the manual one.
+	assert.NotEqual(t, manualRoom.ID, data.Room.ID)
+	assert.True(t, data.Room.IsQuickPlay)
+	assert.Equal(t, 0, data.Seat)
+	assert.False(t, data.GameStarted)
+}
+
+func TestQuickPlay_FillsFirstEmptySeat(t *testing.T) {
+	e, repo := setupTest()
+
+	// Seats 0 and 2 are already occupied. The new joiner should land at seat 1
+	// (the first empty seat in 0..3 order), NOT seat 3.
+	qpRoom := &room.Room{
+		Name:        "Quick Play GAPS",
+		Code:        "GAPSEA",
+		OwnerID:     400,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		IsQuickPlay: true,
+		Status:      "waiting",
+		PlayerCount: 2,
+	}
+	_ = repo.Create(qpRoom)
+
+	seat0, seat2 := 0, 2
+	red := "red"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 400, Seat: &seat0, Team: &red, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 401, Seat: &seat2, Team: &red, Username: "P3"})
+
+	token := validToken(402)
+	rec := doQuickPlay(e, token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	var data struct {
+		Room        room.Room `json:"room"`
+		Seat        int       `json:"seat"`
+		GameStarted bool      `json:"gameStarted"`
+	}
+	require.NoError(t, json.Unmarshal(resp["data"], &data))
+
+	assert.Equal(t, qpRoom.ID, data.Room.ID)
+	assert.Equal(t, 1, data.Seat)
+	assert.False(t, data.GameStarted)
+
+	var newJoinerSeat *int
+	var newJoinerTeam *string
+	for _, p := range repo.players {
+		if p.UserID == 402 {
+			newJoinerSeat = p.Seat
+			newJoinerTeam = p.Team
+		}
+	}
+	require.NotNil(t, newJoinerSeat)
+	assert.Equal(t, 1, *newJoinerSeat)
+	require.NotNil(t, newJoinerTeam)
+	assert.Equal(t, "blue", *newJoinerTeam)
+}
+
+func TestQuickPlay_AutoStartsOnFourthJoiner(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+
+	// Three players are already auto-seated (0, 1, 2). The 4th QuickPlay call
+	// should land at seat 3, fill the room, and trigger auto-start.
+	qpRoom := &room.Room{
+		Name:        "Quick Play FILL",
+		Code:        "FILLED",
+		OwnerID:     500,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		IsQuickPlay: true,
+		Status:      "waiting",
+		PlayerCount: 3,
+	}
+	_ = repo.Create(qpRoom)
+
+	seat0, seat1, seat2 := 0, 1, 2
+	red, blue := "red", "blue"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 500, Seat: &seat0, Team: &red, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 501, Seat: &seat1, Team: &blue, Username: "P2"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 502, Seat: &seat2, Team: &red, Username: "P3"})
+
+	token := validToken(503)
+	rec := doQuickPlay(e, token)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	var data struct {
+		Room        room.Room `json:"room"`
+		Seat        int       `json:"seat"`
+		GameStarted bool      `json:"gameStarted"`
+	}
+	require.NoError(t, json.Unmarshal(resp["data"], &data))
+
+	assert.Equal(t, 3, data.Seat)
+	assert.True(t, data.GameStarted)
+
+	updatedRoom, _ := repo.FindByID(qpRoom.ID)
+	assert.Equal(t, "playing", updatedRoom.Status)
+
+	// system:game_started must reach the room participants.
+	gotGameStarted := false
+	for _, call := range broadcaster.calls {
+		if strings.Contains(string(call.msg), "system:game_started") {
+			gotGameStarted = true
+			break
+		}
+	}
+	assert.True(t, gotGameStarted, "expected system:game_started broadcast")
 }
 
 // --- SelectSeat Auto-Start Tests ---

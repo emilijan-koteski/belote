@@ -1,6 +1,7 @@
 import { axiosClient } from "@/shared/api/axiosClient";
 import type {
   CreateRoomRequest,
+  QuickPlayResponse,
   Room,
   RoomDetail,
   RoomPlayer,
@@ -39,7 +40,7 @@ export function startGame(roomId: number): Promise<Room> {
   return axiosClient.post(`/rooms/${roomId}/start`);
 }
 
-export function quickPlay(signal?: AbortSignal): Promise<Room> {
+export function quickPlay(signal?: AbortSignal): Promise<QuickPlayResponse> {
   return axiosClient.post("/rooms/quick-play", undefined, { signal });
 }
 

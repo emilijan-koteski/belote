@@ -1,5 +1,11 @@
 # Deferred Work
 
+## Deferred from: code review of spec-quickplay-auto-seat-on-join (2026-04-29)
+
+- **Auto-start broadcasts `system:game_started` even when `gameStarter.StartGame` failed** — clients navigate to `/game/{id}` for a game session that does not exist on the server. Pre-existing pattern duplicated from the `SelectSeat` auto-start branch (`server/internal/room/handler.go:670-731`). Fix scope: refactor both auto-start paths to gate the broadcast and the `playing` status flip on `StartGame` success. [server/internal/room/handler.go:1287-1298]
+- **`pickFirstEmptySeat` returning `apperr.ErrRoomFull` is reachable on `player_count` counter drift** — the QuickPlay retry loop only retries on `ErrRoomCodeTaken`/`ErrRoomNameTaken`, so a 5-seat-occupied room caused by counter drift surfaces as an opaque 5xx instead of falling back to a different/new room. Pre-existing counter-drift gap (Story 2.5 review explicitly deferred this). [server/internal/room/handler.go:1126-1135]
+- **`LeaveRoom` does not gate on `room.Status == "waiting"` under lock** — a leave can race the auto-start tx and `gameStarter.StartGame` runs with a `seatInfo` containing a player who has already left. Same race exists for the existing `SelectSeat` auto-start; this change adds a second exposure point. Fix scope: re-check `room.Status == "waiting"` in `LeaveRoom`'s tx, or serialize start/leave via an explicit lock. [server/internal/room/handler.go:443-542]
+
 ## Deferred from: code review of 1-1-project-scaffold-and-development-environment (2026-04-10)
 
 - **W1: fetchClient 401 handler doesn't implement refresh-then-retry cycle** — **RESOLVED in Story 1.3** — fetchClient now implements 401 → refresh → retry with `_isRetry` guard and concurrent refresh deduplication.

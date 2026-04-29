@@ -62,3 +62,9 @@ export interface SelectSeatResponse {
   players: RoomPlayer[];
   gameStarted: boolean;
 }
+
+export interface QuickPlayResponse {
+  room: Room;
+  seat: number;
+  gameStarted: boolean;
+}

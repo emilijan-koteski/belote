@@ -122,9 +122,13 @@ describe("LobbyPage", () => {
     });
   });
 
-  it("calls quickPlay API and navigates on success", async () => {
+  it("calls quickPlay API and navigates to the room lobby on success", async () => {
     const user = userEvent.setup();
-    mockQuickPlay.mockResolvedValueOnce({ id: 42, isQuickPlay: true });
+    mockQuickPlay.mockResolvedValueOnce({
+      room: { id: 42, isQuickPlay: true },
+      seat: 0,
+      gameStarted: false,
+    });
     renderLobbyPage();
 
     const quickPlayCard = screen.getByTestId("quick-play-card");
@@ -136,6 +140,23 @@ describe("LobbyPage", () => {
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/rooms/42");
+    });
+  });
+
+  it("navigates straight to the game when quickPlay reports gameStarted", async () => {
+    const user = userEvent.setup();
+    mockQuickPlay.mockResolvedValueOnce({
+      room: { id: 77, isQuickPlay: true },
+      seat: 3,
+      gameStarted: true,
+    });
+    renderLobbyPage();
+
+    const quickPlayCard = screen.getByTestId("quick-play-card");
+    await user.click(quickPlayCard);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/game/77");
     });
   });
 

@@ -28,8 +28,12 @@ export function LobbyPage() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const room = await quickPlayMutation.mutateAsync(controller.signal);
-      navigate(`/rooms/${room.id}`);
+      const result = await quickPlayMutation.mutateAsync(controller.signal);
+      if (result.gameStarted) {
+        navigate(`/game/${result.room.id}`);
+      } else {
+        navigate(`/rooms/${result.room.id}`);
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return;
