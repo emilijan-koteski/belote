@@ -78,11 +78,16 @@ func handlePickTrump(state *GameState, action Action) (*GameState, error) {
 		suit := newState.TrumpCandidate.Suit
 		newState.TrumpSuit = &suit
 	} else {
-		// Round 2: player picks any suit — action.Suit is required.
+		// Round 2: player picks any suit — action.Suit is required, and the
+		// originally face-up candidate's suit is locked out (already "spent"
+		// in round 1).
 		if action.Suit == nil {
 			return nil, apperr.ErrInvalidBid
 		}
 		if !validSuits[*action.Suit] {
+			return nil, apperr.ErrInvalidBid
+		}
+		if newState.TrumpCandidate != nil && *action.Suit == newState.TrumpCandidate.Suit {
 			return nil, apperr.ErrInvalidBid
 		}
 		suit := *action.Suit

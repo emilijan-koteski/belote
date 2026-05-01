@@ -124,8 +124,46 @@ describe("TrumpPrompt", () => {
         onPass={vi.fn()}
       />,
     );
+    // Use spades — hearts is the candidate suit (KH) and is locked out in round 2.
+    await user.click(screen.getByTestId("trump-prompt-suit-S"));
+    expect(onPick).toHaveBeenCalledWith("S");
+  });
+
+  it("disables the candidate-suit button in round 2 and leaves the others enabled", () => {
+    render(
+      <TrumpPrompt
+        trumpCandidate={trumpCandidate}
+        biddingRound={2}
+        isActiveBidder={true}
+        onPick={vi.fn()}
+        onPass={vi.fn()}
+      />,
+    );
+    // Candidate is KH — the H button is "spent" and must be disabled.
+    const lockedButton = screen.getByTestId("trump-prompt-suit-H");
+    expect(lockedButton).toBeDisabled();
+    expect(lockedButton).toHaveAttribute("aria-disabled", "true");
+
+    // The other three suits remain enabled.
+    expect(screen.getByTestId("trump-prompt-suit-S")).toBeEnabled();
+    expect(screen.getByTestId("trump-prompt-suit-D")).toBeEnabled();
+    expect(screen.getByTestId("trump-prompt-suit-C")).toBeEnabled();
+  });
+
+  it("does not call onPick when the disabled candidate-suit button is clicked", async () => {
+    const user = userEvent.setup();
+    const onPick = vi.fn();
+    render(
+      <TrumpPrompt
+        trumpCandidate={trumpCandidate}
+        biddingRound={2}
+        isActiveBidder={true}
+        onPick={onPick}
+        onPass={vi.fn()}
+      />,
+    );
     await user.click(screen.getByTestId("trump-prompt-suit-H"));
-    expect(onPick).toHaveBeenCalledWith("H");
+    expect(onPick).not.toHaveBeenCalled();
   });
 
   it("renders the trump candidate card in round 2 for active bidder", () => {

@@ -171,13 +171,6 @@ func TestPickTrumpRound2(t *testing.T) {
 			chosenSuit:    game.SuitClubs,
 			expectedTrump: game.SuitClubs,
 		},
-		{
-			name:          "pick hearts (same as candidate) in round 2",
-			passCount:     4,
-			activeSeat:    1,
-			chosenSuit:    game.SuitHearts,
-			expectedTrump: game.SuitHearts,
-		},
 	}
 
 	for _, tc := range tests {
@@ -219,6 +212,59 @@ func TestRound2PickWithoutSuit(t *testing.T) {
 	assert.Nil(t, result)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, apperr.ErrInvalidBid)
+}
+
+// TestRound2PickCandidateSuitRejected locks the Bitola round-2 rule that the
+// originally face-up candidate's suit is "spent" — picking it in round 2 must
+// be rejected with ErrInvalidBid, regardless of which seat is the active
+// bidder.
+func TestRound2PickCandidateSuitRejected(t *testing.T) {
+	tests := []struct {
+		name       string
+		passCount  int
+		activeSeat int
+	}{
+		{name: "round 2 just started, seat 1 active", passCount: 4, activeSeat: 1},
+		{name: "round 2 with 1 pass, seat 2 active", passCount: 5, activeSeat: 2},
+		{name: "round 2 with 2 passes, seat 3 active", passCount: 6, activeSeat: 3},
+		{name: "round 2 with 3 passes, seat 0 active", passCount: 7, activeSeat: 0},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gs := testfixtures.NewGameMidBidding(tc.passCount)
+			require.NotNil(t, gs.TrumpCandidate, "fixture must have a face-up candidate")
+			lockedSuit := gs.TrumpCandidate.Suit
+
+			// Snapshot key state before the rejected action to assert immutability.
+			origPhase := gs.Phase
+			origRound := gs.BiddingRound
+			origPassCount := gs.BiddingPassCount
+			origActiveSeat := gs.ActivePlayerSeat
+			origCandidate := *gs.TrumpCandidate
+
+			action := game.Action{
+				Type:       game.ActionPickTrump,
+				PlayerSeat: tc.activeSeat,
+				Suit:       &lockedSuit,
+			}
+
+			result, err := game.ApplyAction(gs, action)
+
+			assert.Nil(t, result)
+			require.Error(t, err)
+			assert.ErrorIs(t, err, apperr.ErrInvalidBid)
+
+			// Original state must not be mutated by a rejected pick.
+			assert.Equal(t, origPhase, gs.Phase)
+			assert.Equal(t, origRound, gs.BiddingRound)
+			assert.Equal(t, origPassCount, gs.BiddingPassCount)
+			assert.Equal(t, origActiveSeat, gs.ActivePlayerSeat)
+			assert.Nil(t, gs.TrumpSuit, "trump must remain unset after rejected pick")
+			require.NotNil(t, gs.TrumpCandidate, "candidate must still be present after rejected pick")
+			assert.Equal(t, origCandidate, *gs.TrumpCandidate)
+		})
+	}
 }
 
 func TestRound2FullPassReshuffle(t *testing.T) {
@@ -483,10 +529,6 @@ func TestPickTrumpStage2Rotation(t *testing.T) {
 		{name: "round 1, picker = seat 0 (last bidder)", passCount: 3, picker: 0},
 		{name: "round 2, picker = seat 1, suit = spades", passCount: 4, picker: 1, round2Suit: suitPtr(game.SuitSpades)},
 		{name: "round 2, picker = seat 0, suit = clubs", passCount: 7, picker: 0, round2Suit: suitPtr(game.SuitClubs)},
-		// Round-2 same-suit-as-candidate edge case: candidate is AH, picker
-		// chooses Hearts in round 2. Trump should still resolve to Hearts and
-		// distribution should match the round-1 layout for this picker seat.
-		{name: "round 2, picker = seat 1, suit = hearts (same as candidate)", passCount: 4, picker: 1, round2Suit: suitPtr(game.SuitHearts)},
 	}
 
 	for _, tc := range tests {

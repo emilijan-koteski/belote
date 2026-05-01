@@ -89,20 +89,28 @@ export function TrumpPrompt({
           </div>
         )}
 
-        {/* Round 2: show 4 suit buttons for free selection */}
+        {/* Round 2: show 4 suit buttons for free selection. The originally
+            face-up candidate's suit is locked out (Bitola "spent suit" rule)
+            — it stays in the grid but disabled so the layout is stable and
+            the player sees which suit is unavailable. */}
         {biddingRound === 2 && (
           <div className="grid grid-cols-4 gap-2 mb-4">
-            {SUITS.map((suit) => (
-              <Button
-                key={suit}
-                variant="outline"
-                className={`text-2xl font-display py-4 ${SUIT_COLOR[suit]} hover:bg-accent/10 hover:border-accent`}
-                onClick={() => onPick(suit)}
-                data-testid={`trump-prompt-suit-${suit}`}
-              >
-                {SUIT_SYMBOL[suit]}
-              </Button>
-            ))}
+            {SUITS.map((suit) => {
+              const isLocked = trumpCandidate?.suit === suit;
+              return (
+                <Button
+                  key={suit}
+                  variant="outline"
+                  disabled={isLocked}
+                  aria-disabled={isLocked}
+                  className={`text-2xl font-display py-4 ${SUIT_COLOR[suit]} hover:bg-accent/10 hover:border-accent`}
+                  onClick={() => onPick(suit)}
+                  data-testid={`trump-prompt-suit-${suit}`}
+                >
+                  {SUIT_SYMBOL[suit]}
+                </Button>
+              );
+            })}
           </div>
         )}
 

@@ -272,8 +272,15 @@ func TestNewGameJustDealt_NoInstantWinOnAnyPick(t *testing.T) {
 			continue
 		}
 
-		// Round 2: try every suit.
+		// Round 2: try every suit EXCEPT the candidate's suit, which is locked
+		// out by the Bitola "spent suit" rule and would be rejected with
+		// ErrInvalidBid before any state mutation.
+		require.NotNil(t, gs.TrumpCandidate, "round-2 fixture must have a face-up candidate")
+		lockedSuit := gs.TrumpCandidate.Suit
 		for _, suit := range allSuits {
+			if suit == lockedSuit {
+				continue
+			}
 			s := suit
 			result, err := game.ApplyAction(gs, game.Action{
 				Type:       game.ActionPickTrump,
