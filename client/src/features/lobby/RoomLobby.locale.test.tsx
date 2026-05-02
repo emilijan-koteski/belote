@@ -1,29 +1,16 @@
-// Locale overflow test (AC-009). Renders RoomLobby in both `en` and `sr`
-// and asserts no text element inside the seat tiles overflows its
-// container.
+// Locale overflow test (AC-009).
 //
-// JSDOM caveat: scrollWidth and clientWidth are both 0 in JSDOM, so a
-// straight `el.scrollWidth > el.clientWidth` check is trivially false and
-// the test would never fail in the unit-test runtime. Two complementary
-// strategies handle that:
+// AC-009 overflow check is JSDOM-impossible: both `scrollWidth` and
+// `clientWidth` are 0 in jsdom, so any `scrollWidth > clientWidth` comparison
+// is trivially false and would never fail. The real overflow regression gate
+// lives in Playwright (TODO — convert to Playwright). This test only asserts
+// i18n key parity at the seat-label render path: that the localized "Team A"
+// / "Tim A" labels mount without a missing-key fallback that would itself
+// break layout.
 //
-//   1. Run the scrollWidth/clientWidth check anyway — it remains a no-op
-//      under JSDOM but becomes meaningful when the same test file is
-//      executed in a real browser via Playwright/Cypress (planned in a
-//      follow-up commit). Documenting the intent here keeps the gate in
-//      place.
-//
-//   2. CSS-only proxy assertion: confirm the rendered Serbian and English
-//      labels mount without crashing and that the seat tile structure
-//      matches the diamond layout expectation. The visible-text presence
-//      of `Tim A` / `Tim B` (or `Team A` / `Team B`) inside the lobby is
-//      a strong signal the i18n key resolved without a missing-string
-//      fallback that would itself break layout.
-//
-// This is the choice the spec calls out: "Implement whichever fits the
-// codebase's existing test patterns and document the choice in a comment
-// at the top of the file." The codebase already mocks i18n via
-// `i18n.changeLanguage` (see i18n.test.ts), so we follow that pattern.
+// AC10 / D117: removed the dead-letter scrollWidth/clientWidth assertion;
+// keeping it would mislead future readers into thinking this test catches
+// overflow regressions in unit-test runs.
 
 import "@/shared/i18n/i18n";
 
@@ -144,44 +131,26 @@ afterEach(async () => {
 });
 
 describe("RoomLobby locale overflow", () => {
-  it.each(["en", "sr"] as const)("no seat-tile text overflows in %s locale", async (locale) => {
-    await i18n.changeLanguage(locale);
+  it.each(["en", "sr"] as const)(
+    "renders Tim A / Tim B labels without missing-key fallback in %s locale",
+    async (locale) => {
+      await i18n.changeLanguage(locale);
 
-    renderRoomLobby();
+      renderRoomLobby();
 
-    // Wait for the seat grid + the team header that swaps on language
-    // change. If translation keys were missing, getByText would throw
-    // before we get to the overflow assertion — that is itself a
-    // signal the i18n parity test should also catch.
-    await waitFor(() => {
-      expect(screen.getByTestId("seats-grid")).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId("seats-grid")).toBeInTheDocument();
+      });
 
-    const expectedTeamA = locale === "en" ? "Team A" : "Tim A";
-    const expectedTeamB = locale === "en" ? "Team B" : "Tim B";
-    expect(screen.getByText(expectedTeamA)).toBeInTheDocument();
-    expect(screen.getByText(expectedTeamB)).toBeInTheDocument();
+      const expectedTeamA = locale === "en" ? "Team A" : "Tim A";
+      const expectedTeamB = locale === "en" ? "Team B" : "Tim B";
+      expect(screen.getByText(expectedTeamA)).toBeInTheDocument();
+      expect(screen.getByText(expectedTeamB)).toBeInTheDocument();
 
-    // Walk every text-bearing element inside each seat tile and apply
-    // the scrollWidth/clientWidth check. JSDOM zeroes both, so the
-    // assertion is trivially satisfied here — its real value lands
-    // when a future Playwright run executes the same shape. Comment
-    // is on the file header explaining the limitation.
-    const seatGrid = screen.getByTestId("seats-grid");
-    const tiles = seatGrid.querySelectorAll<HTMLElement>("[data-testid^='seat-position-']");
-    expect(tiles.length).toBe(4);
-
-    for (const tile of tiles) {
-      // Buttons, spans, divs — anything that holds text. Reading
-      // textContent excludes hidden whitespace nodes.
-      const textNodes = tile.querySelectorAll<HTMLElement>("button, span, p, div");
-      for (const el of textNodes) {
-        if (!el.textContent || el.textContent.trim() === "") continue;
-        expect(
-          el.scrollWidth,
-          `text overflow in ${locale} on element <${el.tagName.toLowerCase()}> with content "${el.textContent.trim().slice(0, 40)}"`,
-        ).toBeLessThanOrEqual(el.clientWidth);
-      }
-    }
-  });
+      // Sanity-check the diamond layout has all four seat tiles.
+      const seatGrid = screen.getByTestId("seats-grid");
+      const tiles = seatGrid.querySelectorAll<HTMLElement>("[data-testid^='seat-position-']");
+      expect(tiles.length).toBe(4);
+    },
+  );
 });

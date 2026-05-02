@@ -1,6 +1,6 @@
 import "@/shared/i18n/i18n";
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -93,5 +93,20 @@ describe("BelotPrompt", () => {
       />,
     );
     expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+  });
+
+  it("Escape key triggers onDecline (AC7)", () => {
+    const onDecline = vi.fn();
+    render(<BelotPrompt isKing={false} onAnnounce={vi.fn()} onDecline={onDecline} />);
+    const dialog = screen.getByRole("dialog");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(onDecline).toHaveBeenCalledTimes(1);
+  });
+
+  it("outer wrapper uses fixed positioning (AC7)", () => {
+    render(<BelotPrompt isKing={false} onAnnounce={vi.fn()} onDecline={vi.fn()} />);
+    const wrapper = screen.getByTestId("belot-prompt");
+    expect(wrapper.className).toContain("fixed");
+    expect(wrapper.className).not.toMatch(/(^|\s)absolute(\s|$)/);
   });
 });

@@ -379,6 +379,14 @@ export function GamePage() {
   // Pause state
   const isRoomOwner = myPlayerSeat !== null && gameState.ownerSeat === myPlayerSeat;
   const isPaused = gameState.phase === "paused";
+
+  // Single source of truth for "is an overlay covering the table". Used to
+  // gate reveals (D112) and the dealer/trump pill (dealer-indicator D97).
+  const isOverlayActive =
+    isPaused ||
+    matchEndData !== null ||
+    matchAbandonedData !== null ||
+    gameState.phase === "disconnected";
   const canPause =
     !isPaused &&
     (gameState.phase === "playing" || gameState.phase === "bidding") &&
@@ -463,27 +471,34 @@ export function GamePage() {
 
       {/* Dealer + trump indicators - top right, stacked vertically.
           Trump indicator is gated to play phases (AC 4.4.5); the dealer
-          indicator is visible whenever the dealer's seat resolves to a player. */}
-      <div className="absolute top-4 right-16 z-10 flex flex-col items-end gap-2">
-        {(() => {
-          const dealerName = gameState.players.find(
-            (p) => p.seat === gameState.dealerSeat,
-          )?.username;
-          return dealerName ? <DealerIndicator dealerName={dealerName} /> : null;
-        })()}
-        {gameState.trumpSuit && gameState.phase !== "dealing" && gameState.phase !== "bidding" && (
-          <TrumpIndicator
-            trumpSuit={gameState.trumpSuit}
-            trumpCallerSeat={gameState.trumpCallerSeat}
-            trumpCallerName={
-              gameState.trumpCallerSeat !== null
-                ? (gameState.players.find((p) => p.seat === gameState.trumpCallerSeat)?.username ??
-                  null)
-                : null
-            }
-          />
-        )}
-      </div>
+          indicator is visible whenever the dealer's seat resolves to a
+          player. The whole pill is hidden behind any active overlay
+          (dealer-indicator D97). */}
+      {!isOverlayActive && (
+        <div className="absolute top-4 right-16 z-10 flex flex-col items-end gap-2">
+          {(() => {
+            const dealerName = gameState.players.find(
+              (p) => p.seat === gameState.dealerSeat,
+            )?.username;
+            return dealerName ? <DealerIndicator dealerName={dealerName} /> : null;
+          })()}
+          {gameState.trumpSuit &&
+            gameState.phase !== "dealing" &&
+            gameState.phase !== "bidding" && (
+              <TrumpIndicator
+                trumpSuit={gameState.trumpSuit}
+                trumpCallerSeat={gameState.trumpCallerSeat}
+                trumpCallerName={
+                  gameState.trumpCallerSeat !== null
+                    ? (gameState.players.find((p) => p.seat === gameState.trumpCallerSeat)
+                        ?.username ?? null)
+                    : null
+                }
+                viewerTeam={viewerTeam}
+              />
+            )}
+        </div>
+      )}
 
       {/* Player seats at compass positions */}
       {gameState.players.map((player) => {
@@ -648,8 +663,10 @@ export function GamePage() {
         />
       )}
 
-      {/* Declaration resolution reveal */}
-      {declarationReveal && (
+      {/* Declaration resolution reveal — silently consumed while an overlay
+          covers the table (D112). The reveal's internal setTimeout still ticks
+          via useEffect; gating is render-only by design. */}
+      {declarationReveal && !isOverlayActive && (
         <DeclarationReveal
           payload={declarationReveal}
           players={gameState.players}
@@ -658,8 +675,9 @@ export function GamePage() {
         />
       )}
 
-      {/* Belot / Re-belot reveal — keyed on payload so back-to-back reveals remount cleanly */}
-      {belotReveal && (
+      {/* Belot / Re-belot reveal — same overlay-active gate as the declaration
+          reveal. Keyed on payload so back-to-back reveals remount cleanly. */}
+      {belotReveal && !isOverlayActive && (
         <BelotReveal
           key={`${belotReveal.playerSeat}-${belotReveal.cardId}`}
           playerSeat={belotReveal.playerSeat}

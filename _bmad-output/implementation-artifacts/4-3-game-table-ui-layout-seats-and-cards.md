@@ -13,7 +13,7 @@ So that the game feels like sitting at a real card table.
 1. **Given** a player enters the game view
    **When** GamePage renders
    **Then** the layout fills the full viewport with no scroll and no overflow
-   **And** four PlayerSeat components are positioned at compass points: bottom = you (South), left = West, top = North (teammate), right = East
+   **And** four PlayerSeat components are positioned at compass points: bottom = you (South), right = East, top = North (teammate), left = West
    **And** the TrickArea is centered, occupying ~25% of viewport width
    **And** match chat is accessible as a collapsible sidebar on the right edge
 
@@ -74,7 +74,7 @@ So that the game feels like sitting at a real card table.
 
 - [x] Task 3: Derive `myPlayerSeat` on first gameState (AC: 2)
   - [x] In GamePage, `useEffect` on `gameState`: if `myPlayerSeat === null && gameState`, find player with `userId === authStore.user.id` in `gameState.players` and call `setMyPlayerSeat(player.seat)`
-  - [x] Compute compass mapping: `compassPosition(seat, myPlayerSeat) = (seat - myPlayerSeat + 4) % 4` → 0=South, 1=West, 2=North, 3=East
+  - [x] Compute compass mapping: `compassPosition(seat, myPlayerSeat) = (seat - myPlayerSeat + 4) % 4` → 0=South, 1=East, 2=North, 3=West (counter-clockwise; seat indices increment counter-clockwise)
 
 - [x] Task 4: Create `PlayingCard` component (AC: 4, 5, 6, 7)
   - [x] Create `client/src/features/game/components/PlayingCard.tsx`
@@ -127,9 +127,9 @@ So that the game feels like sitting at a real card table.
   - [x] Layout: `relative w-[25vw] aspect-square` — cards placed in N/S/E/W quadrants using absolute offsets
   - [x] Card placement per compass position (relative to myPlayerSeat):
     - South (0): bottom-center
-    - West (1): center-left
+    - East (1): center-right
     - North (2): top-center
-    - East (3): center-right
+    - West (3): center-left
   - [x] Empty state: subtle oval outline (`border border-border rounded-full opacity-30`)
   - [x] `resolving` state: when `winnerSeat !== null` AND trick has 4 cards, apply `accent` glow to the winning card: `shadow-[0_0_20px_var(--color-accent)]`
   - [x] Trick resolution sequence (use `useEffect` watching `trick.length` and `winnerSeat`):
@@ -263,7 +263,8 @@ The `useWebSocket` hook manages connection lifecycle by component mount. When Ga
 ### Compass Seat Mapping
 
 ```ts
-// compassOffset 0 = South (self), 1 = West, 2 = North (teammate), 3 = East
+// compassOffset 0 = South (self), 1 = East, 2 = North (teammate), 3 = West
+// (Counter-clockwise seat indexing — seat indices increment CCW around the table.)
 function compassOffset(seat: number, myPlayerSeat: number): number {
   return (seat - myPlayerSeat + 4) % 4;
 }
@@ -271,13 +272,13 @@ function compassOffset(seat: number, myPlayerSeat: number): number {
 // CSS positions for each compass point
 const SEAT_POSITIONS = {
   0: "bottom-4 left-1/2 -translate-x-1/2", // South (self)
-  1: "left-4 top-1/2 -translate-y-1/2", // West
+  1: "right-4 top-1/2 -translate-y-1/2", // East
   2: "top-4 left-1/2 -translate-x-1/2", // North
-  3: "right-4 top-1/2 -translate-y-1/2", // East
+  3: "left-4 top-1/2 -translate-y-1/2", // West
 };
 ```
 
-Counter-clockwise play direction: seat index increments counter-clockwise. So if `myPlayerSeat=0`, turn order is 0→1→2→3→0 (which visually goes South→West→North→East→South, i.e., counter-clockwise around the table).
+Counter-clockwise play direction: seat index increments counter-clockwise. So if `myPlayerSeat=0`, turn order is 0→1→2→3→0 (which visually goes South→East→North→West→South, counter-clockwise around the table when viewed from above; seat indices increment counter-clockwise).
 
 ### Derive `myPlayerSeat` in GamePage
 
@@ -448,9 +449,9 @@ Place each played card in its compass quadrant within the TrickArea box:
 ```ts
 const TRICK_CARD_POSITIONS = {
   0: "bottom-0 left-1/2 -translate-x-1/2", // South
-  1: "top-1/2 left-0 -translate-y-1/2", // West
+  1: "top-1/2 right-0 -translate-y-1/2", // East
   2: "top-0 left-1/2 -translate-x-1/2", // North
-  3: "top-1/2 right-0 -translate-y-1/2", // East
+  3: "top-1/2 left-0 -translate-y-1/2", // West
 };
 ```
 

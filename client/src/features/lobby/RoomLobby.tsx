@@ -23,6 +23,7 @@ import {
   useSwapSeatsMutation,
 } from "@/shared/hooks/mutations/useRooms";
 import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import { useWsConnectionState } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useChatStore } from "@/shared/stores/chatStore";
@@ -178,12 +179,9 @@ export function RoomLobby() {
   const isViewerSeated = viewerSeat !== null;
 
   // `prefers-reduced-motion: reduce` snaps the rotation and shows the "your
-  // seat" micro-label immediately. Same useMemo + matchMedia pattern used in
-  // ScorePanel / DealAnimation / etc.
-  const prefersReducedMotion = useMemo(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
-  );
+  // seat" micro-label immediately. Live via the shared useReducedMotion hook
+  // (D68 / D122) so OS-level toggles propagate on the next render.
+  const prefersReducedMotion = useReducedMotion();
 
   // Fade in the "your seat" label ~300ms after the viewer takes a seat —
   // roughly when the rotation transition completes. Reduced-motion users get

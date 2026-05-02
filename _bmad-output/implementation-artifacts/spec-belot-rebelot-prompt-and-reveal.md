@@ -21,7 +21,7 @@ baseline_commit: "c0945b9"
 
 1. **Prompt label:** the prompt title and button text must reflect the card being played. When the player is about to play the **Queen of trump**, prompt says "Announce Belot?". When about to play the **King of trump**, prompt says "Announce Re-belot?". Terminology is rank-bound, not play-order-bound.
 2. **Server payload:** extend `event:belot_announced` to include `cardId` (the K or Q being announced). Session manager already knows — it fires off the `ActionAnnounceBelot` action, whose last-played card is the triggering card.
-3. **Reveal:** mirror the declaration reveal from `spec-declaration-reveal-cards-and-timing.md` — a small panel anchored to the announcing player's seat, showing the single card (the K or Q of trump that triggered the announcement), with the text "Belot!" or "Re-belot!" above it. Auto-dismisses after 4s (1.5s reduced-motion). Non-blocking.
+3. **Reveal:** Belot's reveal stays seat-anchored to the announcer (PANEL_POSITIONS in BelotReveal); the declaration reveal centers on the table since 2026-04-29 (spec-center-declaration-dialog). The Belot panel shows the single card (the K or Q of trump that triggered the announcement), with the text "Belot!" or "Re-belot!" above it. Auto-dismisses after 4s (1.5s reduced-motion). Non-blocking.
 
 ## Boundaries & Constraints
 

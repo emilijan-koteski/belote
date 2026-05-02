@@ -23,7 +23,7 @@ import type { Room } from "@/shared/types/apiTypes";
 import type { GameState } from "@/shared/types/gameTypes";
 import type { WsMessage } from "@/shared/types/wsEvents";
 
-import { useWsDispatch } from "./useWsDispatch";
+import { __resetWsDispatchStateForTests, useWsDispatch } from "./useWsDispatch";
 
 const mockGameState: GameState = {
   id: 1,
@@ -111,6 +111,7 @@ describe("useWsDispatch", () => {
     useGameStore.getState().reset();
     useRoomLobbyStore.getState().reset();
     useChatStore.setState({ globalMessages: [], matchMessages: [], roomMessages: [] });
+    __resetWsDispatchStateForTests();
     vi.restoreAllMocks();
   });
 
@@ -292,6 +293,135 @@ describe("useWsDispatch", () => {
     expect(state.gameState?.phase).toBe("playing");
     expect(state.gameState?.roomId).toBe(100);
     expect(state.roomId).toBe(100);
+  });
+
+  it("clears stale declarationReveal and belotReveal on a reconnect-style event:game_state", () => {
+    // Seed both reveal fields as if a player disconnected mid-reveal.
+    // No preceding event:declarations_resolved / event:belot_announced is
+    // dispatched here — that mirrors the server's reconnect behaviour
+    // (reveal events are not replayed on reconnect, only the snapshot is).
+    useGameStore.setState({
+      declarationReveal: {
+        winnerTeam: 0,
+        declarations: [
+          {
+            playerSeat: 0,
+            type: "sequence",
+            cards: ["9S", "TS", "JS", "QS"],
+            value: 50,
+          },
+        ],
+      },
+      belotReveal: {
+        playerSeat: 0,
+        team: 0,
+        cardId: "QS",
+      },
+    });
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:game_state",
+      payload: mockGameState,
+    });
+
+    const state = useGameStore.getState();
+    expect(state.declarationReveal).toBeNull();
+    expect(state.belotReveal).toBeNull();
+    expect(state.gameState).not.toBeNull();
+  });
+
+  it("preserves declarationReveal across the trailing event:game_state in normal flow", () => {
+    // Server flow (manager.go:513→554): event:declarations_resolved is
+    // emitted, then event:game_state is broadcast for state sync. The
+    // trailing snapshot must NOT wipe the reveal that just rendered, or
+    // the user never sees declarations.
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:declarations_resolved",
+      payload: {
+        winnerTeam: 0,
+        declarations: [
+          {
+            playerSeat: 0,
+            type: "sequence",
+            cards: ["9S", "TS", "JS", "QS"],
+            value: 50,
+          },
+        ],
+      },
+    });
+    expect(useGameStore.getState().declarationReveal).not.toBeNull();
+
+    dispatch({
+      type: "event:game_state",
+      payload: mockGameState,
+    });
+
+    const state = useGameStore.getState();
+    expect(state.declarationReveal).not.toBeNull();
+    expect(state.gameState).not.toBeNull();
+  });
+
+  it("preserves belotReveal across the trailing event:game_state in normal flow", () => {
+    // Server flow (manager.go:609→614): event:belot_announced is emitted,
+    // then event:game_state is broadcast. Same suppression contract as
+    // declarations_resolved.
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:belot_announced",
+      payload: {
+        playerSeat: 0,
+        team: 0,
+        cardId: "QS",
+      },
+    });
+    expect(useGameStore.getState().belotReveal).not.toBeNull();
+
+    dispatch({
+      type: "event:game_state",
+      payload: mockGameState,
+    });
+
+    const state = useGameStore.getState();
+    expect(state.belotReveal).not.toBeNull();
+    expect(state.gameState).not.toBeNull();
+  });
+
+  it("clears reveals on a second event:game_state — the suppression is single-shot", () => {
+    // After the trailing snapshot consumes the suppression flag, a later
+    // standalone event:game_state (e.g., a reconnect snapshot arriving
+    // after a stale reveal payload was set) must still clear.
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:declarations_resolved",
+      payload: {
+        winnerTeam: 0,
+        declarations: [
+          {
+            playerSeat: 0,
+            type: "sequence",
+            cards: ["9S", "TS", "JS", "QS"],
+            value: 50,
+          },
+        ],
+      },
+    });
+    dispatch({ type: "event:game_state", payload: mockGameState });
+    // First snapshot suppressed the clear; reveal still set.
+    expect(useGameStore.getState().declarationReveal).not.toBeNull();
+
+    dispatch({ type: "event:game_state", payload: mockGameState });
+    // Second standalone snapshot now clears.
+    expect(useGameStore.getState().declarationReveal).toBeNull();
   });
 
   it("dispatches event:card_played to gameStore", () => {

@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useGameStore } from "@/shared/stores/gameStore";
 import { EMOTE_IDS, type EmoteID } from "@/shared/types/wsEvents";
 
 const EMOTE_GLYPHS: Record<EmoteID, string> = {
@@ -39,22 +40,26 @@ interface EmotePickerButtonProps {
 export function EmotePickerButton({ onSend, disabled = false }: EmotePickerButtonProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const [lastSentAt, setLastSentAt] = useState<number>(0);
+  // lastSentAt lives on gameStore so the cooldown survives the picker's
+  // unmount/remount across phase transitions (D107). performance.now() is
+  // monotonic so an OS clock backstep cannot lock the picker (D108).
+  const lastSentAt = useGameStore((s) => s.lastEmoteSentAt);
+  const setLastSentAt = useGameStore((s) => s.setLastEmoteSentAt);
   // `now` re-renders the picker exactly when the cooldown expires so disabled
   // tiles re-enable instantly without forcing parents to re-render every tick.
-  const [now, setNow] = useState<number>(Date.now());
+  const [now, setNow] = useState<number>(() => performance.now());
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const cooldownRemaining = Math.max(0, COOLDOWN_MS - (now - lastSentAt));
+  const cooldownRemaining = lastSentAt === 0 ? 0 : Math.max(0, COOLDOWN_MS - (now - lastSentAt));
 
   // Single timer keyed on lastSentAt — fires once at the cooldown end so the
   // disabled tiles flip back to enabled. No per-tile timer storms.
   useEffect(() => {
     if (cooldownRemaining <= 0) return;
     const handle = window.setTimeout(() => {
-      setNow(Date.now());
+      setNow(performance.now());
     }, cooldownRemaining);
     return () => window.clearTimeout(handle);
   }, [lastSentAt, cooldownRemaining]);
@@ -132,14 +137,15 @@ export function EmotePickerButton({ onSend, disabled = false }: EmotePickerButto
 
   const handleTileClick = useCallback(
     (emote: EmoteID) => {
-      const remaining = COOLDOWN_MS - (Date.now() - lastSentAt);
+      const stamp = performance.now();
+      const remaining = lastSentAt === 0 ? 0 : COOLDOWN_MS - (stamp - lastSentAt);
       if (remaining > 0) return; // defence in depth — tiles already disabled
-      setLastSentAt(Date.now());
-      setNow(Date.now());
+      setLastSentAt(stamp);
+      setNow(stamp);
       onSend(emote);
       setIsOpen(false);
     },
-    [lastSentAt, onSend],
+    [lastSentAt, setLastSentAt, onSend],
   );
 
   return (

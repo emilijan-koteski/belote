@@ -1,5 +1,31 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, string>) => {
+      const translations: Record<string, string> = {
+        "team.us": "Us",
+        "team.them": "Them",
+        "team.a": "Team A",
+        "team.b": "Team B",
+        "game.suits.spades": "Spades",
+        "game.suits.hearts": "Hearts",
+        "game.suits.diamonds": "Diamonds",
+        "game.suits.clubs": "Clubs",
+        "game.trumpIndicator.trump": "Trump",
+      };
+      if (key === "game.trumpIndicator.label" && opts) return `Trump: ${opts.suit}`;
+      if (key === "game.trumpIndicator.labelWithTeam" && opts) {
+        return `Trump: ${opts.suit} (${opts.team})`;
+      }
+      if (key === "game.trumpIndicator.labelWithCaller" && opts) {
+        return `Trump: ${opts.suit} (${opts.team} — ${opts.name})`;
+      }
+      return translations[key] ?? key;
+    },
+  }),
+}));
 
 import { TrumpIndicator } from "./TrumpIndicator";
 
@@ -91,5 +117,42 @@ describe("TrumpIndicator", () => {
   it("omits the player name when no caller seat is set even if a name is provided", () => {
     render(<TrumpIndicator trumpSuit="S" trumpCallerSeat={null} trumpCallerName="Marko" />);
     expect(screen.queryByTestId("trump-caller-name")).not.toBeInTheDocument();
+  });
+
+  it("renders Us when viewerTeam matches the caller's team (AC4)", () => {
+    render(<TrumpIndicator trumpSuit="S" trumpCallerSeat={0} viewerTeam="teamA" />);
+    const badge = screen.getByTestId("trump-caller-team");
+    expect(badge).toHaveTextContent("Us");
+    expect(badge).toHaveAttribute("data-team", "teamA");
+  });
+
+  it("renders Them when viewerTeam differs from the caller's team (AC4)", () => {
+    render(<TrumpIndicator trumpSuit="H" trumpCallerSeat={1} viewerTeam="teamA" />);
+    const badge = screen.getByTestId("trump-caller-team");
+    expect(badge).toHaveTextContent("Them");
+    expect(badge).toHaveAttribute("data-team", "teamB");
+  });
+
+  it("falls back to neutral Team A / Team B when viewerTeam is null (AC4)", () => {
+    const { rerender } = render(
+      <TrumpIndicator trumpSuit="S" trumpCallerSeat={0} viewerTeam={null} />,
+    );
+    expect(screen.getByTestId("trump-caller-team")).toHaveTextContent("Team A");
+
+    rerender(<TrumpIndicator trumpSuit="H" trumpCallerSeat={3} viewerTeam={null} />);
+    expect(screen.getByTestId("trump-caller-team")).toHaveTextContent("Team B");
+  });
+
+  it("trump caller name span has truncate clamp (AC6)", () => {
+    render(
+      <TrumpIndicator
+        trumpSuit="S"
+        trumpCallerSeat={0}
+        trumpCallerName="aVeryLongUsernameThatShouldClamp"
+      />,
+    );
+    const nameEl = screen.getByTestId("trump-caller-name");
+    expect(nameEl.className).toContain("max-w-[8rem]");
+    expect(nameEl.className).toContain("truncate");
   });
 });

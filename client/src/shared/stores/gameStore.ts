@@ -37,6 +37,12 @@ interface GameStoreState {
   surrenderProposed: SurrenderProposedPayload | null;
   surrenderDeclined: SurrenderDeclinedPayload | null;
   activeEmotes: ActiveEmotesMap;
+  // Monotonic timestamp (performance.now()) of the most recent emote sent
+  // from this client. Lifted out of EmotePickerButton's local useState so
+  // the picker's cooldown survives mount/unmount across phase transitions
+  // (D107). performance.now() is monotonic so OS clock backsteps cannot
+  // lock the picker for arbitrary time (D108). 0 means "no emote sent".
+  lastEmoteSentAt: number;
 
   setGameState: (state: GameState) => void;
   setMyPlayerSeat: (seat: number) => void;
@@ -51,6 +57,7 @@ interface GameStoreState {
   setSurrenderProposed: (payload: SurrenderProposedPayload | null) => void;
   setSurrenderDeclined: (payload: SurrenderDeclinedPayload | null) => void;
   setActiveEmote: (seat: number, emote: EmoteID | null) => void;
+  setLastEmoteSentAt: (value: number) => void;
   clearGame: () => void;
   reset: () => void;
 }
@@ -85,6 +92,7 @@ const initialState = {
   surrenderProposed: null,
   surrenderDeclined: null,
   activeEmotes: { 0: null, 1: null, 2: null, 3: null } as ActiveEmotesMap,
+  lastEmoteSentAt: 0,
 };
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -127,6 +135,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
         activeEmotes: { ...state.activeEmotes, [slot]: next } as ActiveEmotesMap,
       };
     }),
+
+  setLastEmoteSentAt: (lastEmoteSentAt) => set({ lastEmoteSentAt }),
 
   clearGame: () => set(initialState),
 

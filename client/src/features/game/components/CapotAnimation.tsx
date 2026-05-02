@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import { teamStringForIndex } from "@/shared/types/gameTypes";
 
 interface CapotAnimationProps {
@@ -11,10 +12,7 @@ interface CapotAnimationProps {
 export function CapotAnimation({ capotTeam, onComplete }: CapotAnimationProps) {
   const { t } = useTranslation();
 
-  const prefersReducedMotion = useMemo(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
-  );
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const duration = prefersReducedMotion ? 500 : 2500;

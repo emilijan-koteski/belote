@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import type { EmoteID } from "@/shared/types/wsEvents";
 
 const EMOTE_GLYPHS: Record<EmoteID, string> = {
@@ -41,16 +42,13 @@ export function EmoteBubble({ emote, compassPosition, onDismiss }: EmoteBubblePr
     onDismissRef.current = onDismiss;
   }, [onDismiss]);
 
-  useEffect(() => {
-    const reducedMotion =
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? REDUCED_MOTION_DURATION_MS : DURATION_MS;
+  const reducedMotion = useReducedMotion();
 
+  useEffect(() => {
+    const duration = reducedMotion ? REDUCED_MOTION_DURATION_MS : DURATION_MS;
     const handle = window.setTimeout(() => onDismissRef.current(), duration);
     return () => window.clearTimeout(handle);
-  }, []);
+  }, [reducedMotion]);
 
   return (
     <div

@@ -72,7 +72,7 @@ export function TrumpPrompt({
 
       <div
         ref={promptRef}
-        className="relative bg-surface-elevated border border-border rounded-lg p-6 max-w-[480px] w-full mx-4 motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150"
+        className="relative bg-surface-elevated border border-border rounded-lg p-6 max-w-[480px] w-full mx-4 max-h-[90vh] overflow-y-auto motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150"
         role="dialog"
         aria-modal="true"
         aria-labelledby="trump-prompt-title"

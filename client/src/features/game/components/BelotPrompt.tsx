@@ -27,17 +27,16 @@ export function BelotPrompt({
   isActivePlayer = true,
 }: BelotPromptProps) {
   const { t } = useTranslation();
-  const promptRef = useFocusTrap<HTMLDivElement>();
+  // Escape declines the announcement and forfeits the +20 bonus per the rule
+  // (D102 / D103). fixed inset-0 prevents leak through scrolled stacking.
+  const promptRef = useFocusTrap<HTMLDivElement>({ onEscape: onDecline });
   const showRing = isActivePlayer && Boolean(turnExpiresAt) && (timerDurationSec ?? 0) > 0;
 
   const titleKey = isKing ? "game.belot.titleRebelot" : "game.belot.titleBelot";
   const announceKey = isKing ? "game.belot.announceRebelot" : "game.belot.announceBelot";
 
   return (
-    <div
-      className="absolute inset-0 flex items-center justify-center z-30"
-      data-testid="belot-prompt"
-    >
+    <div className="fixed inset-0 flex items-center justify-center z-30" data-testid="belot-prompt">
       <div className="absolute inset-0 bg-black/40" />
 
       <div

@@ -1,6 +1,24 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// AC10 / D120: mock react-i18next so visible-text assertions can verify the
+// viewer-relative "Us declared" / "Them declared" copy. Mirrors the pattern
+// used by MatchResult.test.tsx.
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, string | number>) => {
+      const translations: Record<string, string> = {
+        "team.us": "Us",
+        "team.them": "Them",
+      };
+      if (key === "game.declaration.teamDeclared" && opts) return `${opts.team} declared`;
+      if (key === "game.declaration.sequenceShort" && opts) return `${opts.count} in a row`;
+      if (key === "game.declaration.fourOfAKindShort" && opts) return `four of a kind`;
+      return translations[key] ?? key;
+    },
+  }),
+}));
+
 import type { PlayerState } from "@/shared/types/gameTypes";
 import type { DeclarationsResolvedPayload } from "@/shared/types/wsEvents";
 
@@ -71,15 +89,12 @@ describe("DeclarationReveal", () => {
         onComplete={vi.fn()}
       />,
     );
-    // game.declaration.teamDeclared is interpolated; check via i18n key path —
-    // since real i18n isn't mocked here, the visible label is the i18n key
-    // text. Look at the data-team attribute as an invariant + the rendered
-    // label text by checking it contains the team key prop. Since we're not
-    // mocking i18next here, this assertion focuses on the data attribute.
-    expect(screen.getByTestId("declaration-reveal-team")).toHaveAttribute("data-team", "teamB");
+    const label = screen.getByTestId("declaration-reveal-team");
+    expect(label).toHaveAttribute("data-team", "teamB");
+    expect(label).toHaveTextContent("Us declared");
   });
 
-  it("renders correct data-team when viewer is teamA and opponents declare", () => {
+  it("renders 'Them declared' when viewer is teamA and opponents declare", () => {
     // viewer is teamA; declarer is on teamB → they see Them
     render(
       <DeclarationReveal
@@ -89,9 +104,11 @@ describe("DeclarationReveal", () => {
         onComplete={vi.fn()}
       />,
     );
+    const label = screen.getByTestId("declaration-reveal-team");
     // The winner team is still teamB — data-team reflects the winner team
     // (used for styling), not the viewer-relative label.
-    expect(screen.getByTestId("declaration-reveal-team")).toHaveAttribute("data-team", "teamB");
+    expect(label).toHaveAttribute("data-team", "teamB");
+    expect(label).toHaveTextContent("Them declared");
   });
 
   it("centers the panel regardless of winning declarer's seat", () => {

@@ -1,12 +1,21 @@
 import { useEffect, useRef } from "react";
 
+interface UseFocusTrapOptions {
+  // When provided, pressing Escape inside the trapped container invokes the
+  // callback. Opt-in — legacy callers that omit it keep their previous
+  // behaviour (no Escape handling).
+  onEscape?: () => void;
+}
+
 /**
  * Traps focus within a container element and restores focus to the
  * previously focused element when the container unmounts.
  */
-export function useFocusTrap<T extends HTMLElement>() {
+export function useFocusTrap<T extends HTMLElement>(opts?: UseFocusTrapOptions) {
   const containerRef = useRef<T>(null);
   const previousActiveElement = useRef<Element | null>(null);
+  const onEscapeRef = useRef<UseFocusTrapOptions["onEscape"]>(opts?.onEscape);
+  onEscapeRef.current = opts?.onEscape;
 
   useEffect(() => {
     previousActiveElement.current = document.activeElement;
@@ -18,6 +27,11 @@ export function useFocusTrap<T extends HTMLElement>() {
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
     function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && onEscapeRef.current) {
+        e.preventDefault();
+        onEscapeRef.current();
+        return;
+      }
       if (e.key !== "Tab") return;
 
       const focusable = container!.querySelectorAll<HTMLElement>(focusableSelector);

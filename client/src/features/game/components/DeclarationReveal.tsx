@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import type { PlayerState, Rank, Suit } from "@/shared/types/gameTypes";
 import { type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
 import type { DeclarationsResolvedPayload } from "@/shared/types/wsEvents";
@@ -31,10 +32,7 @@ export function DeclarationReveal({
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
 
-  const prefersReducedMotion = useMemo(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
-  );
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const duration = prefersReducedMotion ? 1500 : 8000;

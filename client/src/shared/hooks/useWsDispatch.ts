@@ -101,12 +101,41 @@ export function useWsDispatch() {
   return dispatch;
 }
 
+// Tracks whether the most recent dispatched event was a reveal event
+// (event:declarations_resolved / event:belot_announced). The server emits
+// these immediately followed by a trailing event:game_state for state sync;
+// the trailing snapshot must NOT wipe the reveal payload that was just set
+// (which would prevent the user from ever seeing the reveal). On reconnect
+// the server sends only the snapshot — the flag is false — and the stale
+// reveal clear runs as D69 / D71 require. The flag is consumed (reset to
+// false) on the next event:game_state regardless of branch, so two snapshots
+// in a row will clear on the second.
+let revealJustEmitted = false;
+
+// Test-only: reset module state between tests. Production has one dispatcher
+// for the lifetime of the app, so this is never called in app code.
+export function __resetWsDispatchStateForTests(): void {
+  revealJustEmitted = false;
+}
+
 function dispatchGameEvent(message: WsMessage): void {
   const store = useGameStore.getState();
   const { type } = message;
 
   if (type === EVENT_GAME_STATE) {
     const gameState = message.payload as GameState;
+    // D69 / D71: a reconnect during the 4–8s reveal window must not re-render
+    // a stale reveal payload on top of the new snapshot. The reveal events
+    // (event:declarations_resolved / event:belot_announced) are not replayed
+    // by the server on reconnect, so the snapshot is treated as a clean slate
+    // — UNLESS the snapshot is the trailing one that follows a reveal event
+    // in normal action flow (manager.go:513→554 / :609→614), in which case
+    // clearing would cancel the reveal that just rendered.
+    if (!revealJustEmitted) {
+      store.setDeclarationReveal(null);
+      store.setBelotReveal(null);
+    }
+    revealJustEmitted = false;
     store.setGameState(gameState);
     return;
   }
@@ -209,6 +238,9 @@ function dispatchGameEvent(message: WsMessage): void {
   if (type === EVENT_DECLARATIONS_RESOLVED) {
     const payload = message.payload as DeclarationsResolvedPayload;
     store.setDeclarationReveal(payload);
+    // Mark that the trailing event:game_state must NOT wipe the reveal we
+    // just set. Cleared by the EVENT_GAME_STATE branch.
+    revealJustEmitted = true;
     // Full game state update follows via event:game_state
     return;
   }
@@ -219,6 +251,8 @@ function dispatchGameEvent(message: WsMessage): void {
     // an empty cardId to BelotReveal where rendering/rank detection would silently break.
     if (!payload.cardId || payload.cardId.length < 2) return;
     store.setBelotReveal(payload);
+    // Same trailing-snapshot suppression as declarations_resolved above.
+    revealJustEmitted = true;
     // Full state update follows via event:game_state
     return;
   }

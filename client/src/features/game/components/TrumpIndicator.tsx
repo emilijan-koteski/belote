@@ -6,6 +6,9 @@ interface TrumpIndicatorProps {
   trumpSuit: Suit;
   trumpCallerSeat?: number | null;
   trumpCallerName?: string | null;
+  // When provided, the visible team label flips to viewer-relative Us/Them.
+  // null/undefined preserves the legacy neutral team.a / team.b label.
+  viewerTeam?: TeamString | null;
 }
 
 const SUIT_SYMBOL: Record<Suit, string> = {
@@ -57,6 +60,7 @@ export function TrumpIndicator({
   trumpSuit,
   trumpCallerSeat,
   trumpCallerName,
+  viewerTeam,
 }: TrumpIndicatorProps) {
   const { t } = useTranslation();
 
@@ -66,7 +70,14 @@ export function TrumpIndicator({
   const callerName = trumpCallerName?.trim() || null;
 
   const suitName = t(SUIT_NAME_KEY[trumpSuit]);
-  const teamName = team ? t(TEAM_NAME_KEY[team]) : null;
+  // Viewer-relative Us/Them when caller is provided AND a viewerTeam is
+  // passed in; otherwise fall back to the neutral team.a / team.b label so
+  // legacy callers (no viewerTeam prop) keep their previous behaviour.
+  const teamName = team
+    ? viewerTeam
+      ? t(team === viewerTeam ? "team.us" : "team.them")
+      : t(TEAM_NAME_KEY[team])
+    : null;
   const ariaLabel =
     team && teamName && callerName
       ? t("game.trumpIndicator.labelWithCaller", {
@@ -79,8 +90,8 @@ export function TrumpIndicator({
         : t("game.trumpIndicator.label", { suit: suitName });
 
   const containerClass = team
-    ? `flex items-center gap-2 rounded-full border-2 ${TEAM_BORDER[team]} ${TEAM_BG[team]} px-3 py-1`
-    : "flex items-center gap-2";
+    ? `flex min-w-0 items-center gap-2 rounded-full border-2 ${TEAM_BORDER[team]} ${TEAM_BG[team]} px-3 py-1`
+    : "flex min-w-0 items-center gap-2";
 
   return (
     <div
@@ -115,7 +126,10 @@ export function TrumpIndicator({
           <span className="text-text-secondary/40" aria-hidden>
             ·
           </span>
-          <span className="text-text-primary font-body text-sm" data-testid="trump-caller-name">
+          <span
+            className="text-text-primary font-body text-sm max-w-[8rem] truncate"
+            data-testid="trump-caller-name"
+          >
             {callerName}
           </span>
         </>

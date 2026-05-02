@@ -184,19 +184,16 @@ describe("RoomLobby diamond layout invariant", () => {
       }
 
       const partnerSeat = (viewerSeat + 2) % 4;
-      const opponentSeats = [(viewerSeat + 1) % 4, (viewerSeat + 3) % 4].sort();
 
       expect(seatIndexAt(south as HTMLElement)).toBe(viewerSeat);
       expect(seatIndexAt(north as HTMLElement)).toBe(partnerSeat);
-      // East and west collectively cover the two opponents — the diamond
-      // is symmetric across the viewer-partner axis so the *specific*
-      // east/west assignment is rotation-dependent, but *together* they
-      // must equal the opponent set.
-      const eastWestSeats = [
-        seatIndexAt(east as HTMLElement),
-        seatIndexAt(west as HTMLElement),
-      ].sort();
-      expect(eastWestSeats).toEqual(opponentSeats);
+      // AC10 / D119: positional east/west assertions. Counter-clockwise
+      // seat indexing puts the next-CCW opponent at east (viewer+1) and
+      // the previous-CCW opponent at west (viewer+3). The previous loose
+      // sorted-set check would have passed even if east and west were
+      // swapped — that is no longer a regression gate.
+      expect(seatIndexAt(east as HTMLElement)).toBe((viewerSeat + 1) % 4);
+      expect(seatIndexAt(west as HTMLElement)).toBe((viewerSeat + 3) % 4);
 
       // Partnership signal: viewer and partner share data-team. This is
       // the next task's hook for the gold/silver palette + non-color

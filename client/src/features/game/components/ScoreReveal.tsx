@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import { type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
 import type { HandScoredPayload } from "@/shared/types/wsEvents";
 
@@ -14,10 +15,7 @@ export function ScoreReveal({ data, viewerTeam, onContinue }: ScoreRevealProps) 
   const { t } = useTranslation();
   const [continueEnabled, setContinueEnabled] = useState(false);
 
-  const prefersReducedMotion = useMemo(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
-  );
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const delay = prefersReducedMotion ? 500 : 2000;

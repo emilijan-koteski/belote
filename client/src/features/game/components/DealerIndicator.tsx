@@ -16,7 +16,7 @@ export function DealerIndicator({ dealerName }: DealerIndicatorProps) {
 
   return (
     <div
-      className="border-text-secondary/30 bg-background/80 flex items-center gap-2 rounded-full border-2 px-3 py-1"
+      className="border-text-secondary/30 bg-background/80 flex min-w-0 items-center gap-2 rounded-full border-2 px-3 py-1"
       aria-live="polite"
       aria-label={ariaLabel}
       data-testid="dealer-indicator"
@@ -28,7 +28,7 @@ export function DealerIndicator({ dealerName }: DealerIndicatorProps) {
         ·
       </span>
       <span
-        className="text-text-primary font-display text-sm font-semibold"
+        className="text-text-primary font-display text-sm font-semibold max-w-[8rem] truncate"
         data-testid="dealer-name"
       >
         {trimmed}

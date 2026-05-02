@@ -1,6 +1,6 @@
 import "@/shared/i18n/i18n";
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -43,5 +43,20 @@ describe("SurrenderPrompt", () => {
     render(<SurrenderPrompt proposerUsername="alice" onAccept={vi.fn()} onDecline={vi.fn()} />);
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
+  });
+
+  it("Escape key triggers onDecline (AC7)", () => {
+    const onDecline = vi.fn();
+    render(<SurrenderPrompt proposerUsername="alice" onAccept={vi.fn()} onDecline={onDecline} />);
+    const dialog = screen.getByRole("dialog");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(onDecline).toHaveBeenCalledTimes(1);
+  });
+
+  it("outer wrapper uses fixed positioning (AC7)", () => {
+    render(<SurrenderPrompt proposerUsername="alice" onAccept={vi.fn()} onDecline={vi.fn()} />);
+    const wrapper = screen.getByTestId("surrender-prompt");
+    expect(wrapper.className).toContain("fixed");
+    expect(wrapper.className).not.toMatch(/(^|\s)absolute(\s|$)/);
   });
 });

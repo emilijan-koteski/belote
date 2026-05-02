@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import type { Card } from "@/shared/types/gameTypes";
 
 import { PlayingCard } from "./PlayingCard";
@@ -23,10 +24,7 @@ export function DealAnimation({ trumpCandidate }: DealAnimationProps) {
   const { t } = useTranslation();
   const [dealPhase, setDealPhase] = useState<"dealing" | "revealing" | "done">("dealing");
 
-  const prefersReducedMotion = useMemo(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
-  );
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (prefersReducedMotion) {

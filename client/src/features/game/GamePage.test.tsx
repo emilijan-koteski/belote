@@ -491,6 +491,70 @@ describe("GamePage", () => {
     expect(screen.queryByTestId("emote-bubble-2")).not.toBeInTheDocument();
   });
 
+  it("hides declarationReveal while the table is paused (AC3)", () => {
+    useGameStore.getState().setGameState({ ...mockGameState, phase: "paused" });
+    useGameStore.getState().setMyPlayerSeat(0);
+    useGameStore.getState().setDeclarationReveal({
+      winnerTeam: 0,
+      declarations: [
+        {
+          playerSeat: 0,
+          type: "sequence",
+          cards: ["9S", "TS", "JS", "QS"],
+          value: 50,
+        },
+      ],
+    });
+
+    renderGamePage();
+
+    expect(screen.queryByTestId("declaration-reveal")).not.toBeInTheDocument();
+  });
+
+  it("hides dealer indicator when an overlay is up (AC6)", () => {
+    useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
+    useGameStore.getState().setMyPlayerSeat(0);
+    useGameStore.getState().setMatchEndData({
+      winnerTeam: 0,
+      teamAFinalScore: 1020,
+      teamBFinalScore: 850,
+      matchDurationSec: 300,
+    });
+
+    renderGamePage();
+
+    expect(screen.queryByTestId("dealer-indicator")).not.toBeInTheDocument();
+  });
+
+  it("hides belotReveal while a match-end overlay is up (AC3)", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+    useGameStore.getState().setBelotReveal({
+      playerSeat: 0,
+      team: 0,
+      cardId: "QS",
+    });
+
+    const { rerender } = renderGamePage();
+
+    act(() => {
+      useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
+      useGameStore.getState().setMatchEndData({
+        winnerTeam: 0,
+        teamAFinalScore: 1020,
+        teamBFinalScore: 850,
+        matchDurationSec: 300,
+      });
+    });
+    rerender(
+      <BrowserRouter>
+        <GamePage />
+      </BrowserRouter>,
+    );
+
+    expect(screen.queryByTestId("belot-reveal")).not.toBeInTheDocument();
+  });
+
   it("shows confirm dialog on browser back button and stays if declined", () => {
     useGameStore.getState().setGameState(mockGameState);
     useGameStore.getState().setMyPlayerSeat(0);

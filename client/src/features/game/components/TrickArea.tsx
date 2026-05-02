@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import type { TrickCard } from "@/shared/types/gameTypes";
 
 import { PlayingCard } from "./PlayingCard";
@@ -39,10 +40,7 @@ export function TrickArea({ trick: rawTrick, winnerSeat, myPlayerSeat }: TrickAr
   const displayTrickRef = useRef<TrickCard[]>([]);
   displayTrickRef.current = displayTrick;
 
-  const prefersReducedMotion = useMemo(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
-  );
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const prevLen = displayTrickRef.current.length;

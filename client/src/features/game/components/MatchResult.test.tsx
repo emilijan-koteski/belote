@@ -77,6 +77,26 @@ describe("MatchResult", () => {
     expect(screen.getByTestId("match-result-team-b-column")).toHaveTextContent("Us");
   });
 
+  it("renders viewer's team column first — viewer on teamA", () => {
+    const { container } = render(
+      <MatchResult data={matchData} viewerTeam="teamA" onReturnToLobby={vi.fn()} />,
+    );
+    const cols = container.querySelectorAll<HTMLElement>('[data-testid$="-column"]');
+    expect(cols).toHaveLength(2);
+    expect(cols[0]).toHaveAttribute("data-team", "teamA");
+    expect(cols[1]).toHaveAttribute("data-team", "teamB");
+  });
+
+  it("renders viewer's team column first — viewer on teamB", () => {
+    const { container } = render(
+      <MatchResult data={matchData} viewerTeam="teamB" onReturnToLobby={vi.fn()} />,
+    );
+    const cols = container.querySelectorAll<HTMLElement>('[data-testid$="-column"]');
+    expect(cols).toHaveLength(2);
+    expect(cols[0]).toHaveAttribute("data-team", "teamB");
+    expect(cols[1]).toHaveAttribute("data-team", "teamA");
+  });
+
   it("formats match duration correctly", () => {
     render(<MatchResult data={matchData} viewerTeam="teamA" onReturnToLobby={vi.fn()} />);
 

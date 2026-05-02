@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import { type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
 
 interface ScorePanelProps {
@@ -27,10 +28,7 @@ export function ScorePanel({
   lastTrickTeam,
 }: ScorePanelProps) {
   const { t } = useTranslation();
-  const prefersReducedMotion = useMemo(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
-  );
+  const prefersReducedMotion = useReducedMotion();
 
   const [showBonus, setShowBonus] = useState<{ team: 0 | 1; amount: number } | null>(null);
 

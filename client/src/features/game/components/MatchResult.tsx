@@ -69,27 +69,23 @@ export function MatchResult({
           </p>
         )}
 
-        {/* Final Scores */}
+        {/* Final Scores — viewer's team renders on the LEFT (D114). The
+            data-testid + data-team attributes stay tied to team identity, so
+            styling continues to key off teamA / teamB regardless of order. */}
         <div className="flex items-center justify-center gap-4 mb-6">
-          <div className="text-center" data-testid="match-result-team-a-column" data-team="teamA">
-            <p className="text-team-a font-body text-sm font-semibold">{teamAColumnLabel}</p>
-            <p
-              className="text-team-a font-display text-5xl font-bold tabular-nums"
-              data-testid="match-result-team-a-score"
-            >
-              {data.teamAFinalScore}
-            </p>
-          </div>
-          <span className="text-text-secondary font-display text-3xl">:</span>
-          <div className="text-center" data-testid="match-result-team-b-column" data-team="teamB">
-            <p className="text-team-b font-body text-sm font-semibold">{teamBColumnLabel}</p>
-            <p
-              className="text-team-b font-display text-5xl font-bold tabular-nums"
-              data-testid="match-result-team-b-score"
-            >
-              {data.teamBFinalScore}
-            </p>
-          </div>
+          {viewerTeam === "teamA" ? (
+            <>
+              <ScoreColumn team="teamA" label={teamAColumnLabel} score={data.teamAFinalScore} />
+              <span className="text-text-secondary font-display text-3xl">:</span>
+              <ScoreColumn team="teamB" label={teamBColumnLabel} score={data.teamBFinalScore} />
+            </>
+          ) : (
+            <>
+              <ScoreColumn team="teamB" label={teamBColumnLabel} score={data.teamBFinalScore} />
+              <span className="text-text-secondary font-display text-3xl">:</span>
+              <ScoreColumn team="teamA" label={teamAColumnLabel} score={data.teamAFinalScore} />
+            </>
+          )}
         </div>
 
         {/* Duration */}
@@ -109,6 +105,29 @@ export function MatchResult({
           {t("game.matchResult.returnToLobby")}
         </button>
       </div>
+    </div>
+  );
+}
+
+interface ScoreColumnProps {
+  team: TeamString;
+  label: string;
+  score: number;
+}
+
+function ScoreColumn({ team, label, score }: ScoreColumnProps) {
+  const colorClass = team === "teamA" ? "text-team-a" : "text-team-b";
+  const testId = team === "teamA" ? "match-result-team-a-column" : "match-result-team-b-column";
+  const scoreTestId = team === "teamA" ? "match-result-team-a-score" : "match-result-team-b-score";
+  return (
+    <div className="text-center" data-testid={testId} data-team={team}>
+      <p className={`${colorClass} font-body text-sm font-semibold`}>{label}</p>
+      <p
+        className={`${colorClass} font-display text-5xl font-bold tabular-nums`}
+        data-testid={scoreTestId}
+      >
+        {score}
+      </p>
     </div>
   );
 }

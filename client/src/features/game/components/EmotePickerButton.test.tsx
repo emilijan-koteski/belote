@@ -3,6 +3,7 @@ import "@/shared/i18n/i18n";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useGameStore } from "@/shared/stores/gameStore";
 import { EMOTE_IDS } from "@/shared/types/wsEvents";
 
 import { EmotePickerButton } from "./EmotePickerButton";
@@ -10,6 +11,14 @@ import { EmotePickerButton } from "./EmotePickerButton";
 describe("EmotePickerButton", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    // Advance fake `performance.now()` past 0 so the spec's
+    // `lastEmoteSentAt: 0` "no emote sent" sentinel is distinguishable from
+    // a real stamp. With sinon fake-timers, `performance.now()` measures
+    // elapsed fake-ms (not absolute time), so it starts at 0 unconditionally.
+    vi.advanceTimersByTime(100_000);
+    // Cooldown lives on gameStore (lifted out of local useState in AC8) so
+    // the store must be reset between tests to avoid cross-test bleed.
+    useGameStore.getState().reset();
   });
 
   afterEach(() => {
@@ -169,5 +178,29 @@ describe("EmotePickerButton", () => {
     const picker = screen.getByTestId("emote-picker");
     expect(picker).toHaveAttribute("role", "group");
     expect(picker).not.toHaveAttribute("role", "dialog");
+  });
+
+  it("preserves cooldown across remount (AC8)", () => {
+    const onSend = vi.fn();
+    const { unmount } = render(<EmotePickerButton onSend={onSend} />);
+
+    // Send an emote — lastEmoteSentAt is stamped on the gameStore.
+    fireEvent.click(screen.getByTestId("emote-toggle"));
+    fireEvent.click(screen.getByTestId("emote-tile-thumbs_up"));
+    expect(onSend).toHaveBeenCalledTimes(1);
+
+    // Unmount the picker — phase transition (e.g., playing → match_end)
+    // tears down EmotePickerButton in production. Cooldown must survive.
+    unmount();
+
+    // Remount before the cooldown elapses.
+    render(<EmotePickerButton onSend={onSend} />);
+    fireEvent.click(screen.getByTestId("emote-toggle"));
+    const laughTile = screen.getByTestId("emote-tile-laugh");
+    expect(laughTile).toBeDisabled();
+    fireEvent.click(laughTile);
+
+    // Still 1 — the freshly-mounted picker honored the in-store cooldown.
+    expect(onSend).toHaveBeenCalledTimes(1);
   });
 });

@@ -212,6 +212,21 @@ describe("gameStore", () => {
     });
   });
 
+  it("initializes lastEmoteSentAt to 0", () => {
+    expect(useGameStore.getState().lastEmoteSentAt).toBe(0);
+  });
+
+  it("setLastEmoteSentAt updates the value", () => {
+    useGameStore.getState().setLastEmoteSentAt(12345.6);
+    expect(useGameStore.getState().lastEmoteSentAt).toBe(12345.6);
+  });
+
+  it("clearGame resets lastEmoteSentAt to 0 (AC8)", () => {
+    useGameStore.getState().setLastEmoteSentAt(12345.6);
+    useGameStore.getState().clearGame();
+    expect(useGameStore.getState().lastEmoteSentAt).toBe(0);
+  });
+
   it("replaces gameState on subsequent setGameState calls", () => {
     useGameStore.getState().setGameState(mockGameState);
 

@@ -11,11 +11,13 @@ interface SurrenderPromptProps {
 
 export function SurrenderPrompt({ proposerUsername, onAccept, onDecline }: SurrenderPromptProps) {
   const { t } = useTranslation();
-  const promptRef = useFocusTrap<HTMLDivElement>();
+  // Escape declines the partner-accept (D102 / D103). fixed inset-0 prevents
+  // the prompt from leaking through scrolled/zoomed parent stacking contexts.
+  const promptRef = useFocusTrap<HTMLDivElement>({ onEscape: onDecline });
 
   return (
     <div
-      className="absolute inset-0 flex items-center justify-center z-30"
+      className="fixed inset-0 flex items-center justify-center z-30"
       data-testid="surrender-prompt"
     >
       <div className="absolute inset-0 bg-black/40" />

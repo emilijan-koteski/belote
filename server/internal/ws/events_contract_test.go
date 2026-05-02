@@ -273,9 +273,16 @@ func TestEventsJSONContract(t *testing.T) {
 			expected, err := os.ReadFile(goldenPath)
 			if err != nil {
 				if os.IsNotExist(err) {
+					// AC10 / D118: a missing golden must hard-fail unless the
+					// caller explicitly asked for regeneration. The previous
+					// bootstrap-on-missing path silently treated a deleted
+					// golden as the new truth, defeating the drift gate.
+					if !*updateGoldens {
+						t.Fatalf("missing golden %s — rerun with UPDATE_GOLDENS=1 to regenerate", goldenPath)
+					}
 					require.NoError(t, os.WriteFile(goldenPath, actual, 0o644),
-						"failed to bootstrap missing golden %s", goldenPath)
-					t.Logf("bootstrapped missing golden: %s (rerun without -update to verify)", goldenPath)
+						"failed to write golden %s", goldenPath)
+					t.Logf("regenerated golden: %s", goldenPath)
 					return
 				}
 				t.Fatalf("failed to read golden %s: %v", goldenPath, err)

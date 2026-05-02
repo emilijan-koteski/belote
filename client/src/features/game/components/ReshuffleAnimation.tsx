@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 
 interface ReshuffleAnimationProps {
   onComplete: () => void;
@@ -9,10 +11,7 @@ export function ReshuffleAnimation({ onComplete }: ReshuffleAnimationProps) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<"shuffle" | "done">("shuffle");
 
-  const prefersReducedMotion = useMemo(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
-  );
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (prefersReducedMotion) {
