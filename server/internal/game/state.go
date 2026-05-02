@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"math/rand/v2"
 	"slices"
 	"time"
@@ -122,7 +121,7 @@ func TeamForSeat(seat int) int {
 	return seat % 2
 }
 
-// TeamStringForIndex returns "teamA" for 0, "teamB" for 1. Panics on other values.
+// TeamStringForIndex returns "teamA" for 0, "teamB" for 1. Returns empty string for values outside {0, 1}.
 func TeamStringForIndex(i int) string {
 	switch i {
 	case TeamA:
@@ -130,7 +129,7 @@ func TeamStringForIndex(i int) string {
 	case TeamB:
 		return "teamB"
 	}
-	panic(fmt.Sprintf("TeamStringForIndex: invalid team index %d", i))
+	return ""
 }
 
 // TeamIndexForString returns 0 for "teamA", 1 for "teamB". Returns -1 for unknown.

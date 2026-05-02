@@ -294,3 +294,20 @@ func TestShuffleDeck(t *testing.T) {
 		assert.Greater(t, differences, 0, "two shuffles should produce different orderings")
 	})
 }
+
+func TestTeamStringForIndex_SafeOnOutOfRange(t *testing.T) {
+	tests := []struct {
+		name  string
+		index int
+	}{
+		{"negative", -1},
+		{"two", 2},
+		{"large", 100},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := game.TeamStringForIndex(tc.index)
+			assert.Equal(t, "", result, "out-of-range index should return empty string, not panic")
+		})
+	}
+}

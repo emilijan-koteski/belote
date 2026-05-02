@@ -155,6 +155,7 @@ func TestEventsJSONContract(t *testing.T) {
 				TeamAFinalScore:  1010,
 				TeamBFinalScore:  640,
 				MatchDurationSec: 1234,
+				OutcomeReason:    ws.OutcomeReasonNatural,
 			},
 			goldenFile: "match_end.json",
 		},

@@ -120,6 +120,7 @@ func main() {
 	roomMembership := &chatRoomMembership{repo: roomRepo}
 	chatHandler := chat.NewHandler(hub, userRepo, sessionManager, roomMembership)
 	emoteHandler := emote.NewHandler(hub, sessionManager)
+	sessionManager.AddUserRemovedHook(emoteHandler.RemoveUser)
 	hub.SetActionHandler(func(client *ws.Client, msg ws.WSMessage) {
 		if msg.Type == ws.ActionChatMessage {
 			chatHandler.HandleAction(client, msg)

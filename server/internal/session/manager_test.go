@@ -932,3 +932,36 @@ func TestSurrender_PauseInteraction_PreservesProposal(t *testing.T) {
 	assert.NotEqual(t, game.PhasePaused, resumed.Phase)
 	require.NotNil(t, resumed.SurrenderProposerSeat, "proposal still pending after unpause")
 }
+
+func TestRemoveSession_CallsUserRemovedHooks(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+
+	err := mgr.StartGame(900, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120)
+	require.NoError(t, err)
+
+	received := make(chan uint, 4)
+	mgr.AddUserRemovedHook(func(userID uint) {
+		received <- userID
+	})
+
+	mgr.RemoveSession(900)
+
+	var got []uint
+	timeout := time.After(100 * time.Millisecond)
+	for len(got) < 4 {
+		select {
+		case uid := <-received:
+			got = append(got, uid)
+		case <-timeout:
+			t.Fatalf("hook received only %d of 4 expected userIDs", len(got))
+		}
+	}
+
+	assert.ElementsMatch(t, []uint{10, 20, 30, 40}, got, "all 4 playerIDs must be delivered to hook")
+	assert.False(t, mgr.HasSession(900), "session should be removed")
+}

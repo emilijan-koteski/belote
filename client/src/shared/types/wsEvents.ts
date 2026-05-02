@@ -125,7 +125,7 @@ export interface MatchEndPayload {
   // server-side omitempty so existing readers continue to work.
   // surrenderedBySeat is a seat index (0..3); the persistence column
   // match.SurrenderedBy holds a userID — distinct fields, distinct names.
-  outcomeReason?: "surrender";
+  outcomeReason?: "surrender" | "timeout" | "abandonment" | "natural";
   surrenderedBySeat?: number;
 }
 

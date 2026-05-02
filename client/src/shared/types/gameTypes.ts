@@ -42,8 +42,12 @@ export type DeclarationType = "sequence" | "four_of_a_kind";
 // string literal lives in exactly one helper, `teamStringForIndex`.
 export type TeamString = "teamA" | "teamB";
 
-export function teamStringForIndex(i: 0 | 1): TeamString {
-  return i === 0 ? "teamA" : "teamB";
+export function teamStringForIndex(i: 0 | 1): TeamString;
+export function teamStringForIndex(i: number): TeamString | null;
+export function teamStringForIndex(i: number): TeamString | null {
+  if (i === 0) return "teamA";
+  if (i === 1) return "teamB";
+  return null;
 }
 
 export interface Card {

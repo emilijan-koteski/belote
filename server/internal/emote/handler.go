@@ -89,7 +89,20 @@ func (h *Handler) HandleAction(client *ws.Client, msg ws.WSMessage) {
 	if msgBytes == nil {
 		return
 	}
+	// D109 (formally accepted): MatchParticipantsByUser released the RLock before
+	// this broadcast. RemoveSession may have run in the window. BroadcastToUsers
+	// silently skips clients no longer in the hub's registry; a brief tail-of-match
+	// emote delivery is the worst case and is benign. See deferred-work.md D109.
 	h.hub.BroadcastToUsers(participants[:], msgBytes)
+}
+
+// RemoveUser deletes the per-user rate-limit entry, bounding the map to
+// current-active users (not lifetime users). Called via session.Manager's
+// UserRemovedHook on session teardown (D105 + D106).
+func (h *Handler) RemoveUser(userID uint) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	delete(h.lastEmoteAt, userID)
 }
 
 // acceptRateLimited atomically checks the per-user cooldown and stamps the

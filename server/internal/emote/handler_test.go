@@ -230,3 +230,26 @@ func TestHandler_PayloadSeatIndexMatchesSender(t *testing.T) {
 		assert.Equal(t, ws.EmoteHeart, payload.Emote)
 	}
 }
+
+func TestHandler_RemoveUser_ClearsRateLimit(t *testing.T) {
+	participants := [4]uint{1, 2, 3, 4}
+	h, hub, _ := newHandlerWithMatch(participants)
+
+	userID := uint(1)
+	client := &ws.Client{UserID: userID}
+
+	// First emote stamps lastEmoteAt.
+	h.HandleAction(client, emoteAction(t, "heart"))
+	assert.Equal(t, 1, hub.callCount(), "first emote should broadcast")
+
+	// Second immediate emote is rate-limited.
+	h.HandleAction(client, emoteAction(t, "heart"))
+	assert.Equal(t, 1, hub.callCount(), "second immediate emote should be rate-limited")
+
+	// RemoveUser clears the rate-limit entry.
+	h.RemoveUser(userID)
+
+	// Third emote immediately after removal should broadcast (fresh window).
+	h.HandleAction(client, emoteAction(t, "heart"))
+	assert.Equal(t, 2, hub.callCount(), "emote after RemoveUser should broadcast (rate limit cleared)")
+}

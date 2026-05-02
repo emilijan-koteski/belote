@@ -890,3 +890,17 @@ func TestGetProfile_StatsMatchListTotal(t *testing.T) {
 	assert.Equal(t, 0, byProf.Abandoned)
 	assert.Equal(t, 1, byProf.TotalGamesPlayed)
 }
+
+func TestGetProfile_Forbidden_WraparoundID(t *testing.T) {
+	repo, e := setupUserHandler()
+	repo.addUser("alice", "alice@example.com", "en") // gets ID=1
+
+	token, err := auth.GenerateAccessToken(1, testJWTSecret)
+	require.NoError(t, err)
+
+	// 4294967297 = 2^32 + 1; on 32-bit uint it would truncate to 1 == userID.
+	// On 64-bit with the fixed uint64 comparison, this must return 403.
+	rec := doGetProfile(e, "4294967297", token)
+	assert.Equal(t, http.StatusForbidden, rec.Code,
+		"wraparound ID must not bypass auth check (D86)")
+}

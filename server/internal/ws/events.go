@@ -126,20 +126,29 @@ type MatchAbandonedPayload struct {
 	MatchDurationSec  int `json:"matchDurationSec"`
 }
 
+// OutcomeReason is the typed outcome discriminator carried in event:match_end.
+// Epic 9 will add OutcomeReasonInsolvency and OutcomeReasonHonorEject.
+type OutcomeReason string
+
+const (
+	OutcomeReasonNatural     OutcomeReason = "natural"
+	OutcomeReasonSurrender   OutcomeReason = "surrender"
+	OutcomeReasonTimeout     OutcomeReason = "timeout"
+	OutcomeReasonAbandonment OutcomeReason = "abandonment"
+)
+
 // MatchEndPayload is the typed payload for EventMatchEnd events.
-// OutcomeReason and SurrenderedBySeat are additive fields — natural-end
-// matches omit both via omitempty so the wire format is unchanged for
-// existing clients. SurrenderedBySeat carries a seat index (0..3) when
-// OutcomeReason == "surrender". The name disambiguates this seat-index
-// field from the persistence column `match.SurrenderedBy` which holds a
-// userID (uint).
+// OutcomeReason is always present on the wire ("natural" | "surrender" | "timeout" | "abandonment").
+// SurrenderedBySeat carries a seat index (0..3) only when OutcomeReason == "surrender".
+// The name disambiguates this seat-index field from the persistence column
+// `match.SurrenderedBy` which holds a userID (uint).
 type MatchEndPayload struct {
-	WinnerTeam        int    `json:"winnerTeam"`
-	TeamAFinalScore   int    `json:"teamAFinalScore"`
-	TeamBFinalScore   int    `json:"teamBFinalScore"`
-	MatchDurationSec  int    `json:"matchDurationSec"`
-	OutcomeReason     string `json:"outcomeReason,omitempty"`     // "" (natural) | "surrender"
-	SurrenderedBySeat *int   `json:"surrenderedBySeat,omitempty"` // seat index, only when outcomeReason == "surrender"
+	WinnerTeam        int           `json:"winnerTeam"`
+	TeamAFinalScore   int           `json:"teamAFinalScore"`
+	TeamBFinalScore   int           `json:"teamBFinalScore"`
+	MatchDurationSec  int           `json:"matchDurationSec"`
+	OutcomeReason     OutcomeReason `json:"outcomeReason,omitempty"`     // "natural" | "surrender" | "timeout" | "abandonment"
+	SurrenderedBySeat *int          `json:"surrenderedBySeat,omitempty"` // seat index, only when outcomeReason == "surrender"
 }
 
 // --- Surrender events (Story 8.2) ---

@@ -52,12 +52,13 @@ type Broadcaster interface {
 // Manager orchestrates game sessions: receives actions via WebSocket,
 // calls the rules engine, broadcasts results, and persists completed matches.
 type Manager struct {
-	sessions    map[uint]*Session // keyed by roomID
-	userToRoom  map[uint]uint     // userID → roomID for quick lookup
-	hub         Broadcaster
-	matchRepo   match.MatchRepository
-	roomUpdater RoomStatusUpdater
-	mu          sync.RWMutex
+	sessions         map[uint]*Session // keyed by roomID
+	userToRoom       map[uint]uint     // userID → roomID for quick lookup
+	hub              Broadcaster
+	matchRepo        match.MatchRepository
+	roomUpdater      RoomStatusUpdater
+	userRemovedHooks []func(userID uint)
+	mu               sync.RWMutex
 }
 
 // NewManager creates a session manager wired to the WebSocket hub and match repository.
@@ -73,6 +74,15 @@ func NewManager(hub Broadcaster, matchRepo match.MatchRepository) *Manager {
 // SetRoomUpdater sets the interface for updating room status on match completion.
 func (m *Manager) SetRoomUpdater(updater RoomStatusUpdater) {
 	m.roomUpdater = updater
+}
+
+// AddUserRemovedHook registers fn to be called (outside the manager lock)
+// for each playerID when RemoveSession tears down a session.
+// Reusable for Epic 9 per-user state (wallet rate-limit, daily-claim cooldown).
+func (m *Manager) AddUserRemovedHook(fn func(userID uint)) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.userRemovedHooks = append(m.userRemovedHooks, fn)
 }
 
 // StartGame creates a new game session from room data and broadcasts the initial state.
@@ -299,7 +309,7 @@ func (m *Manager) GetStateSnapshot(roomID uint) *game.GameState {
 // RemoveSession cleans up a game session, cancelling any active timer.
 func (m *Manager) RemoveSession(roomID uint) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	var removedIDs []uint
 	if session, ok := m.sessions[roomID]; ok {
 		session.mu.Lock()
 		session.closed = true
@@ -308,9 +318,19 @@ func (m *Manager) RemoveSession(roomID uint) {
 		session.mu.Unlock()
 		for _, uid := range session.playerIDs {
 			delete(m.userToRoom, uid)
+			removedIDs = append(removedIDs, uid)
 		}
 		delete(m.sessions, roomID)
 		slog.Info("session: removed", "roomID", roomID)
+	}
+	hooks := append([]func(userID uint){}, m.userRemovedHooks...) // snapshot under lock
+	m.mu.Unlock()
+
+	// Call hooks after releasing the manager lock to prevent deadlocks.
+	for _, uid := range removedIDs {
+		for _, fn := range hooks {
+			fn(uid)
+		}
 	}
 }
 
@@ -1034,20 +1054,20 @@ func safeDerefInt(p *int) int {
 	return *p
 }
 
-// buildMatchEndPayload constructs the typed event:match_end payload. For a
-// surrender accept the optional outcomeReason/surrenderedBySeat fields are
-// populated; for any natural end they are omitted (omitempty drops them) so
-// existing wire-format readers see no change.
+// buildMatchEndPayload constructs the typed event:match_end payload.
+// OutcomeReason is always set explicitly so the wire format is fully symmetric:
+// natural-end matches emit "natural", surrender emits "surrender".
 func buildMatchEndPayload(oldState, newState *game.GameState, action game.Action, startedAt time.Time) ws.MatchEndPayload {
 	payload := ws.MatchEndPayload{
 		WinnerTeam:       safeDerefInt(newState.WinnerTeam),
 		TeamAFinalScore:  newState.TeamScores[game.TeamA],
 		TeamBFinalScore:  newState.TeamScores[game.TeamB],
 		MatchDurationSec: int(time.Since(startedAt).Seconds()),
+		OutcomeReason:    ws.OutcomeReasonNatural,
 	}
 	if action.Type == game.ActionSurrenderAccept && oldState != nil && oldState.SurrenderProposerSeat != nil {
 		proposerSeat := *oldState.SurrenderProposerSeat
-		payload.OutcomeReason = "surrender"
+		payload.OutcomeReason = ws.OutcomeReasonSurrender
 		payload.SurrenderedBySeat = &proposerSeat
 	}
 	return payload

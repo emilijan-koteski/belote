@@ -110,7 +110,7 @@ func (h *UserHandler) GetProfile(c echo.Context) error {
 		return apperr.ErrBadRequest
 	}
 
-	if uint(paramID) != authUserID {
+	if paramID != uint64(authUserID) {
 		return apperr.ErrForbidden
 	}
 
@@ -152,7 +152,7 @@ func (h *UserHandler) UpdatePreferences(c echo.Context) error {
 		return apperr.ErrBadRequest
 	}
 
-	if uint(paramID) != authUserID {
+	if paramID != uint64(authUserID) {
 		return apperr.ErrForbidden
 	}
 
@@ -195,7 +195,7 @@ func (h *UserHandler) ListMatches(c echo.Context) error {
 	if err != nil || paramID == 0 {
 		return apperr.ErrBadRequest
 	}
-	if uint(paramID) != authUserID {
+	if paramID != uint64(authUserID) {
 		return apperr.ErrForbidden
 	}
 
