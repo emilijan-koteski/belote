@@ -307,6 +307,13 @@ Room owners can curate the pre-game table (kick seated players, rearrange seats)
 **FRs covered:** FR28a, FR32, FR58
 **Phase:** 2
 
+### Epic 8.5: Pre-Phase-2 Hardening
+
+Engineering-quality epic batching open code-review deferreds before Phase 2 economy work touches the same hot paths. Covers timer/race fixes, server-side concurrency & type hardening, and shared-pattern UX cleanups extracted from `deferred-work.md`.
+
+**FRs covered:** none (technical debt epic — see deferred-work.md for source items)
+**Phase:** 2
+
 ### Epic 9: Player Economy & Progression
 
 Players earn and spend coins (room buy-in, per-match settlement, daily/streak rewards), accumulate lifetime XP/level as a career signal, and build a public honor score that reflects match-completion reliability. Rooms may optionally gate by a minimum honor threshold.
@@ -1524,6 +1531,182 @@ So that I can communicate emotions and reactions beyond text chat.
 **Given** emotes are sent rapidly
 **When** a player sends multiple emotes
 **Then** a rate limit applies (max 1 emote per 3 seconds per player) to prevent spam
+
+## Epic 8.5: Pre-Phase-2 Hardening
+
+Engineering-quality epic. Three stories that fold the open items from `_bmad-output/implementation-artifacts/deferred-work.md` into discrete, reviewable work before Epic 9 economy work begins. Source: triage pass on 2026-05-02. Items explicitly ACCEPTED-for-Phase-1 in deferred-work.md remain deferred — this epic only tackles the open items where (a) the issue is a bug or latent race today, or (b) the fix establishes a primitive Epic 9 will reuse.
+
+### Story 8.5-1: Bug & Race Triage
+
+As an engineer,
+I want the open bugs and races discovered across Epics 1–8 code reviews resolved before Phase 2 economy work begins,
+So that Epic 9's match-end settlement, wallet, and counter operations build on a stable substrate.
+
+**Acceptance Criteria:**
+
+**Given** the per-move timer is cancelled via `cancelTurnTimer()` (e.g. on pause)
+**When** a goroutine spawned by `time.AfterFunc` is already past the timer trigger and blocked on `session.mu.Lock()`
+**Then** the goroutine's staleness check trips because `session.timerGeneration` was bumped at cancel time
+**And** no work runs after the lock is acquired (defensive against future code added above the `handleTimerExpiry` switch)
+[Resolves D — `cancelTurnTimer()` does not increment `timerGeneration` (server/internal/session/manager.go:861-919)]
+
+**Given** the auto-start path (`SelectSeat` 4th-seat or QuickPlay last-seat) attempts `gameStarter.StartGame`
+**When** `StartGame` returns an error
+**Then** `system:game_started` is NOT broadcast
+**And** the room's status is NOT flipped to `playing`
+**And** clients receive a clear error toast instead of navigating to a non-existent `/game/{id}`
+[Resolves the auto-start failure leak in `server/internal/room/handler.go:670-731, :1287-1298`]
+
+**Given** a player calls `LeaveRoom` while another player is in the auto-start tx for the same room
+**When** the leave runs concurrently with `gameStarter.StartGame`
+**Then** the leave path re-checks `room.Status == "waiting"` under transaction lock and aborts (`ErrAlreadyStarted`) if start has begun
+**And** `StartGame` never observes a `seatInfo` containing a player who has already left
+[Resolves the LeaveRoom / auto-start race in `server/internal/room/handler.go:443-542`]
+
+**Given** the match-end goroutine fires `event:match_end`
+**When** the broadcast is sent
+**Then** the match record (and any settlement-relevant rows the broadcast implies exist) are persisted to the DB BEFORE `BroadcastToUsers` runs
+**And** a client immediately calling a hypothetical match-record API after receiving `match_end` finds the row
+[Resolves D101 in `server/internal/session/manager.go:handleMatchEnd`]
+
+**Given** the `player_count` denormalized counter on `rooms` may drift under concurrent join/leave
+**When** `pickFirstEmptySeat` runs as part of the QuickPlay retry loop
+**Then** an `ErrRoomFull` outcome triggers retry on a different/new room (not just `ErrRoomCodeTaken`/`ErrRoomNameTaken`)
+**And** counter drift cannot surface as an opaque 5xx to the user
+[Resolves D29 + the `pickFirstEmptySeat` fallback gap in `server/internal/room/handler.go:1126-1135`]
+
+**Given** the 401 interceptor in `fetchClient` calls `authStore.logout()` after a refresh failure
+**When** logout runs
+**Then** `gameStore.clearGame()` is also invoked
+**And** subsequent `useReconnectionRedirect` reads find a clean store and do not redirect to a finished game's `/game/{id}` page
+[Resolves D66 — stale `gameState` in gameStore on re-login]
+
+**Outcomes:**
+
+- All six items above resolved with tests (table-driven Go tests for race paths; Vitest for the auth-init store-clear).
+- `deferred-work.md` updated with `→ Story 8.5-1` annotations on each adopted ID.
+
+### Story 8.5-2: Server-Side Concurrency & Type Hardening
+
+As an engineer,
+I want session-manager broadcast plumbing, per-user state lifecycles, and wire-format types hardened before Phase 2 introduces wallet/XP/honor at match end,
+So that the new Epic 9 surfaces inherit correct primitives instead of inheriting the same risk shapes.
+
+**Acceptance Criteria:**
+
+**Given** `TeamStringForIndex` (Go) and `teamStringForIndex` (TS) receive a team index
+**When** the index is outside `{0, 1}`
+**Then** the Go variant returns a sentinel string (`""` or named constant), never panics
+**And** the TS variant returns `null` for out-of-range
+**And** Zod schemas at the wire boundary tighten to `z.union([z.literal(0), z.literal(1)])` so contract tests reject garbage at parse time
+[Resolves D113 — `TeamStringForIndex` panic on out-of-range]
+
+**Given** the WS `OutcomeReason` field is emitted by the server
+**When** the client parses an `event:match_end`
+**Then** the Go field is typed as `OutcomeReason` (named string type with constants), not raw `string`
+**And** the TS Zod schema accepts the documented set (e.g. `"surrender" | "timeout" | "abandonment" | "natural"`) — Epic 9 will append `"insolvency"` and `"honor_eject"` per its new events
+[Resolves D116 — `OutcomeReason` Go/TS asymmetry]
+
+**Given** a user is removed from `session.Manager` (match end, leave, disconnect window expiry)
+**When** `RemoveSession` runs (or a new `RemoveUser(userID)` hook fires alongside it)
+**Then** the per-user `lastEmoteAt` entry in `emote.Handler` is cleared
+**And** future cross-match emotes from that user respect a fresh rate-limit window in the next match
+**And** the per-process `lastEmoteAt` map's growth is bounded by current-active users, not lifetime users
+[Resolves D105 + D106 — `lastEmoteAt` unbounded growth + cross-match bleed-through]
+
+**Given** `session.Manager.MatchParticipantsByUser` returns a participant slice
+**When** `RemoveSession` (write lock) interleaves between the slice capture and the broadcast
+**Then** the broadcast either re-checks session liveness OR holds the read lock through `BroadcastToUsers`
+**And** orphaned tail-of-match emote / chat / event broadcasts to torn-down sessions are eliminated (or formally documented as accepted with a tracking comment)
+[Resolves D109 — stale participants slice after RemoveSession]
+
+**Given** the auth `:id` route parameter is parsed via `strconv.ParseUint(..., 10, 64)`
+**When** the result is cast to `uint`
+**Then** the cast is replaced with `uint64` end-to-end, OR the build is enforced 64-bit
+**And** a forged `:id = 4294967297` cannot equate to auth user `1` on any supported platform
+[Resolves D86 — `ParseUint` → `uint` truncation]
+
+**Outcomes:**
+
+- All five items above resolved.
+- New `RemoveUser(userID)` hook (or equivalent) is reusable for Epic 9's per-user state (wallet rate-limit, daily-claim cooldown).
+- `deferred-work.md` updated with `→ Story 8.5-2` annotations on each adopted ID.
+
+### Story 8.5-3: UX Polish & Shared-Pattern Refactors
+
+As a player,
+I want reveals, overlays, prompts, and team labels to behave consistently across reconnect, phase transition, and OS-level setting changes,
+So that the in-match experience is coherent before Phase 2 introduces more reveal/overlay surfaces (settlement, daily-reward, insolvent-eject).
+
+**Acceptance Criteria:**
+
+**Given** the OS-level "Reduce motion" setting toggles mid-session
+**When** any reveal component (`BelotReveal`, `DeclarationReveal`, `RoomLobby`, `MatchResult`, `DealAnimation`) renders next
+**Then** it reads the live value via a shared `useReducedMotion` hook subscribed to the media-query `change` event
+**And** the snapshot-once `useMemo([])` pattern is removed from all five call sites
+[Resolves D68 + D122 — shared `prefersReducedMotion` extraction]
+
+**Given** a player disconnects during the 4s belot reveal window or mid-declaration-reveal animation
+**When** they reconnect inside the window
+**Then** the server-side `event:game_state` snapshot includes either the active reveal payload OR a clear "no active reveal" state
+**And** the client's `setGameState` resets `declarationReveal` and any in-flight reveal fields on reconnect, so a stale reveal is never re-rendered on top of the reconnected state
+[Resolves D69 + D71 — reveal events not replayed / stale `declarationReveal` surviving reconnect]
+
+**Given** the centered declaration reveal is active
+**When** a `PauseOverlay` or `ReconnectOverlay` mounts
+**Then** the reveal timer pauses (or the reveal queues) instead of being silently consumed behind the tinted overlay
+**And** the reveal resumes (or fires) once the overlay dismisses
+[Resolves D112]
+
+**Given** the player views a `MatchResult`, `ReconnectOverlay`, `MatchHistory`, or in-game `TrumpIndicator`
+**When** team identity is rendered
+**Then** all four surfaces honor the same convention (viewer-team-first columns, "Us"/"Them" labels) — `TrumpIndicator` is no longer the neutral "Team A"/"Team B" outlier
+[Resolves D114 + D115]
+
+**Given** the round-2 trump prompt renders on a mobile-landscape viewport (~360px height)
+**When** the candidate card + 4 suit buttons + PASS button stack
+**Then** the dialog body has `max-h-[90vh] overflow-y-auto` (or the suit grid restructures to 2x2) so the PASS button stays reachable
+[Resolves the round-2 D97]
+
+**Given** any overlay mounts above the dealer-indicator pill
+**When** `MatchResult`, `ReconnectOverlay`, or disconnected-phase overlay is active
+**Then** the dealer pill hides (or the overlay's z-index is unambiguously higher across all states)
+**And** dealer/trump-caller name spans clamp via `max-w-[8rem] truncate` + `min-w-0` on the parent pill so a long username can't push the pill into the seat/score area
+[Resolves dealer-indicator D97 + D98]
+
+**Given** `SurrenderPrompt` (and its sibling `BelotPrompt`) is open
+**When** the user presses `Escape`
+**Then** the prompt closes via its decline handler
+**And** the prompt's container uses `fixed` positioning (not `absolute`) so it cannot leak through scrolled/zoomed parent stacking contexts
+[Resolves D102 + D103]
+
+**Given** the emote picker is mounted across phase transitions (`playing` → `match_end` → next `dealing`)
+**When** the picker is unmounted and remounted by the parent's allowlist gate
+**Then** `lastSentAt` is preserved across remount (lifted to `useRef` in `GamePage` or to `gameStore`)
+**And** the cooldown is computed via `performance.now()` (monotonic) so a system-clock backwards jump cannot lock tiles for arbitrary time
+[Resolves D107 + D108]
+
+**Given** Serbian-language strings "Tim A", "Tim B", "Mi", "Oni" render in the lobby and in-game
+**When** a native Belote-playing reviewer evaluates them
+**Then** the strings are confirmed natural by a native speaker, OR replaced with idiomatic equivalents (e.g. "naša ekipa" / "njihova ekipa")
+**And** the change ships in a single i18n update without code-side renames
+[Resolves D125]
+
+**Outcomes:**
+
+- New `useReducedMotion` hook in `client/src/shared/hooks/`, used by ≥5 call sites.
+- All eight items above resolved.
+- `deferred-work.md` updated with `→ Story 8.5-3` annotations on each adopted ID.
+
+### Bucket D items (test/doc gaps): folded into adjacent stories
+
+The following items are NOT discrete ACs in 8.5-1/2/3 but are claimed by whichever story touches the relevant code:
+
+- D87, D88 (stats / match-list status-filter desync) → 8.5-2 if the type-hardening pass touches `match/gorm_repo.go`; otherwise skipped.
+- D100 (`time.Sleep` in manager_test) → 8.5-1 (the timer/race fixes will need stable async-test primitives anyway).
+- D117, D118, D119, D120 (tests that can't fail) → 8.5-3 (touches the same component test files).
+- D94 (Story 4.3 spec inverted compass labels), D111 (belot-reveal spec stale claim), D126 (Red/Blue prose in Go test comments) → 8.5-3 doc-cleanup pass.
+- D124 (lockfile script self-exclusion) → 8.5-2 if a CI failure surfaces it; otherwise skipped.
 
 ## Epic 9: Player Economy & Progression
 

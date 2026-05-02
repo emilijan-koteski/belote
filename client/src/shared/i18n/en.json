@@ -88,6 +88,10 @@
     "chat": {
       "title": "Room Chat",
       "placeholder": "Chat with the table\u2026"
+    },
+    "errors": {
+      "gameStartFailed": "Failed to start the game. Please try again.",
+      "alreadyStarted": "The game has already started \u2014 you can't leave now."
     }
   },
   "rules": {

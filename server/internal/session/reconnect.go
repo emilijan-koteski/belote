@@ -99,10 +99,9 @@ func (m *Manager) HandleDisconnect(userID uint) {
 	// Mark player as disconnected
 	gs.Players[seat].Connected = false
 
-	// [F4] Increment timerGeneration to invalidate any in-flight stale timer callback
-	session.timerGeneration++
-
-	// Cancel turn timer and capture remaining time (same pattern as pause)
+	// [F4] Cancel turn timer (bumps timerGeneration to invalidate any in-flight
+	// stale callback — generation bump is now implicit in cancelTurnTimer).
+	// Capture remaining time (same pattern as pause).
 	session.cancelTurnTimer()
 	// [F5] Only capture TurnTimeRemaining from TurnExpiresAt if we didn't just auto-clear
 	// a pause — in the pause case, TurnTimeRemaining was already stored by the original
@@ -253,8 +252,8 @@ func (m *Manager) HandleReconnect(userID uint) {
 		expiry := time.Now().Add(remaining)
 		gs.TurnExpiresAt = &expiry
 		gs.TurnTimeRemaining = 0
+		// cancelTurnTimer bumps timerGeneration; captured gen is post-cancel.
 		session.cancelTurnTimer()
-		session.timerGeneration++
 		gen := session.timerGeneration
 		expectedSeat := gs.ActivePlayerSeat
 		session.turnTimer = time.AfterFunc(remaining, func() {

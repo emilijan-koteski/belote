@@ -949,6 +949,40 @@ describe("useWsDispatch", () => {
     expect(useGameStore.getState().lastError).toBe("error:surrender_exhausted");
   });
 
+  // --- Story 8.5-1 AC2: error:game_start_failed ---
+
+  it("dispatches error:game_start_failed via toast and writes lastError", () => {
+    expect(useGameStore.getState().lastError).toBeNull();
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "error:game_start_failed",
+      payload: {
+        roomId: 42,
+        message: "Failed to start the game. Please try again.",
+      },
+    });
+
+    expect(useGameStore.getState().lastError).toBe("error:game_start_failed");
+    expect(toast.error).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores malformed error:game_start_failed payloads", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "error:game_start_failed",
+      payload: { unrelatedField: true } as unknown as { roomId?: number; message?: string },
+    });
+
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   // --- Emote (Story 8.3) ---
 
   it("writes a valid system:emote payload to gameStore.activeEmotes", () => {

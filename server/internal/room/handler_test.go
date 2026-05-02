@@ -64,6 +64,10 @@ func (m *mockRoomRepo) FindByID(id uint) (*room.Room, error) {
 	return nil, nil
 }
 
+func (m *mockRoomRepo) FindByIDForUpdate(id uint) (*room.Room, error) {
+	return m.FindByID(id)
+}
+
 func (m *mockRoomRepo) FindByCode(code string) (*room.Room, error) {
 	for _, r := range m.rooms {
 		if r.Code == code {
@@ -185,7 +189,14 @@ func (m *mockRoomRepo) FindPlayerBySeat(roomID uint, seat int) (*room.RoomPlayer
 }
 
 func (m *mockRoomRepo) FindQuickPlayRoom() (*room.Room, error) {
+	return m.FindQuickPlayRoomExcluding(nil)
+}
+
+func (m *mockRoomRepo) FindQuickPlayRoomExcluding(excluded map[uint]bool) (*room.Room, error) {
 	for _, r := range m.rooms {
+		if excluded[r.ID] {
+			continue
+		}
 		if r.IsQuickPlay && r.Status == "waiting" && r.PlayerCount < 4 {
 			return r, nil
 		}
@@ -1736,6 +1747,332 @@ func TestQuickPlay_AutoStartsOnFourthJoiner(t *testing.T) {
 		}
 	}
 	assert.True(t, gotGameStarted, "expected system:game_started broadcast")
+}
+
+// TestLeaveRoom_ReturnsErrGameAlreadyStarted_WhenRoomPlaying locks in Story
+// 8.5-1 AC3: the LeaveRoom transaction must re-fetch the room inside the tx
+// and reject with ErrGameAlreadyStarted (HTTP 409) when status != "waiting".
+// This prevents the race where a leave observes status="waiting" pre-tx and
+// a concurrent auto-start tx flips status to "playing" between the read and
+// the RemovePlayer write — the rules-engine would then receive a seatInfo
+// snapshot containing a player who has already left.
+func TestLeaveRoom_ReturnsErrGameAlreadyStarted_WhenRoomPlaying(t *testing.T) {
+	e, repo := setupTest()
+
+	// Room is already in "playing" status — simulates a concurrent auto-start
+	// having flipped status before this leave's tx body runs.
+	playingRoom := &room.Room{
+		Name:        "Started Room",
+		Code:        "STARTD",
+		OwnerID:     800,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		IsQuickPlay: true,
+		Status:      "playing",
+		PlayerCount: 4,
+	}
+	require.NoError(t, repo.Create(playingRoom))
+	seat0, seat1, seat2, seat3 := 0, 1, 2, 3
+	teamA, teamB := "teamA", "teamB"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: playingRoom.ID, UserID: 800, Seat: &seat0, Team: &teamA, Username: "P1"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: playingRoom.ID, UserID: 801, Seat: &seat1, Team: &teamB, Username: "P2"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: playingRoom.ID, UserID: 802, Seat: &seat2, Team: &teamA, Username: "P3"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: playingRoom.ID, UserID: 803, Seat: &seat3, Team: &teamB, Username: "P4"}))
+
+	token := validToken(803)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/1/leave", nil)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusConflict, rec.Code, "leave during playing must surface 409 GAME_ALREADY_STARTED")
+
+	var resp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	var errBody struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	require.NoError(t, json.Unmarshal(resp["error"], &errBody))
+	assert.Equal(t, "GAME_ALREADY_STARTED", errBody.Code)
+
+	// No player removed — the player count must remain 4 and the seat row
+	// for user 803 must still exist.
+	postRoom, _ := repo.FindByID(playingRoom.ID)
+	require.NotNil(t, postRoom)
+	assert.Equal(t, 4, postRoom.PlayerCount, "PlayerCount must NOT be decremented when leave is rejected")
+
+	stillSeated := false
+	for _, p := range repo.players {
+		if p.UserID == 803 && p.RoomID == playingRoom.ID {
+			stillSeated = true
+			break
+		}
+	}
+	assert.True(t, stillSeated, "user 803 must still be in the room — RemovePlayer must not have run")
+}
+
+// --- Test fakes for Story 8.5-1 AC2 (gameStarter) ---
+
+type fakeGameStarter struct {
+	called   int
+	lastRoom uint
+	err      error
+}
+
+func (g *fakeGameStarter) StartGame(roomID uint, _ string, _ string, _ [4]room.PlayerSeatInfo, _ string, _ int, _ uint, _ int) error {
+	g.called++
+	g.lastRoom = roomID
+	return g.err
+}
+
+func setupTestWithStarter(starter room.GameStarter, broadcaster room.Broadcaster) (*echo.Echo, *mockRoomRepo) {
+	repo := newMockRoomRepo()
+	handler := room.NewRoomHandler(repo, starter, broadcaster)
+
+	e := echo.New()
+	e.HTTPErrorHandler = testErrorHandler
+	api := e.Group("/api/v1", auth.AuthMiddleware("test-jwt-secret"))
+	api.POST("/rooms", handler.CreateRoom)
+	api.POST("/rooms/quick-play", handler.QuickPlay)
+	api.POST("/rooms/:id/join", handler.JoinRoom)
+	api.POST("/rooms/:id/leave", handler.LeaveRoom)
+	api.POST("/rooms/:id/seat", handler.SelectSeat)
+	api.POST("/rooms/:id/start", handler.StartGame)
+	return e, repo
+}
+
+func broadcastTypes(t *testing.T, b *mockBroadcaster) []string {
+	t.Helper()
+	out := make([]string, 0, len(b.calls)+len(b.allCalls))
+	for _, c := range b.calls {
+		out = append(out, msgTypeOf(t, c.msg))
+	}
+	for _, c := range b.allCalls {
+		out = append(out, msgTypeOf(t, c.msg))
+	}
+	return out
+}
+
+func containsString(haystack []string, needle string) bool {
+	for _, h := range haystack {
+		if h == needle {
+			return true
+		}
+	}
+	return false
+}
+
+// TestSelectSeat_AutoStart_BroadcastsWhenStartGameSucceeds locks in Story
+// 8.5-1 AC2 success path: when the 4th seat fills and StartGame succeeds,
+// system:game_started is broadcast and the room status sticks at "playing".
+func TestSelectSeat_AutoStart_BroadcastsWhenStartGameSucceeds(t *testing.T) {
+	starter := &fakeGameStarter{}
+	broadcaster := &mockBroadcaster{}
+	e, repo := setupTestWithStarter(starter, broadcaster)
+
+	qpRoom := &room.Room{
+		Name:        "Quick Play AC2OK",
+		Code:        "AC2OK1",
+		OwnerID:     500,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		IsQuickPlay: true,
+		Status:      "waiting",
+		PlayerCount: 4,
+	}
+	require.NoError(t, repo.Create(qpRoom))
+	seat0, seat1, seat2 := 0, 1, 2
+	teamA, teamB := "teamA", "teamB"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 500, Seat: &seat0, Team: &teamA, Username: "P1"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 501, Seat: &seat1, Team: &teamB, Username: "P2"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 502, Seat: &seat2, Team: &teamA, Username: "P3"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 503, Username: "P4"}))
+
+	token := validToken(503)
+	rec := doSelectSeat(e, "1", `{"seat": 3}`, token)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, 1, starter.called, "StartGame must be called exactly once on the 4th seat")
+
+	updated, _ := repo.FindByID(qpRoom.ID)
+	require.NotNil(t, updated)
+	assert.Equal(t, "playing", updated.Status, "room status must remain 'playing' on StartGame success")
+
+	types := broadcastTypes(t, broadcaster)
+	assert.True(t, containsString(types, "system:game_started"), "system:game_started must be broadcast on success")
+	assert.False(t, containsString(types, "error:game_start_failed"), "no error event on success")
+}
+
+// TestSelectSeat_AutoStart_RevertsWhenStartGameFails locks in Story 8.5-1 AC2
+// failure path: when StartGame returns an error, the status flip is reverted
+// to "waiting", system:game_started is NOT broadcast, and
+// error:game_start_failed reaches the four would-be participants.
+// playerCount and seat assignments survive (no partial writes lost).
+func TestSelectSeat_AutoStart_RevertsWhenStartGameFails(t *testing.T) {
+	starter := &fakeGameStarter{err: errors.New("session manager unavailable")}
+	broadcaster := &mockBroadcaster{}
+	e, repo := setupTestWithStarter(starter, broadcaster)
+
+	qpRoom := &room.Room{
+		Name:        "Quick Play AC2FAIL",
+		Code:        "AC2F01",
+		OwnerID:     600,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		IsQuickPlay: true,
+		Status:      "waiting",
+		PlayerCount: 4,
+	}
+	require.NoError(t, repo.Create(qpRoom))
+	seat0, seat1, seat2 := 0, 1, 2
+	teamA, teamB := "teamA", "teamB"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 600, Seat: &seat0, Team: &teamA, Username: "P1"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 601, Seat: &seat1, Team: &teamB, Username: "P2"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 602, Seat: &seat2, Team: &teamA, Username: "P3"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 603, Username: "P4"}))
+
+	token := validToken(603)
+	rec := doSelectSeat(e, "1", `{"seat": 3}`, token)
+
+	// HTTP success — the seat selection itself succeeded; the auto-start
+	// failure is communicated via the error WS event, not an HTTP error.
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, 1, starter.called, "StartGame must be called once")
+
+	updated, _ := repo.FindByID(qpRoom.ID)
+	require.NotNil(t, updated)
+	assert.Equal(t, "waiting", updated.Status, "room status MUST be reverted to 'waiting' on StartGame failure")
+
+	types := broadcastTypes(t, broadcaster)
+	assert.False(t, containsString(types, "system:game_started"), "system:game_started MUST NOT be broadcast on StartGame failure")
+	assert.True(t, containsString(types, "error:game_start_failed"), "error:game_start_failed MUST be broadcast to participants")
+
+	// Verify the error reached all four would-be participants.
+	gotErrUserIDs := map[uint]bool{}
+	for _, c := range broadcaster.calls {
+		if msgTypeOf(t, c.msg) == "error:game_start_failed" {
+			for _, uid := range c.userIDs {
+				gotErrUserIDs[uid] = true
+			}
+		}
+	}
+	for _, expectedUID := range []uint{600, 601, 602, 603} {
+		assert.True(t, gotErrUserIDs[expectedUID], "user %d must receive error:game_start_failed", expectedUID)
+	}
+
+	// Seat assignments + player count survive the rollback: only the room
+	// status flipped back. Players are still seated; PlayerCount is still 4.
+	players, err := repo.FindPlayersByRoomID(qpRoom.ID)
+	require.NoError(t, err)
+	assert.Len(t, players, 4, "all four players still seated")
+	assert.Equal(t, 4, updated.PlayerCount, "PlayerCount preserved across rollback")
+}
+
+// TestQuickPlay_AutoStart_RevertsWhenStartGameFails locks in the same AC2
+// failure-path invariant for the QuickPlay last-seat auto-start path.
+func TestQuickPlay_AutoStart_RevertsWhenStartGameFails(t *testing.T) {
+	starter := &fakeGameStarter{err: errors.New("session manager unavailable")}
+	broadcaster := &mockBroadcaster{}
+	e, repo := setupTestWithStarter(starter, broadcaster)
+
+	qpRoom := &room.Room{
+		Name:        "Quick Play AC2QPFAIL",
+		Code:        "AC2QF1",
+		OwnerID:     700,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		IsQuickPlay: true,
+		Status:      "waiting",
+		PlayerCount: 3,
+	}
+	require.NoError(t, repo.Create(qpRoom))
+	seat0, seat1, seat2 := 0, 1, 2
+	teamA, teamB := "teamA", "teamB"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 700, Seat: &seat0, Team: &teamA, Username: "P1"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 701, Seat: &seat1, Team: &teamB, Username: "P2"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 702, Seat: &seat2, Team: &teamA, Username: "P3"}))
+
+	token := validToken(703)
+	rec := doQuickPlay(e, token)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, 1, starter.called, "StartGame must be called once on the 4th joiner")
+
+	updated, _ := repo.FindByID(qpRoom.ID)
+	require.NotNil(t, updated)
+	assert.Equal(t, "waiting", updated.Status, "room status MUST be reverted to 'waiting' on StartGame failure")
+
+	types := broadcastTypes(t, broadcaster)
+	assert.False(t, containsString(types, "system:game_started"), "system:game_started MUST NOT be broadcast on StartGame failure")
+	assert.True(t, containsString(types, "error:game_start_failed"), "error:game_start_failed MUST be broadcast to participants")
+}
+
+// TestQuickPlay_RetriesOnErrRoomFull locks in Story 8.5-1 AC5 / D29 symptom fix.
+//
+// The QuickPlay retry loop must continue when pickFirstEmptySeat raises
+// apperr.ErrRoomFull (caused by the player_count denormalized counter saying a
+// room has free seats but every seat row is occupied — i.e. counter drift).
+// Counter drift must surface as a successful join into a different/new room,
+// never as an opaque 5xx.
+//
+// Setup: a "drifted" QuickPlay room reports PlayerCount=3 but already has all
+// four seats occupied. First iteration: FindQuickPlayRoom returns the drifted
+// room → pickFirstEmptySeat fails with ErrRoomFull. With the fix, the loop
+// continues; on the second iteration FindQuickPlayRoom returns nil (the
+// drifted room's PlayerCount has reached 4 from the failed iteration's
+// IncrementPlayerCount) and a fresh room is created instead.
+func TestQuickPlay_RetriesOnErrRoomFull(t *testing.T) {
+	e, repo := setupTest()
+
+	// Drifted room: counter says 3, but all 4 seats are filled.
+	driftedRoom := &room.Room{
+		Name:        "Quick Play DRIFT",
+		Code:        "DRIFT1",
+		OwnerID:     900,
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		IsQuickPlay: true,
+		Status:      "waiting",
+		PlayerCount: 3,
+	}
+	require.NoError(t, repo.Create(driftedRoom))
+
+	seat0, seat1, seat2, seat3 := 0, 1, 2, 3
+	teamA, teamB := "teamA", "teamB"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: driftedRoom.ID, UserID: 900, Seat: &seat0, Team: &teamA, Username: "P1"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: driftedRoom.ID, UserID: 901, Seat: &seat1, Team: &teamB, Username: "P2"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: driftedRoom.ID, UserID: 902, Seat: &seat2, Team: &teamA, Username: "P3"}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: driftedRoom.ID, UserID: 903, Seat: &seat3, Team: &teamB, Username: "P4"}))
+
+	token := validToken(904)
+	rec := doQuickPlay(e, token)
+
+	// Without the AC5 fix this would surface ErrRoomFull as 500 (or the
+	// apperr-mapped 4xx). With the fix the loop retries; second iteration
+	// creates a new room and the user lands cleanly.
+	require.Equal(t, http.StatusOK, rec.Code, "ErrRoomFull from counter drift must be retried, not surfaced as an error")
+
+	var resp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	var data struct {
+		Room        room.Room `json:"room"`
+		Seat        int       `json:"seat"`
+		GameStarted bool      `json:"gameStarted"`
+	}
+	require.NoError(t, json.Unmarshal(resp["data"], &data))
+
+	assert.NotEqual(t, driftedRoom.ID, data.Room.ID, "user must land in a different room than the drifted one")
+	assert.True(t, data.Room.IsQuickPlay)
+	assert.Equal(t, 0, data.Seat, "first joiner of the new room sits at seat 0")
+	assert.False(t, data.GameStarted)
 }
 
 // --- SelectSeat Auto-Start Tests ---

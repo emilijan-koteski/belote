@@ -247,8 +247,18 @@ export function RoomLobby() {
     hasLeftRef.current = true;
     try {
       await leaveRoomMutation.mutateAsync(Number(id));
-    } catch {
-      // Even on error, navigate back
+    } catch (err) {
+      // Story 8.5-1 AC3: server returns 409 GAME_ALREADY_STARTED when the
+      // room transitioned to "playing" between the user clicking leave and
+      // the leave tx running. Surface a toast and abort the navigation —
+      // the client should stay in the room (the auto-start UI flow takes
+      // over from here).
+      if (err instanceof FetchError && err.code === "GAME_ALREADY_STARTED") {
+        hasLeftRef.current = false;
+        toast.error(t("room.errors.alreadyStarted"));
+        return;
+      }
+      // Other errors: still navigate back (preserves prior UX).
     }
     navigate("/lobby");
   };

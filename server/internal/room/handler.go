@@ -471,6 +471,26 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 
 	var newOwnerID *uint
 	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		// Story 8.5-1 AC3: row-lock the room INSIDE the tx so the status check
+		// is serialized against any concurrent auto-start tx that flips status
+		// to "playing". FindByIDForUpdate issues SELECT ... FOR UPDATE under
+		// the hood; without it, default READ COMMITTED isolation would let
+		// both tx read status="waiting" and both commit.
+		freshRoom, err := tx.FindByIDForUpdate(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("re-fetching room for leave gate: %w", err)
+		}
+		if freshRoom == nil {
+			return apperr.ErrRoomNotFound
+		}
+		// Only block leaves while a game is actively in progress. Allow leaves
+		// on "finished"/"completed" rooms so post-match unmount auto-leave
+		// (RoomLobby unmount cleanup) does not log spurious 409s — and a
+		// manual click on Leave for a finished game does what the user
+		// expects.
+		if freshRoom.Status == "playing" {
+			return apperr.ErrGameAlreadyStarted
+		}
 		if err := tx.RemovePlayer(uint(roomID), userID); err != nil {
 			return err
 		}
@@ -502,7 +522,9 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 		}
 		return nil
 	}); err != nil {
-		if errors.Is(err, apperr.ErrNotInRoom) || errors.Is(err, apperr.ErrRoomNotFound) {
+		if errors.Is(err, apperr.ErrNotInRoom) ||
+			errors.Is(err, apperr.ErrRoomNotFound) ||
+			errors.Is(err, apperr.ErrGameAlreadyStarted) {
 			return err
 		}
 		return fmt.Errorf("leaving room: %w", err)
@@ -670,16 +692,26 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 	// Check if Quick Play room should auto-start (wrapped in transaction to prevent double-start)
 	gameStarted := false
 	var autoStartRoom *Room
+	var autoStartPlayers []RoomPlayer
 	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
-		r, err := tx.FindByID(uint(roomID))
+		// Story 8.5-1 AC3 + P1: row-lock the room AND re-fetch players INSIDE
+		// the auto-start tx. The outside-tx players slice can go stale if a
+		// concurrent LeaveRoom commits between the seat-update tx and this
+		// auto-start tx — leading the rules engine to receive a seatInfo
+		// snapshot containing a player who has already left.
+		r, err := tx.FindByIDForUpdate(uint(roomID))
 		if err != nil {
 			return fmt.Errorf("fetching room for auto-start check: %w", err)
 		}
 		if r == nil || !r.IsQuickPlay || r.Status != "waiting" {
 			return nil
 		}
+		freshPlayers, err := tx.FindPlayersByRoomID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("fetching players for auto-start check: %w", err)
+		}
 		seatedCount := 0
-		for _, p := range players {
+		for _, p := range freshPlayers {
 			if p.Seat != nil {
 				seatedCount++
 			}
@@ -693,41 +725,33 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 		}
 		gameStarted = true
 		autoStartRoom = r
+		autoStartPlayers = freshPlayers
 		return nil
 	}); err != nil {
 		return fmt.Errorf("auto-start check: %w", err)
 	}
 
 	if gameStarted && autoStartRoom != nil {
-		// Wire gameStarter for Quick Play auto-start
-		if h.gameStarter != nil {
-			var seatInfo [4]PlayerSeatInfo
-			for _, p := range players {
-				if p.Seat != nil {
-					seatInfo[*p.Seat] = PlayerSeatInfo{
-						UserID:   p.UserID,
-						Username: p.Username,
-						Seat:     *p.Seat,
-					}
-				}
-			}
-			timerDuration := 0
-			if autoStartRoom.TimerDurationSeconds != nil {
-				timerDuration = *autoStartRoom.TimerDurationSeconds
-			}
-			reconnectWindow := resolveReconnectWindow(autoStartRoom.ReconnectWindowSec)
-			if err := h.gameStarter.StartGame(uint(roomID), autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration, autoStartRoom.OwnerID, reconnectWindow); err != nil {
-				slog.Error("failed to start game session for quick play", "roomID", roomID, "error", err)
-			}
+		// Story 8.5-1 AC2: gate system:game_started AND the playing-status
+		// broadcast on gameStarter.StartGame success. If StartGame returns an
+		// error, revert the room status to "waiting" so the room is not stuck
+		// in a permanent "playing" state with no live session, and broadcast
+		// error:game_start_failed to the four would-be participants instead of
+		// navigating them to a non-existent /game/{roomID}.
+		startErr := h.startAutoStartedGame(autoStartRoom, autoStartPlayers)
+		if startErr != nil {
+			slog.Error("failed to start game session for quick play", "roomID", roomID, "error", startErr)
+			h.revertAutoStart(uint(roomID), autoStartRoom, autoStartPlayers)
+			gameStarted = false
+		} else {
+			// Broadcast system:game_started to all room participants
+			h.broadcastToRoom(uint(roomID), ws.SystemGameStarted, map[string]interface{}{
+				"roomId": roomID,
+			})
+
+			// Broadcast system:room_updated to lobby browse page
+			h.broadcastRoomUpdated(autoStartRoom)
 		}
-
-		// Broadcast system:game_started to all room participants
-		h.broadcastToRoom(uint(roomID), ws.SystemGameStarted, map[string]interface{}{
-			"roomId": roomID,
-		})
-
-		// Broadcast system:room_updated to lobby browse page
-		h.broadcastRoomUpdated(autoStartRoom)
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -736,6 +760,108 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 			"gameStarted": gameStarted,
 		},
 	})
+}
+
+// startAutoStartedGame invokes gameStarter.StartGame for an auto-start path
+// that has already flipped room.Status to "playing" inside its tx. Returns
+// nil when no gameStarter is wired (test setups skip this) or when StartGame
+// succeeds. The caller is responsible for reverting the status flip when this
+// returns a non-nil error (Story 8.5-1 AC2).
+func (h *RoomHandler) startAutoStartedGame(autoStartRoom *Room, players []RoomPlayer) error {
+	if h.gameStarter == nil {
+		return nil
+	}
+	var seatInfo [4]PlayerSeatInfo
+	for _, p := range players {
+		if p.Seat != nil {
+			seatInfo[*p.Seat] = PlayerSeatInfo{
+				UserID:   p.UserID,
+				Username: p.Username,
+				Seat:     *p.Seat,
+			}
+		}
+	}
+	timerDuration := 0
+	if autoStartRoom.TimerDurationSeconds != nil {
+		timerDuration = *autoStartRoom.TimerDurationSeconds
+	}
+	reconnectWindow := resolveReconnectWindow(autoStartRoom.ReconnectWindowSec)
+	return h.gameStarter.StartGame(autoStartRoom.ID, autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration, autoStartRoom.OwnerID, reconnectWindow)
+}
+
+// revertAutoStart compensates for a failed gameStarter.StartGame: it flips
+// the room status back to "waiting" and broadcasts error:game_start_failed
+// to the four would-be participants so their clients keep them on the
+// room-lobby page instead of navigating to a non-existent /game/{id}.
+// Story 8.5-1 AC2.
+//
+// `players` may be nil — revertAutoStart will re-fetch from the room state
+// so the four participants get the failure broadcast even when the caller
+// failed to load them.
+func (h *RoomHandler) revertAutoStart(roomID uint, autoStartRoom *Room, players []RoomPlayer) {
+	revertErr := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		r, err := tx.FindByIDForUpdate(roomID)
+		if err != nil {
+			return fmt.Errorf("re-fetching room for status revert: %w", err)
+		}
+		if r == nil {
+			return nil
+		}
+		// Idempotency: only revert if the room is still in the "playing"
+		// state we flipped it into. A concurrent code path may have already
+		// transitioned the room to "completed"/"abandoned" and we must not
+		// resurrect it back to "waiting".
+		if r.Status != "playing" {
+			autoStartRoom.Status = r.Status
+			return nil
+		}
+		r.Status = "waiting"
+		if err := tx.Update(r); err != nil {
+			return fmt.Errorf("reverting room status to waiting: %w", err)
+		}
+		// Update the caller-visible Room so the subsequent broadcast carries
+		// the reverted status.
+		autoStartRoom.Status = "waiting"
+		return nil
+	})
+	if revertErr != nil {
+		// Bail out on revert-tx failure: room is stuck in "playing" with no
+		// live session, broadcasting error:game_start_failed AND telling
+		// clients to stay on the room-lobby page would just compound the
+		// problem (every subsequent action rejects on status != "waiting").
+		// Logging is the best we can do here; a follow-up health check or
+		// admin sweep will need to clean the row up.
+		slog.Error("failed to revert auto-start status flip; aborting failure broadcast", "roomID", roomID, "error", revertErr)
+		return
+	}
+
+	// If the caller didn't supply a players slice (e.g. their own
+	// FindPlayersByRoomID failed), re-fetch so the four participants still
+	// receive the failure broadcast and don't silently stall.
+	if len(players) == 0 {
+		if fetched, ferr := h.repo.FindPlayersByRoomID(roomID); ferr == nil {
+			players = fetched
+		} else {
+			slog.Error("failed to load players for revertAutoStart broadcast", "roomID", roomID, "error", ferr)
+		}
+	}
+
+	userIDs := make([]uint, 0, len(players))
+	for _, p := range players {
+		userIDs = append(userIDs, p.UserID)
+	}
+	if len(userIDs) > 0 {
+		h.broadcastToUsers(userIDs, ws.ErrorGameStartFailed, map[string]interface{}{
+			"roomId":  roomID,
+			"message": "Failed to start the game. Please try again.",
+		})
+	}
+
+	// Tell lobby browse pages that the room is back to "waiting" so their
+	// row state matches the reverted DB row.
+	if autoStartRoom.Status == "waiting" {
+		h.broadcastRoomUpdated(autoStartRoom)
+	}
 }
 
 type KickPlayerRequest struct {
@@ -1110,14 +1236,25 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 	var assignedTeam string
 	createdNew := false
 	var createErr error
+	// Story 8.5-1 AC5: track room IDs whose join tx failed in this retry loop
+	// so the next iteration's FindQuickPlayRoom skips them. Without this, a
+	// drifted room (player_count<4 but every seat taken) would be returned
+	// every iteration, the inner pickFirstEmptySeat would raise ErrRoomFull,
+	// the tx would roll back leaving the drift unchanged, and the loop would
+	// burn its retry budget on the same row before surfacing the opaque
+	// ErrRoomFull AC5 promised never to surface.
+	triedRoomIDs := make(map[uint]bool)
+	var lastTriedRoomID uint
 	for i := 0; i < maxRetries; i++ {
+		lastTriedRoomID = 0
 		createErr = h.repo.RunInTransaction(func(tx RoomRepository) error {
-			available, err := tx.FindQuickPlayRoom()
+			available, err := tx.FindQuickPlayRoomExcluding(triedRoomIDs)
 			if err != nil {
 				return fmt.Errorf("finding quick play room: %w", err)
 			}
 
 			if available != nil {
+				lastTriedRoomID = available.ID
 				rp := &RoomPlayer{RoomID: available.ID, UserID: userID}
 				if err := tx.AddPlayer(rp); err != nil {
 					return err
@@ -1182,6 +1319,20 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 			break
 		}
 		if errors.Is(createErr, apperr.ErrRoomCodeTaken) || errors.Is(createErr, apperr.ErrRoomNameTaken) {
+			continue
+		}
+		// Story 8.5-1 AC5 (D29 symptom): pickFirstEmptySeat raises ErrRoomFull
+		// when the player_count denormalized counter says the room has free
+		// seats but every seat row is occupied. Mark the drifted room as
+		// tried and retry — exclusion guarantees the next iteration either
+		// picks a different room or falls through to the create-new-room
+		// branch, satisfying AC5's "successful join into a different/new
+		// room — never an opaque 5xx" promise.
+		// TODO: drift root-cause is D29 (Phase 2) — this only treats the symptom.
+		if errors.Is(createErr, apperr.ErrRoomFull) {
+			if lastTriedRoomID != 0 {
+				triedRoomIDs[lastTriedRoomID] = true
+			}
 			continue
 		}
 		if errors.Is(createErr, apperr.ErrAlreadyInRoom) {
@@ -1251,8 +1402,12 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 	// Auto-start when all four seats are filled (4th joiner closes the room).
 	gameStarted := false
 	var autoStartRoom *Room
+	var autoStartPlayers []RoomPlayer
 	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
-		r, err := tx.FindByID(resultRoom.ID)
+		// Story 8.5-1 AC3 + AC2: row-lock the room and capture the in-tx
+		// players slice for the post-tx StartGame call so we never start a
+		// session referencing a player who has already left.
+		r, err := tx.FindByIDForUpdate(resultRoom.ID)
 		if err != nil {
 			return fmt.Errorf("fetching room for auto-start check: %w", err)
 		}
@@ -1278,42 +1433,28 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 		}
 		gameStarted = true
 		autoStartRoom = r
+		autoStartPlayers = players
 		return nil
 	}); err != nil {
 		return fmt.Errorf("auto-start check: %w", err)
 	}
 
 	if gameStarted && autoStartRoom != nil {
-		if h.gameStarter != nil {
-			players, perr := h.repo.FindPlayersByRoomID(resultRoom.ID)
-			if perr != nil {
-				slog.Error("failed to load players for quick play auto-start", "roomID", resultRoom.ID, "error", perr)
-			} else {
-				var seatInfo [4]PlayerSeatInfo
-				for _, p := range players {
-					if p.Seat != nil {
-						seatInfo[*p.Seat] = PlayerSeatInfo{
-							UserID:   p.UserID,
-							Username: p.Username,
-							Seat:     *p.Seat,
-						}
-					}
-				}
-				timerDuration := 0
-				if autoStartRoom.TimerDurationSeconds != nil {
-					timerDuration = *autoStartRoom.TimerDurationSeconds
-				}
-				reconnectWindow := resolveReconnectWindow(autoStartRoom.ReconnectWindowSec)
-				if err := h.gameStarter.StartGame(resultRoom.ID, autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration, autoStartRoom.OwnerID, reconnectWindow); err != nil {
-					slog.Error("failed to start game session for quick play", "roomID", resultRoom.ID, "error", err)
-				}
-			}
+		// Story 8.5-1 AC2: gate broadcasts on gameStarter.StartGame success.
+		// On failure, revert the room status to "waiting" and tell the four
+		// would-be participants to stay on the room-lobby page rather than
+		// strand them in a permanent "playing" state with no live session.
+		startErr := h.startAutoStartedGame(autoStartRoom, autoStartPlayers)
+		if startErr != nil {
+			slog.Error("failed to start game session for quick play", "roomID", resultRoom.ID, "error", startErr)
+			h.revertAutoStart(resultRoom.ID, autoStartRoom, autoStartPlayers)
+			gameStarted = false
+		} else {
+			h.broadcastToRoom(resultRoom.ID, ws.SystemGameStarted, map[string]interface{}{
+				"roomId": resultRoom.ID,
+			})
+			h.broadcastRoomUpdated(autoStartRoom)
 		}
-
-		h.broadcastToRoom(resultRoom.ID, ws.SystemGameStarted, map[string]interface{}{
-			"roomId": resultRoom.ID,
-		})
-		h.broadcastRoomUpdated(autoStartRoom)
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{

@@ -41,19 +41,27 @@ type RoomStatusUpdater interface {
 	UpdateRoomStatus(roomID uint, status string) error
 }
 
+// Broadcaster is the subset of *ws.Hub the manager depends on. Mirrors the
+// chat / emote pattern (chat/handler.go, emote/handler.go) so tests can swap
+// in a hubSpy without spinning up a real hub. *ws.Hub satisfies this directly.
+type Broadcaster interface {
+	BroadcastToUsers(userIDs []uint, msg []byte)
+	SendToUser(userID uint, msg []byte)
+}
+
 // Manager orchestrates game sessions: receives actions via WebSocket,
 // calls the rules engine, broadcasts results, and persists completed matches.
 type Manager struct {
 	sessions    map[uint]*Session // keyed by roomID
 	userToRoom  map[uint]uint     // userID → roomID for quick lookup
-	hub         *ws.Hub
+	hub         Broadcaster
 	matchRepo   match.MatchRepository
 	roomUpdater RoomStatusUpdater
 	mu          sync.RWMutex
 }
 
 // NewManager creates a session manager wired to the WebSocket hub and match repository.
-func NewManager(hub *ws.Hub, matchRepo match.MatchRepository) *Manager {
+func NewManager(hub Broadcaster, matchRepo match.MatchRepository) *Manager {
 	return &Manager{
 		sessions:   make(map[uint]*Session),
 		userToRoom: make(map[uint]uint),
@@ -204,9 +212,9 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 			expiry := time.Now().Add(remaining)
 			newState.TurnExpiresAt = &expiry
 			newState.TurnTimeRemaining = 0
-			// Start timer with remaining duration
+			// Start timer with remaining duration. cancelTurnTimer bumps
+			// timerGeneration so the captured gen is the post-cancel value.
 			session.cancelTurnTimer()
-			session.timerGeneration++
 			gen := session.timerGeneration
 			expectedSeat := newState.ActivePlayerSeat
 			session.turnTimer = time.AfterFunc(remaining, func() {
@@ -226,7 +234,9 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 				newState.TimerDurationSec = oldState.TimerDurationSec
 				remaining := time.Until(*oldState.TurnExpiresAt)
 				if remaining > 0 {
-					session.timerGeneration++
+					// HandleAction's pre-mutation cancelTurnTimer (above) already
+					// bumped timerGeneration; the captured gen is the post-cancel
+					// value. Any future cancel/restart will invalidate it.
 					gen := session.timerGeneration
 					expectedSeat := newState.ActivePlayerSeat
 					session.turnTimer = time.AfterFunc(remaining, func() {
@@ -248,7 +258,7 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 	session.mu.Unlock()
 
 	// Broadcast the result using captured local variables (not session.gameState)
-	m.broadcastActionResult(playerIDs, oldState, newState, action, false, startedAt)
+	m.broadcastActionResult(playerIDs, oldState, newState, action, false)
 
 	// Buffer per-hand scoring for persistence at match end
 	m.bufferHandResultIfScored(session, oldState, newState)
@@ -265,7 +275,8 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 				surrenderedBy = &uid
 			}
 		}
-		m.handleMatchEnd(session, newState, surrenderedBy)
+		matchEndPayload := buildMatchEndPayload(oldState, newState, action, startedAt)
+		m.handleMatchEnd(session, newState, surrenderedBy, matchEndPayload)
 	}
 }
 
@@ -425,8 +436,11 @@ func (m *Manager) parseAction(userID uint, session *Session, msg ws.WSMessage) (
 // broadcastActionResult sends the appropriate event(s) after a successful action.
 // All parameters are local values — no session.gameState reads (avoids data races).
 // autoPlayed indicates whether the card was played by the timer auto-play system.
-// startedAt is the session start time, used to compute match duration on match_end.
-func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *game.GameState, action game.Action, autoPlayed bool, startedAt time.Time) {
+//
+// Story 8.5-1 AC4: match-end broadcasts (event:match_end and the trailing
+// event:game_state) are emitted by handleMatchEnd AFTER persistence; this
+// function returns early in those branches.
+func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *game.GameState, action game.Action, autoPlayed bool) {
 	userIDs := playerIDs[:]
 
 	switch action.Type {
@@ -501,10 +515,15 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventHandScored, handScored))
 		}
 
-		// Check if match ended (natural end via final card play)
+		// Story 8.5-1 AC4: when phase is match_end, the event:match_end and the
+		// trailing event:game_state are emitted by handleMatchEnd AFTER the
+		// match is persisted. The persist-before-broadcast invariant guarantees
+		// a client that receives match_end and immediately reads the match row
+		// will find it. handleMatchEnd preserves the (match_end → game_state)
+		// client-facing order so GamePage's stale-state redirect does not race
+		// the matchEndData arrival.
 		if newState.Phase == game.PhaseMatchEnd {
-			matchEnd := buildMatchEndPayload(oldState, newState, action, startedAt)
-			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchEnd, matchEnd))
+			return
 		}
 
 		// Follow with authoritative state so clients advance activePlayerSeat,
@@ -620,14 +639,15 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 
 	case game.ActionSurrenderAccept:
-		// Match-end transition path. Emit event:match_end FIRST (matching the
-		// natural-end ordering established in case ActionPlayCard), then the
-		// authoritative state. handleMatchEnd at HandleAction's call-site
-		// runs after this for persistence + room cleanup.
+		// Story 8.5-1 AC4: match-end transition emits event:match_end AND the
+		// trailing event:game_state from handleMatchEnd, AFTER persistence.
+		// The (match_end → game_state) client-facing order is preserved.
 		if newState.Phase == game.PhaseMatchEnd {
-			matchEnd := buildMatchEndPayload(oldState, newState, action, startedAt)
-			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchEnd, matchEnd))
+			return
 		}
+		// Defensive fallback for the (currently unreachable) case where surrender
+		// accept does not reach match_end — emit authoritative state so clients
+		// pick up the cleared SurrenderProposerSeat.
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
 
 	case game.ActionUnpause, game.ActionOwnerUnpause:
@@ -725,12 +745,26 @@ func (m *Manager) bufferHandResultIfScored(session *Session, oldState, newState 
 	session.mu.Unlock()
 }
 
-// handleMatchEnd persists the match record, updates room status, and removes the session.
-// Uses the passed newState (not session.gameState) to avoid data races.
+// handleMatchEnd persists the match record, updates room status, broadcasts
+// event:match_end and the trailing event:game_state, and removes the session.
+// Uses the passed finalState (not session.gameState) to avoid data races.
 // surrenderedBy is the userID of the player who initiated the accepted surrender,
 // or nil for natural match-end. The match Status stays "completed" in both cases —
 // the column is the load-bearing signal Story 9.6 (honor system) will consume.
-func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState, surrenderedBy *uint) {
+//
+// Story 8.5-1 AC4 ordering contract:
+//
+//  1. Persist matchRecord (CreateWithHands) and update room status FIRST so a
+//     client that receives event:match_end and immediately reads the match row
+//     will find it.
+//  2. event:match_end ALWAYS fires — even if persistence failed — so the four
+//     participants are not stranded on the table forever. Persist failures
+//     are logged via slog.Error but do not block the broadcast.
+//  3. event:game_state follows event:match_end so the (match_end → game_state)
+//     client-facing order is preserved (GamePage redirects to /lobby when it
+//     observes phase=="match_end" with matchEndData==null; sending game_state
+//     first would race that redirect against matchEndData arrival).
+func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState, surrenderedBy *uint, matchEndPayload ws.MatchEndPayload) {
 	winnerTeam := 0
 	if finalState.WinnerTeam != nil {
 		winnerTeam = *finalState.WinnerTeam
@@ -771,6 +805,12 @@ func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState, s
 			slog.Error("session: failed to update room status", "roomID", session.roomID, "error", err)
 		}
 	}
+
+	// Broadcast match_end → game_state AFTER persistence completes. Both fire
+	// regardless of persist outcome (clients must not be stranded on the table).
+	userIDs := session.playerIDs[:]
+	m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchEnd, matchEndPayload))
+	m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, finalState))
 
 	m.RemoveSession(session.roomID)
 }
@@ -844,8 +884,9 @@ func (m *Manager) startTimerLocked(session *Session) {
 	if session.timerStyle != "per-move" || session.timerDurationSec <= 0 {
 		return
 	}
+	// cancelTurnTimer bumps timerGeneration; the captured gen is the
+	// post-cancel value, invalidated by any subsequent cancel/restart.
 	session.cancelTurnTimer()
-	session.timerGeneration++
 	gen := session.timerGeneration
 	expectedSeat := session.gameState.ActivePlayerSeat
 
@@ -956,7 +997,7 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 
 	// Broadcast result
 	isAutoPlayedCard := action.Type == game.ActionPlayCard
-	m.broadcastActionResult(playerIDs, oldState, newState, action, isAutoPlayedCard, startedAt)
+	m.broadcastActionResult(playerIDs, oldState, newState, action, isAutoPlayedCard)
 
 	// Buffer per-hand scoring for persistence at match end
 	m.bufferHandResultIfScored(session, oldState, newState)
@@ -965,7 +1006,8 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 	// per-move timer doesn't auto-resolve a pending proposal — see AC #13),
 	// so surrenderedBy is always nil here.
 	if newState.Phase == game.PhaseMatchEnd {
-		m.handleMatchEnd(session, newState, nil)
+		matchEndPayload := buildMatchEndPayload(oldState, newState, action, startedAt)
+		m.handleMatchEnd(session, newState, nil, matchEndPayload)
 	}
 }
 

@@ -3,10 +3,15 @@ import React from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useAuthStore } from "@/shared/stores/authStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 import type { GameState } from "@/shared/types/gameTypes";
 
 import { useReconnectionRedirect } from "./useReconnectionRedirect";
+
+vi.mock("@/shared/api/auth", () => ({
+  logout: vi.fn(),
+}));
 
 const mockNavigate = vi.fn();
 let currentPathname = "/lobby";
@@ -141,5 +146,23 @@ describe("useReconnectionRedirect", () => {
     renderHook(() => useReconnectionRedirect(), { wrapper });
 
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  // Story 8.5-1 AC6 (D66): regression coverage. Before the fix, a 401 on a
+  // finished match → refresh-fail → authStore.logout left gameStore.gameState
+  // populated, and on the next login this hook would redirect the freshly
+  // re-logged-in user to the (no-longer-existing) /game/{roomId}. The fix is
+  // store-level: authStore.logout() now wipes gameStore. After logout, this
+  // hook MUST observe a clean store and NOT navigate.
+  it("does not redirect after logout (D66 regression)", () => {
+    useGameStore.setState({ gameState: minimalGameState, roomId: 42 });
+    useAuthStore.setState({ token: "expired", user: null, isLoading: false });
+
+    useAuthStore.getState().logout();
+
+    renderHook(() => useReconnectionRedirect(), { wrapper });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(useGameStore.getState().gameState).toBeNull();
   });
 });

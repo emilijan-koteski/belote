@@ -75,6 +75,7 @@ var (
 	ErrRoomNotWaiting            = NewAppError("ROOM_NOT_WAITING", "this action is only available before the game starts", http.StatusConflict)
 	ErrCannotKickSelf            = NewAppError("CANNOT_KICK_SELF", "the room owner cannot kick themselves", http.StatusBadRequest)
 	ErrSeatNotOccupied           = NewAppError("SEAT_NOT_OCCUPIED", "seat must be occupied to be swapped", http.StatusConflict)
+	ErrGameAlreadyStarted        = NewAppError("GAME_ALREADY_STARTED", "the game has already started", http.StatusConflict)
 
 	// Game domain errors
 	ErrWrongPhase              = NewAppError("WRONG_PHASE", "action not valid in current game phase", http.StatusBadRequest)

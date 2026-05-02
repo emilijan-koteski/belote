@@ -36,6 +36,10 @@ func (r *mockRepoForLobby) FindByID(id uint) (*room.Room, error) {
 	return rm, nil
 }
 
+func (r *mockRepoForLobby) FindByIDForUpdate(id uint) (*room.Room, error) {
+	return r.FindByID(id)
+}
+
 func (r *mockRepoForLobby) FindPlayersByRoomID(roomID uint) ([]room.RoomPlayer, error) {
 	return r.players[roomID], nil
 }
@@ -78,6 +82,9 @@ func (r *mockRepoForLobby) UpdatePlayerSeat(_ uint, _ uint, _ int, _ string) err
 func (r *mockRepoForLobby) ClearPlayerSeat(_ uint, _ uint) error                     { return nil }
 func (r *mockRepoForLobby) FindPlayerBySeat(_ uint, _ int) (*room.RoomPlayer, error) { return nil, nil }
 func (r *mockRepoForLobby) FindQuickPlayRoom() (*room.Room, error)                   { return nil, nil }
+func (r *mockRepoForLobby) FindQuickPlayRoomExcluding(_ map[uint]bool) (*room.Room, error) {
+	return nil, nil
+}
 func (r *mockRepoForLobby) UpdateStatus(_ uint, _ string) error                      { return nil }
 
 func setupLobbyTest() (*mockRepoForLobby, *room.LobbyDisconnectHandler) {

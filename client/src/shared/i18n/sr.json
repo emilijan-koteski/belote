@@ -88,6 +88,10 @@
     "chat": {
       "title": "Ćaskanje u sobi",
       "placeholder": "Ćaskaj za stolom\u2026"
+    },
+    "errors": {
+      "gameStartFailed": "Pokretanje partije nije uspelo. Pokušajte ponovo.",
+      "alreadyStarted": "Partija je već započela \u2014 ne možete sada izaći."
     }
   },
   "rules": {

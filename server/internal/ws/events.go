@@ -173,6 +173,14 @@ const ErrorNotRoomOwner = "error:not_room_owner"
 const ErrorPlayerDisconnected = "error:player_disconnected"
 const ErrorSurrenderExhausted = "error:surrender_exhausted"
 
+// ErrorGameStartFailed is broadcast to the four would-be participants of an
+// auto-start that reached a "ready to start" state in the room transaction
+// but whose subsequent gameStarter.StartGame call returned an error. Story
+// 8.5-1 AC2 — instead of stranding the room in a permanent "playing" state
+// with no live session, the room is reverted to "waiting" and clients are
+// told to stay on the room-lobby page rather than navigate to /game/{id}.
+const ErrorGameStartFailed = "error:game_start_failed"
+
 // --- Room events ---
 const SystemRoomCreated = "system:room_created"
 const SystemRoomUpdated = "system:room_updated"

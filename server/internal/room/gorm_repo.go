@@ -83,6 +83,17 @@ func (r *GormRepository) FindByID(id uint) (*Room, error) {
 	return &room, nil
 }
 
+func (r *GormRepository) FindByIDForUpdate(id uint) (*Room, error) {
+	var room Room
+	if err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).First(&room, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &room, nil
+}
+
 func (r *GormRepository) Update(room *Room) error {
 	if err := r.db.Save(room).Error; err != nil {
 		return fmt.Errorf("updating room: %w", err)
@@ -198,11 +209,21 @@ func (r *GormRepository) FindPlayerBySeat(roomID uint, seat int) (*RoomPlayer, e
 }
 
 func (r *GormRepository) FindQuickPlayRoom() (*Room, error) {
+	return r.FindQuickPlayRoomExcluding(nil)
+}
+
+func (r *GormRepository) FindQuickPlayRoomExcluding(excludedRoomIDs map[uint]bool) (*Room, error) {
 	var room Room
-	err := r.db.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
-		Where("is_quick_play = ? AND status = ? AND player_count < 4", true, "waiting").
-		Order("created_at ASC").
-		First(&room).Error
+	q := r.db.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
+		Where("is_quick_play = ? AND status = ? AND player_count < 4", true, "waiting")
+	if len(excludedRoomIDs) > 0 {
+		ids := make([]uint, 0, len(excludedRoomIDs))
+		for id := range excludedRoomIDs {
+			ids = append(ids, id)
+		}
+		q = q.Where("id NOT IN ?", ids)
+	}
+	err := q.Order("created_at ASC").First(&room).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

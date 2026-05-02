@@ -221,6 +221,12 @@ export const ERROR_NOT_ROOM_OWNER = "error:not_room_owner" as const;
 export const ERROR_PLAYER_DISCONNECTED = "error:player_disconnected" as const;
 export const ERROR_SURRENDER_EXHAUSTED = "error:surrender_exhausted" as const;
 
+// Story 8.5-1 AC2: broadcast to the four would-be participants of an auto-start
+// whose gameStarter.StartGame call returned an error. The room is reverted to
+// "waiting" server-side; clients should surface a toast and stay on the
+// room-lobby page rather than navigate to /game/{id}.
+export const ERROR_GAME_START_FAILED = "error:game_start_failed" as const;
+
 export interface GameErrorPayload {
   code: string;
   message: string;

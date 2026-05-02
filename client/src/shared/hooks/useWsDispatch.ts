@@ -34,6 +34,7 @@ import type {
 import {
   EMOTE_IDS,
   ERROR_AUTH_FAILED,
+  ERROR_GAME_START_FAILED,
   ERROR_ILLEGAL_PLAY,
   ERROR_INVALID_ACTION,
   ERROR_NO_ACTIVE_PAUSE,
@@ -451,7 +452,7 @@ const GAME_ERROR_TYPES: Set<string> = new Set([
 ]);
 
 function dispatchErrorEvent(message: WsMessage): void {
-  const payload = message.payload as { code?: string; message?: string };
+  const payload = message.payload as { code?: string; message?: string; roomId?: number };
 
   // Surrender-exhausted has its own dedicated toast (the UI gates already
   // prevent reaching this branch in the happy path; defence in depth).
@@ -460,6 +461,20 @@ function dispatchErrorEvent(message: WsMessage): void {
   if (message.type === ERROR_SURRENDER_EXHAUSTED) {
     useGameStore.getState().setLastError(message.type);
     toast.error(i18n.t("game.surrender.errors.exhausted"));
+    return;
+  }
+
+  // Story 8.5-1 AC2: auto-start failed server-side. Surface a toast so the
+  // four would-be participants know the room reverted to "waiting" rather
+  // than navigating them to a non-existent /game/{roomId}. Defence in depth:
+  // validate payload shape before showing the toast.
+  if (message.type === ERROR_GAME_START_FAILED) {
+    if (typeof payload?.message !== "string" || typeof payload?.roomId !== "number") {
+      console.warn("WS: ignoring malformed error:game_start_failed payload", payload);
+      return;
+    }
+    useGameStore.getState().setLastError(message.type);
+    toast.error(i18n.t("room.errors.gameStartFailed"), { duration: 5000 });
     return;
   }
 
