@@ -43,16 +43,20 @@ describe("CapotAnimation", () => {
     expect(screen.getByTestId("capot-text")).toHaveTextContent("CAPOT!");
   });
 
-  it("renders with red team color for team 0", () => {
+  it("renders with team-a color and data-team='teamA' for team 0", () => {
     render(<CapotAnimation capotTeam={0} onComplete={vi.fn()} />);
 
-    expect(screen.getByTestId("capot-text").className).toContain("text-team-red");
+    const text = screen.getByTestId("capot-text");
+    expect(text.className).toContain("text-team-a");
+    expect(text).toHaveAttribute("data-team", "teamA");
   });
 
-  it("renders with blue team color for team 1", () => {
+  it("renders with team-b color and data-team='teamB' for team 1", () => {
     render(<CapotAnimation capotTeam={1} onComplete={vi.fn()} />);
 
-    expect(screen.getByTestId("capot-text").className).toContain("text-team-blue");
+    const text = screen.getByTestId("capot-text");
+    expect(text.className).toContain("text-team-b");
+    expect(text).toHaveAttribute("data-team", "teamB");
   });
 
   it("calls onComplete after 2500ms", () => {

@@ -15,7 +15,7 @@ so that scoring feels transparent, accurate, and satisfying.
 1. **ScorePanel Display**
    Given a game is in progress,
    When the ScorePanel renders,
-   Then it is fixed to the top-left of the game viewport showing: two rows (Red / Blue) with team color labels, current match scores in Space Grotesk bold (`display-xl` for scores), and current hand trick count,
+   Then it is fixed to the top-left of the game viewport showing: two rows (Team A / Team B) with team color labels, current match scores in Space Grotesk bold (`display-xl` for scores), and current hand trick count,
    And the panel never reflows during play.
 
 2. **ScorePanel Updates on Trick Win**
@@ -52,14 +52,14 @@ so that scoring feels transparent, accurate, and satisfying.
 ## Tasks / Subtasks
 
 - [x] Task 1: Backend — Add `HandResult` to GameState and populate in `scoreHand()` (AC: #3, #4)
-  - [x] 1.1 Add `HandResult` struct to `server/internal/game/state.go` with fields: `RedCardPoints`, `BlueCardPoints`, `RedDeclPoints`, `BlueDeclPoints`, `LastTrickTeam`, `LastTrickBonus`, `Capot`, `CapotTeam`, `FailedContract`, `ContractingTeam`, `RedHandTotal`, `BlueHandTotal`
+  - [x] 1.1 Add `HandResult` struct to `server/internal/game/state.go` with fields: `TeamACardPoints`, `TeamBCardPoints`, `TeamADeclPoints`, `TeamBDeclPoints`, `LastTrickTeam`, `LastTrickBonus`, `Capot`, `CapotTeam`, `FailedContract`, `ContractingTeam`, `TeamAHandTotal`, `TeamBHandTotal`
   - [x] 1.2 Add `LastHandResult *HandResult` field to `GameState` (in the Scoring section, after `WinnerTeam`)
   - [x] 1.3 Modify `scoreHand()` in `scoring.go` to populate `LastHandResult` with the full breakdown BEFORE calling `startNewHand()` — this preserves hand data through the reset
   - [x] 1.4 In `startNewHand()`, set `LastHandResult = nil` is NOT needed — `scoreHand()` sets it fresh each time, and for match_end it persists
   - [x] 1.5 Add `LastHandResult` to TypeScript `GameState` in `gameTypes.ts` and `HandResult` interface
 
 - [x] Task 2: Backend — Enhance `HandScoredPayload` with score breakdown (AC: #3)
-  - [x] 2.1 Update `HandScoredPayload` in `events.go` to include: `redCardPoints`, `blueCardPoints`, `redDeclPoints`, `blueDeclPoints`, `lastTrickTeam`, `lastTrickBonus`, `capot`, `capotTeam`, `failedContract`, `contractingTeam`, `redHandTotal`, `blueHandTotal`, `redMatchScore`, `blueMatchScore`
+  - [x] 2.1 Update `HandScoredPayload` in `events.go` to include: `teamACardPoints`, `teamBCardPoints`, `teamADeclPoints`, `teamBDeclPoints`, `lastTrickTeam`, `lastTrickBonus`, `capot`, `capotTeam`, `failedContract`, `contractingTeam`, `teamAHandTotal`, `teamBHandTotal`, `teamAMatchScore`, `teamBMatchScore`
   - [x] 2.2 Update `broadcastActionResult` in `manager.go` to build `handScored` payload from `newState.LastHandResult` instead of raw `newState.HandPoints` — this fixes the bug where `HandPoints` is `[0, 0]` after `startNewHand()` resets it
   - [x] 2.3 Update `HandScoredPayload` in `wsEvents.ts` to match the new Go struct — SAME COMMIT as events.go
 
@@ -71,7 +71,7 @@ so that scoring feels transparent, accurate, and satisfying.
 
 - [x] Task 4: Backend tests (AC: #3, #4, #5)
   - [x] 4.1 Add scoring tests in `scoring_test.go` (if exists) or through `ApplyAction` in existing test file — verify `LastHandResult` is populated correctly for: normal hand, failed contract, capot, match-end
-  - [x] 4.2 Verify `LastHandResult.RedHandTotal + BlueHandTotal` equals the actual points added to `TeamScores`
+  - [x] 4.2 Verify `LastHandResult.TeamAHandTotal + TeamBHandTotal` equals the actual points added to `TeamScores`
   - [x] 4.3 Verify capot scenario: `LastHandResult.Capot == true`, `CapotTeam` set correctly, bonus is 100 (not 10)
   - [x] 4.4 Verify failed contract: `LastHandResult.FailedContract == true`, contracting team total is 0, opposing team gets all
   - [x] 4.5 Update `manager_test.go` — verify `EVENT_HAND_SCORED` payload contains all new fields
@@ -89,7 +89,7 @@ so that scoring feels transparent, accurate, and satisfying.
 
 - [x] Task 6: Frontend — ScorePanel component (AC: #1, #2)
   - [x] 6.1 Create `ScorePanel.tsx` in `features/game/components/` — fixed top-left panel
-  - [x] 6.2 Props: `redScore: number`, `blueScore: number`, `redTricks: number`, `blueTricks: number`
+  - [x] 6.2 Props: `teamAScore: number`, `teamBScore: number`, `teamATricks: number`, `teamBTricks: number`
   - [x] 6.3 Layout: fixed position `top-4 left-4`, two rows with team color labels, `font-display text-3xl font-bold` for scores
   - [x] 6.4 Counter animation: use CSS transition on score change (300ms) — track previous value in ref, animate from old to new
   - [x] 6.5 Float-up animation: "+10" animates upward with opacity fade on last-trick bonus detection (when `tricksWon` reaches 8 and score changes)
@@ -103,14 +103,14 @@ so that scoring feels transparent, accurate, and satisfying.
   - [x] 7.2 Props: `data: HandScoredPayload`, `onContinue: () => void`
   - [x] 7.3 Layout: full-screen overlay (`fixed inset-0 z-30`), centered card with `bg-surface-elevated` background, `max-w-md`, `p-8` padding
   - [x] 7.4 Content breakdown rows:
-    - Card points: Red vs Blue
-    - Declaration points: Red vs Blue (only if > 0)
+    - Card points: Team A vs Team B
+    - Declaration points: Team A vs Team B (only if > 0)
     - Last-trick bonus: "+10" to winning team (only if not capot)
     - Capot bonus: "+100" to winning team (only if capot)
     - Divider line
     - Failed contract indicator (if `failedContract === true`): "Failed contract — [Team] scores 0, all points to [Other Team]"
-    - Hand totals: Red vs Blue (after adjustment)
-    - Match totals: Red vs Blue (bold, larger)
+    - Hand totals: Team A vs Team B (after adjustment)
+    - Match totals: Team A vs Team B (bold, larger)
   - [x] 7.5 Sequential animation: each row animates in with 200ms stagger delay, numbers use counter animation (300ms)
   - [x] 7.6 "Continue" button: primary style (`bg-accent text-background`), disabled for first 2 seconds, then enabled
   - [x] 7.7 All animations respect `prefers-reduced-motion` — stagger reduces to 0, counters instant
@@ -152,8 +152,8 @@ so that scoring feels transparent, accurate, and satisfying.
 
 - [x] Task 11: i18n keys (AC: all)
   - [x] 11.1 Add keys to `en.json`:
-    - `game.score.red`: "Red"
-    - `game.score.blue`: "Blue"
+    - `game.score.teamA`: "Team A"
+    - `game.score.teamB`: "Team B"
     - `game.score.tricks`: "Tricks"
     - `game.score.lastTrickBonus`: "+10"
     - `game.scoreReveal.title`: "Hand Score"
@@ -172,8 +172,8 @@ so that scoring feels transparent, accurate, and satisfying.
     - `game.matchResult.duration`: "Match Duration"
     - `game.matchResult.returnToLobby`: "Return to Lobby"
   - [x] 11.2 Add corresponding keys to `sr.json`:
-    - `game.score.red`: "Crveni"
-    - `game.score.blue`: "Plavi"
+    - `game.score.teamA`: "Tim A"
+    - `game.score.teamB`: "Tim B"
     - `game.score.tricks`: "Ruke"
     - `game.score.lastTrickBonus`: "+10"
     - `game.scoreReveal.title`: "Rezultat ruke"
@@ -204,7 +204,7 @@ so that scoring feels transparent, accurate, and satisfying.
 - [x] [Review][Patch] P1-HIGH: ScoreReveal stagger animation non-functional — `delay` prop silently dropped in `ScoreRow` [ScoreReveal.tsx:163] — FIXED: wired delay into ScoreRow destructuring + applied as animationDelay style
 - [x] [Review][Patch] P2-HIGH: ScorePanel float-up hardcodes "+10" — wrong for capot/failed-contract; also missing i18n key `game.score.lastTrickBonus` [ScorePanel.tsx:90] — FIXED: bonus now driven by lastTrickBonus/lastTrickTeam props from scoreRevealData; i18n key added
 - [x] [Review][Patch] P3-HIGH: ScorePanel uses `absolute` instead of `fixed` positioning — violates AC1 "fixed to the top-left" [ScorePanel.tsx:44] — FIXED: changed to `fixed`
-- [x] [Review][Patch] P4-HIGH: manager_test.go missing tests for new EVENT_HAND_SCORED payload fields and EVENT_MATCH_END matchDurationSec (Tasks 4.5, 4.6) — DEFERRED: Manager uses concrete *ws.Hub (no interface), broadcast payloads can't be captured without refactoring. LastHandResult fields verified through 6 scoring_test.go tests; payload construction is mechanical mapping.
+- [x] [Review][Patch] P4-HIGH: manager_test.go missing tests for new EVENT_HAND_SCORED payload fields and EVENT_MATCH_END matchDurationSec (Tasks 4.5, 4.6) — DEFERRED: Manager uses concrete \*ws.Hub (no interface), broadcast payloads can't be captured without refactoring. LastHandResult fields verified through 6 scoring_test.go tests; payload construction is mechanical mapping.
 - [x] [Review][Patch] P5-MED: useWsDispatch.test.ts missing test for event:hand_scored → setScoreRevealData — FIXED: added test
 - [x] [Review][Patch] P6-MED: ScoreReveal.test.tsx missing prefers-reduced-motion test case — FIXED: added test for 500ms Continue delay with reduced motion
 - [x] [Review][Patch] P7-MED: ScorePanel.test.tsx missing counter-animation-fires test case — FIXED: added transition class assertion + bonus display test
@@ -219,7 +219,7 @@ so that scoring feels transparent, accurate, and satisfying.
 
 ### Critical Bug Fix: HandScoredPayload Has Wrong HandPoints
 
-**MUST FIX**: The current `broadcastActionResult` in `manager.go` (lines 338-346) sends `newState.HandPoints` in the `EVENT_HAND_SCORED` payload. When a new hand starts (non-match-end), `startNewHand()` resets `HandPoints` to `[0, 0]` BEFORE the broadcast reads them. This means clients receive `redHandPoints: 0, blueHandPoints: 0` — completely wrong.
+**MUST FIX**: The current `broadcastActionResult` in `manager.go` (lines 338-346) sends `newState.HandPoints` in the `EVENT_HAND_SCORED` payload. When a new hand starts (non-match-end), `startNewHand()` resets `HandPoints` to `[0, 0]` BEFORE the broadcast reads them. This means clients receive `teamAHandPoints: 0, teamBHandPoints: 0` — completely wrong.
 
 **Fix**: Add `LastHandResult *HandResult` to `GameState`. Populate it in `scoreHand()` right before `startNewHand()` is called (or before `PhaseMatchEnd` is set). The `broadcastActionResult` then reads `newState.LastHandResult` for the hand_scored payload instead of raw `HandPoints`.
 
@@ -248,6 +248,7 @@ State: "match_result" → MatchResult overlay (if match ended)
 ```
 
 For non-capot hands:
+
 ```
 State: "normal"
   ↓ on EVENT_HAND_SCORED with capot=false
@@ -257,6 +258,7 @@ State: "normal" → DealAnimation plays for new hand
 ```
 
 For match-ending hands:
+
 ```
 State: "score_reveal"
   ↓ User clicks Continue
@@ -280,23 +282,24 @@ So there's no conflict: DealAnimation doesn't fire between hands. The reshuffle 
 // Populated by scoreHand() and persists through startNewHand() so the
 // session manager can broadcast the breakdown to clients.
 type HandResult struct {
-    RedCardPoints   int  `json:"redCardPoints"`   // Trick-taking card points (Red)
-    BlueCardPoints  int  `json:"blueCardPoints"`  // Trick-taking card points (Blue)
-    RedDeclPoints   int  `json:"redDeclPoints"`   // Declaration points (Red)
-    BlueDeclPoints  int  `json:"blueDeclPoints"`  // Declaration points (Blue)
-    LastTrickTeam   int  `json:"lastTrickTeam"`   // Team that won last trick
-    LastTrickBonus  int  `json:"lastTrickBonus"`  // 10 (normal) or 0 (capot replaces it)
-    Capot           bool `json:"capot"`           // One team took all 8 tricks
-    CapotTeam       *int `json:"capotTeam"`       // Team with capot (nil if no capot)
-    CapotBonus      int  `json:"capotBonus"`      // 100 or 0
-    FailedContract  bool `json:"failedContract"`  // Contracting team lost
-    ContractingTeam int  `json:"contractingTeam"` // Team that called trump
-    RedHandTotal    int  `json:"redHandTotal"`    // Points actually awarded to Red
-    BlueHandTotal   int  `json:"blueHandTotal"`   // Points actually awarded to Blue
+    TeamACardPoints int  `json:"teamACardPoints"`  // Trick-taking card points (Team A)
+    TeamBCardPoints int  `json:"teamBCardPoints"`  // Trick-taking card points (Team B)
+    TeamADeclPoints int  `json:"teamADeclPoints"`  // Declaration points (Team A)
+    TeamBDeclPoints int  `json:"teamBDeclPoints"`  // Declaration points (Team B)
+    LastTrickTeam   int  `json:"lastTrickTeam"`    // Team that won last trick
+    LastTrickBonus  int  `json:"lastTrickBonus"`   // 10 (normal) or 0 (capot replaces it)
+    Capot           bool `json:"capot"`            // One team took all 8 tricks
+    CapotTeam       *int `json:"capotTeam"`        // Team with capot (nil if no capot)
+    CapotBonus      int  `json:"capotBonus"`       // 100 or 0
+    FailedContract  bool `json:"failedContract"`   // Contracting team lost
+    ContractingTeam int  `json:"contractingTeam"`  // Team that called trump
+    TeamAHandTotal  int  `json:"teamAHandTotal"`   // Points actually awarded to Team A
+    TeamBHandTotal  int  `json:"teamBHandTotal"`   // Points actually awarded to Team B
 }
 ```
 
 Add to `GameState`, in the Scoring section after `WinnerTeam`:
+
 ```go
 LastHandResult *HandResult `json:"lastHandResult"`
 ```
@@ -310,24 +313,26 @@ After step 5 (award points), before step 6 (check match-end):
 ```go
 // Populate hand result for broadcast
 result := &HandResult{
-    RedCardPoints:   state.HandPoints[TeamRed],  // BEFORE bonus was part of HandPoints... 
+    TeamACardPoints: state.HandPoints[TeamA],  // BEFORE bonus was part of HandPoints...
     // Actually need to capture BEFORE bonus is added
 }
 ```
 
-**IMPORTANT**: The `scoreHand()` function currently adds the last-trick/capot bonus to `HandPoints` in step 2 (lines 12-18). The `HandResult.RedCardPoints`/`BlueCardPoints` should be the card points BEFORE the bonus. To capture this correctly:
+**IMPORTANT**: The `scoreHand()` function currently adds the last-trick/capot bonus to `HandPoints` in step 2 (lines 12-18). The `HandResult.TeamACardPoints`/`TeamBCardPoints` should be the card points BEFORE the bonus. To capture this correctly:
+
 1. Save raw `HandPoints` before step 2 (bonus application)
 2. Apply bonus (existing code)
 3. Populate `HandResult` with raw card points + separate bonus fields
 
 Here's the approach:
+
 ```go
 func scoreHand(state *GameState) {
     lastTrickTeam := TeamForSeat(*state.TrickWinnerSeat)
 
     // Capture raw card points BEFORE bonus
-    rawRedCardPoints := state.HandPoints[TeamRed]
-    rawBlueCardPoints := state.HandPoints[TeamBlue]
+    rawTeamACardPoints := state.HandPoints[TeamA]
+    rawTeamBCardPoints := state.HandPoints[TeamB]
 
     // Step 2: Apply Capot or last-trick bonus (existing code)
     isCapot := false
@@ -335,16 +340,16 @@ func scoreHand(state *GameState) {
     capotBonus := 0
     lastTrickBonus := 0
 
-    if state.TricksWon[TeamRed] == 8 {
-        state.HandPoints[TeamRed] += 100
+    if state.TricksWon[TeamA] == 8 {
+        state.HandPoints[TeamA] += 100
         isCapot = true
-        t := TeamRed
+        t := TeamA
         capotTeam = &t
         capotBonus = 100
-    } else if state.TricksWon[TeamBlue] == 8 {
-        state.HandPoints[TeamBlue] += 100
+    } else if state.TricksWon[TeamB] == 8 {
+        state.HandPoints[TeamB] += 100
         isCapot = true
-        t := TeamBlue
+        t := TeamB
         capotTeam = &t
         capotBonus = 100
     } else {
@@ -356,10 +361,10 @@ func scoreHand(state *GameState) {
 
     // Populate LastHandResult
     state.LastHandResult = &HandResult{
-        RedCardPoints:   rawRedCardPoints,
-        BlueCardPoints:  rawBlueCardPoints,
-        RedDeclPoints:   state.DeclarationPoints[TeamRed],
-        BlueDeclPoints:  state.DeclarationPoints[TeamBlue],
+        TeamACardPoints: rawTeamACardPoints,
+        TeamBCardPoints: rawTeamBCardPoints,
+        TeamADeclPoints: state.DeclarationPoints[TeamA],
+        TeamBDeclPoints: state.DeclarationPoints[TeamB],
         LastTrickTeam:   lastTrickTeam,
         LastTrickBonus:  lastTrickBonus,
         Capot:           isCapot,
@@ -367,34 +372,37 @@ func scoreHand(state *GameState) {
         CapotBonus:      capotBonus,
         FailedContract:  contractFailed, // from step 5
         ContractingTeam: contractingTeam,
-        RedHandTotal:    actualRedAwarded,  // points actually added to TeamScores[Red]
-        BlueHandTotal:   actualBlueAwarded, // points actually added to TeamScores[Blue]
+        TeamAHandTotal:  actualAAwarded, // points actually added to TeamScores[TeamA]
+        TeamBHandTotal:  actualBAwarded, // points actually added to TeamScores[TeamB]
     }
 }
 ```
 
-The `contractFailed`, `contractingTeam`, `actualRedAwarded`, `actualBlueAwarded` values come from the failed-contract logic in step 5. Refactor the step 5 block to capture these intermediate values.
+The `contractFailed`, `contractingTeam`, `actualAAwarded`, `actualBAwarded` values come from the failed-contract logic in step 5. Refactor the step 5 block to capture these intermediate values.
 
 #### `broadcastActionResult` Changes (`server/internal/session/manager.go`)
 
 **Signature change**: Add `startedAt time.Time` parameter:
+
 ```go
 func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *game.GameState, action game.Action, autoPlayed bool, startedAt time.Time)
 ```
 
 Update all call sites:
+
 - `HandleAction` (line 169): pass `session.startedAt`
 - `handleTimerExpiry` (wherever timer auto-play calls it): pass `session.startedAt`
 
 **Hand scored payload** — replace lines 338-346:
+
 ```go
 if oldState.HandNumber < newState.HandNumber || newState.Phase == game.PhaseMatchEnd {
     if newState.LastHandResult != nil {
         handScored := map[string]interface{}{
-            "redCardPoints":   newState.LastHandResult.RedCardPoints,
-            "blueCardPoints":  newState.LastHandResult.BlueCardPoints,
-            "redDeclPoints":   newState.LastHandResult.RedDeclPoints,
-            "blueDeclPoints":  newState.LastHandResult.BlueDeclPoints,
+            "teamACardPoints": newState.LastHandResult.TeamACardPoints,
+            "teamBCardPoints": newState.LastHandResult.TeamBCardPoints,
+            "teamADeclPoints": newState.LastHandResult.TeamADeclPoints,
+            "teamBDeclPoints": newState.LastHandResult.TeamBDeclPoints,
             "lastTrickTeam":   newState.LastHandResult.LastTrickTeam,
             "lastTrickBonus":  newState.LastHandResult.LastTrickBonus,
             "capot":           newState.LastHandResult.Capot,
@@ -402,10 +410,10 @@ if oldState.HandNumber < newState.HandNumber || newState.Phase == game.PhaseMatc
             "capotBonus":      newState.LastHandResult.CapotBonus,
             "failedContract":  newState.LastHandResult.FailedContract,
             "contractingTeam": newState.LastHandResult.ContractingTeam,
-            "redHandTotal":    newState.LastHandResult.RedHandTotal,
-            "blueHandTotal":   newState.LastHandResult.BlueHandTotal,
-            "redMatchScore":   newState.TeamScores[game.TeamRed],
-            "blueMatchScore":  newState.TeamScores[game.TeamBlue],
+            "teamAHandTotal":  newState.LastHandResult.TeamAHandTotal,
+            "teamBHandTotal":  newState.LastHandResult.TeamBHandTotal,
+            "teamAMatchScore": newState.TeamScores[game.TeamA],
+            "teamBMatchScore": newState.TeamScores[game.TeamB],
         }
         m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventHandScored, handScored))
     }
@@ -413,12 +421,13 @@ if oldState.HandNumber < newState.HandNumber || newState.Phase == game.PhaseMatc
 ```
 
 **Match end payload** — update lines 350-357:
+
 ```go
 if newState.Phase == game.PhaseMatchEnd {
     matchEnd := map[string]interface{}{
         "winnerTeam":       safeDerefInt(newState.WinnerTeam),
-        "redFinalScore":    newState.TeamScores[game.TeamRed],
-        "blueFinalScore":   newState.TeamScores[game.TeamBlue],
+        "teamAFinalScore":  newState.TeamScores[game.TeamA],
+        "teamBFinalScore":  newState.TeamScores[game.TeamB],
         "matchDurationSec": int(time.Since(startedAt).Seconds()),
     }
     m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchEnd, matchEnd))
@@ -431,21 +440,21 @@ if newState.Phase == game.PhaseMatchEnd {
 
 ```typescript
 export interface HandScoredPayload {
-  redCardPoints: number;
-  blueCardPoints: number;
-  redDeclPoints: number;
-  blueDeclPoints: number;
-  lastTrickTeam: number;     // 0=Red, 1=Blue
-  lastTrickBonus: number;    // 10 or 0
+  teamACardPoints: number;
+  teamBCardPoints: number;
+  teamADeclPoints: number;
+  teamBDeclPoints: number;
+  lastTrickTeam: number; // 0=Team A, 1=Team B
+  lastTrickBonus: number; // 10 or 0
   capot: boolean;
-  capotTeam: number | null;  // 0=Red, 1=Blue, null if no capot
-  capotBonus: number;        // 100 or 0
+  capotTeam: number | null; // 0=Team A, 1=Team B, null if no capot
+  capotBonus: number; // 100 or 0
   failedContract: boolean;
-  contractingTeam: number;   // 0=Red, 1=Blue
-  redHandTotal: number;      // Points actually awarded
-  blueHandTotal: number;
-  redMatchScore: number;     // Cumulative
-  blueMatchScore: number;
+  contractingTeam: number; // 0=Team A, 1=Team B
+  teamAHandTotal: number; // Points actually awarded
+  teamBHandTotal: number;
+  teamAMatchScore: number; // Cumulative
+  teamBMatchScore: number;
 }
 ```
 
@@ -454,8 +463,8 @@ export interface HandScoredPayload {
 ```typescript
 export interface MatchEndPayload {
   winnerTeam: number;
-  redFinalScore: number;
-  blueFinalScore: number;
+  teamAFinalScore: number;
+  teamBFinalScore: number;
   matchDurationSec: number;
 }
 ```
@@ -476,30 +485,30 @@ setMatchEndData: (data: MatchEndPayload | null) => void;
 
 ```typescript
 if (type === EVENT_HAND_SCORED) {
-    const payload = message.payload as HandScoredPayload;
-    const current = store.gameState;
-    if (current) {
-      store.setGameState({
-        ...current,
-        teamScores: [payload.redMatchScore, payload.blueMatchScore],
-      });
-    }
-    store.setScoreRevealData(payload); // NEW — triggers ScoreReveal overlay
-    return;
+  const payload = message.payload as HandScoredPayload;
+  const current = store.gameState;
+  if (current) {
+    store.setGameState({
+      ...current,
+      teamScores: [payload.teamAMatchScore, payload.teamBMatchScore],
+    });
+  }
+  store.setScoreRevealData(payload); // NEW — triggers ScoreReveal overlay
+  return;
 }
 
 if (type === EVENT_MATCH_END) {
-    const payload = message.payload as MatchEndPayload;
-    const current = store.gameState;
-    if (current) {
-      store.setGameState({
-        ...current,
-        phase: "match_end",
-        teamScores: [payload.redFinalScore, payload.blueFinalScore],
-      });
-    }
-    store.setMatchEndData(payload); // NEW — triggers MatchResult overlay
-    return;
+  const payload = message.payload as MatchEndPayload;
+  const current = store.gameState;
+  if (current) {
+    store.setGameState({
+      ...current,
+      phase: "match_end",
+      teamScores: [payload.teamAFinalScore, payload.teamBFinalScore],
+    });
+  }
+  store.setMatchEndData(payload); // NEW — triggers MatchResult overlay
+  return;
 }
 ```
 
@@ -507,13 +516,18 @@ if (type === EVENT_MATCH_END) {
 
 ```tsx
 // ScorePanel.tsx — fixed top-left HUD element
-export function ScorePanel({ redScore, blueScore, redTricks, blueTricks }: ScorePanelProps) {
+export function ScorePanel({
+  teamAScore,
+  teamBScore,
+  teamATricks,
+  teamBTricks,
+}: ScorePanelProps) {
   // Track previous scores for counter animation
-  const prevRedRef = useRef(redScore);
-  const prevBlueRef = useRef(blueScore);
+  const prevARef = useRef(teamAScore);
+  const prevBRef = useRef(teamBScore);
   // ... counter animation logic with 300ms CSS transition
   // Use `font-display text-3xl font-bold` for scores
-  // Use `text-team-red` and `text-team-blue` tokens
+  // Use `text-team-a` and `text-team-b` tokens
   // Use `aria-live="polite"` for accessibility
 }
 ```
@@ -532,22 +546,35 @@ Actually — the "+10" float-up is simpler if triggered from the `ScoreReveal` d
 // Full-screen overlay with team-color glow
 <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 pointer-events-none">
   <div className="motion-safe:animate-capot-scale">
-    <h1 className={`font-display text-7xl font-bold ${
-      capotTeam === 0 ? 'text-team-red' : 'text-team-blue'
-    } drop-shadow-[0_0_40px_currentColor]`}>
-      {t('game.capot.title')}
+    <h1
+      className={`font-display text-7xl font-bold ${
+        capotTeam === 0 ? "text-team-a" : "text-team-b"
+      } drop-shadow-[0_0_40px_currentColor]`}
+    >
+      {t("game.capot.title")}
     </h1>
   </div>
 </div>
 ```
 
 **Tailwind keyframe extension** — add to `index.css` `@theme` section:
+
 ```css
 @keyframes capot-scale {
-  0% { transform: scale(0.3); opacity: 0; }
-  40% { transform: scale(1.3); opacity: 1; }
-  70% { transform: scale(0.95); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 ```
 
@@ -560,10 +587,12 @@ For `prefers-reduced-motion`: skip animation, show text immediately for 500ms, t
 **BOTH files updated in the same commit — no exceptions.**
 
 `wsEvents.ts`:
+
 - `HandScoredPayload`: Replace existing interface with expanded version (13 fields → replaces 6)
 - `MatchEndPayload`: Add `matchDurationSec: number`
 
 `events.go`:
+
 - Add `HandScoredPayload` struct (if it doesn't exist as a struct — currently the payload is built inline as `map[string]interface{}` in `broadcastActionResult`)
 - Add `MatchEndPayload` struct (same)
 - Note: The event constants already exist: `EventHandScored`, `EventMatchEnd`
@@ -588,7 +617,7 @@ See Task 11 for complete list. Follow existing key pattern: `game.{component}.{e
 **Frontend (Vitest):**
 
 - `ScorePanel.test.tsx`:
-  - Renders Red and Blue scores with correct team colors
+  - Renders Team A and Team B scores with correct team colors
   - Shows trick counts
   - `aria-live="polite"` present
 - `ScoreReveal.test.tsx`:
@@ -711,19 +740,19 @@ All recent work follows the `feat(game):` commit scope. Commit for this story sh
 
 ### Design Tokens Reference
 
-| Token | Value | Usage in this story |
-|-------|-------|---------------------|
-| `background` | `#0a0a0f` | ScoreReveal/MatchResult backdrop |
-| `surface-elevated` | `#1c1c26` | ScoreReveal card, MatchResult card |
-| `text-primary` | `#f0f0f8` | Score numbers, labels |
-| `text-secondary` | `#8888a0` | Trick counts, sub-labels |
-| `team-red` | `#ff4d4d` | Red team scores, labels |
-| `team-blue` | `#4d9fff` | Blue team scores, labels |
-| `accent` | `#00e5a0` | Continue button, highlights |
-| `success` | `#22c55e` | Positive outcomes |
-| `warning` | `#f59e0b` | Failed contract indicator |
-| `font-display` | Space Grotesk | Score numbers (font-bold) |
-| `font-body` | Inter | Labels, descriptions |
+| Token              | Value         | Usage in this story                |
+| ------------------ | ------------- | ---------------------------------- |
+| `background`       | `#0a0a0f`     | ScoreReveal/MatchResult backdrop   |
+| `surface-elevated` | `#1c1c26`     | ScoreReveal card, MatchResult card |
+| `text-primary`     | `#f0f0f8`     | Score numbers, labels              |
+| `text-secondary`   | `#8888a0`     | Trick counts, sub-labels           |
+| `team-a`           | `#ff4d4d`     | Team A scores, labels              |
+| `team-b`           | `#4d9fff`     | Team B scores, labels              |
+| `accent`           | `#00e5a0`     | Continue button, highlights        |
+| `success`          | `#22c55e`     | Positive outcomes                  |
+| `warning`          | `#f59e0b`     | Failed contract indicator          |
+| `font-display`     | Space Grotesk | Score numbers (font-bold)          |
+| `font-body`        | Inter         | Labels, descriptions               |
 
 ### References
 

@@ -1119,7 +1119,7 @@ func TestSelectSeat_Success(t *testing.T) {
 			require.NotNil(t, p.Seat)
 			assert.Equal(t, 0, *p.Seat)
 			require.NotNil(t, p.Team)
-			assert.Equal(t, "red", *p.Team)
+			assert.Equal(t, "teamA", *p.Team)
 		}
 	}
 }
@@ -1129,10 +1129,10 @@ func TestSelectSeat_TeamDerivation(t *testing.T) {
 		seat int
 		team string
 	}{
-		{0, "red"},
-		{1, "blue"},
-		{2, "red"},
-		{3, "blue"},
+		{0, "teamA"},
+		{1, "teamB"},
+		{2, "teamA"},
+		{3, "teamB"},
 	}
 
 	for _, tc := range tests {
@@ -1165,7 +1165,7 @@ func TestSelectSeat_Switching(t *testing.T) {
 	for _, p := range repo.players {
 		if p.UserID == 10 {
 			p.Seat = intPtr(0)
-			p.Team = strPtr("red")
+			p.Team = strPtr("teamA")
 		}
 	}
 
@@ -1178,7 +1178,7 @@ func TestSelectSeat_Switching(t *testing.T) {
 			require.NotNil(t, p.Seat)
 			assert.Equal(t, 3, *p.Seat)
 			require.NotNil(t, p.Team)
-			assert.Equal(t, "blue", *p.Team)
+			assert.Equal(t, "teamB", *p.Team)
 		}
 	}
 }
@@ -1192,7 +1192,7 @@ func TestSelectSeat_Taken(t *testing.T) {
 	for _, p := range repo.players {
 		if p.UserID == 1 {
 			p.Seat = intPtr(0)
-			p.Team = strPtr("red")
+			p.Team = strPtr("teamA")
 		}
 	}
 
@@ -1290,7 +1290,7 @@ func TestSelectSeat_OwnCurrentSeat(t *testing.T) {
 	for _, p := range repo.players {
 		if p.UserID == 10 {
 			p.Seat = intPtr(2)
-			p.Team = strPtr("red")
+			p.Team = strPtr("teamA")
 		}
 	}
 
@@ -1334,7 +1334,7 @@ func TestStartGame_Success(t *testing.T) {
 	seedRoomWithPlayers(repo, "Start Test", 1, 1, 2, 3, 4)
 	// Seat all 4 players
 	seats := []int{0, 1, 2, 3}
-	teams := []string{"red", "blue", "red", "blue"}
+	teams := []string{"teamA", "teamB", "teamA", "teamB"}
 	for i, p := range repo.players {
 		p.Seat = intPtr(seats[i])
 		p.Team = strPtr(teams[i])
@@ -1357,7 +1357,7 @@ func TestStartGame_NotOwner(t *testing.T) {
 	seedRoomWithPlayers(repo, "Not Owner", 1, 1, 10, 3, 4)
 	for i, p := range repo.players {
 		p.Seat = intPtr(i)
-		teams := []string{"red", "blue", "red", "blue"}
+		teams := []string{"teamA", "teamB", "teamA", "teamB"}
 		p.Team = strPtr(teams[i])
 	}
 
@@ -1377,9 +1377,9 @@ func TestStartGame_NotAllSeated(t *testing.T) {
 	seedRoomWithPlayers(repo, "Not All Seated", 1, 1, 2, 3, 4)
 	// Only seat 2 out of 4
 	repo.players[0].Seat = intPtr(0)
-	repo.players[0].Team = strPtr("red")
+	repo.players[0].Team = strPtr("teamA")
 	repo.players[1].Seat = intPtr(1)
-	repo.players[1].Team = strPtr("blue")
+	repo.players[1].Team = strPtr("teamB")
 
 	rec := doStartGame(e, "1", token)
 
@@ -1480,7 +1480,7 @@ func TestQuickPlay_CreatesNewRoom(t *testing.T) {
 	assert.Contains(t, data.Room.Name, "Quick Play ")
 	assert.Len(t, data.Room.Code, 6)
 
-	// Auto-seat: first joiner lands at seat 0 (red).
+	// Auto-seat: first joiner lands at seat 0 (team A).
 	assert.Equal(t, 0, data.Seat)
 	assert.False(t, data.GameStarted)
 
@@ -1488,7 +1488,7 @@ func TestQuickPlay_CreatesNewRoom(t *testing.T) {
 	require.NotNil(t, repo.players[0].Seat)
 	assert.Equal(t, 0, *repo.players[0].Seat)
 	require.NotNil(t, repo.players[0].Team)
-	assert.Equal(t, "red", *repo.players[0].Team)
+	assert.Equal(t, "teamA", *repo.players[0].Team)
 }
 
 func TestQuickPlay_JoinsExistingRoom(t *testing.T) {
@@ -1509,8 +1509,8 @@ func TestQuickPlay_JoinsExistingRoom(t *testing.T) {
 	}
 	_ = repo.Create(existingRoom)
 	seat0 := 0
-	red := "red"
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: existingRoom.ID, UserID: 20, Seat: &seat0, Team: &red})
+	teamA := "teamA"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: existingRoom.ID, UserID: 20, Seat: &seat0, Team: &teamA})
 
 	token := validToken(30)
 	rec := doQuickPlay(e, token)
@@ -1529,11 +1529,11 @@ func TestQuickPlay_JoinsExistingRoom(t *testing.T) {
 
 	assert.Equal(t, existingRoom.ID, data.Room.ID)
 	assert.Equal(t, 2, data.Room.PlayerCount)
-	// Joiner gets the next empty seat (1 → blue) since seat 0 is taken.
+	// Joiner gets the next empty seat (1 → team B) since seat 0 is taken.
 	assert.Equal(t, 1, data.Seat)
 	assert.False(t, data.GameStarted)
 
-	// Verify the joining player record has seat 1 / team blue.
+	// Verify the joining player record has seat 1 / team B.
 	var joinerSeat *int
 	var joinerTeam *string
 	for _, p := range repo.players {
@@ -1545,7 +1545,7 @@ func TestQuickPlay_JoinsExistingRoom(t *testing.T) {
 	require.NotNil(t, joinerSeat)
 	assert.Equal(t, 1, *joinerSeat)
 	require.NotNil(t, joinerTeam)
-	assert.Equal(t, "blue", *joinerTeam)
+	assert.Equal(t, "teamB", *joinerTeam)
 }
 
 func TestQuickPlay_AlreadyInRoom(t *testing.T) {
@@ -1645,9 +1645,9 @@ func TestQuickPlay_FillsFirstEmptySeat(t *testing.T) {
 	_ = repo.Create(qpRoom)
 
 	seat0, seat2 := 0, 2
-	red := "red"
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 400, Seat: &seat0, Team: &red, Username: "P1"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 401, Seat: &seat2, Team: &red, Username: "P3"})
+	teamA := "teamA"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 400, Seat: &seat0, Team: &teamA, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 401, Seat: &seat2, Team: &teamA, Username: "P3"})
 
 	token := validToken(402)
 	rec := doQuickPlay(e, token)
@@ -1679,7 +1679,7 @@ func TestQuickPlay_FillsFirstEmptySeat(t *testing.T) {
 	require.NotNil(t, newJoinerSeat)
 	assert.Equal(t, 1, *newJoinerSeat)
 	require.NotNil(t, newJoinerTeam)
-	assert.Equal(t, "blue", *newJoinerTeam)
+	assert.Equal(t, "teamB", *newJoinerTeam)
 }
 
 func TestQuickPlay_AutoStartsOnFourthJoiner(t *testing.T) {
@@ -1701,10 +1701,10 @@ func TestQuickPlay_AutoStartsOnFourthJoiner(t *testing.T) {
 	_ = repo.Create(qpRoom)
 
 	seat0, seat1, seat2 := 0, 1, 2
-	red, blue := "red", "blue"
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 500, Seat: &seat0, Team: &red, Username: "P1"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 501, Seat: &seat1, Team: &blue, Username: "P2"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 502, Seat: &seat2, Team: &red, Username: "P3"})
+	teamA, teamB := "teamA", "teamB"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 500, Seat: &seat0, Team: &teamA, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 501, Seat: &seat1, Team: &teamB, Username: "P2"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 502, Seat: &seat2, Team: &teamA, Username: "P3"})
 
 	token := validToken(503)
 	rec := doQuickPlay(e, token)
@@ -1759,12 +1759,12 @@ func TestSelectSeat_QuickPlayAutoStart(t *testing.T) {
 	seat0 := 0
 	seat1 := 1
 	seat2 := 2
-	red := "red"
-	blue := "blue"
+	teamA := "teamA"
+	teamB := "teamB"
 
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 100, Seat: &seat0, Team: &red, Username: "P1"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 101, Seat: &seat1, Team: &blue, Username: "P2"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 102, Seat: &seat2, Team: &red, Username: "P3"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 100, Seat: &seat0, Team: &teamA, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 101, Seat: &seat1, Team: &teamB, Username: "P2"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 102, Seat: &seat2, Team: &teamA, Username: "P3"})
 	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 103, Username: "P4"})
 
 	// Player 103 selects seat 3 — this is the 4th seat, should trigger auto-start
@@ -1806,11 +1806,11 @@ func TestSelectSeat_QuickPlayNoAutoStartWith3Seats(t *testing.T) {
 
 	seat0 := 0
 	seat1 := 1
-	red := "red"
-	blue := "blue"
+	teamA := "teamA"
+	teamB := "teamB"
 
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 200, Seat: &seat0, Team: &red, Username: "P1"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 201, Seat: &seat1, Team: &blue, Username: "P2"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 200, Seat: &seat0, Team: &teamA, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 201, Seat: &seat1, Team: &teamB, Username: "P2"})
 	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 202, Username: "P3"})
 	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 203, Username: "P4"})
 
@@ -1854,12 +1854,12 @@ func TestSelectSeat_ManualRoomNoAutoStart(t *testing.T) {
 	seat0 := 0
 	seat1 := 1
 	seat2 := 2
-	red := "red"
-	blue := "blue"
+	teamA := "teamA"
+	teamB := "teamB"
 
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: manualRoom.ID, UserID: 300, Seat: &seat0, Team: &red, Username: "P1"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: manualRoom.ID, UserID: 301, Seat: &seat1, Team: &blue, Username: "P2"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: manualRoom.ID, UserID: 302, Seat: &seat2, Team: &red, Username: "P3"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: manualRoom.ID, UserID: 300, Seat: &seat0, Team: &teamA, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: manualRoom.ID, UserID: 301, Seat: &seat1, Team: &teamB, Username: "P2"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: manualRoom.ID, UserID: 302, Seat: &seat2, Team: &teamA, Username: "P3"})
 	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: manualRoom.ID, UserID: 303, Username: "P4"})
 
 	// Player 303 selects seat 3 — all 4 seated but NOT a Quick Play room
@@ -2006,7 +2006,7 @@ func TestSelectSeat_BroadcastsSeatUpdated(t *testing.T) {
 	assert.Equal(t, float64(2), seatVal)
 	var team string
 	require.NoError(t, json.Unmarshal(payload["team"], &team))
-	assert.Equal(t, "red", team)
+	assert.Equal(t, "teamA", team)
 }
 
 func TestStartGame_BroadcastsGameStarted(t *testing.T) {
@@ -2019,12 +2019,12 @@ func TestStartGame_BroadcastsGameStarted(t *testing.T) {
 	seat1 := 1
 	seat2 := 2
 	seat3 := 3
-	red := "red"
-	blue := "blue"
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 100, Seat: &seat0, Team: &red, Username: "P1"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 200, Seat: &seat1, Team: &blue, Username: "P2"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 300, Seat: &seat2, Team: &red, Username: "P3"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 400, Seat: &seat3, Team: &blue, Username: "P4"})
+	teamA := "teamA"
+	teamB := "teamB"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 100, Seat: &seat0, Team: &teamA, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 200, Seat: &seat1, Team: &teamB, Username: "P2"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 300, Seat: &seat2, Team: &teamA, Username: "P3"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: testRoom.ID, UserID: 400, Seat: &seat3, Team: &teamB, Username: "P4"})
 
 	token := validToken(100)
 	rec := doStartGame(e, "1", token)
@@ -2063,11 +2063,11 @@ func TestQuickPlayAutoStart_BroadcastsGameStarted(t *testing.T) {
 	seat0 := 0
 	seat1 := 1
 	seat2 := 2
-	red := "red"
-	blue := "blue"
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 100, Seat: &seat0, Team: &red, Username: "P1"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 200, Seat: &seat1, Team: &blue, Username: "P2"})
-	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 300, Seat: &seat2, Team: &red, Username: "P3"})
+	teamA := "teamA"
+	teamB := "teamB"
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 100, Seat: &seat0, Team: &teamA, Username: "P1"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 200, Seat: &seat1, Team: &teamB, Username: "P2"})
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 300, Seat: &seat2, Team: &teamA, Username: "P3"})
 	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: qpRoom.ID, UserID: 400, Username: "P4"})
 
 	// Player 400 selects seat 3 — all 4 seated, Quick Play auto-start should trigger
@@ -2360,13 +2360,13 @@ func doSwapSeats(e *echo.Echo, id string, body string, token string) *httptest.R
 }
 
 // seedSeatedRoom seeds a room with the owner at seat 0 and three other
-// players at seats 1, 2, 3 (red/blue/red/blue).
+// players at seats 1, 2, 3 (team A/team B/team A/team B).
 func seedSeatedRoom(t *testing.T, repo *mockRoomRepo) *room.Room {
 	t.Helper()
 	r := &room.Room{Name: "Swap Test", OwnerID: 100, Status: "waiting", PlayerCount: 4}
 	require.NoError(t, repo.Create(r))
 	seats := []int{0, 1, 2, 3}
-	teams := []string{"red", "blue", "red", "blue"}
+	teams := []string{"teamA", "teamB", "teamA", "teamB"}
 	users := []uint{100, 200, 300, 400}
 	names := []string{"Owner", "P2", "P3", "P4"}
 	for i, uid := range users {
@@ -2391,7 +2391,7 @@ func TestSwapSeats_Success(t *testing.T) {
 	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 1}`, token)
 	require.Equal(t, http.StatusOK, rec.Code)
 
-	// User 100 should now be at seat 1 (blue), user 200 at seat 0 (red)
+	// User 100 should now be at seat 1 (team B), user 200 at seat 0 (team A)
 	players, _ := repo.FindPlayersByRoomID(r.ID)
 	for _, p := range players {
 		switch p.UserID {
@@ -2399,12 +2399,12 @@ func TestSwapSeats_Success(t *testing.T) {
 			require.NotNil(t, p.Seat)
 			assert.Equal(t, 1, *p.Seat)
 			require.NotNil(t, p.Team)
-			assert.Equal(t, "blue", *p.Team)
+			assert.Equal(t, "teamB", *p.Team)
 		case 200:
 			require.NotNil(t, p.Seat)
 			assert.Equal(t, 0, *p.Seat)
 			require.NotNil(t, p.Team)
-			assert.Equal(t, "red", *p.Team)
+			assert.Equal(t, "teamA", *p.Team)
 		}
 	}
 
@@ -2454,7 +2454,7 @@ func TestSwapSeats_CrossTeamRecomputesTeam(t *testing.T) {
 	seedSeatedRoom(t, repo)
 
 	token := validToken(100)
-	// seat 0 (red) ↔ seat 3 (blue)
+	// seat 0 (team A) ↔ seat 3 (team B)
 	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 3}`, token)
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -2464,11 +2464,11 @@ func TestSwapSeats_CrossTeamRecomputesTeam(t *testing.T) {
 		case 100:
 			require.NotNil(t, p.Seat)
 			assert.Equal(t, 3, *p.Seat)
-			assert.Equal(t, "blue", *p.Team)
+			assert.Equal(t, "teamB", *p.Team)
 		case 400:
 			require.NotNil(t, p.Seat)
 			assert.Equal(t, 0, *p.Seat)
-			assert.Equal(t, "red", *p.Team)
+			assert.Equal(t, "teamA", *p.Team)
 		}
 	}
 }
@@ -2535,8 +2535,8 @@ func TestSwapSeats_SeatNotOccupied(t *testing.T) {
 	r := &room.Room{Name: "Swap Empty", OwnerID: 100, Status: "waiting", PlayerCount: 2}
 	require.NoError(t, repo.Create(r))
 	seat0 := 0
-	red := "red"
-	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner", Seat: &seat0, Team: &red}))
+	teamA := "teamA"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner", Seat: &seat0, Team: &teamA}))
 	// Second player not yet seated
 	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
 

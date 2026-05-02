@@ -212,40 +212,40 @@ func TestDeclarationResolution(t *testing.T) {
 		// The simplest way: manually check the resolution through the fixture.
 		// Since resolveDeclarations is unexported, we test through the full flow instead.
 
-		// Blue (seat 1) has 50pts vs Red (seat 0) has 20pts → Blue wins
+		// Team B (seat 1) has 50pts vs team A (seat 0) has 20pts → team B wins
 		assert.Equal(t, 50, decls[1].Value)
 		assert.Equal(t, 20, decls[0].Value)
-		// Blue team declaration should win because 50 > 20
+		// Team B declaration should win because 50 > 20
 	})
 
 	t.Run("only winning team declarations scored", func(t *testing.T) {
-		// Red team total would be 40 (two tierces), Blue team total is 50 (quarte).
-		// Blue's best (50) beats Red's best (20), so Blue wins all 50 and Red gets 0.
+		// Team A total would be 40 (two tierces), team B total is 50 (quarte).
+		// Team B's best (50) beats team A's best (20), so team B wins all 50 and team A gets 0.
 		decls := []game.Declaration{
-			{Type: game.DeclarationSequence, Cards: makeCards("7S", "8S", "9S"), PlayerSeat: 0, Value: 20},       // Red
-			{Type: game.DeclarationSequence, Cards: makeCards("7C", "8C", "9C"), PlayerSeat: 2, Value: 20},       // Red (teammate)
-			{Type: game.DeclarationSequence, Cards: makeCards("JD", "QD", "KD", "AD"), PlayerSeat: 1, Value: 50}, // Blue
+			{Type: game.DeclarationSequence, Cards: makeCards("7S", "8S", "9S"), PlayerSeat: 0, Value: 20},       // Team A
+			{Type: game.DeclarationSequence, Cards: makeCards("7C", "8C", "9C"), PlayerSeat: 2, Value: 20},       // Team A (teammate)
+			{Type: game.DeclarationSequence, Cards: makeCards("JD", "QD", "KD", "AD"), PlayerSeat: 1, Value: 50}, // Team B
 		}
 		state := completeTrick1(t, decls)
 
-		assert.Equal(t, 0, state.DeclarationPoints[game.TeamRed], "Red gets 0 — best meld lost")
-		assert.Equal(t, 50, state.DeclarationPoints[game.TeamBlue], "Blue gets 50 — sum of winning team's melds")
-		assert.Empty(t, state.Players[0].Declarations, "Red seat 0 declarations cleared")
-		assert.Empty(t, state.Players[2].Declarations, "Red seat 2 declarations cleared")
-		assert.NotEmpty(t, state.Players[1].Declarations, "Blue seat 1 declarations preserved")
+		assert.Equal(t, 0, state.DeclarationPoints[game.TeamA], "Team A gets 0 — best meld lost")
+		assert.Equal(t, 50, state.DeclarationPoints[game.TeamB], "Team B gets 50 — sum of winning team's melds")
+		assert.Empty(t, state.Players[0].Declarations, "Team A seat 0 declarations cleared")
+		assert.Empty(t, state.Players[2].Declarations, "Team A seat 2 declarations cleared")
+		assert.NotEmpty(t, state.Players[1].Declarations, "Team B seat 1 declarations preserved")
 	})
 
 	t.Run("only one team declared — wins with full sum", func(t *testing.T) {
 		decls := []game.Declaration{
-			{Type: game.DeclarationSequence, Cards: makeCards("7S", "8S", "9S"), PlayerSeat: 0, Value: 20},           // Red
-			{Type: game.DeclarationFourOfAKind, Cards: makeCards("TS", "TH", "TD", "TC"), PlayerSeat: 2, Value: 100}, // Red (teammate)
+			{Type: game.DeclarationSequence, Cards: makeCards("7S", "8S", "9S"), PlayerSeat: 0, Value: 20},           // Team A
+			{Type: game.DeclarationFourOfAKind, Cards: makeCards("TS", "TH", "TD", "TC"), PlayerSeat: 2, Value: 100}, // Team A (teammate)
 		}
 		state := completeTrick1(t, decls)
 
-		assert.Equal(t, 120, state.DeclarationPoints[game.TeamRed], "Red wins with full sum 20+100")
-		assert.Equal(t, 0, state.DeclarationPoints[game.TeamBlue], "Blue gets 0 — no declarations")
-		assert.NotEmpty(t, state.Players[0].Declarations, "Red seat 0 declarations preserved")
-		assert.NotEmpty(t, state.Players[2].Declarations, "Red seat 2 declarations preserved")
+		assert.Equal(t, 120, state.DeclarationPoints[game.TeamA], "Team A wins with full sum 20+100")
+		assert.Equal(t, 0, state.DeclarationPoints[game.TeamB], "Team B gets 0 — no declarations")
+		assert.NotEmpty(t, state.Players[0].Declarations, "Team A seat 0 declarations preserved")
+		assert.NotEmpty(t, state.Players[2].Declarations, "Team A seat 2 declarations preserved")
 	})
 
 	// Regression: per Belote rules, declaration comparison uses each team's
@@ -253,17 +253,17 @@ func TestDeclarationResolution(t *testing.T) {
 	// (sum=200) lose to Team B's lone 150-pt Kare-of-9.
 	t.Run("strongest single meld wins over higher team sum (Q+K vs 9)", func(t *testing.T) {
 		decls := []game.Declaration{
-			{Type: game.DeclarationFourOfAKind, Cards: makeCards("QS", "QH", "QD", "QC"), PlayerSeat: 0, Value: 100}, // Red
-			{Type: game.DeclarationFourOfAKind, Cards: makeCards("9S", "9H", "9D", "9C"), PlayerSeat: 1, Value: 150}, // Blue
-			{Type: game.DeclarationFourOfAKind, Cards: makeCards("KS", "KH", "KD", "KC"), PlayerSeat: 2, Value: 100}, // Red (teammate)
+			{Type: game.DeclarationFourOfAKind, Cards: makeCards("QS", "QH", "QD", "QC"), PlayerSeat: 0, Value: 100}, // Team A
+			{Type: game.DeclarationFourOfAKind, Cards: makeCards("9S", "9H", "9D", "9C"), PlayerSeat: 1, Value: 150}, // Team B
+			{Type: game.DeclarationFourOfAKind, Cards: makeCards("KS", "KH", "KD", "KC"), PlayerSeat: 2, Value: 100}, // Team A (teammate)
 		}
 		state := completeTrick1(t, decls)
 
-		assert.Equal(t, 0, state.DeclarationPoints[game.TeamRed], "Red gets 0 even though sum (200) > Blue's 150")
-		assert.Equal(t, 150, state.DeclarationPoints[game.TeamBlue], "Blue wins with its single strongest meld total")
-		assert.Empty(t, state.Players[0].Declarations, "Red seat 0 declarations cleared")
-		assert.Empty(t, state.Players[2].Declarations, "Red seat 2 declarations cleared")
-		assert.NotEmpty(t, state.Players[1].Declarations, "Blue seat 1 declarations preserved")
+		assert.Equal(t, 0, state.DeclarationPoints[game.TeamA], "Team A gets 0 even though sum (200) > team B's 150")
+		assert.Equal(t, 150, state.DeclarationPoints[game.TeamB], "Team B wins with its single strongest meld total")
+		assert.Empty(t, state.Players[0].Declarations, "Team A seat 0 declarations cleared")
+		assert.Empty(t, state.Players[2].Declarations, "Team A seat 2 declarations cleared")
+		assert.NotEmpty(t, state.Players[1].Declarations, "Team B seat 1 declarations preserved")
 	})
 }
 
@@ -391,7 +391,7 @@ func TestAnnounceBelot(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, state2.PendingBelotSeat, "PendingBelotSeat cleared")
 		assert.True(t, state2.BelotAnnounced)
-		assert.Equal(t, 20, state2.HandPoints[game.TeamRed], "20 pts to Red team")
+		assert.Equal(t, 20, state2.HandPoints[game.TeamA], "20 pts to team A")
 		assert.Equal(t, 1, state2.ActivePlayerSeat, "turn advances after Belot")
 	})
 
@@ -413,7 +413,7 @@ func TestAnnounceBelot(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, state2.PendingBelotSeat)
 		assert.False(t, state2.BelotAnnounced, "Belot not announced")
-		assert.Equal(t, 0, state2.HandPoints[game.TeamRed], "no points awarded")
+		assert.Equal(t, 0, state2.HandPoints[game.TeamA], "no points awarded")
 	})
 
 	t.Run("play_card while pending Belot returns ErrActionRequired", func(t *testing.T) {
@@ -532,7 +532,7 @@ func TestFullTrick1WithDeclarations(t *testing.T) {
 		assert.Equal(t, 4, len(state.CurrentTrick))
 		assert.Equal(t, 1, state.TrickNumber)
 
-		// Step 8: Announce Belot (+20 to Red)
+		// Step 8: Announce Belot (+20 to team A)
 		state, err = game.ApplyAction(state, game.Action{
 			Type: game.ActionAnnounceBelot, PlayerSeat: 0,
 		})
@@ -543,14 +543,14 @@ func TestFullTrick1WithDeclarations(t *testing.T) {
 		assert.Equal(t, 2, state.TrickNumber)
 		assert.True(t, state.DeclarationsResolved)
 
-		// Verify Belot: HandPoints[Red] includes 20 Belot + trick card points
-		assert.GreaterOrEqual(t, state.HandPoints[game.TeamRed], 20, "Red HandPoints includes Belot bonus")
+		// Verify Belot: HandPoints[team A] includes 20 Belot + trick card points
+		assert.GreaterOrEqual(t, state.HandPoints[game.TeamA], 20, "Team A HandPoints includes Belot bonus")
 
-		// Verify declarations: Blue's quarte (50) beats Red's tierces (20 each)
-		assert.Equal(t, 50, state.DeclarationPoints[game.TeamBlue])
-		assert.Equal(t, 0, state.DeclarationPoints[game.TeamRed])
+		// Verify declarations: team B's quarte (50) beats team A's tierces (20 each)
+		assert.Equal(t, 50, state.DeclarationPoints[game.TeamB])
+		assert.Equal(t, 0, state.DeclarationPoints[game.TeamA])
 
-		// Red declarations cleared, Blue preserved
+		// Team A declarations cleared, team B preserved
 		assert.Empty(t, state.Players[0].Declarations)
 		assert.Empty(t, state.Players[2].Declarations)
 		assert.NotEmpty(t, state.Players[1].Declarations)
@@ -624,7 +624,7 @@ func TestDeclarationTiebreakers(t *testing.T) {
 
 	t.Run("equal-value sequences resolved by top card", func(t *testing.T) {
 		gs := testfixtures.NewGameFirstTrick(game.SuitHearts)
-		// Seat 0 (Red): tierce Q-K-A spades (top=A)
+		// Seat 0 (team A): tierce Q-K-A spades (top=A)
 		gs.Players[0].Hand = []game.Card{
 			{Rank: game.RankQueen, Suit: game.SuitSpades},
 			{Rank: game.RankKing, Suit: game.SuitSpades},
@@ -635,7 +635,7 @@ func TestDeclarationTiebreakers(t *testing.T) {
 			{Rank: game.Rank7, Suit: game.SuitDiamonds},
 			{Rank: game.Rank8, Suit: game.SuitDiamonds},
 		}
-		// Seat 1 (Blue): tierce 7-8-9 diamonds (top=9)
+		// Seat 1 (team B): tierce 7-8-9 diamonds (top=9)
 		gs.Players[1].Hand = []game.Card{
 			{Rank: game.Rank7, Suit: game.SuitSpades},
 			{Rank: game.Rank8, Suit: game.SuitSpades},
@@ -662,7 +662,7 @@ func TestDeclarationTiebreakers(t *testing.T) {
 		// which beats seat 0's tierce (20pts) by value
 		// Note: seat 1 has 9D-TD-JD-QD-KD-AD = 6 consecutive = 100pts!
 		// Seat 0 has QS-KS-AS = tierce 20pts
-		// Blue (seat 1) wins by value 100 > 20
+		// Team B (seat 1) wins by value 100 > 20
 		assert.True(t, len(state.Players[1].Declarations) > 0)
 	})
 }

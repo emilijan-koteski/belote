@@ -146,9 +146,10 @@ So that I can prepare for a game with other players.
     const SystemPlayerLeft   = "system:player_left"
     ```
   - [x] Add to `client/src/shared/types/wsEvents.ts`:
+
     ```typescript
-    export const SYSTEM_PLAYER_JOINED = 'system:player_joined' as const;
-    export const SYSTEM_PLAYER_LEFT = 'system:player_left' as const;
+    export const SYSTEM_PLAYER_JOINED = "system:player_joined" as const;
+    export const SYSTEM_PLAYER_LEFT = "system:player_left" as const;
 
     export interface PlayerJoinedPayload {
       roomId: number;
@@ -165,10 +166,12 @@ So that I can prepare for a game with other players.
       newOwnerId?: number; // set if ownership transferred
     }
     ```
+
   - [x] **Both files updated in the same commit** — per project convention
 
 - [x] **Task 11: Frontend — Add API client functions** (AC: #1, #3, #4)
   - [x] Add `RoomPlayer` and `RoomDetail` types to `client/src/shared/types/apiTypes.ts` (canonical location):
+
     ```typescript
     export interface RoomPlayer {
       id: number;
@@ -185,22 +188,25 @@ So that I can prepare for a game with other players.
       players: RoomPlayer[];
     }
     ```
+
   - [x] Add functions to `client/src/shared/api/rooms.ts` — import `RoomDetail` and `RoomPlayer` from `apiTypes.ts`:
+
     ```typescript
-    import type { Room, RoomDetail } from '@/shared/types/apiTypes';
+    import type { Room, RoomDetail } from "@/shared/types/apiTypes";
 
     export function getRoom(id: number): Promise<RoomDetail> {
       return fetchClient<RoomDetail>(`/rooms/${id}`);
     }
 
     export function joinRoom(id: number): Promise<Room> {
-      return fetchClient<Room>(`/rooms/${id}/join`, { method: 'POST' });
+      return fetchClient<Room>(`/rooms/${id}/join`, { method: "POST" });
     }
 
     export function leaveRoom(id: number): Promise<void> {
-      return fetchClient<void>(`/rooms/${id}/leave`, { method: 'POST' });
+      return fetchClient<void>(`/rooms/${id}/leave`, { method: "POST" });
     }
     ```
+
   - [x] **Important:** `fetchClient<T>` auto-unwraps `{ data: T }` — do NOT double-unwrap
 
 - [x] **Task 12: Frontend — Wire Join button on RoomCard** (AC: #1, #2)
@@ -226,12 +232,12 @@ So that I can prepare for a game with other players.
         navigate(`/rooms/${roomId}`);
       } catch (err) {
         if (err instanceof FetchError) {
-          if (err.code === 'ROOM_FULL') {
-            toast(t('lobby.roomList.errors.roomFull'));
-          } else if (err.code === 'ALREADY_IN_ROOM') {
-            toast(t('lobby.roomList.errors.alreadyInRoom'));
+          if (err.code === "ROOM_FULL") {
+            toast(t("lobby.roomList.errors.roomFull"));
+          } else if (err.code === "ALREADY_IN_ROOM") {
+            toast(t("lobby.roomList.errors.alreadyInRoom"));
           } else {
-            toast(t('lobby.roomList.errors.joinFailed'));
+            toast(t("lobby.roomList.errors.joinFailed"));
           }
         }
       }
@@ -405,6 +411,7 @@ So that I can prepare for a game with other players.
 **Backend domain stays in `room/` package** — JoinRoom, LeaveRoom, and GetRoom handlers belong alongside CreateRoom and ListRooms. Do NOT create a separate package. The `lobby/` package is reserved for matchmaking logic (Story 2.5).
 
 **File organization:**
+
 ```
 server/internal/room/
 ├── model.go          # Add RoomPlayer struct
@@ -432,6 +439,7 @@ client/src/features/lobby/
 ### Backend Implementation Details
 
 **Migration — `000004_create_room_players.up.sql`:**
+
 ```sql
 CREATE TABLE room_players (
     id SERIAL PRIMARY KEY,
@@ -448,16 +456,19 @@ CREATE INDEX idx_room_players_user_id ON room_players(user_id);
 ```
 
 **Migration — `000004_create_room_players.down.sql`:**
+
 ```sql
 DROP TABLE IF EXISTS room_players;
 ```
 
 **Important migration notes:**
+
 - `ON DELETE CASCADE` on `room_id` — if a room is deleted, its players are cleaned up
 - No `deleted_at` column — room_players records are hard-deleted on leave (soft delete is for rooms, not transient join records)
 - `seat` and `team` are nullable — populated in Story 2.4
 
 **FindPlayersByRoomID with username join:**
+
 ```go
 func (r *GormRepository) FindPlayersByRoomID(roomID uint) ([]RoomPlayer, error) {
     var players []RoomPlayer
@@ -478,6 +489,7 @@ func (r *GormRepository) FindPlayersByRoomID(roomID uint) ([]RoomPlayer, error) 
 ```
 
 **FindPlayerRoom — check if user is in any active room:**
+
 ```go
 func (r *GormRepository) FindPlayerRoom(userID uint) (*RoomPlayer, error) {
     var player RoomPlayer
@@ -496,6 +508,7 @@ func (r *GormRepository) FindPlayerRoom(userID uint) (*RoomPlayer, error) {
 ```
 
 **JoinRoom handler response:** After successful join, re-fetch the room to get the updated `PlayerCount`:
+
 ```go
 updatedRoom, err := h.repo.FindByID(roomID)
 if err != nil {
@@ -505,6 +518,7 @@ return c.JSON(http.StatusOK, map[string]interface{}{"data": updatedRoom})
 ```
 
 **LeaveRoom — ownership transfer logic:**
+
 ```go
 // After removing the player, check if they were the owner
 if room.OwnerID == userID {
@@ -534,6 +548,7 @@ if room.OwnerID == userID {
 ### Frontend Implementation Details
 
 **RoomLobby component data flow:**
+
 ```
 useParams() → roomId
   ↓
@@ -545,6 +560,7 @@ Render: header + seats grid + config bar + leave button
 ```
 
 **Player seat grid layout:**
+
 ```tsx
 <div className="grid grid-cols-2 gap-6 p-8">
   {[0, 1, 2, 3].map((seatIndex) => {
@@ -575,36 +591,40 @@ Render: header + seats grid + config bar + leave button
 ```
 
 **Seat styling:**
+
 - Occupied: `rounded-xl border border-border bg-surface p-6 text-center`
 - Empty: `rounded-xl border border-dashed border-border bg-surface/50 p-6 text-center`
 - Current user's seat: add `ring-1 ring-accent` for subtle highlight
 
 **Copy Link implementation:**
+
 ```tsx
 const handleCopyLink = async () => {
   try {
     await navigator.clipboard.writeText(room.code);
-    toast(t('lobby.roomLobby.copyLinkSuccess'));
+    toast(t("lobby.roomLobby.copyLinkSuccess"));
   } catch {
-    toast(t('lobby.roomLobby.copyLinkFailed', { code: room.code }));
+    toast(t("lobby.roomLobby.copyLinkFailed", { code: room.code }));
   }
 };
 ```
 
 **Leave Room handler:**
+
 ```tsx
 const handleLeaveRoom = async () => {
   try {
     await leaveRoom(Number(id));
-    navigate('/lobby');
+    navigate("/lobby");
   } catch {
     // Even on error, navigate back — the player shouldn't be stuck
-    navigate('/lobby');
+    navigate("/lobby");
   }
 };
 ```
 
 **Browser back/navigation leave:** Use `useEffect` cleanup to call `leaveRoom` when the component unmounts due to navigation:
+
 ```tsx
 useEffect(() => {
   return () => {
@@ -615,6 +635,7 @@ useEffect(() => {
   };
 }, [roomId, hasJoined]);
 ```
+
 **Important:** Track `hasJoined` state to avoid calling leaveRoom on initial mount failure or when the user explicitly clicked "Leave Room" (which already calls leaveRoom). Use a ref to prevent double-leave.
 
 **Toast notifications:** Use the existing toast pattern from the project. Check if a toast utility/component exists (from shadcn). If not, use `window.alert` as a temporary fallback and add a TODO for proper toast implementation.
@@ -622,15 +643,17 @@ useEffect(() => {
 ### WebSocket Event Contract
 
 **New events for `server/internal/ws/events.go`:**
+
 ```go
 const SystemPlayerJoined = "system:player_joined"
 const SystemPlayerLeft   = "system:player_left"
 ```
 
 **New events for `client/src/shared/types/wsEvents.ts`:**
+
 ```typescript
-export const SYSTEM_PLAYER_JOINED = 'system:player_joined' as const;
-export const SYSTEM_PLAYER_LEFT = 'system:player_left' as const;
+export const SYSTEM_PLAYER_JOINED = "system:player_joined" as const;
+export const SYSTEM_PLAYER_LEFT = "system:player_left" as const;
 
 export interface PlayerJoinedPayload {
   roomId: number;
@@ -653,6 +676,7 @@ export interface PlayerLeftPayload {
 ### Testing Strategy
 
 **Backend (Go):**
+
 - External test package: `package room_test`
 - Extend existing mock repository with 6 new methods
 - Mock patterns:
@@ -664,6 +688,7 @@ export interface PlayerLeftPayload {
 - **Critical:** Return `[]RoomPlayer{}` (not `nil`) when no players match — JSON serializes as `[]` not `null`
 
 **Frontend (Vitest):**
+
 - Co-locate all test files with their components
 - Mock `shared/api/rooms` module for API calls
 - Mock `navigator.clipboard.writeText` for Copy Link tests
@@ -675,6 +700,7 @@ export interface PlayerLeftPayload {
 ### Previous Story Intelligence (from Story 2.2)
 
 **Critical learnings to apply:**
+
 - `fetchClient<T>()` auto-unwraps `{ data: T }` — do NOT add a second unwrap in `getRoom()`, `joinRoom()`, or `leaveRoom()`
 - Use `auth.GetUserID(c)` from `auth/middleware.go` for user ID extraction in handlers
 - Use external test packages (`room_test` not `room`) to prevent import cycles
@@ -687,11 +713,13 @@ export interface PlayerLeftPayload {
 - Handler returns `map[string]interface{}{"data": ...}` for response wrapping
 
 **Review findings from Story 2.2 to avoid repeating:**
+
 - F1: Validate parameters — validate room ID is a valid integer in JoinRoom/LeaveRoom/GetRoom handlers
 - F2: Unsafe `as` casts on WS payloads — deferred to Story 4-1, continue deferring
 - F4: Clear state on view re-entry — clear room lobby data when navigating away
 
 **Deferred items still pending:**
+
 - D1: `FindByID` returns `(nil, nil)` for missing rooms — follow this pattern
 - D2: No rate limiting on room endpoints — still deferred
 - D3: No per-user active room count cap — now partially addressed by `FindPlayerRoom` check (one active room at a time)
@@ -699,10 +727,12 @@ export interface PlayerLeftPayload {
 ### Git Intelligence
 
 **Recent commit pattern:**
+
 ```
 ea114b7 feat(room): implement room browsing and search with code review fixes
 eead853 feat(room): implement room creation and configuration with code review fixes
 ```
+
 - Format: `{type}({scope}): {description}`
 - Scope for this story: `room` (same domain as 2.1 and 2.2)
 - Expected commit: `feat(room): implement room joining and room lobby`
@@ -784,12 +814,14 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - server/migrations/000004_create_room_players.up.sql
 - server/migrations/000004_create_room_players.down.sql
 - client/src/features/lobby/RoomLobby.test.tsx
 - client/src/features/lobby/useRoomLobbyUpdates.ts
 
 **Modified files:**
+
 - server/internal/room/model.go (added RoomPlayer struct)
 - server/internal/room/repository.go (added 7 interface methods)
 - server/internal/room/gorm_repo.go (added 7 implementations)
@@ -807,5 +839,5 @@ Claude Opus 4.6 (1M context)
 - client/src/features/lobby/RoomList.test.tsx (updated for onJoinRoom prop)
 - client/src/features/lobby/RoomLobby.tsx (full rewrite from stub)
 - client/src/features/lobby/LobbyPage.tsx (added join handler, navigate, toast imports)
-- client/src/shared/i18n/en.json (added lobby.roomLobby.* and lobby.roomList.errors.* keys)
+- client/src/shared/i18n/en.json (added lobby.roomLobby._ and lobby.roomList.errors._ keys)
 - client/src/shared/i18n/sr.json (added matching Serbian translations)

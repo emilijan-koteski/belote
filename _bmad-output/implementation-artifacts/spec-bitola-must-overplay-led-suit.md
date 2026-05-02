@@ -1,23 +1,24 @@
 ---
-title: 'Bitola: must overplay highest led non-trump suit card'
-type: 'bugfix'
-created: '2026-04-25'
-status: 'done'
+title: "Bitola: must overplay highest led non-trump suit card"
+type: "bugfix"
+created: "2026-04-25"
+status: "done"
 context: []
-baseline_commit: 'bdacfb6da008b9602c5f432a0c80c98d84f1cad1'
+baseline_commit: "bdacfb6da008b9602c5f432a0c80c98d84f1cad1"
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
 
 ## Intent
 
-**Problem:** Bitola variant's "must overplay" rule is only enforced when the led suit is trump (existing over-trump / *iber* logic). When the led suit is non-trump, players who can follow suit may currently play any card of that suit — including a card lower than the highest led-suit card already on the table. Per the Bitola variant's full following-suit rule, that lower card must not be a legal play.
+**Problem:** Bitola variant's "must overplay" rule is only enforced when the led suit is trump (existing over-trump / _iber_ logic). When the led suit is non-trump, players who can follow suit may currently play any card of that suit — including a card lower than the highest led-suit card already on the table. Per the Bitola variant's full following-suit rule, that lower card must not be a legal play.
 
 **Approach:** Extend the existing must-overplay logic so it applies to the led suit regardless of whether it is trump. When a player has cards of the led suit, they must play one strictly higher than the highest led-suit card currently in the trick (using the led suit's rank ordering — `NonTrumpRankOrder` when the led suit is non-trump, `TrumpRankOrder` when it is trump). If no such card exists in hand, any same-suit card is legal (rule 2). Void-in-led-suit behavior (rule 3 / trump obligation) is unchanged.
 
 ## Boundaries & Constraints
 
 **Always:**
+
 - Server `legalCards` is the single source of truth; client `legalCards.ts` mirrors it byte-for-byte in semantics.
 - Server `isCardLegal` (used by `handlePlayCard`) and `AutoPlay` automatically inherit the new rule by reusing `legalCards`.
 - Use `NonTrumpRankOrder` for non-trump led suits and `TrumpRankOrder` for trump-led; never compare ranks across orderings.
@@ -25,9 +26,11 @@ baseline_commit: 'bdacfb6da008b9602c5f432a0c80c98d84f1cad1'
 - Variant gating: Bitola is currently the only variant; do not introduce conditional branching on `state.Variant` for this rule. If other variants are added later, that gating is a separate concern.
 
 **Ask First:**
+
 - Refactoring scope beyond this rule (e.g. unifying `applyOverTrump` into a generalized helper) — propose, don't enact, if the scope creeps.
 
 **Never:**
+
 - Do not change `currentTrickWinnerSeat`, declaration logic, scoring, or trick resolution.
 - Do not introduce a `state.Variant`-based code path; keep the rule unconditional under Bitola.
 - Do not alter how the client derives `ledSuit` (still from `currentTrick[0]`, not `state.leadSuit`) — that race-mitigation pattern stays.
@@ -37,18 +40,18 @@ baseline_commit: 'bdacfb6da008b9602c5f432a0c80c98d84f1cad1'
 
 Hand reference: H = hearts (led, non-trump), D = diamonds (trump). Trick sequence is `[(seat, card)]`.
 
-| Scenario | Input / State | Expected `legalCards` | Notes |
-|---|---|---|---|
-| Lower follow-suit blocked | hand=`[8H, AH, KC, AC]`, trick=`[(prev, KH)]`, trump=D | `[AH]` | Core fix — 8H excluded |
-| All led-suit lower than highest on table | hand=`[7H, 8H]`, trick=`[(prev, KH)]`, trump=D | `[7H, 8H]` | Rule 2: no higher → all same-suit legal |
-| Multiple higher led-suit cards | hand=`[QH, KH, AH]`, trick=`[(prev, JH)]`, trump=D | `[QH, KH, AH]` | All strictly higher are legal |
-| Highest led-suit on table is from partner | hand=`[8H, AH]`, trick=`[(partner, KH), (opp, 7H)]`, trump=D | `[AH]` | Rule still applies — partner exemption is only for void case (rule 3) |
-| Trump played over led non-trump | hand=`[8H, AH]`, trick=`[(prev, KH), (opp, 7D)]`, trump=D | `[AH]` | Highest *led-suit* card is KH; trump in trick doesn't relax the led-suit overplay |
-| Void in led suit, opponent winning, has trump | hand=`[KD, 7C]`, trick=`[(opp, AH)]`, trump=D | `[KD]` | Unchanged — rule 3 / trump obligation |
-| Void in led suit, partner winning | hand=`[KD, 7C]`, trick=`[(partner, AH)]`, trump=D | `[KD, 7C]` | Unchanged — partner exemption |
-| Trump-led over-trump (regression) | hand=`[7D, KD]`, trick=`[(prev, QD)]`, trump=D | `[KD]` | Existing trump path must keep working |
-| Trump-led, no over-trump available | hand=`[7D, 8D]`, trick=`[(prev, JD)]`, trump=D | `[7D, 8D]` | Existing path: lower trumps legal when no over-trump |
-| Leading the trick | hand=`[8H, AH, ...]`, trick=`[]` | full hand | Unchanged |
+| Scenario                                      | Input / State                                                | Expected `legalCards` | Notes                                                                             |
+| --------------------------------------------- | ------------------------------------------------------------ | --------------------- | --------------------------------------------------------------------------------- |
+| Lower follow-suit blocked                     | hand=`[8H, AH, KC, AC]`, trick=`[(prev, KH)]`, trump=D       | `[AH]`                | Core fix — 8H excluded                                                            |
+| All led-suit lower than highest on table      | hand=`[7H, 8H]`, trick=`[(prev, KH)]`, trump=D               | `[7H, 8H]`            | Rule 2: no higher → all same-suit legal                                           |
+| Multiple higher led-suit cards                | hand=`[QH, KH, AH]`, trick=`[(prev, JH)]`, trump=D           | `[QH, KH, AH]`        | All strictly higher are legal                                                     |
+| Highest led-suit on table is from partner     | hand=`[8H, AH]`, trick=`[(partner, KH), (opp, 7H)]`, trump=D | `[AH]`                | Rule still applies — partner exemption is only for void case (rule 3)             |
+| Trump played over led non-trump               | hand=`[8H, AH]`, trick=`[(prev, KH), (opp, 7D)]`, trump=D    | `[AH]`                | Highest _led-suit_ card is KH; trump in trick doesn't relax the led-suit overplay |
+| Void in led suit, opponent winning, has trump | hand=`[KD, 7C]`, trick=`[(opp, AH)]`, trump=D                | `[KD]`                | Unchanged — rule 3 / trump obligation                                             |
+| Void in led suit, partner winning             | hand=`[KD, 7C]`, trick=`[(partner, AH)]`, trump=D            | `[KD, 7C]`            | Unchanged — partner exemption                                                     |
+| Trump-led over-trump (regression)             | hand=`[7D, KD]`, trick=`[(prev, QD)]`, trump=D               | `[KD]`                | Existing trump path must keep working                                             |
+| Trump-led, no over-trump available            | hand=`[7D, 8D]`, trick=`[(prev, JD)]`, trump=D               | `[7D, 8D]`            | Existing path: lower trumps legal when no over-trump                              |
+| Leading the trick                             | hand=`[8H, AH, ...]`, trick=`[]`                             | full hand             | Unchanged                                                                         |
 
 </frozen-after-approval>
 
@@ -65,12 +68,14 @@ Hand reference: H = hearts (led, non-trump), D = diamonds (trump). Trick sequenc
 ## Tasks & Acceptance
 
 **Execution:**
+
 - [x] `server/internal/game/validation.go` -- Add `applyMustOverplayLedSuit(suitCards, trick, ledSuit, trumpSuit) []Card` returning the led-suit cards in hand strictly higher than the highest led-suit card in the trick (using `TrumpRankOrder` if `ledSuit == trumpSuit`, else `NonTrumpRankOrder`); in `legalCards`, when `len(suitCards) > 0`, call it and return its result if non-empty, else return `suitCards`. The existing trump-led `applyOverTrump` branch is replaced by this unified call. -- One rule for both led-suit cases; matches user-described semantics.
 - [x] `server/internal/game/validation_test.go` -- Add tests covering each row of the I/O matrix that touches non-trump-led overplay, plus a regression test for trump-led over-trump going through the new path. -- Lock in new rule and prevent regression of trump path.
 - [x] `client/src/features/game/lib/legalCards.ts` -- Mirror the server change: add `applyMustOverplayLedSuit` (using `NON_TRUMP_RANK_ORDER` / `TRUMP_RANK_ORDER` parallel to the server) and update the follow-suit branch. Preserve `currentTrick[0]`-derived `ledSuit`. -- Keeps client/server semantics identical so UI highlighting matches server validation.
 - [x] `client/src/features/game/lib/legalCards.test.ts` -- Mirror server tests: add the same I/O matrix cases. -- Symmetric regression coverage on the client.
 
 **Acceptance Criteria:**
+
 - Given the scenario in the attached image (kiro holds `[8H, AH, KC, AC]`, trick is `[(prev, KH)]`, trump is diamonds), when computing legal cards for kiro, then only `AH` is returned (server and client agree).
 - Given a player holds `[7H, 8H]` and the trick is `[(prev, KH)]` with trump diamonds, when computing legal cards, then both `7H` and `8H` are legal (rule 2 — no higher led-suit available).
 - Given the same trump-led over-trump scenarios that pass today, when running the existing test suite, then all current trump tests continue to pass without modification.
@@ -88,12 +93,14 @@ Hand reference: H = hearts (led, non-trump), D = diamonds (trump). Trick sequenc
 ## Verification
 
 **Commands:**
+
 - `cd server && go test ./internal/game/...` — expected: all tests pass, including new I/O matrix cases.
 - `cd client && npm run test -- legalCards` — expected: all `legalCards` tests pass, including new cases.
 - `make lint` (from repo root) — expected: clean.
 - `cd client && npx prettier --write .` — expected: format the changed TS files before commit (per CLAUDE memory).
 
 **Manual checks:**
+
 - Reproduce the screenshot scenario in a local dev game (or via fixtures): confirm `8H` is shown as unplayable and clicking it does nothing; confirm `AH` plays normally.
 
 ## Suggested Review Order

@@ -166,7 +166,7 @@ function dispatchGameEvent(message: WsMessage): void {
       // new-hand defaults, but zeroing now avoids a flicker of stale potentials.
       store.setGameState({
         ...current,
-        teamScores: [payload.redMatchScore, payload.blueMatchScore],
+        teamScores: [payload.teamAMatchScore, payload.teamBMatchScore],
         handPoints: [0, 0],
         declarationPoints: [0, 0],
       });
@@ -182,7 +182,7 @@ function dispatchGameEvent(message: WsMessage): void {
       store.setGameState({
         ...current,
         phase: "match_end",
-        teamScores: [payload.redFinalScore, payload.blueFinalScore],
+        teamScores: [payload.teamAFinalScore, payload.teamBFinalScore],
       });
     }
     store.setMatchEndData(payload);

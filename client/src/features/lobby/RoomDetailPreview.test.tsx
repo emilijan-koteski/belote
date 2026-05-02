@@ -57,12 +57,26 @@ describe("RoomDetailPreview", () => {
     expect(screen.getByTestId("room-detail-seat-3")).toBeInTheDocument();
   });
 
-  it("renders player names in correct seat positions", async () => {
+  it("renders Team A / Team B headers (neutral view)", async () => {
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, playerCount: 0 },
+      players: [],
+    });
+
+    renderPreview();
+
+    await waitFor(() => {
+      expect(screen.getByText("Team A")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Team B")).toBeInTheDocument();
+  });
+
+  it("renders player names in correct seat positions with data-team attributes", async () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 2 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "Kiro", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "Irena", seat: 3, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "Kiro", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "Irena", seat: 3, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -74,17 +88,21 @@ describe("RoomDetailPreview", () => {
 
     expect(screen.getByText("Irena")).toBeInTheDocument();
 
-    // Kiro at seat 0 (Red team, top-left)
-    expect(screen.getByTestId("room-detail-seat-0")).toHaveTextContent("Kiro");
-    // Irena at seat 3 (Blue team, bottom-right)
-    expect(screen.getByTestId("room-detail-seat-3")).toHaveTextContent("Irena");
+    // Kiro at seat 0 (teamA, top-left)
+    const seat0 = screen.getByTestId("room-detail-seat-0");
+    expect(seat0).toHaveTextContent("Kiro");
+    expect(seat0).toHaveAttribute("data-team", "teamA");
+    // Irena at seat 3 (teamB, bottom-right)
+    const seat3 = screen.getByTestId("room-detail-seat-3");
+    expect(seat3).toHaveTextContent("Irena");
+    expect(seat3).toHaveAttribute("data-team", "teamB");
   });
 
   it("renders empty seats with placeholder text", async () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "Kiro", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "Kiro", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
@@ -125,7 +143,7 @@ describe("RoomDetailPreview", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 2 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "Kiro", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "Kiro", seat: 0, team: "teamA", createdAt: "" },
         { id: 2, roomId: 1, userId: 20, username: "Maja", seat: null, team: null, createdAt: "" },
       ],
     });

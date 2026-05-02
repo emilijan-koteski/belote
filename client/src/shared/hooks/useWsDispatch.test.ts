@@ -52,7 +52,7 @@ const mockGameState: GameState = {
       seat: 0,
       userId: 10,
       username: "Alice",
-      team: "red",
+      team: "teamA",
       declarations: [],
       connected: true,
     },
@@ -61,7 +61,7 @@ const mockGameState: GameState = {
       seat: 1,
       userId: 20,
       username: "Bob",
-      team: "blue",
+      team: "teamB",
       declarations: [],
       connected: true,
     },
@@ -70,7 +70,7 @@ const mockGameState: GameState = {
       seat: 2,
       userId: 30,
       username: "Carol",
-      team: "red",
+      team: "teamA",
       declarations: [],
       connected: true,
     },
@@ -79,7 +79,7 @@ const mockGameState: GameState = {
       seat: 3,
       userId: 40,
       username: "Dave",
-      team: "blue",
+      team: "teamB",
       declarations: [],
       connected: true,
     },
@@ -319,10 +319,10 @@ describe("useWsDispatch", () => {
     dispatch({
       type: "event:hand_scored",
       payload: {
-        redCardPoints: 70,
-        blueCardPoints: 82,
-        redDeclPoints: 0,
-        blueDeclPoints: 0,
+        teamACardPoints: 70,
+        teamBCardPoints: 82,
+        teamADeclPoints: 0,
+        teamBDeclPoints: 0,
         lastTrickTeam: 1,
         lastTrickBonus: 10,
         capot: false,
@@ -330,10 +330,10 @@ describe("useWsDispatch", () => {
         capotBonus: 0,
         failedContract: false,
         contractingTeam: 1,
-        redHandTotal: 70,
-        blueHandTotal: 92,
-        redMatchScore: 70,
-        blueMatchScore: 92,
+        teamAHandTotal: 70,
+        teamBHandTotal: 92,
+        teamAMatchScore: 70,
+        teamBMatchScore: 92,
       },
     });
 
@@ -341,7 +341,7 @@ describe("useWsDispatch", () => {
     expect(state.gameState?.teamScores[0]).toBe(70);
     expect(state.gameState?.teamScores[1]).toBe(92);
     expect(state.scoreRevealData).not.toBeNull();
-    expect(state.scoreRevealData?.redCardPoints).toBe(70);
+    expect(state.scoreRevealData?.teamACardPoints).toBe(70);
     expect(state.scoreRevealData?.capot).toBe(false);
   });
 
@@ -358,10 +358,10 @@ describe("useWsDispatch", () => {
     dispatch({
       type: "event:hand_scored",
       payload: {
-        redCardPoints: 70,
-        blueCardPoints: 82,
-        redDeclPoints: 0,
-        blueDeclPoints: 50,
+        teamACardPoints: 70,
+        teamBCardPoints: 82,
+        teamADeclPoints: 0,
+        teamBDeclPoints: 50,
         lastTrickTeam: 1,
         lastTrickBonus: 10,
         capot: false,
@@ -369,10 +369,10 @@ describe("useWsDispatch", () => {
         capotBonus: 0,
         failedContract: false,
         contractingTeam: 1,
-        redHandTotal: 70,
-        blueHandTotal: 142,
-        redMatchScore: 70,
-        blueMatchScore: 142,
+        teamAHandTotal: 70,
+        teamBHandTotal: 142,
+        teamAMatchScore: 70,
+        teamBMatchScore: 142,
       },
     });
 
@@ -389,7 +389,12 @@ describe("useWsDispatch", () => {
 
     dispatch({
       type: "event:match_end",
-      payload: { winnerTeam: 0, redFinalScore: 1020, blueFinalScore: 850, matchDurationSec: 300 },
+      payload: {
+        winnerTeam: 0,
+        teamAFinalScore: 1020,
+        teamBFinalScore: 850,
+        matchDurationSec: 300,
+      },
     });
 
     const state = useGameStore.getState();
@@ -512,14 +517,14 @@ describe("useWsDispatch", () => {
         userId: 42,
         username: "Alice",
         seat: 2,
-        team: "red",
+        team: "teamA",
         previousSeat: null,
       },
     });
 
     const player = useRoomLobbyStore.getState().players[0]!;
     expect(player.seat).toBe(2);
-    expect(player.team).toBe("red");
+    expect(player.team).toBe("teamA");
   });
 
   it("dispatches system:game_started to roomLobbyStore", () => {
@@ -822,8 +827,8 @@ describe("useWsDispatch", () => {
       type: "event:match_end",
       payload: {
         winnerTeam: 1,
-        redFinalScore: 420,
-        blueFinalScore: 600,
+        teamAFinalScore: 420,
+        teamBFinalScore: 600,
         matchDurationSec: 280,
         outcomeReason: "surrender",
         surrenderedBySeat: 0,

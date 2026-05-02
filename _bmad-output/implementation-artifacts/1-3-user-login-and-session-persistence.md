@@ -244,6 +244,7 @@ so that I don't need to re-enter my credentials every time I visit the platform.
 ### JWT Implementation Details (Already Built in Story 1.2)
 
 These functions exist in `server/internal/auth/service.go` — reuse them, do NOT reimplement:
+
 - `HashPassword(password string) (string, error)` — bcrypt
 - `CheckPassword(hash, password string) error` — bcrypt compare
 - `GenerateAccessToken(userID uint, secret string) (string, error)` — 15 min, audience="access"
@@ -342,6 +343,7 @@ Use React Router v7's nested route pattern with `<Outlet />`:
 ```
 
 The `ProtectedRoute` component:
+
 - Reads `token` and `isLoading` from `authStore`
 - If `isLoading`: render nothing (or minimal spinner) — session restore in progress
 - If `!token && !isLoading`: `<Navigate to="/login" replace />`
@@ -349,25 +351,26 @@ The `ProtectedRoute` component:
 
 ### Deferred Items Resolved by This Story
 
-| ID | Issue | Resolution |
-|----|-------|------------|
-| D1 | Token lost on page refresh | Session restore via `useAuthInit()` → `POST /auth/refresh` on app mount |
-| D2 | fetchClient hard redirect breaks SPA | `setAuthRedirect` callback using React Router navigate |
-| D5 | Refresh cookie Secure:true hardcoded | Environment-aware via `BELOTE_ENV` config |
-| W1 | fetchClient 401 lacks refresh-then-retry | Full refresh cycle with concurrent deduplication |
+| ID  | Issue                                    | Resolution                                                              |
+| --- | ---------------------------------------- | ----------------------------------------------------------------------- |
+| D1  | Token lost on page refresh               | Session restore via `useAuthInit()` → `POST /auth/refresh` on app mount |
+| D2  | fetchClient hard redirect breaks SPA     | `setAuthRedirect` callback using React Router navigate                  |
+| D5  | Refresh cookie Secure:true hardcoded     | Environment-aware via `BELOTE_ENV` config                               |
+| W1  | fetchClient 401 lacks refresh-then-retry | Full refresh cycle with concurrent deduplication                        |
 
 ### Deferred Items NOT Addressed (Out of Scope)
 
-| ID | Issue | Why Deferred |
-|----|-------|-------------|
-| W2 | apperr.Wrap() wraps raw error | Utility concern, not auth-specific |
-| W3 | ErrorBoundary retry loop | UX concern, not auth-specific |
-| D3 | JWT secret default only warns | Infrastructure concern, acceptable for Phase 1 |
-| D4 | No rate limiting on auth endpoints | Infrastructure concern (nginx/Caddy rate limiting), not story-scoped |
+| ID  | Issue                              | Why Deferred                                                         |
+| --- | ---------------------------------- | -------------------------------------------------------------------- |
+| W2  | apperr.Wrap() wraps raw error      | Utility concern, not auth-specific                                   |
+| W3  | ErrorBoundary retry loop           | UX concern, not auth-specific                                        |
+| D3  | JWT secret default only warns      | Infrastructure concern, acceptable for Phase 1                       |
+| D4  | No rate limiting on auth endpoints | Infrastructure concern (nginx/Caddy rate limiting), not story-scoped |
 
 ### Previous Story Intelligence (Story 1.2)
 
 **Key patterns established that MUST be followed:**
+
 - Email normalization: `strings.ToLower(strings.TrimSpace())` — apply to login input too
 - Cookie settings: path `/api/v1/auth`, httpOnly, SameSite=Strict — keep identical
 - Handler tests use `httptest` with real Echo instance and `e.ServeHTTP` — do NOT call handlers directly
@@ -378,6 +381,7 @@ The `ProtectedRoute` component:
 - Password field: show/hide toggle via lucide-react eye icon
 
 **Review fixes from Story 1.2 that inform this story:**
+
 - TOCTOU race on duplicate checks → already fixed in `gorm_repo.go` with pgconn constraint handling
 - JWT audience claim → already added (access/refresh distinction) — middleware must enforce it
 - Email case sensitivity → already fixed with `strings.ToLower` — apply same in login
@@ -386,6 +390,7 @@ The `ProtectedRoute` component:
 ### Git Intelligence
 
 Recent commits follow pattern: `feat(auth): implement user registration with code review fixes`. For this story:
+
 - Branch name: `feat/E1-S3-user-login`
 - Commit style: `feat(auth): implement user login and session persistence`
 
@@ -476,6 +481,7 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **Backend (modified):**
+
 - server/internal/auth/handler.go — added Login, Refresh, Logout handlers + setRefreshCookie/clearRefreshCookie helpers; refactored AuthHandler to accept env param
 - server/internal/auth/handler_test.go — added 11 new tests for login/refresh/logout; updated setupHandler and cookie test
 - server/internal/auth/auth_test.go — added audience validation test
@@ -484,10 +490,12 @@ Claude Opus 4.6 (1M context)
 - server/cmd/api/main.go — wired login/refresh/logout routes + authenticated group
 
 **Backend (new):**
+
 - server/internal/auth/middleware.go — JWT auth middleware + GetUserID helper
 - server/internal/auth/middleware_test.go — 7 middleware tests
 
 **Frontend (modified):**
+
 - client/src/shared/api/auth.ts — added login(), refresh(), logout() functions + types
 - client/src/shared/api/fetchClient.ts — added refresh-retry cycle, setAuthRedirect, concurrent deduplication
 - client/src/shared/stores/authStore.ts — logout calls backend; isLoading defaults to true
@@ -498,6 +506,7 @@ Claude Opus 4.6 (1M context)
 - client/src/App.test.tsx — updated for new LoginPage (uses data-testid + i18n)
 
 **Frontend (new):**
+
 - client/src/shared/hooks/useAuth.ts — useAuthInit hook for session restore
 - client/src/shared/components/ProtectedRoute.tsx — route guard component
 - client/src/features/auth/LoginPage.test.tsx — 8 LoginPage tests

@@ -6,7 +6,7 @@ import { useWsSendMessage } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useChatStore } from "@/shared/stores/chatStore";
 import { useGameStore } from "@/shared/stores/gameStore";
-import type { Suit } from "@/shared/types/gameTypes";
+import type { Suit, TeamString } from "@/shared/types/gameTypes";
 import {
   ACTION_ANNOUNCE_BELOT,
   ACTION_DECLARE,
@@ -57,8 +57,8 @@ function compassOffset(seat: number, myPlayerSeat: number): number {
   return (seat - myPlayerSeat + 4) % 4;
 }
 
-function teamColor(seat: number): "red" | "blue" {
-  return seat % 2 === 0 ? "red" : "blue";
+function teamForSeat(seat: number): TeamString {
+  return seat % 2 === 0 ? "teamA" : "teamB";
 }
 
 const SEAT_POSITIONS: Record<number, string> = {
@@ -371,6 +371,11 @@ export function GamePage() {
     );
   }
 
+  // Viewer team derivation — single rule, frontend only. Components rendered
+  // below this guard always have a non-null myPlayerSeat, so viewerTeam is
+  // always a real TeamString when we're inside an active match.
+  const viewerTeam: TeamString = myPlayerSeat % 2 === 0 ? "teamA" : "teamB";
+
   // Pause state
   const isRoomOwner = myPlayerSeat !== null && gameState.ownerSeat === myPlayerSeat;
   const isPaused = gameState.phase === "paused";
@@ -445,12 +450,13 @@ export function GamePage() {
     >
       {/* Score panel - top left */}
       <ScorePanel
-        redScore={gameState.teamScores[0]}
-        blueScore={gameState.teamScores[1]}
-        redTricks={gameState.tricksWon[0]}
-        blueTricks={gameState.tricksWon[1]}
-        redHandPotential={gameState.handPoints[0] + gameState.declarationPoints[0]}
-        blueHandPotential={gameState.handPoints[1] + gameState.declarationPoints[1]}
+        viewerTeam={viewerTeam}
+        teamAScore={gameState.teamScores[0]}
+        teamBScore={gameState.teamScores[1]}
+        teamATricks={gameState.tricksWon[0]}
+        teamBTricks={gameState.tricksWon[1]}
+        teamAHandPotential={gameState.handPoints[0] + gameState.declarationPoints[0]}
+        teamBHandPotential={gameState.handPoints[1] + gameState.declarationPoints[1]}
         lastTrickBonus={scoreRevealData?.lastTrickBonus}
         lastTrickTeam={scoreRevealData?.lastTrickTeam}
       />
@@ -495,7 +501,7 @@ export function GamePage() {
               player={player}
               isSelf={isSelf}
               isActive={isActive}
-              teamColor={teamColor(player.seat)}
+              team={teamForSeat(player.seat)}
               cardCount={isSelf ? undefined : player.hand.length}
               turnExpiresAt={isActive ? gameState.turnExpiresAt : null}
               timerDuration={gameState.timerDurationSec}
@@ -592,6 +598,7 @@ export function GamePage() {
           }
           reconnectExpiresAt={gameState.reconnectExpiresAt ?? ""}
           abandonedData={matchAbandonedData}
+          viewerTeam={viewerTeam}
           onReturnToLobby={handleAbandonReturnToLobby}
         />
       )}
@@ -640,6 +647,7 @@ export function GamePage() {
         <DeclarationReveal
           payload={declarationReveal}
           players={gameState.players}
+          viewerTeam={viewerTeam}
           onComplete={handleDeclarationRevealComplete}
         />
       )}
@@ -714,13 +722,18 @@ export function GamePage() {
 
       {/* Score reveal overlay */}
       {overlayPhase === "score_reveal" && scoreRevealData !== null && (
-        <ScoreReveal data={scoreRevealData} onContinue={handleScoreRevealContinue} />
+        <ScoreReveal
+          data={scoreRevealData}
+          viewerTeam={viewerTeam}
+          onContinue={handleScoreRevealContinue}
+        />
       )}
 
       {/* Match result overlay */}
       {overlayPhase === "match_result" && matchEndData !== null && (
         <MatchResult
           data={matchEndData}
+          viewerTeam={viewerTeam}
           onReturnToLobby={handleReturnToLobby}
           surrenderedByUsername={surrenderedByUsername}
         />

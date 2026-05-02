@@ -75,30 +75,34 @@ so that the remaining players aren't stuck waiting indefinitely.
 
 - [x] Task 3: Add WS event `EventMatchAbandoned` to both contract files (AC: #4)
   - [x] 3.1 In `server/internal/ws/events.go`, add after the existing disconnect events:
+
     ```go
     const EventMatchAbandoned = "event:match_abandoned"
 
     type MatchAbandonedPayload struct {
         AbandonedByPlayer int `json:"abandonedByPlayer"` // seat index (client resolves name from gameState.players[seat].username — D43: server PlayerState has no Username field)
-        RedFinalScore     int `json:"redFinalScore"`
-        BlueFinalScore    int `json:"blueFinalScore"`
+        TeamAFinalScore   int `json:"teamAFinalScore"`
+        TeamBFinalScore   int `json:"teamBFinalScore"`
         MatchDurationSec  int `json:"matchDurationSec"`
     }
     ```
+
   - [x] 3.2 In `client/src/shared/types/wsEvents.ts`, add:
+
     ```typescript
     export const EVENT_MATCH_ABANDONED = "event:match_abandoned" as const;
 
     export interface MatchAbandonedPayload {
       abandonedByPlayer: number; // seat index — resolve name from gameState.players[seat].username
-      redFinalScore: number;
-      blueFinalScore: number;
+      teamAFinalScore: number;
+      teamBFinalScore: number;
       matchDurationSec: number;
     }
     ```
 
 - [x] Task 4: Backend — implement `handleReconnectTimeout` in session manager (AC: #1, #2, #3)
   - [x] 4.1 Replace the placeholder in `server/internal/session/reconnect.go` (lines 249-265). **CRITICAL: The existing placeholder uses `defer session.mu.Unlock()`. The replacement uses manual `session.mu.Unlock()` before external I/O. You MUST remove the `defer` — keeping both will double-unlock and panic.** Implement:
+
     ```go
     func (m *Manager) handleReconnectTimeout(session *Session, generation uint64) {
         session.mu.Lock()
@@ -132,13 +136,13 @@ so that the remaining players aren't stuck waiting indefinitely.
         playerIDs := session.playerIDs
         roomID := session.roomID
         startedAt := session.startedAt
-        redScore := gs.TeamScores[game.TeamRed]
-        blueScore := gs.TeamScores[game.TeamBlue]
+        teamAScore := gs.TeamScores[game.TeamA]
+        teamBScore := gs.TeamScores[game.TeamB]
 
         abandonedPayload := ws.MatchAbandonedPayload{
             AbandonedByPlayer: abandonedSeat,
-            RedFinalScore:     redScore,
-            BlueFinalScore:    blueScore,
+            TeamAFinalScore:   teamAScore,
+            TeamBFinalScore:   teamBScore,
             MatchDurationSec:  int(time.Since(startedAt).Seconds()),
         }
         abandonedMsg := buildMessage(ws.EventMatchAbandoned, abandonedPayload)
@@ -164,8 +168,8 @@ so that the remaining players aren't stuck waiting indefinitely.
             Player2ID:     playerIDs[1],
             Player3ID:     playerIDs[2],
             Player4ID:     playerIDs[3],
-            TeamRedScore:  redScore,
-            TeamBlueScore: blueScore,
+            TeamAScore:    teamAScore,
+            TeamBScore:    teamBScore,
             WinnerTeam:    0, // No winner — status field distinguishes abandoned
             Variant:       string(gs.Variant),
             MatchMode:     gs.MatchMode,
@@ -189,10 +193,12 @@ so that the remaining players aren't stuck waiting indefinitely.
         m.RemoveSession(roomID)
     }
     ```
+
   - [x] 4.2 Verify the `handleReconnectTimeout` is already called by `HandleDisconnect` (lines 118-127 in reconnect.go) via `time.AfterFunc`. No new wiring needed — the timer callback already calls this function.
 
 - [x] Task 5: Backend — lobby pre-game disconnect with 10s seat-free timer (AC: #5)
   - [x] 5.1 Create a `LobbyDisconnectHandler` struct in a new file `server/internal/room/lobby_disconnect.go`:
+
     ```go
     type LobbyDisconnectHandler struct {
         roomRepo    Repository
@@ -206,6 +212,7 @@ so that the remaining players aren't stuck waiting indefinitely.
         roomID uint
     }
     ```
+
   - [x] 5.2 Implement `HandleDisconnect(userID uint)`:
     - Check if user is in a room via `roomRepo.FindRoomByPlayer(userID)` (you may need to add this repo method)
     - If user is NOT in a room, return (no-op)
@@ -216,6 +223,7 @@ so that the remaining players aren't stuck waiting indefinitely.
     - Cancel any pending lobby disconnect timer for this user
   - [x] 5.4 Add repo method `FindRoomByPlayer(userID uint) (*Room, error)` to `server/internal/room/repository.go` and `gorm_repo.go` — returns the room the player is currently in (via room_players join), or nil if not in any room
   - [x] 5.5 Wire composite disconnect/connect handlers in `server/cmd/api/main.go`:
+
     ```go
     lobbyHandler := room.NewLobbyDisconnectHandler(roomRepo, hub)
 
@@ -257,7 +265,7 @@ so that the remaining players aren't stuck waiting indefinitely.
     ```
   - [x] 7.2 When `abandonedData` is provided, transition the overlay to show an abandonment message instead of the countdown:
     - Replace countdown display with: "{player} disconnected — match ended" (player name comes from `disconnectedPlayerName` prop, resolved in GamePage from `gameState.players[abandonedByPlayer].username` — NOT from payload, since server PlayerState has no Username field per D43)
-    - Show final scores: Red {score} : Blue {score} (from `abandonedData.redFinalScore` / `blueFinalScore`)
+    - Show final scores: Team A {score} : Team B {score} (from `abandonedData.teamAFinalScore` / `teamBFinalScore`)
     - Show "Returning to lobby..." with a brief countdown (3 seconds)
     - Use i18n keys for all text
   - [x] 7.3 Implement auto-redirect: after 3 seconds when `abandonedData` is present, call `clearGame()` and `navigate("/lobby")`. Use a `useEffect` with a `setTimeout`:
@@ -293,13 +301,13 @@ so that the remaining players aren't stuck waiting indefinitely.
   - [x] 8.1 In `client/src/shared/i18n/en.json`, under `game.disconnect`:
     ```json
     "matchAbandoned": "{{player}} disconnected — match ended",
-    "matchAbandonedScores": "Final: Red {{red}} : Blue {{blue}}",
+    "matchAbandonedScores": "Final: Team A {{a}} : Team B {{b}}",
     "returningToLobby": "Returning to lobby..."
     ```
   - [x] 8.2 In `client/src/shared/i18n/sr.json`, under `game.disconnect`:
     ```json
     "matchAbandoned": "{{player}} se disconnektovao — meč završen",
-    "matchAbandonedScores": "Rezultat: Crveni {{red}} : Plavi {{blue}}",
+    "matchAbandonedScores": "Rezultat: Tim A {{a}} : Tim B {{b}}",
     "returningToLobby": "Povratak u lobi..."
     ```
 
@@ -343,37 +351,37 @@ so that the remaining players aren't stuck waiting indefinitely.
 
 ### What Already Exists — Do NOT Recreate
 
-| Item | Location | Status |
-|------|----------|--------|
-| `handleReconnectTimeout` placeholder | `server/internal/session/reconnect.go:249-265` | Exists — REPLACE contents |
-| Reconnect timer setup (calls `handleReconnectTimeout`) | `server/internal/session/reconnect.go:118-127` | Exists — DO NOT modify |
-| `PhaseMatchEnd = "match_end"` | `server/internal/game/types.go:86` | Exists |
-| `"match_end"` in Phase type | `client/src/shared/types/gameTypes.ts:18` | Exists |
-| `WinnerTeam *int` (nullable) | `server/internal/game/state.go:88` | Exists |
-| `winnerTeam: number \| null` | `client/src/shared/types/gameTypes.ts:95` | Exists |
-| `DisconnectedSeat int` | `server/internal/game/state.go:102` | Exists (init -1) |
-| `ReconnectExpiresAt *time.Time` | `server/internal/game/state.go:103` | Exists |
-| `handleMatchEnd(session, finalState)` | `server/internal/session/manager.go:502-539` | Exists — add `Status: "completed"` to its match record |
-| `RemoveSession(roomID)` | `server/internal/session/manager.go:244-258` | Exists — reuse as-is |
-| `buildMessage(eventType, payload)` | `server/internal/session/manager.go` | Exists |
-| `cancelReconnectTimer()` | `server/internal/session/timer.go:12-19` | Exists |
-| `cancelTurnTimer()` | `server/internal/session/timer.go` | Exists |
-| `reconnectGeneration` guard pattern | `server/internal/session/reconnect.go:252-256` | Exists |
-| `hub.BroadcastToUsers(userIDs, msg)` | `server/internal/ws/hub.go:174-182` | Exists |
-| `EventMatchEnd` + `MatchEndPayload` | Both contract files | Exists — NOT used for abandonment |
-| `ReconnectOverlay` component | `client/src/features/game/components/ReconnectOverlay.tsx` | Exists — MODIFY to handle abandonment |
-| `MatchResult` component | `client/src/features/game/components/MatchResult.tsx` | Exists — NOT used for abandonment |
-| `useReconnectionRedirect` hook | `client/src/shared/hooks/useReconnectionRedirect.ts` | Exists — has `phase !== "match_end"` guard |
-| `clearGame()` in gameStore | `client/src/shared/stores/gameStore.ts:60` | Exists |
-| `handleReturnToLobby` in GamePage | `client/src/features/game/GamePage.tsx:230-234` | Exists — pattern to follow for abandon redirect |
-| `safeDerefInt` helper | `server/internal/session/manager.go:701-706` | Exists — returns 0 for nil, used in normal match end |
-| `RoomStatusUpdater` interface | `server/internal/session/manager.go:33-36` | Exists |
-| `RoomStatusAdapter` implementation | `server/internal/room/handler.go:54-65` | Exists |
-| `LeaveRoom` handler | `server/internal/room/handler.go:442` | Exists — reference for lobby seat-freeing logic |
-| `Match` struct | `server/internal/match/model.go:6-21` | Exists — MODIFY to add fields |
-| `match.MatchRepository` interface | `server/internal/match/repository.go` | Exists — `Create` method used |
-| Match DB migration | `server/migrations/000006_create_matches.up.sql` | Exists — DO NOT modify |
-| Hub composite handler wiring | `server/cmd/api/main.go:98-100` | Exists — MODIFY to composite |
+| Item                                                   | Location                                                   | Status                                                 |
+| ------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------ |
+| `handleReconnectTimeout` placeholder                   | `server/internal/session/reconnect.go:249-265`             | Exists — REPLACE contents                              |
+| Reconnect timer setup (calls `handleReconnectTimeout`) | `server/internal/session/reconnect.go:118-127`             | Exists — DO NOT modify                                 |
+| `PhaseMatchEnd = "match_end"`                          | `server/internal/game/types.go:86`                         | Exists                                                 |
+| `"match_end"` in Phase type                            | `client/src/shared/types/gameTypes.ts:18`                  | Exists                                                 |
+| `WinnerTeam *int` (nullable)                           | `server/internal/game/state.go:88`                         | Exists                                                 |
+| `winnerTeam: number \| null`                           | `client/src/shared/types/gameTypes.ts:95`                  | Exists                                                 |
+| `DisconnectedSeat int`                                 | `server/internal/game/state.go:102`                        | Exists (init -1)                                       |
+| `ReconnectExpiresAt *time.Time`                        | `server/internal/game/state.go:103`                        | Exists                                                 |
+| `handleMatchEnd(session, finalState)`                  | `server/internal/session/manager.go:502-539`               | Exists — add `Status: "completed"` to its match record |
+| `RemoveSession(roomID)`                                | `server/internal/session/manager.go:244-258`               | Exists — reuse as-is                                   |
+| `buildMessage(eventType, payload)`                     | `server/internal/session/manager.go`                       | Exists                                                 |
+| `cancelReconnectTimer()`                               | `server/internal/session/timer.go:12-19`                   | Exists                                                 |
+| `cancelTurnTimer()`                                    | `server/internal/session/timer.go`                         | Exists                                                 |
+| `reconnectGeneration` guard pattern                    | `server/internal/session/reconnect.go:252-256`             | Exists                                                 |
+| `hub.BroadcastToUsers(userIDs, msg)`                   | `server/internal/ws/hub.go:174-182`                        | Exists                                                 |
+| `EventMatchEnd` + `MatchEndPayload`                    | Both contract files                                        | Exists — NOT used for abandonment                      |
+| `ReconnectOverlay` component                           | `client/src/features/game/components/ReconnectOverlay.tsx` | Exists — MODIFY to handle abandonment                  |
+| `MatchResult` component                                | `client/src/features/game/components/MatchResult.tsx`      | Exists — NOT used for abandonment                      |
+| `useReconnectionRedirect` hook                         | `client/src/shared/hooks/useReconnectionRedirect.ts`       | Exists — has `phase !== "match_end"` guard             |
+| `clearGame()` in gameStore                             | `client/src/shared/stores/gameStore.ts:60`                 | Exists                                                 |
+| `handleReturnToLobby` in GamePage                      | `client/src/features/game/GamePage.tsx:230-234`            | Exists — pattern to follow for abandon redirect        |
+| `safeDerefInt` helper                                  | `server/internal/session/manager.go:701-706`               | Exists — returns 0 for nil, used in normal match end   |
+| `RoomStatusUpdater` interface                          | `server/internal/session/manager.go:33-36`                 | Exists                                                 |
+| `RoomStatusAdapter` implementation                     | `server/internal/room/handler.go:54-65`                    | Exists                                                 |
+| `LeaveRoom` handler                                    | `server/internal/room/handler.go:442`                      | Exists — reference for lobby seat-freeing logic        |
+| `Match` struct                                         | `server/internal/match/model.go:6-21`                      | Exists — MODIFY to add fields                          |
+| `match.MatchRepository` interface                      | `server/internal/match/repository.go`                      | Exists — `Create` method used                          |
+| Match DB migration                                     | `server/migrations/000006_create_matches.up.sql`           | Exists — DO NOT modify                                 |
+| Hub composite handler wiring                           | `server/cmd/api/main.go:98-100`                            | Exists — MODIFY to composite                           |
 
 ### What Must Be Created
 
@@ -413,16 +421,16 @@ so that the remaining players aren't stuck waiting indefinitely.
 
 ### `handleReconnectTimeout` vs `handleMatchEnd` — Key Differences
 
-| Concern | `handleMatchEnd` (normal) | `handleReconnectTimeout` (abandon) |
-|---------|---------------------------|-------------------------------------|
-| Triggered by | Rules engine returns `PhaseMatchEnd` | Reconnect timer expires |
-| Lock state | Caller holds no session lock | Function acquires session lock |
-| WinnerTeam | Non-nil (0 or 1) | nil (no winner) |
-| Match status | `"completed"` | `"abandoned"` |
-| AbandonedBy | nil | Disconnected player's ID |
-| WS event | `event:match_end` | `event:match_abandoned` |
-| Client flow | Score reveal → MatchResult overlay | ReconnectOverlay → abandon message → auto-redirect |
-| GameState mutation | Done by rules engine (pure function) | Done directly in `handleReconnectTimeout` |
+| Concern            | `handleMatchEnd` (normal)            | `handleReconnectTimeout` (abandon)                 |
+| ------------------ | ------------------------------------ | -------------------------------------------------- |
+| Triggered by       | Rules engine returns `PhaseMatchEnd` | Reconnect timer expires                            |
+| Lock state         | Caller holds no session lock         | Function acquires session lock                     |
+| WinnerTeam         | Non-nil (0 or 1)                     | nil (no winner)                                    |
+| Match status       | `"completed"`                        | `"abandoned"`                                      |
+| AbandonedBy        | nil                                  | Disconnected player's ID                           |
+| WS event           | `event:match_end`                    | `event:match_abandoned`                            |
+| Client flow        | Score reveal → MatchResult overlay   | ReconnectOverlay → abandon message → auto-redirect |
+| GameState mutation | Done by rules engine (pure function) | Done directly in `handleReconnectTimeout`          |
 
 ### Frontend Abandonment Flow — Step by Step
 
@@ -446,6 +454,7 @@ so that the remaining players aren't stuck waiting indefinitely.
 The session manager's `HandleDisconnect` already returns early for non-game users (line 19: "Not in a game session — lobby disconnect, no game impact"). The lobby disconnect seat-freeing is a **separate concern** handled by a new `LobbyDisconnectHandler` in the room package.
 
 **Flow:**
+
 1. Hub fires `disconnectHandler(userID)` → composite handler delegates to both session manager and lobby handler
 2. Session manager returns immediately (user not in a game)
 3. Lobby handler checks if user is in a room with status `"waiting"` (via `FindRoomByPlayer`)
@@ -453,6 +462,7 @@ The session manager's `HandleDisconnect` already returns early for non-game user
 5. After 10s: removes player from room (reuse logic from `LeaveRoom`), broadcasts `system:player_left` to room
 
 **Reconnection cancellation:**
+
 1. Hub fires `connectHandler(userID)` → composite handler delegates to both session manager and lobby handler
 2. Session manager returns immediately (user not in a game)
 3. Lobby handler checks `pending` map, cancels timer if present
@@ -462,6 +472,7 @@ The session manager's `HandleDisconnect` already returns early for non-game user
 ### Previous Story Intelligence (Story 5.4)
 
 Key learnings to carry forward:
+
 - **Data race on broadcast after unlock** — build ALL messages BEFORE unlocking session mutex (F1 fix pattern). This is critical for `handleReconnectTimeout`.
 - **Generation guard prevents stale callbacks** — `reconnectGeneration` is already incremented in `HandleDisconnect` (line 120). The guard in `handleReconnectTimeout` checks this. If a player reconnects and then disconnects again, a NEW timer starts with a NEW generation — the old timer's callback is invalidated.
 - **Hub ConnectHandler fires for ALL connections** — including first-time lobby connections. Both `HandleReconnect` and `LobbyDisconnectHandler.HandleReconnect` must be safe for all connections (early return for non-applicable users).
@@ -482,12 +493,14 @@ Key learnings to carry forward:
 ### Project Structure Notes
 
 **New files (expected):**
+
 - `server/migrations/000008_add_match_status.up.sql`
 - `server/migrations/000008_add_match_status.down.sql`
 - `server/internal/room/lobby_disconnect.go`
 - `server/internal/room/lobby_disconnect_test.go`
 
 **Modified files (expected):**
+
 - `server/internal/session/reconnect.go` (replace `handleReconnectTimeout` placeholder)
 - `server/internal/session/reconnect_test.go` (add timeout tests)
 - `server/internal/session/manager.go` (add `Status: "completed"` to `handleMatchEnd`)
@@ -557,12 +570,14 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - server/migrations/000008_add_match_status.up.sql
 - server/migrations/000008_add_match_status.down.sql
 - server/internal/room/lobby_disconnect.go
 - server/internal/room/lobby_disconnect_test.go
 
 **Modified files:**
+
 - server/internal/match/model.go (added Status, AbandonedBy fields)
 - server/internal/session/reconnect.go (replaced handleReconnectTimeout placeholder, added match import)
 - server/internal/session/reconnect_test.go (added 4 timeout tests, updated expired window test)

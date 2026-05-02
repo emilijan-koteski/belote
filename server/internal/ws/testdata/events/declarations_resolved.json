@@ -1,0 +1,16 @@
+{
+  "declarations": [
+    {
+      "cards": [
+        "JS",
+        "QS",
+        "KS",
+        "AS"
+      ],
+      "playerSeat": 0,
+      "type": "sequence",
+      "value": 50
+    }
+  ],
+  "winnerTeam": 0
+}

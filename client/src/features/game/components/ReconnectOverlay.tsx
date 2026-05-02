@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { TeamString } from "@/shared/types/gameTypes";
 import type { MatchAbandonedPayload } from "@/shared/types/wsEvents";
 
 interface ReconnectOverlayProps {
   disconnectedPlayerName: string;
   reconnectExpiresAt: string;
   abandonedData?: MatchAbandonedPayload | null;
+  // Viewer team — required whenever `abandonedData` is supplied so the
+  // final-score line can render Us/Them. When the overlay shows only the
+  // reconnect countdown (no abandonedData), this prop is unused and may be
+  // omitted.
+  viewerTeam?: TeamString | null;
   onReturnToLobby?: () => void;
 }
 
@@ -21,6 +27,7 @@ export function ReconnectOverlay({
   disconnectedPlayerName,
   reconnectExpiresAt,
   abandonedData,
+  viewerTeam = null,
   onReturnToLobby,
 }: ReconnectOverlayProps) {
   const { t } = useTranslation();
@@ -51,8 +58,14 @@ export function ReconnectOverlay({
     return () => clearTimeout(timer);
   }, [abandonedData, onReturnToLobby]);
 
-  // Abandoned state — show abandonment message instead of countdown
+  // Abandoned state — show abandonment message instead of countdown.
+  // The viewer is a participant, so the score line uses Us/Them: the
+  // viewer's team value is rendered first.
   if (abandonedData) {
+    const usValue =
+      viewerTeam === "teamA" ? abandonedData.teamAFinalScore : abandonedData.teamBFinalScore;
+    const themValue =
+      viewerTeam === "teamA" ? abandonedData.teamBFinalScore : abandonedData.teamAFinalScore;
     return (
       <div
         className="fixed inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm"
@@ -71,8 +84,8 @@ export function ReconnectOverlay({
 
           <p className="text-text-secondary text-sm mb-4" data-testid="abandon-scores">
             {t("game.disconnect.matchAbandonedScores", {
-              red: abandonedData.redFinalScore,
-              blue: abandonedData.blueFinalScore,
+              us: usValue,
+              them: themValue,
             })}
           </p>
 

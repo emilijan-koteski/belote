@@ -30,7 +30,7 @@ so that I can communicate emotions and reactions beyond text chat without leavin
 
 9. **Given** the new feature ships, **when** translations are checked by [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) (`flattenKeys` parity test), **then** every new English `game.emote.*` key has a Serbian counterpart in [sr.json](client/src/shared/i18n/sr.json). Required keys: `game.emote.button` (aria/tooltip), `game.emote.picker.title`, `game.emote.picker.close`, `game.emote.names.thumbsUp`, `.clap`, `.laugh`, `.thinking`, `.facepalm`, `.heart`. **No emote ID strings appear in user-facing copy** — IDs are protocol values, names come from i18n.
 
-10. **Given** an opponent's emote arrives, **when** the bubble renders on the receiving client, **then** the position uses the **compass-relative** seat layout (the existing `compassOffset(seat, myPlayerSeat)` helper from [GamePage.tsx:52-54](client/src/features/game/GamePage.tsx#L52-L54)) — i.e. the bubble appears at the absolute screen position of *that player's* seat from the *receiver's* perspective. Sender always sees their own bubble at South.
+10. **Given** an opponent's emote arrives, **when** the bubble renders on the receiving client, **then** the position uses the **compass-relative** seat layout (the existing `compassOffset(seat, myPlayerSeat)` helper from [GamePage.tsx:52-54](client/src/features/game/GamePage.tsx#L52-L54)) — i.e. the bubble appears at the absolute screen position of _that player's_ seat from the _receiver's_ perspective. Sender always sees their own bubble at South.
 
 11. **Given** the match is `paused` OR a reconnect overlay is up OR a match-end / match-abandoned overlay is up OR the receiving client has not yet derived `myPlayerSeat`, **when** a `system:emote` event arrives, **then** the bubble does not render (the picker button is also hidden in these states). The store can still record the latest emote, but the visual is suppressed; existing overlays own the screen.
 
@@ -129,35 +129,35 @@ so that I can communicate emotions and reactions beyond text chat without leavin
 
 This is the architecturally important framing the dev agent must internalise up-front: **emotes do not mutate `GameState`**. They are ephemeral social broadcasts on the same multiplexed WebSocket as chat. The closest precedent is **`internal/chat/handler.go`**, not `internal/game/surrender.go`.
 
-| Concern | Pause / Surrender (Story 5.1, 8.2) | Chat (Story 6.2) | **Emote (this story)** |
-|---|---|---|---|
-| Mutates `GameState`? | Yes (Phase, Used flags, ProposerSeat) | No | **No** |
-| Goes through `game.ApplyAction`? | Yes | No | **No** |
-| Lives in `internal/game/`? | Yes | No (`internal/chat/`) | **No (`internal/emote/`)** |
-| Persisted to DB? | Yes (matches.surrendered_by) | No | **No** |
-| Server-side rate limit? | n/a (one-shot per-seat) | n/a (length cap only) | **Yes — per-user 3 s window** |
-| Reuses `IsUserInGame` / `MatchParticipants`? | n/a | Yes | **Yes** |
-| Phase gating in handler? | Yes (PhasePlaying / PhaseBidding / PhasePaused) | Phase-agnostic (uses `IsUserInGame`) | **Phase-agnostic — `IsUserInGame` is the gate** |
+| Concern                                      | Pause / Surrender (Story 5.1, 8.2)              | Chat (Story 6.2)                     | **Emote (this story)**                          |
+| -------------------------------------------- | ----------------------------------------------- | ------------------------------------ | ----------------------------------------------- |
+| Mutates `GameState`?                         | Yes (Phase, Used flags, ProposerSeat)           | No                                   | **No**                                          |
+| Goes through `game.ApplyAction`?             | Yes                                             | No                                   | **No**                                          |
+| Lives in `internal/game/`?                   | Yes                                             | No (`internal/chat/`)                | **No (`internal/emote/`)**                      |
+| Persisted to DB?                             | Yes (matches.surrendered_by)                    | No                                   | **No**                                          |
+| Server-side rate limit?                      | n/a (one-shot per-seat)                         | n/a (length cap only)                | **Yes — per-user 3 s window**                   |
+| Reuses `IsUserInGame` / `MatchParticipants`? | n/a                                             | Yes                                  | **Yes**                                         |
+| Phase gating in handler?                     | Yes (PhasePlaying / PhaseBidding / PhasePaused) | Phase-agnostic (uses `IsUserInGame`) | **Phase-agnostic — `IsUserInGame` is the gate** |
 
 The dev agent's primary anti-pattern risk on this story is **over-fitting the surrender precedent**: adding a `GameState.LastEmoteAt`, an `ActionEmote` rules-engine action type, an apperr error, a migration. **None of those are needed.** Read the chat handler closely; do not read the surrender handler for inspiration on this feature.
 
 ### What Already Exists — Do NOT Recreate
 
-| Item | Location | Notes |
-|---|---|---|
-| `chat.Handler` action handler | [server/internal/chat/handler.go](server/internal/chat/handler.go) | The exact shape and dependency wiring to mirror — `Broadcaster` interface (subset of `*ws.Hub`), `GameMembership` interface, silent-drop on validation failures, `buildMessage` helper. **Read this whole file before writing the emote handler**. |
-| `chat.Handler` test scaffolding | [server/internal/chat/handler_test.go](server/internal/chat/handler_test.go) | `hubSpy`, `fakeGame`, `fakeRoom`, `userRepoStub` — copy the spy/fake patterns; do not invent new ones. |
-| Composite action-handler wiring | [server/cmd/api/main.go:121-127](server/cmd/api/main.go#L121-L127) | The single-closure `if msg.Type == ws.ActionChatMessage { ... }; sessionManager.HandleAction(...)` pattern. Extend with a second `if` arm — do NOT introduce a router abstraction or move dispatch into `ws.Router`. |
-| `ws.Hub.BroadcastToUsers` | [server/internal/ws/hub.go:174-182](server/internal/ws/hub.go#L174-L182) | All emote broadcasts go through this. Disconnected user IDs are silently skipped — exactly the desired behaviour during a transient disconnect. |
-| `Manager.IsUserInGame` / `Manager.MatchParticipants` | [server/internal/session/manager.go:316-335](server/internal/session/manager.go#L316-L335) | Existing helpers. The new `MatchParticipantsByUser` is a sibling helper using the same lock pattern. |
-| `compassOffset(seat, myPlayerSeat)` | [client/src/features/game/GamePage.tsx:52-54](client/src/features/game/GamePage.tsx#L52-L54) | Existing helper. Use as-is for `EmoteBubble` positioning — do not duplicate the math. |
-| `SEAT_POSITIONS` Tailwind class map | [client/src/features/game/GamePage.tsx:60-65](client/src/features/game/GamePage.tsx#L60-L65) | The four absolute-positioning class strings keyed by compass index. The `EmoteBubble` reuses this exact mapping. |
-| `useFocusTrap` | `client/src/shared/hooks/useFocusTrap.ts` | Used by `SurrenderPrompt` / `BelotPrompt`. **Do NOT** apply to `EmotePickerButton`'s popover — it is a non-modal popover, not a dialog; trapping focus would block the picker close-via-outside-click flow. |
-| `useGameStore.clearGame()` | [client/src/shared/stores/gameStore.ts:105](client/src/shared/stores/gameStore.ts#L105) | Wipes all transient slots back to `initialState`. Adding `activeEmotes` to `initialState` is the entire mechanism that satisfies AC #6 (no per-game cleanup logic needed beyond the existing teardown). |
-| `useWsDispatch` defensive payload validation | [useWsDispatch.ts:357-366](client/src/shared/hooks/useWsDispatch.ts#L357-L366) | The `SYSTEM_CHAT_MESSAGE` malformed-payload guard. Mirror this exact shape for `SYSTEM_EMOTE`. |
-| Lucide `Smile` icon (and friends) via `lucide-react` | npm package already on the dependency tree (used by `MatchChatSidebar`, others) | Import `import { Smile } from "lucide-react"`. **Do NOT** install any new icon library. |
-| `motion-safe:` Tailwind v4 modifier | Used throughout the codebase ([SurrenderPrompt.tsx:25](client/src/features/game/components/SurrenderPrompt.tsx#L25) and others) | Use the same `motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150` pattern; reduced-motion will skip the animation automatically. |
-| i18n parity test | [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) | CI-enforced. Every English `game.emote.*` key must have a Serbian counterpart. |
+| Item                                                 | Location                                                                                                                        | Notes                                                                                                                                                                                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `chat.Handler` action handler                        | [server/internal/chat/handler.go](server/internal/chat/handler.go)                                                              | The exact shape and dependency wiring to mirror — `Broadcaster` interface (subset of `*ws.Hub`), `GameMembership` interface, silent-drop on validation failures, `buildMessage` helper. **Read this whole file before writing the emote handler**. |
+| `chat.Handler` test scaffolding                      | [server/internal/chat/handler_test.go](server/internal/chat/handler_test.go)                                                    | `hubSpy`, `fakeGame`, `fakeRoom`, `userRepoStub` — copy the spy/fake patterns; do not invent new ones.                                                                                                                                             |
+| Composite action-handler wiring                      | [server/cmd/api/main.go:121-127](server/cmd/api/main.go#L121-L127)                                                              | The single-closure `if msg.Type == ws.ActionChatMessage { ... }; sessionManager.HandleAction(...)` pattern. Extend with a second `if` arm — do NOT introduce a router abstraction or move dispatch into `ws.Router`.                               |
+| `ws.Hub.BroadcastToUsers`                            | [server/internal/ws/hub.go:174-182](server/internal/ws/hub.go#L174-L182)                                                        | All emote broadcasts go through this. Disconnected user IDs are silently skipped — exactly the desired behaviour during a transient disconnect.                                                                                                    |
+| `Manager.IsUserInGame` / `Manager.MatchParticipants` | [server/internal/session/manager.go:316-335](server/internal/session/manager.go#L316-L335)                                      | Existing helpers. The new `MatchParticipantsByUser` is a sibling helper using the same lock pattern.                                                                                                                                               |
+| `compassOffset(seat, myPlayerSeat)`                  | [client/src/features/game/GamePage.tsx:52-54](client/src/features/game/GamePage.tsx#L52-L54)                                    | Existing helper. Use as-is for `EmoteBubble` positioning — do not duplicate the math.                                                                                                                                                              |
+| `SEAT_POSITIONS` Tailwind class map                  | [client/src/features/game/GamePage.tsx:60-65](client/src/features/game/GamePage.tsx#L60-L65)                                    | The four absolute-positioning class strings keyed by compass index. The `EmoteBubble` reuses this exact mapping.                                                                                                                                   |
+| `useFocusTrap`                                       | `client/src/shared/hooks/useFocusTrap.ts`                                                                                       | Used by `SurrenderPrompt` / `BelotPrompt`. **Do NOT** apply to `EmotePickerButton`'s popover — it is a non-modal popover, not a dialog; trapping focus would block the picker close-via-outside-click flow.                                        |
+| `useGameStore.clearGame()`                           | [client/src/shared/stores/gameStore.ts:105](client/src/shared/stores/gameStore.ts#L105)                                         | Wipes all transient slots back to `initialState`. Adding `activeEmotes` to `initialState` is the entire mechanism that satisfies AC #6 (no per-game cleanup logic needed beyond the existing teardown).                                            |
+| `useWsDispatch` defensive payload validation         | [useWsDispatch.ts:357-366](client/src/shared/hooks/useWsDispatch.ts#L357-L366)                                                  | The `SYSTEM_CHAT_MESSAGE` malformed-payload guard. Mirror this exact shape for `SYSTEM_EMOTE`.                                                                                                                                                     |
+| Lucide `Smile` icon (and friends) via `lucide-react` | npm package already on the dependency tree (used by `MatchChatSidebar`, others)                                                 | Import `import { Smile } from "lucide-react"`. **Do NOT** install any new icon library.                                                                                                                                                            |
+| `motion-safe:` Tailwind v4 modifier                  | Used throughout the codebase ([SurrenderPrompt.tsx:25](client/src/features/game/components/SurrenderPrompt.tsx#L25) and others) | Use the same `motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150` pattern; reduced-motion will skip the animation automatically.                                                                                               |
+| i18n parity test                                     | [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts)                                                      | CI-enforced. Every English `game.emote.*` key must have a Serbian counterpart.                                                                                                                                                                     |
 
 ### What Must Be Created
 
@@ -183,6 +183,7 @@ The dev agent's primary anti-pattern risk on this story is **over-fitting the su
 12. [client/src/shared/i18n/en.json](client/src/shared/i18n/en.json) + [sr.json](client/src/shared/i18n/sr.json) — `game.emote.*` block.
 
 **No changes expected:**
+
 - `internal/game/*` — emote is not a rules-engine concern.
 - `internal/match/*` — no persistence.
 - `internal/apperr/errors.go` — no new errors (silent drops).
@@ -253,11 +254,11 @@ Carried-forward learnings that shape this story:
 
 ### Frontend Flow — Sending and Receiving an Emote
 
-| Role | What They See | Driving State |
-|---|---|---|
-| **Sender** | Click emote toggle → grid pops open → click tile → grid closes immediately → ~150 ms later the bubble pops in at their own (South) seat. Re-clicking the toggle within 3 s shows disabled tiles. | Local `lastSentAt` for client throttle; `activeEmotes[mySeat]` set by the round-trip `system:emote` broadcast. |
-| **Other 3 participants** | A bubble pops in at the sender's compass position with the emote glyph; auto-dismisses after 2 s (1 s with reduced motion). | `activeEmotes[senderSeat]` set by `useWsDispatch`'s `SYSTEM_EMOTE` branch. |
-| **Spectator (future)** | n/a — Phase 5. | n/a |
+| Role                     | What They See                                                                                                                                                                                    | Driving State                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **Sender**               | Click emote toggle → grid pops open → click tile → grid closes immediately → ~150 ms later the bubble pops in at their own (South) seat. Re-clicking the toggle within 3 s shows disabled tiles. | Local `lastSentAt` for client throttle; `activeEmotes[mySeat]` set by the round-trip `system:emote` broadcast. |
+| **Other 3 participants** | A bubble pops in at the sender's compass position with the emote glyph; auto-dismisses after 2 s (1 s with reduced motion).                                                                      | `activeEmotes[senderSeat]` set by `useWsDispatch`'s `SYSTEM_EMOTE` branch.                                     |
+| **Spectator (future)**   | n/a — Phase 5.                                                                                                                                                                                   | n/a                                                                                                            |
 
 The sender does NOT optimistically render their own bubble — they wait for the WS round-trip, identical to surrender / pause UI patterns (server is the authority, client renders received state). This guarantees the sender sees their own bubble at the same moment everyone else does, eliminating the cross-client desync that an optimistic render would risk.
 
@@ -268,6 +269,7 @@ The sender does NOT optimistically render their own bubble — they wait for the
 **Total LOC estimate:** ~600–800 lines including tests.
 
 **Alignment with unified project structure:**
+
 - Backend: new `internal/emote/` package matches the package-per-domain pattern (architecture L356-368).
 - Frontend: components live under `features/game/components/` next to siblings (no new folder).
 - WS contract: both sides updated in the same commit (project rule).
@@ -285,7 +287,7 @@ The sender does NOT optimistically render their own bubble — they wait for the
 
 ### Edge Cases & Anti-Patterns to Avoid
 
-- **Do NOT** add `ActionEmote` to [server/internal/game/types.go](server/internal/game/types.go) or `case ActionEmote` to `game.ApplyAction`. The emote handler runs *outside* the rules engine.
+- **Do NOT** add `ActionEmote` to [server/internal/game/types.go](server/internal/game/types.go) or `case ActionEmote` to `game.ApplyAction`. The emote handler runs _outside_ the rules engine.
 - **Do NOT** add an `activeEmotes` field to the Go `GameState` struct. Emotes are not part of the snapshot, not part of reconnection state, not persisted.
 - **Do NOT** add an `error:emote_*` event. All failure modes are silent drops with `slog.Info` — mirrors chat handler.
 - **Do NOT** add a new shadcn primitive (`popover`, `alert-dialog`, etc.). The picker is a hand-rolled absolute-positioned grid with click-outside dismissal — six tiles do not warrant a UI library install.
@@ -303,15 +305,15 @@ The sender does NOT optimistically render their own bubble — they wait for the
 
 ### References
 
-- [_bmad-output/planning-artifacts/epics.md#L1493-L1511](_bmad-output/planning-artifacts/epics.md#L1493-L1511) — Epic 8 / Story 8.3 ACs
-- [_bmad-output/planning-artifacts/epics.md#L209](_bmad-output/planning-artifacts/epics.md#L209) — FR32 maps to Epic 8 (in-game emotes)
-- [_bmad-output/planning-artifacts/epics.md#L51](_bmad-output/planning-artifacts/epics.md#L51) — FR32: "Players can express reactions during a match using preset in-game emotes"
-- [_bmad-output/planning-artifacts/architecture.md#L327-L336](_bmad-output/planning-artifacts/architecture.md#L327-L336) — WS event prefix discipline
-- [_bmad-output/planning-artifacts/architecture.md#L877](_bmad-output/planning-artifacts/architecture.md#L877) — communication packages map to `internal/chat/`
-- [_bmad-output/planning-artifacts/ux-design-specification.md#L117](_bmad-output/planning-artifacts/ux-design-specification.md#L117) — UX phase 2: in-game preset emotes (rate-limited, visible to all 4 seats)
-- [_bmad-output/planning-artifacts/prd.md#L136](_bmad-output/planning-artifacts/prd.md#L136) — PRD: "In-game preset emotes: rate-limited (max 1 per 3s per player), visible to all 4 seats"
-- [_bmad-output/planning-artifacts/prd.md#L349](_bmad-output/planning-artifacts/prd.md#L349) — FR32 PRD definition
-- [_bmad-output/project-context.md](_bmad-output/project-context.md) — global project rules (TS no-`enum`, WS contract sync, i18n parity, etc.)
+- [\_bmad-output/planning-artifacts/epics.md#L1493-L1511](_bmad-output/planning-artifacts/epics.md#L1493-L1511) — Epic 8 / Story 8.3 ACs
+- [\_bmad-output/planning-artifacts/epics.md#L209](_bmad-output/planning-artifacts/epics.md#L209) — FR32 maps to Epic 8 (in-game emotes)
+- [\_bmad-output/planning-artifacts/epics.md#L51](_bmad-output/planning-artifacts/epics.md#L51) — FR32: "Players can express reactions during a match using preset in-game emotes"
+- [\_bmad-output/planning-artifacts/architecture.md#L327-L336](_bmad-output/planning-artifacts/architecture.md#L327-L336) — WS event prefix discipline
+- [\_bmad-output/planning-artifacts/architecture.md#L877](_bmad-output/planning-artifacts/architecture.md#L877) — communication packages map to `internal/chat/`
+- [\_bmad-output/planning-artifacts/ux-design-specification.md#L117](_bmad-output/planning-artifacts/ux-design-specification.md#L117) — UX phase 2: in-game preset emotes (rate-limited, visible to all 4 seats)
+- [\_bmad-output/planning-artifacts/prd.md#L136](_bmad-output/planning-artifacts/prd.md#L136) — PRD: "In-game preset emotes: rate-limited (max 1 per 3s per player), visible to all 4 seats"
+- [\_bmad-output/planning-artifacts/prd.md#L349](_bmad-output/planning-artifacts/prd.md#L349) — FR32 PRD definition
+- [\_bmad-output/project-context.md](_bmad-output/project-context.md) — global project rules (TS no-`enum`, WS contract sync, i18n parity, etc.)
 - [server/internal/chat/handler.go](server/internal/chat/handler.go) — direct architectural template
 - [server/internal/chat/handler_test.go](server/internal/chat/handler_test.go) — test scaffolding template
 - [server/internal/ws/events.go](server/internal/ws/events.go) — WS contract (server side)
@@ -324,7 +326,7 @@ The sender does NOT optimistically render their own bubble — they wait for the
 - [client/src/features/game/GamePage.tsx](client/src/features/game/GamePage.tsx) — table layout, `compassOffset`, `SEAT_POSITIONS`
 - [client/src/features/game/components/MatchChatSidebar.tsx](client/src/features/game/components/MatchChatSidebar.tsx) — chat-toggle button placement reference
 - [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) — parity test the new keys must satisfy
-- [_bmad-output/implementation-artifacts/8-2-team-surrender.md](_bmad-output/implementation-artifacts/8-2-team-surrender.md) — predecessor story (anti-precedent for emote architecture; precedent for review discipline)
+- [\_bmad-output/implementation-artifacts/8-2-team-surrender.md](_bmad-output/implementation-artifacts/8-2-team-surrender.md) — predecessor story (anti-precedent for emote architecture; precedent for review discipline)
 
 ## Dev Agent Record
 
@@ -385,9 +387,9 @@ claude-opus-4-7 (Opus 4.7, 1M context)
 
 ### Change Log
 
-| Date | Description | Author |
-|---|---|---|
-| 2026-04-28 | Story drafted with comprehensive context — chat-handler-style architecture (NOT rules engine), six-emote preset, 3 s rate limit, ephemeral per-seat bubbles | Bob (SM) |
+| Date       | Description                                                                                                                                                                                                                                                                        | Author       |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 2026-04-28 | Story drafted with comprehensive context — chat-handler-style architecture (NOT rules engine), six-emote preset, 3 s rate limit, ephemeral per-seat bubbles                                                                                                                        | Bob (SM)     |
 | 2026-04-28 | Implementation complete — WS contract + emote package + session helper + composite-handler arm + gameStore slot + dispatcher branch + picker/bubble components + GamePage integration + i18n. All quality gates green (go test, vitest, eslint, prettier, gofmt). Status → review. | Amelia (Dev) |
 
 ### Review Findings

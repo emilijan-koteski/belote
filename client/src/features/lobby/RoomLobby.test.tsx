@@ -103,6 +103,18 @@ beforeEach(() => {
   mockLeaveRoom.mockResolvedValue(undefined);
   // jsdom has no scrollIntoView — the nested ChatPanel calls it on mount.
   Element.prototype.scrollIntoView = vi.fn();
+  // jsdom has no matchMedia — RoomLobby reads `prefers-reduced-motion` to
+  // decide between the rotation transition + delayed "your seat" label and
+  // the snap path. Default matches=false (animations allowed).
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  });
 });
 
 afterEach(() => {
@@ -118,7 +130,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
@@ -140,8 +152,8 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 2 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -160,7 +172,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
@@ -180,7 +192,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
@@ -205,7 +217,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
@@ -230,7 +242,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
@@ -268,22 +280,22 @@ describe("RoomLobby", () => {
 
   // --- Team color indicators ---
 
-  it("renders Red Team and Blue Team labels", async () => {
+  it("renders Team A and Team B labels", async () => {
     useAuthStore.setState({ user: defaultUser, token: "tok" });
 
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("Red Team")).toBeInTheDocument();
+      expect(screen.getByText("Team A")).toBeInTheDocument();
     });
-    expect(screen.getByText("Blue Team")).toBeInTheDocument();
+    expect(screen.getByText("Team B")).toBeInTheDocument();
   });
 
   // --- Seat selection ---
@@ -295,7 +307,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 2 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
         { id: 2, roomId: 1, userId: 20, username: "bob", seat: null, team: null, createdAt: "" },
       ],
     });
@@ -303,8 +315,8 @@ describe("RoomLobby", () => {
     mockSelectSeat.mockResolvedValue({
       gameStarted: false,
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -327,8 +339,8 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 2 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -351,14 +363,14 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
     mockSelectSeat.mockResolvedValue({
       gameStarted: false,
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 1, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 1, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -381,7 +393,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
@@ -408,10 +420,10 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 4 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -430,7 +442,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 2 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
         { id: 2, roomId: 1, userId: 20, username: "bob", seat: null, team: null, createdAt: "" },
       ],
     });
@@ -451,10 +463,10 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 4 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -484,10 +496,10 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 4 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -510,8 +522,8 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 2 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -531,10 +543,10 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 4 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -561,7 +573,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, isQuickPlay: true, playerCount: 2 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
         { id: 2, roomId: 1, userId: 20, username: "bob", seat: null, team: null, createdAt: "" },
       ],
     });
@@ -582,10 +594,10 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, isQuickPlay: true, playerCount: 4 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -607,10 +619,10 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, isQuickPlay: true, playerCount: 4 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -632,7 +644,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
@@ -650,7 +662,7 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, playerCount: 1 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
       ],
     });
 
@@ -691,9 +703,9 @@ describe("RoomLobby", () => {
     mockGetRoom.mockResolvedValue({
       room: { ...defaultRoom, isQuickPlay: true, playerCount: 4 },
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
         { id: 4, roomId: 1, userId: 40, username: "dave", seat: null, team: null, createdAt: "" },
       ],
     });
@@ -701,10 +713,10 @@ describe("RoomLobby", () => {
     mockSelectSeat.mockResolvedValue({
       gameStarted: true,
       players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "red", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
       ],
     });
 
@@ -734,12 +746,12 @@ describe("RoomLobby", () => {
           userId: 10,
           username: "alice",
           seat: ownerSeat,
-          team: ownerSeat % 2 === 0 ? "red" : "blue",
+          team: ownerSeat % 2 === 0 ? "teamA" : "teamB",
           createdAt: "",
         },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "blue", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "red", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "blue", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
+        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
       ],
     };
   }

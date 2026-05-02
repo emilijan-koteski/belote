@@ -105,6 +105,7 @@ so that we can banter and communicate during play and recreate the card-table at
         h.handleMatch(client.UserID, req.MatchID, text)
     ```
   - [x] 2.2 Add the handler method to the same file. Mirror `handleGlobal` in structure — silent drops on every failure, server-stamped `RFC3339Nano` timestamp, reuse the existing `buildMessage` helper:
+
     ```go
     func (h *Handler) handleMatch(senderID uint, matchID *uint, text string) {
         if matchID == nil {
@@ -153,6 +154,7 @@ so that we can banter and communicate during play and recreate the card-table at
         h.hub.BroadcastToUsers(participants[:], msgBytes)
     }
     ```
+
   - [x] 2.3 Remove the stale "// Reserved for Story 6.2" comment — the branch is now live.
 
 - [x] Task 3: Extend backend tests for the match branch (AC: #2, #3, #8 server-side parity)
@@ -310,26 +312,26 @@ so that we can banter and communicate during play and recreate the card-table at
 
 ### What Already Exists — Do NOT Recreate
 
-| Item | Location | Status |
-|------|----------|--------|
-| `ChannelMatch = "match"` constant | [server/internal/chat/handler.go:17](server/internal/chat/handler.go#L17) | Exists — replace the `case ChannelMatch:` stub with the real handler |
-| `ChatMessageRequest.MatchID *uint` (Go) | [server/internal/ws/events.go:124](server/internal/ws/events.go#L124) | Exists (json tag `matchId,omitempty`) — DO NOT redeclare |
-| `ChatMessagePayload.Scope string` (Go) | [server/internal/ws/events.go:134](server/internal/ws/events.go#L134) | Exists with doc `"global" | "match"` — DO NOT redeclare |
-| `ChatMessageRequest.matchId?: number` (TS) | [client/src/shared/types/wsEvents.ts:262](client/src/shared/types/wsEvents.ts#L262) | Exists — DO NOT redeclare |
-| `ChatMessagePayload.scope: "global" | "match"` (TS) | [client/src/shared/types/wsEvents.ts:271](client/src/shared/types/wsEvents.ts#L271) | Exists — DO NOT redeclare |
-| `Hub.BroadcastToUsers(userIDs []uint, msg []byte)` | [server/internal/ws/hub.go:174-182](server/internal/ws/hub.go#L174-L182) | Exists — use directly with `session.playerIDs[:]` |
-| `Hub.ConnectedUserIDs()` | [server/internal/ws/hub.go:202-210](server/internal/ws/hub.go#L202-L210) | Exists (Story 6.1) — **NOT needed** for match scope (we broadcast to the 4 known participants regardless of connection state; `BroadcastToUsers` silently skips disconnected IDs) |
-| `session.Manager.IsUserInGame(uid)` | [server/internal/session/manager.go:279](server/internal/session/manager.go#L279) | Exists — reused indirectly via the existing `GameMembership` interface |
-| `session.Manager.sessions[roomID]` + `Session.playerIDs [4]uint` | [server/internal/session/manager.go:43,21](server/internal/session/manager.go#L43) | Exists — expose via new `MatchParticipants(roomID)` method (Task 1) |
-| `chat.Handler` with `HandleAction`, length check, RFC3339Nano stamping, `buildMessage` helper | [server/internal/chat/handler.go](server/internal/chat/handler.go) | Exists — reuse the text-validation pipeline; only add `handleMatch` below `handleGlobal` |
-| `hubSpy`, `fakeGame`, `userRepoStub` test fakes | [server/internal/chat/handler_test.go:19-95](server/internal/chat/handler_test.go#L19-L95) | Exists — extend `fakeGame` with a participants map and add match-mode tests |
-| `chatStore.globalMessages` + 200-message ring buffer pattern | [client/src/shared/stores/chatStore.ts](client/src/shared/stores/chatStore.ts) | Exists — add a symmetric `matchMessages` partition with identical buffer semantics |
-| `ChatPanel` component | [client/src/features/chat/ChatPanel.tsx](client/src/features/chat/ChatPanel.tsx) | Exists — ADAPT with an optional `channel` prop; do NOT fork or duplicate |
-| `useWsDispatch` chat branch with defensive payload validation | [client/src/shared/hooks/useWsDispatch.ts:305-324](client/src/shared/hooks/useWsDispatch.ts#L305-L324) | Exists — add the `scope === "match"` arm; keep the existing validation block unchanged |
-| `useGameStore((s) => s.roomId)` | [client/src/shared/stores/gameStore.ts:15,68](client/src/shared/stores/gameStore.ts#L15) | Exists — this is the `matchId` for the chat payload |
-| Composite `SetActionHandler` closure routing chat vs session | [server/cmd/api/main.go:115-122](server/cmd/api/main.go#L115-L122) | Exists — no wiring change; the same `chat.Handler` instance handles both scopes |
-| `WebSocketProvider` wrapping `/game/:roomId` | [client/src/shared/components/ProtectedRoute.tsx](client/src/shared/components/ProtectedRoute.tsx) | Exists — `GamePage` already has WS context |
-| `Intl.DateTimeFormat` / `useTranslation` / `data-testid` conventions | client-wide | Established in Story 6.1; same discipline here |
+| Item                                                                                          | Location                                                                                               | Status                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `ChannelMatch = "match"` constant                                                             | [server/internal/chat/handler.go:17](server/internal/chat/handler.go#L17)                              | Exists — replace the `case ChannelMatch:` stub with the real handler                                                                                                              |
+| `ChatMessageRequest.MatchID *uint` (Go)                                                       | [server/internal/ws/events.go:124](server/internal/ws/events.go#L124)                                  | Exists (json tag `matchId,omitempty`) — DO NOT redeclare                                                                                                                          |
+| `ChatMessagePayload.Scope string` (Go)                                                        | [server/internal/ws/events.go:134](server/internal/ws/events.go#L134)                                  | Exists with doc `"global"                                                                                                                                                         | "match"` — DO NOT redeclare |
+| `ChatMessageRequest.matchId?: number` (TS)                                                    | [client/src/shared/types/wsEvents.ts:262](client/src/shared/types/wsEvents.ts#L262)                    | Exists — DO NOT redeclare                                                                                                                                                         |
+| `ChatMessagePayload.scope: "global"                                                           | "match"` (TS)                                                                                          | [client/src/shared/types/wsEvents.ts:271](client/src/shared/types/wsEvents.ts#L271)                                                                                               | Exists — DO NOT redeclare   |
+| `Hub.BroadcastToUsers(userIDs []uint, msg []byte)`                                            | [server/internal/ws/hub.go:174-182](server/internal/ws/hub.go#L174-L182)                               | Exists — use directly with `session.playerIDs[:]`                                                                                                                                 |
+| `Hub.ConnectedUserIDs()`                                                                      | [server/internal/ws/hub.go:202-210](server/internal/ws/hub.go#L202-L210)                               | Exists (Story 6.1) — **NOT needed** for match scope (we broadcast to the 4 known participants regardless of connection state; `BroadcastToUsers` silently skips disconnected IDs) |
+| `session.Manager.IsUserInGame(uid)`                                                           | [server/internal/session/manager.go:279](server/internal/session/manager.go#L279)                      | Exists — reused indirectly via the existing `GameMembership` interface                                                                                                            |
+| `session.Manager.sessions[roomID]` + `Session.playerIDs [4]uint`                              | [server/internal/session/manager.go:43,21](server/internal/session/manager.go#L43)                     | Exists — expose via new `MatchParticipants(roomID)` method (Task 1)                                                                                                               |
+| `chat.Handler` with `HandleAction`, length check, RFC3339Nano stamping, `buildMessage` helper | [server/internal/chat/handler.go](server/internal/chat/handler.go)                                     | Exists — reuse the text-validation pipeline; only add `handleMatch` below `handleGlobal`                                                                                          |
+| `hubSpy`, `fakeGame`, `userRepoStub` test fakes                                               | [server/internal/chat/handler_test.go:19-95](server/internal/chat/handler_test.go#L19-L95)             | Exists — extend `fakeGame` with a participants map and add match-mode tests                                                                                                       |
+| `chatStore.globalMessages` + 200-message ring buffer pattern                                  | [client/src/shared/stores/chatStore.ts](client/src/shared/stores/chatStore.ts)                         | Exists — add a symmetric `matchMessages` partition with identical buffer semantics                                                                                                |
+| `ChatPanel` component                                                                         | [client/src/features/chat/ChatPanel.tsx](client/src/features/chat/ChatPanel.tsx)                       | Exists — ADAPT with an optional `channel` prop; do NOT fork or duplicate                                                                                                          |
+| `useWsDispatch` chat branch with defensive payload validation                                 | [client/src/shared/hooks/useWsDispatch.ts:305-324](client/src/shared/hooks/useWsDispatch.ts#L305-L324) | Exists — add the `scope === "match"` arm; keep the existing validation block unchanged                                                                                            |
+| `useGameStore((s) => s.roomId)`                                                               | [client/src/shared/stores/gameStore.ts:15,68](client/src/shared/stores/gameStore.ts#L15)               | Exists — this is the `matchId` for the chat payload                                                                                                                               |
+| Composite `SetActionHandler` closure routing chat vs session                                  | [server/cmd/api/main.go:115-122](server/cmd/api/main.go#L115-L122)                                     | Exists — no wiring change; the same `chat.Handler` instance handles both scopes                                                                                                   |
+| `WebSocketProvider` wrapping `/game/:roomId`                                                  | [client/src/shared/components/ProtectedRoute.tsx](client/src/shared/components/ProtectedRoute.tsx)     | Exists — `GamePage` already has WS context                                                                                                                                        |
+| `Intl.DateTimeFormat` / `useTranslation` / `data-testid` conventions                          | client-wide                                                                                            | Established in Story 6.1; same discipline here                                                                                                                                    |
 
 ### What Must Be Created
 
@@ -371,6 +373,7 @@ so that we can banter and communicate during play and recreate the card-table at
 ### Key Design Decision — Sidebar Collapsed by Default
 
 AC #1 says the sidebar is "available" and "can be toggled". UX spec says "always visible and accessible". The implementation choice: **toggle button always visible, panel collapsed by default at match start**. Rationale:
+
 - First trick is attentionally critical (bidding, declarations, belot prompts, hand orientation). Showing a full chat panel on top of that overwhelms new players.
 - Unread badge (AC #5) advertises activity without stealing focus.
 - Returning players who value chat will click once; the state persists for the duration of the match (optional future: remember the preference in localStorage — out of scope here).
@@ -384,6 +387,7 @@ The East seat avatar sits at `right-4 top-1/2 -translate-y-1/2` ([GamePage.tsx:5
 **Resolution:** The sidebar panel sits at `z-30`; seat 3 avatar is at a lower z-index (~z-10 implicit). The panel visually covers seat 3 **while it is open** — this is acceptable per UX spec since the panel is explicitly collapsible and the player can close it at any time to see every seat. The alternative (shifting seat 3 inward on open) violates the "HUD anchored to fixed positions — never reflow during play" rule at [ux-design-specification.md:378](_bmad-output/planning-artifacts/ux-design-specification.md#L378).
 
 **Critical guards:**
+
 - Panel z-index MUST be lower than pause/reconnect/match-result overlays (those should be `z-40`+). Verify by scanning existing overlay classes before wiring.
 - Panel must NOT cover hand cards (bottom edge) or the toggle button when closed. Width cap 320px; on viewports < 900px tall, the panel uses full width the same way — the project targets 1280×720 minimum.
 - Pointer events outside the panel bounds pass through to the game table (standard CSS — no `pointer-events: none` workarounds needed since the panel does not span the full viewport width).
@@ -391,6 +395,7 @@ The East seat avatar sits at `right-4 top-1/2 -translate-y-1/2` ([GamePage.tsx:5
 ### Key Design Decision — One `ChatPanel`, Two Channels
 
 Adding an optional `channel` prop (default `"global"`) to the existing `ChatPanel` is preferred over forking into `LobbyChatPanel` + `MatchChatPanel`:
+
 - Single rendering path for message rows — future tweaks (say, timestamp hover, copy-to-clipboard) benefit both instantly.
 - Prop default preserves `LobbyPage` as-is (no Story 6.1 regression risk).
 - The sidebar wrapper (`MatchChatSidebar`) carries only the composition logic (toggle, unread badge, positioning) — the message-list + input stays single-sourced.
@@ -447,10 +452,12 @@ Carried-forward learnings that directly shape this story:
 ### Project Structure Notes
 
 **New files (expected):**
+
 - `client/src/features/game/components/MatchChatSidebar.tsx`
 - `client/src/features/game/components/MatchChatSidebar.test.tsx`
 
 **Modified files (expected):**
+
 - `server/internal/session/manager.go` (add `MatchParticipants`)
 - `server/internal/session/manager_test.go` (add `TestMatchParticipants`)
 - `server/internal/chat/handler.go` (extend `GameMembership`, add `handleMatch`, replace stub)
@@ -467,6 +474,7 @@ Carried-forward learnings that directly shape this story:
 - `client/src/shared/i18n/sr.json` (`game.chat.*` extension)
 
 **No changes expected:**
+
 - `server/cmd/api/main.go` (wiring already correct)
 - `server/internal/ws/events.go` (contract fields already present)
 - `client/src/shared/types/wsEvents.ts` (contract fields already present)
@@ -514,10 +522,12 @@ Claude Opus 4.7 (1M context)
 ### File List
 
 **New files:**
+
 - client/src/features/game/components/MatchChatSidebar.tsx
 - client/src/features/game/components/MatchChatSidebar.test.tsx
 
 **Modified files:**
+
 - server/internal/session/manager.go (added `MatchParticipants(roomID)`)
 - server/internal/session/manager_test.go (added `TestMatchParticipants`)
 - server/internal/chat/handler.go (extended `GameMembership` interface, added `handleMatch`, replaced `ChannelMatch` stub with live dispatch)
@@ -535,10 +545,12 @@ Claude Opus 4.7 (1M context)
 - client/src/shared/i18n/sr.json (expanded `game.chat.*` with Serbian translations)
 
 **Modified files (review patches, 2026-04-18):**
+
 - client/src/features/game/components/MatchChatSidebar.tsx — z-20 → z-30 on toggle + panel (spec alignment); unread counter switched from `matchMessages.length` to monotonic `matchMessagesReceivedTotal` so the badge survives the 200-cap ceiling and `clearMatch()` correctly resets it to 0; tightened null-guard from `roomId === null` to `roomId === null || roomId <= 0`
 - client/src/features/game/components/MatchChatSidebar.test.tsx — added 2 regression tests: "unread keeps incrementing past 200-cap" and "unread resets when matchMessages cleared while sidebar closed"
 
 **No changes expected / made:**
+
 - server/cmd/api/main.go, server/internal/ws/events.go, server/internal/ws/hub.go, client/src/shared/types/wsEvents.ts, client/src/features/lobby/LobbyPage.tsx (contract and wiring already landed in Story 6.1).
 
 ### Change Log

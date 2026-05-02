@@ -17,12 +17,12 @@ so that I have a meaningful overview of my Belote career alongside my match hist
    When `GET /api/v1/users/:id/profile` is called,
    Then the server returns `200 { "data": { "id", "username", "languagePreference", "createdAt", "totalGamesPlayed", "wins", "losses", "abandoned" } }` — `totalGamesPlayed`, `wins`, `losses`, `abandoned` are non-negative integers derived from the `matches` table (never cached; computed per-request in Phase 1).
    And definitions (all computed over matches where `userID ∈ {player1_id..player4_id}`):
-     - `wins` = count of matches where `status = 'completed'` AND `winnerTeam = teamForSeat(viewerSeat)` (seat 0/2 → Red team index 0; seat 1/3 → Blue team index 1; mirroring `game.TeamForSeat`).
-     - `losses` = count of matches where `status = 'completed'` AND `winnerTeam != teamForSeat(viewerSeat)`.
-     - `abandoned` = count of matches where `status = 'abandoned'` (regardless of which side abandoned or which team "won" — abandoned games are neither wins nor losses, matching the UX tone in Story 7.1 AC #7 where the badge is `warning`, not `destructive`).
-     - `totalGamesPlayed` = `wins + losses + abandoned` (and MUST equal a direct `COUNT(*)` over the same where-clause — enforce with a unit test).
-   And the existing `ProfileResponse` fields (`id`, `username`, `languagePreference`, `createdAt`) remain **unchanged** in shape and semantics; this is an additive extension. No existing consumers break.
-   And `languagePreference` is still returned ONLY to the owner (the authorisation check is unchanged — `paramID != authUserID → 403`), preserving the existing PII boundary from [server/internal/user/handler.go:109](server/internal/user/handler.go#L109).
+   - `wins` = count of matches where `status = 'completed'` AND `winnerTeam = teamForSeat(viewerSeat)` (seat 0/2 → Team A index 0; seat 1/3 → Team B index 1; mirroring `game.TeamForSeat`).
+   - `losses` = count of matches where `status = 'completed'` AND `winnerTeam != teamForSeat(viewerSeat)`.
+   - `abandoned` = count of matches where `status = 'abandoned'` (regardless of which side abandoned or which team "won" — abandoned games are neither wins nor losses, matching the UX tone in Story 7.1 AC #7 where the badge is `warning`, not `destructive`).
+   - `totalGamesPlayed` = `wins + losses + abandoned` (and MUST equal a direct `COUNT(*)` over the same where-clause — enforce with a unit test).
+     And the existing `ProfileResponse` fields (`id`, `username`, `languagePreference`, `createdAt`) remain **unchanged** in shape and semantics; this is an additive extension. No existing consumers break.
+     And `languagePreference` is still returned ONLY to the owner (the authorisation check is unchanged — `paramID != authUserID → 403`), preserving the existing PII boundary from [server/internal/user/handler.go:109](server/internal/user/handler.go#L109).
 
 2. **Aggregate stats computed in a single DB round-trip — no N+1, no per-match loop**
    Given the handler composes the profile response,
@@ -36,13 +36,13 @@ so that I have a meaningful overview of my Belote career alongside my match hist
    Given the `ProfilePage` receives the extended profile payload,
    When the page renders,
    Then the `<section data-testid="profile-stats">` (currently a placeholder at [client/src/features/profile/ProfilePage.tsx:66-74](client/src/features/profile/ProfilePage.tsx#L66-L74)) displays four stat tiles in a horizontal `flex` or `grid-cols-4` layout:
-     - `games-played` — big number + label "Games played" (`profile.stats.totalGamesPlayed`).
-     - `wins` — big number + label "Wins" (`profile.stats.wins`), number coloured `text-success`.
-     - `losses` — big number + label "Losses" (`profile.stats.losses`), number coloured `text-text-secondary` (**never** `destructive` — per UX spec [ux-design-specification.md:321-323](_bmad-output/planning-artifacts/ux-design-specification.md#L321-L323) and the outcome-tone decision in Story 7.1).
-     - `win-rate` — percentage (`wins / (wins + losses)`) + label "Win rate" (`profile.stats.winRate`), number coloured `text-success` if ≥ 50% else `text-text-secondary`.
-   And stat numbers use `font-display` (Space Grotesk) at `text-4xl font-bold` — per UX spec typography rule "score numbers and rank text always use Space Grotesk" ([ux-design-specification.md:339](_bmad-output/planning-artifacts/ux-design-specification.md#L339), [#L357](_bmad-output/planning-artifacts/ux-design-specification.md#L357)).
-   And each tile has `data-testid="profile-stat-<key>"` (`profile-stat-games-played`, `profile-stat-wins`, `profile-stat-losses`, `profile-stat-win-rate`) and a stable `data-value="<number>"` attribute for robust test targeting independent of locale formatting.
-   And the section heading `profile.stats` (`"Stats"` / `"Statistika"`) is retained — only the inner body changes from the `<p>{t("profile.statsEmpty")}</p>` placeholder.
+   - `games-played` — big number + label "Games played" (`profile.stats.totalGamesPlayed`).
+   - `wins` — big number + label "Wins" (`profile.stats.wins`), number coloured `text-success`.
+   - `losses` — big number + label "Losses" (`profile.stats.losses`), number coloured `text-text-secondary` (**never** `destructive` — per UX spec [ux-design-specification.md:321-323](_bmad-output/planning-artifacts/ux-design-specification.md#L321-L323) and the outcome-tone decision in Story 7.1).
+   - `win-rate` — percentage (`wins / (wins + losses)`) + label "Win rate" (`profile.stats.winRate`), number coloured `text-success` if ≥ 50% else `text-text-secondary`.
+     And stat numbers use `font-display` (Space Grotesk) at `text-4xl font-bold` — per UX spec typography rule "score numbers and rank text always use Space Grotesk" ([ux-design-specification.md:339](_bmad-output/planning-artifacts/ux-design-specification.md#L339), [#L357](_bmad-output/planning-artifacts/ux-design-specification.md#L357)).
+     And each tile has `data-testid="profile-stat-<key>"` (`profile-stat-games-played`, `profile-stat-wins`, `profile-stat-losses`, `profile-stat-win-rate`) and a stable `data-value="<number>"` attribute for robust test targeting independent of locale formatting.
+     And the section heading `profile.stats` (`"Stats"` / `"Statistika"`) is retained — only the inner body changes from the `<p>{t("profile.statsEmpty")}</p>` placeholder.
 
 4. **Zero-games empty path — show `0 games played`, not a broken UI**
    Given an authenticated player has never played a match (`totalGamesPlayed === 0`),
@@ -55,9 +55,9 @@ so that I have a meaningful overview of my Belote career alongside my match hist
    Given Epic 7 is complete with Story 7.1 + 7.2,
    When `ProfilePage` renders,
    Then neither the string `profile.statsEmpty` nor any literal `"coming soon"` / `"placeholder"` copy is rendered in the stats or match-history sections — both are fully replaced by real data (or real empty states). Verified by:
-     - Removing the `profile.statsEmpty` key from both [en.json](client/src/shared/i18n/en.json) and [sr.json](client/src/shared/i18n/sr.json) in the same commit.
-     - Updating [ProfilePage.test.tsx](client/src/features/profile/ProfilePage.test.tsx) test `"renders placeholder sections"` to assert the stat tiles exist (retargeted to `profile-stat-*` testids), not the placeholder copy.
-     - A `grep` test (`npx vitest`) that asserts `profile.statsEmpty` does not appear in any `.tsx`/`.ts` file under `client/src/`.
+   - Removing the `profile.statsEmpty` key from both [en.json](client/src/shared/i18n/en.json) and [sr.json](client/src/shared/i18n/sr.json) in the same commit.
+   - Updating [ProfilePage.test.tsx](client/src/features/profile/ProfilePage.test.tsx) test `"renders placeholder sections"` to assert the stat tiles exist (retargeted to `profile-stat-*` testids), not the placeholder copy.
+   - A `grep` test (`npx vitest`) that asserts `profile.statsEmpty` does not appear in any `.tsx`/`.ts` file under `client/src/`.
 
 6. **i18n keys added to both `en.json` and `sr.json` in the same commit; `statsEmpty` removed from both**
    Given new copy introduced by this story,
@@ -123,9 +123,9 @@ so that I have a meaningful overview of my Belote career alongside my match hist
   - [x] 3.4 Existing `TestGetProfile_*` cases for auth failures (400 on bad id, 401 on missing token, 403 on foreign id) must continue to pass unchanged. Verify the mock's `GetStatsForUser` is NOT called when the auth check fails early — add a call-count assertion (`mockMatchRepo.getStatsCalls == 0`).
 
 - [x] **Task 4: Integration test — stats total equals matches total (AC #2)**
-  - [x] 4.1 Add a test (either in `gorm_repo_test.go` if one exists, or in [server/internal/user/handler_test.go](server/internal/user/handler_test.go) at handler level) that seeds N matches (e.g. 2 wins, 1 loss, 1 abandoned, some where the user is on team Red, some Blue, some in seats 2 and 3) and asserts: `stats.wins + stats.losses + stats.abandoned == getMatchesForUser.total` for the same user.
+  - [x] 4.1 Add a test (either in `gorm_repo_test.go` if one exists, or in [server/internal/user/handler_test.go](server/internal/user/handler_test.go) at handler level) that seeds N matches (e.g. 2 wins, 1 loss, 1 abandoned, some where the user is on Team A, some Team B, some in seats 2 and 3) and asserts: `stats.wins + stats.losses + stats.abandoned == getMatchesForUser.total` for the same user.
   - [x] 4.2 Edge case: matches where the viewing user was NOT a participant — they MUST NOT be counted in any bucket. Seed one such match in the fixture and assert the counts ignore it.
-  - [x] 4.3 Edge case: a user seated at position 3 (Blue team index 1) whose team won a match — verify `wins` increments (not `losses`). This exercises the CASE expression for `teamForSeat` across all four seats in the fixture.
+  - [x] 4.3 Edge case: a user seated at position 3 (Team B index 1) whose team won a match — verify `wins` increments (not `losses`). This exercises the CASE expression for `teamForSeat` across all four seats in the fixture.
 
 - [x] **Task 5: Client API type extension (AC #1, #8)**
   - [x] 5.1 Extend `ProfileResponse` in [client/src/shared/api/profile.ts](client/src/shared/api/profile.ts) with four required number fields:
@@ -143,14 +143,22 @@ so that I have a meaningful overview of my Belote career alongside my match hist
   - [x] 6.1 In [client/src/features/profile/ProfilePage.tsx](client/src/features/profile/ProfilePage.tsx), replace the placeholder body of the `<section data-testid="profile-stats">` (currently `<p>{t("profile.statsEmpty")}</p>`) with a 4-tile grid. Use Tailwind `grid grid-cols-2 md:grid-cols-4 gap-4` (Phase 1 is desktop-only per UX spec [line 894](_bmad-output/planning-artifacts/ux-design-specification.md#L894), but `md:` breakpoint is a cheap future-proofing; do NOT add responsive work beyond this one utility).
   - [x] 6.2 Create a single-file helper component `StatTile` (inline in `ProfilePage.tsx` — do NOT extract to its own file for a 20-LOC helper, per project precedent of keeping small helpers colocated):
     ```tsx
-    function StatTile({ testId, label, value, tone }: {
+    function StatTile({
+      testId,
+      label,
+      value,
+      tone,
+    }: {
       testId: string;
       label: string;
-      value: string;            // pre-formatted string, NOT number — locale/rate formatting is handled by caller
+      value: string; // pre-formatted string, NOT number — locale/rate formatting is handled by caller
       tone?: "neutral" | "success";
     }) {
       return (
-        <div data-testid={testId} className="rounded-lg bg-surface-elevated p-4">
+        <div
+          data-testid={testId}
+          className="rounded-lg bg-surface-elevated p-4"
+        >
           <div
             className={`font-display text-4xl font-bold ${tone === "success" ? "text-success" : "text-text-primary"}`}
           >
@@ -200,7 +208,7 @@ so that I have a meaningful overview of my Belote career alongside my match hist
   - [x] 8.3 Add a new test `"renders real stats when profile has played games"`:
     - Fixture: `{ totalGamesPlayed: 11, wins: 7, losses: 3, abandoned: 1, ... }`.
     - Assert each tile's `data-value` matches the fixture field (numeric string for games/wins/losses).
-    - Assert `profile-stat-win-rate` renders `"70%"` (7 / 10 * 100 = 70, rounded) — `data-value="70"`.
+    - Assert `profile-stat-win-rate` renders `"70%"` (7 / 10 \* 100 = 70, rounded) — `data-value="70"`.
     - Assert tone on `profile-stat-win-rate` by CSS class presence — but prefer to use `data-value` alone, since Tailwind class churn can break class-based assertions (project rule reinforced in 7.1 Dev Notes).
   - [x] 8.4 Add a new test `"renders em-dash for win-rate when zero games played"`:
     - Fixture: `{ totalGamesPlayed: 0, wins: 0, losses: 0, abandoned: 0, ... }`.
@@ -223,18 +231,18 @@ so that I have a meaningful overview of my Belote career alongside my match hist
 
 ### What Already Exists — Do NOT Recreate
 
-| Item | Location | Notes |
-|------|----------|-------|
-| `matches` table with `status` + `winner_team` + `player1..4_id` | [server/migrations/000006_create_matches.up.sql](server/migrations/000006_create_matches.up.sql), [server/migrations/000008_add_match_status.up.sql](server/migrations/000008_add_match_status.up.sql) | All columns needed for stat aggregation already exist. Story 7.2 adds NO new migrations. |
-| `match.MatchRepository` interface with `Create`, `CreateWithHands`, `GetMatchesForUser` | [server/internal/match/repository.go](server/internal/match/repository.go) | Extend with `GetStatsForUser` in Task 1. Keep the interface cohesive — this is a read-query, same data source. |
-| `UserHandler` with `GetProfile` returning `ProfileResponse` | [server/internal/user/handler.go:15-20, 98-129](server/internal/user/handler.go#L98-L129) | Extend `ProfileResponse` and the `GetProfile` body in Task 2. No route change needed (`GET /users/:id/profile` already registered at [server/cmd/api/main.go:95](server/cmd/api/main.go#L95)). |
-| `teamForSeat(seat) = seat % 2` rule | [server/internal/game/state.go:115-117](server/internal/game/state.go#L115-L117), locally duplicated in [server/internal/user/handler.go:278](server/internal/user/handler.go#L278) | Use the existing local `teamForSeat` from handler.go OR encode in SQL CASE (Task 1.2). Both patterns are pre-established. |
-| `useProfileQuery` + `queryKeys.profile.detail(id)` | [client/src/shared/hooks/queries/useProfile.ts](client/src/shared/hooks/queries/useProfile.ts), [client/src/shared/api/queryKeys.ts:8-10](client/src/shared/api/queryKeys.ts#L8-L10) | TS type extension propagates automatically. No hook change. |
-| `ProfilePage` skeleton loader | [client/src/features/profile/ProfilePage.tsx:13-20](client/src/features/profile/ProfilePage.tsx#L13-L20) | Unchanged — the same `isPending` path continues to render the skeleton while the extended payload loads. |
-| `profile.stats` section heading key | [en.json:17](client/src/shared/i18n/en.json#L17), [sr.json:17](client/src/shared/i18n/sr.json#L17) | Retained. Only the section body changes. |
-| `QueryWrapper` + i18n test wrapper + `data-testid` discipline | [client/src/test-utils/](client/src/test-utils/), Story 7.1 Dev Notes | All test scaffolding for this story already exists and is used by `ProfilePage.test.tsx`. |
-| PII-leak-guard test pattern | [server/internal/user/handler_test.go](server/internal/user/handler_test.go) (`TestListMatches_NeverLeaksPII`, added in Story 7.1 Task 6.2) | Copy pattern verbatim for Task 3.3. |
-| `i18n.test.ts` recursive `flattenKeys` parity check | [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) (added in Story 7.1 review) | Automatic safety net — if nested keys diverge between `en.json` and `sr.json`, CI fails. |
+| Item                                                                                    | Location                                                                                                                                                                                               | Notes                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `matches` table with `status` + `winner_team` + `player1..4_id`                         | [server/migrations/000006_create_matches.up.sql](server/migrations/000006_create_matches.up.sql), [server/migrations/000008_add_match_status.up.sql](server/migrations/000008_add_match_status.up.sql) | All columns needed for stat aggregation already exist. Story 7.2 adds NO new migrations.                                                                                                       |
+| `match.MatchRepository` interface with `Create`, `CreateWithHands`, `GetMatchesForUser` | [server/internal/match/repository.go](server/internal/match/repository.go)                                                                                                                             | Extend with `GetStatsForUser` in Task 1. Keep the interface cohesive — this is a read-query, same data source.                                                                                 |
+| `UserHandler` with `GetProfile` returning `ProfileResponse`                             | [server/internal/user/handler.go:15-20, 98-129](server/internal/user/handler.go#L98-L129)                                                                                                              | Extend `ProfileResponse` and the `GetProfile` body in Task 2. No route change needed (`GET /users/:id/profile` already registered at [server/cmd/api/main.go:95](server/cmd/api/main.go#L95)). |
+| `teamForSeat(seat) = seat % 2` rule                                                     | [server/internal/game/state.go:115-117](server/internal/game/state.go#L115-L117), locally duplicated in [server/internal/user/handler.go:278](server/internal/user/handler.go#L278)                    | Use the existing local `teamForSeat` from handler.go OR encode in SQL CASE (Task 1.2). Both patterns are pre-established.                                                                      |
+| `useProfileQuery` + `queryKeys.profile.detail(id)`                                      | [client/src/shared/hooks/queries/useProfile.ts](client/src/shared/hooks/queries/useProfile.ts), [client/src/shared/api/queryKeys.ts:8-10](client/src/shared/api/queryKeys.ts#L8-L10)                   | TS type extension propagates automatically. No hook change.                                                                                                                                    |
+| `ProfilePage` skeleton loader                                                           | [client/src/features/profile/ProfilePage.tsx:13-20](client/src/features/profile/ProfilePage.tsx#L13-L20)                                                                                               | Unchanged — the same `isPending` path continues to render the skeleton while the extended payload loads.                                                                                       |
+| `profile.stats` section heading key                                                     | [en.json:17](client/src/shared/i18n/en.json#L17), [sr.json:17](client/src/shared/i18n/sr.json#L17)                                                                                                     | Retained. Only the section body changes.                                                                                                                                                       |
+| `QueryWrapper` + i18n test wrapper + `data-testid` discipline                           | [client/src/test-utils/](client/src/test-utils/), Story 7.1 Dev Notes                                                                                                                                  | All test scaffolding for this story already exists and is used by `ProfilePage.test.tsx`.                                                                                                      |
+| PII-leak-guard test pattern                                                             | [server/internal/user/handler_test.go](server/internal/user/handler_test.go) (`TestListMatches_NeverLeaksPII`, added in Story 7.1 Task 6.2)                                                            | Copy pattern verbatim for Task 3.3.                                                                                                                                                            |
+| `i18n.test.ts` recursive `flattenKeys` parity check                                     | [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) (added in Story 7.1 review)                                                                                                 | Automatic safety net — if nested keys diverge between `en.json` and `sr.json`, CI fails.                                                                                                       |
 
 ### What Must Be Created
 
@@ -256,6 +264,7 @@ That's it — no new files. Story 7.2 is a surgical extension of existing code.
 10. [client/src/shared/i18n/sr.json](client/src/shared/i18n/sr.json) — mirror.
 
 **No changes expected:**
+
 - `server/migrations/*` — zero new tables, zero schema changes.
 - `server/cmd/api/main.go` — route already registered; handler signature unchanged.
 - `server/internal/session/manager.go`, `server/internal/session/reconnect.go` — no persistence change.
@@ -268,6 +277,7 @@ That's it — no new files. Story 7.2 is a surgical extension of existing code.
 **Chosen approach:** Per-request aggregate computation via a single `SELECT ... FILTER (WHERE ...) FROM matches` query. No materialised stats column on `users`, no denormalised counter.
 
 **Rationale:**
+
 - **Truth lives in the `matches` table.** Denormalising `wins`/`losses`/`abandoned` onto `users` introduces a two-writer coordination problem: every match completion would need to atomically update the 4 participants' counters, every abandonment the same — any crash or race between `match insert` and `user counter increment` causes drift. For Phase 1, on-read aggregation is simpler and the source of truth is unambiguous.
 - **Query cost is O(indexed-scan) on `matches.player{1..4}_id`** — Story 7.1 already indexed those columns ([server/migrations/000006_create_matches.up.sql](server/migrations/000006_create_matches.up.sql)). PostgreSQL can satisfy the aggregation via an index scan + a table lookup for the `status`/`winner_team` columns. At thousands of matches per user the query remains sub-millisecond.
 - **Single round-trip via `FILTER`** — three separate `COUNT` queries would be 3× the latency and lose atomicity (concurrent match completions could show inconsistent snapshots).
@@ -345,6 +355,7 @@ Error paths unchanged; the new DB error path from step 4 flows through `appError
 **Modified files (expected):** see "What Must Be Modified" table above — 10 files modified, 0 new files, 0 migrations.
 
 **Alignment with unified project structure:**
+
 - Repository methods live alongside each other in [server/internal/match/gorm_repo.go](server/internal/match/gorm_repo.go) — same package, same file, pattern-consistent with existing `Create` / `CreateWithHands` / `GetMatchesForUser`.
 - Client stats UI lives in [client/src/features/profile/ProfilePage.tsx](client/src/features/profile/ProfilePage.tsx) — same feature folder as Story 7.1's `MatchHistory.tsx` + `ProfilePage.tsx`, per the feature-folder convention in [architecture.md:651-653](_bmad-output/planning-artifacts/architecture.md#L651-L653).
 - `StatTile` is an inline helper; if it grows beyond ~30 LOC or gains a second consumer, extract to `client/src/features/profile/StatTile.tsx` (Task 6.2 sets the extraction threshold).

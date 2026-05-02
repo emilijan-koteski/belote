@@ -16,73 +16,76 @@ so that we can end a hopeless game without grinding it out to 1001.
    Given the authenticated player is one of the four seated players in an active session whose `gs.Phase == game.PhasePlaying` (or `PhaseBidding`),
    When the client sends `action:surrender_request` (no payload) over WebSocket,
    Then `Manager.HandleAction` resolves their seat via `session.playerIDs`, calls `game.ApplyAction` with `Action{Type: ActionSurrenderRequest, PlayerSeat: seat}`, and the rules engine sets `gs.SurrenderProposerSeat = &seat`, `gs.SurrenderUsed[seat] = true`, and leaves `gs.Phase` unchanged.
-   And after commit the session manager broadcasts (in this order, as separate ordered messages — never batched, per [_bmad-output/project-context.md#L109](_bmad-output/project-context.md)):
-     - `event:surrender_proposed` with `SurrenderProposedPayload{ proposerSeat, proposerTeam, proposerUsername, partnerSeat }` to all 4 player WS connections. (Clients derive opponent seats trivially as the two seats whose team is `1 - proposerTeam` — no `opponentSeats[2]` field on the wire. AC#10 is canonical for the payload shape; this AC text was amended in the Story 8.2 code review to match.)
-     - `event:game_state` with the full updated `GameState` (so clients can read `pendingSurrenderProposerSeat` for non-prompt UI gating, e.g. opponent banner).
-   And the action is rejected with `error:wrong_phase` when called outside `PhasePlaying`/`PhaseBidding` (i.e. dealing, hand_scoring, trick_resolving, paused, disconnected, match_end). `PhasePaused` rejection mirrors the existing rule: pause must be cleared first.
-   And the action is rejected with `error:surrender_exhausted` (new — see AC #11) when `gs.SurrenderUsed[seat] == true`.
-   And the action is rejected with `error:action_required` (existing `ErrActionRequired`) when a surrender proposal is already pending (`gs.SurrenderProposerSeat != nil`) — the second proposer's request is held until the first is resolved.
-   And **the per-move turn timer keeps running on the active player**. Surrender proposal does not affect `gs.ActivePlayerSeat`, `TurnExpiresAt`, or `TurnTimeRemaining`. The active player can still play a card while the proposal is pending — gameplay continues until accept/decline.
+   And after commit the session manager broadcasts (in this order, as separate ordered messages — never batched, per [\_bmad-output/project-context.md#L109](_bmad-output/project-context.md)):
+   - `event:surrender_proposed` with `SurrenderProposedPayload{ proposerSeat, proposerTeam, proposerUsername, partnerSeat }` to all 4 player WS connections. (Clients derive opponent seats trivially as the two seats whose team is `1 - proposerTeam` — no `opponentSeats[2]` field on the wire. AC#10 is canonical for the payload shape; this AC text was amended in the Story 8.2 code review to match.)
+   - `event:game_state` with the full updated `GameState` (so clients can read `pendingSurrenderProposerSeat` for non-prompt UI gating, e.g. opponent banner).
+     And the action is rejected with `error:wrong_phase` when called outside `PhasePlaying`/`PhaseBidding` (i.e. dealing, hand_scoring, trick_resolving, paused, disconnected, match_end). `PhasePaused` rejection mirrors the existing rule: pause must be cleared first.
+     And the action is rejected with `error:surrender_exhausted` (new — see AC #11) when `gs.SurrenderUsed[seat] == true`.
+     And the action is rejected with `error:action_required` (existing `ErrActionRequired`) when a surrender proposal is already pending (`gs.SurrenderProposerSeat != nil`) — the second proposer's request is held until the first is resolved.
+     And **the per-move turn timer keeps running on the active player**. Surrender proposal does not affect `gs.ActivePlayerSeat`, `TurnExpiresAt`, or `TurnTimeRemaining`. The active player can still play a card while the proposal is pending — gameplay continues until accept/decline.
 
 2. **The teammate (and only the teammate) can accept the proposal**
    Given `gs.SurrenderProposerSeat != nil` AND the caller's seat is the partner of the proposer (`partnerSeat = (proposerSeat + 2) % 4`),
    When the client sends `action:surrender_accept` over WebSocket,
    Then `game.ApplyAction(state, Action{Type: ActionSurrenderAccept, PlayerSeat: seat})` returns a state with:
-     - `gs.Phase = game.PhaseMatchEnd`
-     - `gs.WinnerTeam = &opponentTeam` where `opponentTeam = 1 - game.TeamForSeat(proposerSeat)`
-     - `gs.SurrenderProposerSeat = nil` (cleared)
-     - `gs.SurrenderUsed` unchanged (the proposer's `true` stays `true`)
-     - `gs.TurnExpiresAt = nil`, `gs.TurnTimeRemaining = 0` (timer cancelled at match end — same shape as the natural `PhaseMatchEnd` transition).
-   And the session manager (extending the existing match-end path in [server/internal/session/manager.go:237-239](server/internal/session/manager.go#L237-L239)):
-     - Cancels the turn timer.
-     - Broadcasts `event:match_end` with `MatchEndPayload{ winnerTeam, redFinalScore, blueFinalScore, matchDurationSec, outcomeReason: "surrender", surrenderedBySeat: <proposerSeat> }` (extending the existing payload — see AC #10). The seat-suffixed name disambiguates this wire field from the persistence column `match.SurrenderedBy` which holds a userID; renamed in the Story 8.2 code review.
-     - Broadcasts the authoritative `event:game_state` so clients leave the surrender UI and render the match-end overlay.
-     - Calls `handleMatchEnd(session, finalState)` to persist the match record and update room status.
-   And `error:not_your_turn` is **NOT** the right rejection — surrender accept is partner-only, not turn-based. Use `error:invalid_action` ("only your teammate can accept your surrender proposal") when called by a non-partner.
-   And `error:wrong_phase` is returned when no proposal is pending (`gs.SurrenderProposerSeat == nil`).
-   And the proposer themselves cannot accept their own proposal (`seat == *gs.SurrenderProposerSeat` → `error:invalid_action`). Either opponent calling accept also returns `error:invalid_action`. Only the partner is authorised.
+   - `gs.Phase = game.PhaseMatchEnd`
+   - `gs.WinnerTeam = &opponentTeam` where `opponentTeam = 1 - game.TeamForSeat(proposerSeat)`
+   - `gs.SurrenderProposerSeat = nil` (cleared)
+   - `gs.SurrenderUsed` unchanged (the proposer's `true` stays `true`)
+   - `gs.TurnExpiresAt = nil`, `gs.TurnTimeRemaining = 0` (timer cancelled at match end — same shape as the natural `PhaseMatchEnd` transition).
+     And the session manager (extending the existing match-end path in [server/internal/session/manager.go:237-239](server/internal/session/manager.go#L237-L239)):
+   - Cancels the turn timer.
+   - Broadcasts `event:match_end` with `MatchEndPayload{ winnerTeam, teamAFinalScore, teamBFinalScore, matchDurationSec, outcomeReason: "surrender", surrenderedBySeat: <proposerSeat> }` (extending the existing payload — see AC #10). The seat-suffixed name disambiguates this wire field from the persistence column `match.SurrenderedBy` which holds a userID; renamed in the Story 8.2 code review.
+   - Broadcasts the authoritative `event:game_state` so clients leave the surrender UI and render the match-end overlay.
+   - Calls `handleMatchEnd(session, finalState)` to persist the match record and update room status.
+     And `error:not_your_turn` is **NOT** the right rejection — surrender accept is partner-only, not turn-based. Use `error:invalid_action` ("only your teammate can accept your surrender proposal") when called by a non-partner.
+     And `error:wrong_phase` is returned when no proposal is pending (`gs.SurrenderProposerSeat == nil`).
+     And the proposer themselves cannot accept their own proposal (`seat == *gs.SurrenderProposerSeat` → `error:invalid_action`). Either opponent calling accept also returns `error:invalid_action`. Only the partner is authorised.
 
 3. **The teammate can decline the proposal — play resumes, proposer's attempt is consumed**
    Given `gs.SurrenderProposerSeat != nil` AND the caller's seat is the partner of the proposer,
    When the client sends `action:surrender_decline`,
    Then `game.ApplyAction` returns a state with:
-     - `gs.SurrenderProposerSeat = nil` (cleared)
-     - `gs.SurrenderUsed[proposerSeat] == true` is preserved (the attempt is consumed even though it was declined — see FR28a "each player may trigger a surrender request at most once per game" and epics.md AC "the proposing player's surrender attempt is consumed").
-     - All other state fields unchanged: `gs.Phase`, `gs.ActivePlayerSeat`, `gs.TurnExpiresAt`, scores, hands, trick state remain identical to before the proposal.
-   And the session manager broadcasts (separate ordered messages):
-     - `event:surrender_declined` with `SurrenderDeclinedPayload{ proposerSeat, decliningSeat }` to all 4 player WS connections.
-     - `event:game_state` with the cleared `pendingSurrenderProposerSeat`.
-   And the per-move turn timer is **not reset** by decline — whatever time the active player had left when the proposal opened is still ticking down (same lock-step semantics as Belot accept/decline today: Belot decline does not bump the active player's timer either).
-   And the partner can decline even if they themselves have already used their own surrender attempt (`gs.SurrenderUsed[partnerSeat] == true`) — surrender_used controls the **request** action, not the **decline** action.
+   - `gs.SurrenderProposerSeat = nil` (cleared)
+   - `gs.SurrenderUsed[proposerSeat] == true` is preserved (the attempt is consumed even though it was declined — see FR28a "each player may trigger a surrender request at most once per game" and epics.md AC "the proposing player's surrender attempt is consumed").
+   - All other state fields unchanged: `gs.Phase`, `gs.ActivePlayerSeat`, `gs.TurnExpiresAt`, scores, hands, trick state remain identical to before the proposal.
+     And the session manager broadcasts (separate ordered messages):
+   - `event:surrender_declined` with `SurrenderDeclinedPayload{ proposerSeat, decliningSeat }` to all 4 player WS connections.
+   - `event:game_state` with the cleared `pendingSurrenderProposerSeat`.
+     And the per-move turn timer is **not reset** by decline — whatever time the active player had left when the proposal opened is still ticking down (same lock-step semantics as Belot accept/decline today: Belot decline does not bump the active player's timer either).
+     And the partner can decline even if they themselves have already used their own surrender attempt (`gs.SurrenderUsed[partnerSeat] == true`) — surrender_used controls the **request** action, not the **decline** action.
 
 4. **Match record is persisted with surrender outcome**
    Given a surrender accept transitions the session to `PhaseMatchEnd`,
    When `handleMatchEnd` runs (extended for surrender — see Task 4),
    Then a row is inserted into the `matches` table with:
-     - `status = 'completed'` (intentional — surrender is a legitimate, non-abandoned match end; this preserves the existing wins/losses stats query at [server/internal/match/gorm_repo.go:46-61](server/internal/match/gorm_repo.go#L46-L61) without changes).
-     - `winner_team = <opponentTeam>` (0 or 1 depending on which team surrendered).
-     - **A new column `surrendered_by` (`INTEGER REFERENCES users(id) NULL`)** set to the proposer's `userID`.
-     - `team_red_score` / `team_blue_score` = the actual `gs.TeamScores` snapshot at surrender time (NOT artificially zero or inflated). The losing team's score reflects their accumulated points up to that moment.
-     - `started_at`, `completed_at`, `room_id`, `player1..4_id`, `variant`, `match_mode` populated as in the natural-end path.
-   And buffered `session.handResults` are flushed alongside the match row in the same transaction (mirrors [server/internal/session/manager.go:660](server/internal/session/manager.go#L660) `CreateWithHands` behaviour). Hands completed before surrender are persisted; partially-played hands at surrender time are NOT persisted (no `LastHandResult` was buffered for them — same as natural mid-hand match ends today).
-   And the room status is updated to `"completed"` via `m.roomUpdater.UpdateRoomStatus(roomID, "completed")` and the session is removed via `m.RemoveSession(roomID)` — identical to the natural match-end path.
+   - `status = 'completed'` (intentional — surrender is a legitimate, non-abandoned match end; this preserves the existing wins/losses stats query at [server/internal/match/gorm_repo.go:46-61](server/internal/match/gorm_repo.go#L46-L61) without changes).
+   - `winner_team = <opponentTeam>` (0 or 1 depending on which team surrendered).
+   - **A new column `surrendered_by` (`INTEGER REFERENCES users(id) NULL`)** set to the proposer's `userID`.
+   - `team_a_score` / `team_b_score` = the actual `gs.TeamScores` snapshot at surrender time (NOT artificially zero or inflated). The losing team's score reflects their accumulated points up to that moment.
+   - `started_at`, `completed_at`, `room_id`, `player1..4_id`, `variant`, `match_mode` populated as in the natural-end path.
+     And buffered `session.handResults` are flushed alongside the match row in the same transaction (mirrors [server/internal/session/manager.go:660](server/internal/session/manager.go#L660) `CreateWithHands` behaviour). Hands completed before surrender are persisted; partially-played hands at surrender time are NOT persisted (no `LastHandResult` was buffered for them — same as natural mid-hand match ends today).
+     And the room status is updated to `"completed"` via `m.roomUpdater.UpdateRoomStatus(roomID, "completed")` and the session is removed via `m.RemoveSession(roomID)` — identical to the natural match-end path.
 
 5. **Migration adds `surrendered_by` column to the `matches` table**
    Given the project uses `golang-migrate` with sequentially numbered SQL migrations,
    When the next migration is created at `server/migrations/000010_add_match_surrendered_by.up.sql` (and matching `.down.sql`),
    Then the migration adds the column and a supporting index, mirroring the `abandoned_by` precedent in [server/migrations/000008_add_match_status.up.sql](server/migrations/000008_add_match_status.up.sql):
+
    ```sql
    -- 000010_add_match_surrendered_by.up.sql
    ALTER TABLE matches ADD COLUMN surrendered_by INTEGER REFERENCES users(id);
    CREATE INDEX idx_matches_surrendered_by ON matches(surrendered_by);
    ```
+
    ```sql
    -- 000010_add_match_surrendered_by.down.sql
    DROP INDEX IF EXISTS idx_matches_surrendered_by;
    ALTER TABLE matches DROP COLUMN IF EXISTS surrendered_by;
    ```
-   And the `match.Match` struct gains `SurrenderedBy *uint \`gorm:"index" json:"surrenderedBy,omitempty"\`` immediately after `AbandonedBy` ([server/internal/match/model.go:21](server/internal/match/model.go#L21)).
-   And the existing stats query at [server/internal/match/gorm_repo.go:34-74](server/internal/match/gorm_repo.go#L34-L74) is **NOT modified** — surrender keeps `status='completed'` so it counts as a win for the winning team and a loss for the surrendering team automatically. **Honor-system future-coupling is intentional**: PRD line 134 states surrender is a "neutral" honor signal distinct from rage-quit/timeout/disconnect — Story 9.6 will read `surrendered_by` to compute that. This story does NOT touch the honor system.
+
+   And the `match.Match` struct gains `SurrenderedBy *uint \`gorm:"index" json:"surrenderedBy,omitempty"\``immediately after`AbandonedBy`([server/internal/match/model.go:21](server/internal/match/model.go#L21)).
+And the existing stats query at [server/internal/match/gorm_repo.go:34-74](server/internal/match/gorm_repo.go#L34-L74) is **NOT modified** — surrender keeps`status='completed'`so it counts as a win for the winning team and a loss for the surrendering team automatically. **Honor-system future-coupling is intentional**: PRD line 134 states surrender is a "neutral" honor signal distinct from rage-quit/timeout/disconnect — Story 9.6 will read`surrendered_by` to compute that. This story does NOT touch the honor system.
 
 6. **Opponents see a banner during a pending proposal**
    Given the client receives `event:surrender_proposed`,
@@ -90,21 +93,19 @@ so that we can end a hopeless game without grinding it out to 1001.
    Then the GamePage renders an **opponent-banner overlay** (NOT a modal — opponents must keep playing while the proposal is pending) with `data-testid="surrender-opponent-banner"` showing `t("game.surrender.opponentBanner", { username: payload.proposerUsername })` and a small `Surrender pending…` caption.
    And the banner is non-blocking: it renders as a slim strip near the top of the screen (`top-12 left-1/2 -translate-x-1/2 z-30` — beneath the score panel but above the trick area) and does NOT trap focus or steal pointer events from the playing surface.
    And the banner auto-dismisses when:
-     - `event:surrender_declined` arrives → banner disappears (proposal cleared).
-     - `event:match_end` arrives with `outcomeReason === "surrender"` → MatchResult overlay takes over and the banner is unmounted by GamePage.
-   And the banner is hidden if the local player is the **proposer or the proposer's partner** — those two see the prompt UI from AC #7 instead.
+   - `event:surrender_declined` arrives → banner disappears (proposal cleared).
+   - `event:match_end` arrives with `outcomeReason === "surrender"` → MatchResult overlay takes over and the banner is unmounted by GamePage.
+     And the banner is hidden if the local player is the **proposer or the proposer's partner** — those two see the prompt UI from AC #7 instead.
 
 7. **The proposer's partner sees an accept/decline prompt (modal-style, focus-trapped)**
    Given the client receives `event:surrender_proposed` AND the local player's seat satisfies `myPlayerSeat === (payload.proposerSeat + 2) % 4`,
    When GamePage detects `pendingSurrenderProposerSeat === <partner's myPlayerSeat>` from `gs.SurrenderProposerSeat`,
    Then a **`SurrenderPrompt` component** mounts (mirroring the [BelotPrompt.tsx](client/src/features/game/components/BelotPrompt.tsx) shape — `role="dialog" aria-modal="true"`, `useFocusTrap`, centered overlay with `data-testid="surrender-prompt"`):
-     - Title: `t("game.surrender.prompt.title")` — "Your teammate wants to surrender"
-     - Body: `t("game.surrender.prompt.body", { username: <proposer.username> })` — "{{username}} is proposing to forfeit the match. Accepting ends the match as an opponent win."
-     - Two buttons:
-       - Accept (primary): `data-testid="surrender-prompt-accept"`, sends `action:surrender_accept`.
-       - Decline (ghost): `data-testid="surrender-prompt-decline"`, sends `action:surrender_decline`.
-   And the prompt is dismissed by the next `event:game_state` clearing `pendingSurrenderProposerSeat` (same pattern as `pendingBelotSeat` at [GamePage.tsx:356](client/src/features/game/GamePage.tsx#L356)).
-   And the proposer themselves see a **disabled "Surrender pending…" caption** in place of the surrender button while their proposal is in flight (see AC #8) — they do NOT see the partner's prompt and cannot accept their own.
+   - Title: `t("game.surrender.prompt.title")` — "Your teammate wants to surrender"
+   - Body: `t("game.surrender.prompt.body", { username: <proposer.username> })` — "{{username}} is proposing to forfeit the match. Accepting ends the match as an opponent win."
+   - Two buttons: - Accept (primary): `data-testid="surrender-prompt-accept"`, sends `action:surrender_accept`. - Decline (ghost): `data-testid="surrender-prompt-decline"`, sends `action:surrender_decline`.
+     And the prompt is dismissed by the next `event:game_state` clearing `pendingSurrenderProposerSeat` (same pattern as `pendingBelotSeat` at [GamePage.tsx:356](client/src/features/game/GamePage.tsx#L356)).
+     And the proposer themselves see a **disabled "Surrender pending…" caption** in place of the surrender button while their proposal is in flight (see AC #8) — they do NOT see the partner's prompt and cannot accept their own.
 
 8. **Surrender request button — gating, position, exhausted state**
    Given the local player is in an active match (`gs.Phase === "playing" || gs.Phase === "bidding"` and not paused/disconnected),
@@ -112,11 +113,11 @@ so that we can end a hopeless game without grinding it out to 1001.
    Then a **`SurrenderButton`** is rendered next to the existing pause-button slot (see [GamePage.tsx:451-463](client/src/features/game/GamePage.tsx#L451-L463) — bottom-left). Suggested layout: a vertical `flex flex-col gap-2` wrapping the existing pause button and a new sibling surrender button (so the bottom-left now stacks two controls).
    And the surrender button has `data-testid="surrender-button"` and label `t("game.surrender.requestButton")` — "Surrender".
    And the button is **disabled** (visually `disabled:opacity-40 disabled:cursor-not-allowed`, like pause-button) when ANY of:
-     - `gs.SurrenderUsed?.[myPlayerSeat] === true` — caption flips to `t("game.surrender.exhausted")` ("Surrender already used") matching the pause-button's `pauseUsed`/`pauseButton` toggle.
-     - `gs.SurrenderProposerSeat !== null` — a proposal is already pending. Caption flips to `t("game.surrender.pending")` ("Surrender pending…").
-     - `gs.Phase !== "playing" && gs.Phase !== "bidding"` (i.e. paused, disconnected, dealing, hand_scoring, trick_resolving, match_end) — button hidden entirely (mirroring the existing pause-button gate that hides the button outside those phases).
-   And clicking the button when enabled opens an inline confirmation dialog (mirror Story 8.1's `kickConfirm` shadcn `AlertDialog` pattern — `client/src/shared/components/ui/alert-dialog.tsx` exists per Story 8.1). Title: `t("game.surrender.confirm.title")`, body: `t("game.surrender.confirm.body")`, buttons: `t("game.surrender.confirm.confirm")` (primary, sends `action:surrender_request`) and `t("game.surrender.confirm.cancel")` (ghost). The confirm-dialog button gets `data-testid="surrender-confirm"`, cancel `data-testid="surrender-cancel"`.
-   And on receiving `error:surrender_exhausted` from the server (defence in depth; the UI gates already prevent it), `toast.error(t("game.surrender.errors.exhausted"))` fires (mirroring the existing error-toast pattern at [useWsDispatch.ts](client/src/shared/hooks/useWsDispatch.ts)).
+   - `gs.SurrenderUsed?.[myPlayerSeat] === true` — caption flips to `t("game.surrender.exhausted")` ("Surrender already used") matching the pause-button's `pauseUsed`/`pauseButton` toggle.
+   - `gs.SurrenderProposerSeat !== null` — a proposal is already pending. Caption flips to `t("game.surrender.pending")` ("Surrender pending…").
+   - `gs.Phase !== "playing" && gs.Phase !== "bidding"` (i.e. paused, disconnected, dealing, hand_scoring, trick_resolving, match_end) — button hidden entirely (mirroring the existing pause-button gate that hides the button outside those phases).
+     And clicking the button when enabled opens an inline confirmation dialog (mirror Story 8.1's `kickConfirm` shadcn `AlertDialog` pattern — `client/src/shared/components/ui/alert-dialog.tsx` exists per Story 8.1). Title: `t("game.surrender.confirm.title")`, body: `t("game.surrender.confirm.body")`, buttons: `t("game.surrender.confirm.confirm")` (primary, sends `action:surrender_request`) and `t("game.surrender.confirm.cancel")` (ghost). The confirm-dialog button gets `data-testid="surrender-confirm"`, cancel `data-testid="surrender-cancel"`.
+     And on receiving `error:surrender_exhausted` from the server (defence in depth; the UI gates already prevent it), `toast.error(t("game.surrender.errors.exhausted"))` fires (mirroring the existing error-toast pattern at [useWsDispatch.ts](client/src/shared/hooks/useWsDispatch.ts)).
 
 9. **Match-end overlay shows surrender context**
    Given the match ends via accepted surrender,
@@ -130,6 +131,7 @@ so that we can end a hopeless game without grinding it out to 1001.
     Given new WS events are introduced,
     When this story lands,
     Then [server/internal/ws/events.go](server/internal/ws/events.go) gains:
+
     ```go
     // --- Surrender events (Story 8.2) ---
     const ActionSurrenderRequest = "action:surrender_request"
@@ -155,28 +157,33 @@ so that we can end a hopeless game without grinding it out to 1001.
         DecliningSeat int `json:"decliningSeat"`
     }
     ```
+
     And the existing `MatchEndPayload` block (currently broadcast as a `map[string]interface{}` at [manager.go:451-457](server/internal/session/manager.go#L451-L457)) is **typed** as a struct and extended with optional fields:
+
     ```go
     type MatchEndPayload struct {
         WinnerTeam          int     `json:"winnerTeam"`
-        RedFinalScore       int     `json:"redFinalScore"`
-        BlueFinalScore      int     `json:"blueFinalScore"`
+        TeamAFinalScore     int     `json:"teamAFinalScore"`
+        TeamBFinalScore     int     `json:"teamBFinalScore"`
         MatchDurationSec    int     `json:"matchDurationSec"`
         OutcomeReason       string  `json:"outcomeReason,omitempty"`        // "" (natural) | "surrender"
         SurrenderedByPlayer *int    `json:"surrenderedByPlayer,omitempty"` // seat index, only when outcomeReason == "surrender"
     }
     ```
-    The natural-end branch in `broadcastActionResult` switches from the inline `map` to constructing this struct (with `OutcomeReason: ""` / `SurrenderedByPlayer: nil` so JSON omits both via `omitempty`). Existing clients that were reading `winnerTeam`/`redFinalScore`/`blueFinalScore`/`matchDurationSec` continue to work unchanged — additive extension only.
+
+    The natural-end branch in `broadcastActionResult` switches from the inline `map` to constructing this struct (with `OutcomeReason: ""` / `SurrenderedByPlayer: nil` so JSON omits both via `omitempty`). Existing clients that were reading `winnerTeam`/`teamAFinalScore`/`teamBFinalScore`/`matchDurationSec` continue to work unchanged — additive extension only.
     And [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) gains the matching constants and types:
+
     ```ts
     export const ACTION_SURRENDER_REQUEST = "action:surrender_request" as const;
-    export const ACTION_SURRENDER_ACCEPT  = "action:surrender_accept" as const;
+    export const ACTION_SURRENDER_ACCEPT = "action:surrender_accept" as const;
     export const ACTION_SURRENDER_DECLINE = "action:surrender_decline" as const;
 
     export const EVENT_SURRENDER_PROPOSED = "event:surrender_proposed" as const;
     export const EVENT_SURRENDER_DECLINED = "event:surrender_declined" as const;
 
-    export const ERROR_SURRENDER_EXHAUSTED = "error:surrender_exhausted" as const;
+    export const ERROR_SURRENDER_EXHAUSTED =
+      "error:surrender_exhausted" as const;
 
     export type SurrenderRequestPayload = Record<string, never>;
     export type SurrenderAcceptPayload = Record<string, never>;
@@ -194,39 +201,48 @@ so that we can end a hopeless game without grinding it out to 1001.
       decliningSeat: number;
     }
     ```
+
     And `MatchEndPayload` gains the optional fields (additive — existing usages compile unchanged):
+
     ```ts
     export interface MatchEndPayload {
       winnerTeam: number;
-      redFinalScore: number;
-      blueFinalScore: number;
+      teamAFinalScore: number;
+      teamBFinalScore: number;
       matchDurationSec: number;
       outcomeReason?: "surrender";
       surrenderedByPlayer?: number;
     }
     ```
-    And both files are updated in the **same commit** (project rule [_bmad-output/project-context.md#L80, #L286](_bmad-output/project-context.md#L80)).
+
+    And both files are updated in the **same commit** (project rule [\_bmad-output/project-context.md#L80, #L286](_bmad-output/project-context.md#L80)).
 
 11. **GameState contract sync — server + client**
     Given the rules engine adds two new persistent fields,
     When this story lands,
     Then [server/internal/game/state.go](server/internal/game/state.go) gains, immediately after the existing pause-state block (lines 98-102):
+
     ```go
     // Surrender state (Story 8.2)
     SurrenderProposerSeat *int    `json:"surrenderProposerSeat"` // nil when no proposal pending; seat of the proposer otherwise
     SurrenderUsed         [4]bool `json:"surrenderUsed"`         // each seat may initiate a surrender at most once per match
     ```
+
     And [server/internal/game/types.go](server/internal/game/types.go) gains the action-type constants alongside the existing pause/unpause set:
+
     ```go
     ActionSurrenderRequest = "surrender_request"
     ActionSurrenderAccept  = "surrender_accept"
     ActionSurrenderDecline = "surrender_decline"
     ```
+
     And [client/src/shared/types/gameTypes.ts](client/src/shared/types/gameTypes.ts) extends the `GameState` interface with:
+
     ```ts
     surrenderProposerSeat: number | null;
     surrenderUsed: [boolean, boolean, boolean, boolean];
     ```
+
     And the `ActionType` union in `gameTypes.ts` adds `"surrender_request" | "surrender_accept" | "surrender_decline"`.
     And [client/src/shared/stores/gameStore.ts](client/src/shared/stores/gameStore.ts) `normalizeGameState` is a no-op for these fields (they default to `null` / `[false, false, false, false]` from the server — Go zero values serialize correctly for both shapes).
 
@@ -234,6 +250,7 @@ so that we can end a hopeless game without grinding it out to 1001.
     Given new copy is introduced,
     When this story lands,
     Then both [client/src/shared/i18n/en.json](client/src/shared/i18n/en.json) and [client/src/shared/i18n/sr.json](client/src/shared/i18n/sr.json) gain a new `game.surrender.*` block:
+
     ```json
     "surrender": {
       "requestButton": "Surrender",
@@ -261,11 +278,15 @@ so that we can end a hopeless game without grinding it out to 1001.
       "unknownProposer": "your opponent"
     }
     ```
+
     And `game.matchResult` gains a new key:
+
     ```json
     "surrenderNote": "{{username}} surrendered the match"
     ```
+
     And Serbian-Latin copy uses the **Ekavian** register (matching adjacent keys; cf. Story 7.2 + Story 8.1 — `Pobeda`, `mesto`). Suggested copy (verify register at PR time):
+
     ```json
     "surrender": {
       "requestButton": "Predaja",
@@ -297,6 +318,7 @@ so that we can end a hopeless game without grinding it out to 1001.
       "surrenderNote": "{{username}} je predao meč"
     }
     ```
+
     And the `i18n.test.ts` recursive `flattenKeys` parity check at [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) must stay green.
 
 13. **Pause + disconnect interaction**
@@ -328,8 +350,8 @@ so that we can end a hopeless game without grinding it out to 1001.
     DROP INDEX IF EXISTS idx_matches_surrendered_by;
     ALTER TABLE matches DROP COLUMN IF EXISTS surrendered_by;
     ```
-  - [x] 1.3 Verify next migration number is `000010` (current highest is `000009_create_hand_results`). Per [_bmad-output/project-context.md#L243-L245](_bmad-output/project-context.md#L243-L245), never skip migration numbers.
-  - [x] 1.4 Add `SurrenderedBy *uint \`gorm:"index" json:"surrenderedBy,omitempty"\`` to [server/internal/match/model.go](server/internal/match/model.go) immediately after `AbandonedBy`. **Use `*uint` (pointer)** so unset rows serialise to JSON `null`, matching the `AbandonedBy` precedent — Go's `uint` zero-value `0` would serialise as a real value otherwise (project-context Go rule on pointer optional fields).
+  - [x] 1.3 Verify next migration number is `000010` (current highest is `000009_create_hand_results`). Per [\_bmad-output/project-context.md#L243-L245](_bmad-output/project-context.md#L243-L245), never skip migration numbers.
+  - [x] 1.4 Add `SurrenderedBy *uint \`gorm:"index" json:"surrenderedBy,omitempty"\``to [server/internal/match/model.go](server/internal/match/model.go) immediately after`AbandonedBy`. **Use `\*uint`(pointer)** so unset rows serialise to JSON`null`, matching the `AbandonedBy`precedent — Go's`uint`zero-value`0` would serialise as a real value otherwise (project-context Go rule on pointer optional fields).
   - [x] 1.5 Run `make migrate` locally against the dev DB to verify the migration applies cleanly. Down-migrate then re-up to ensure idempotence.
   - [x] 1.6 Do **not** modify [server/internal/match/gorm_repo.go](server/internal/match/gorm_repo.go) — surrender intentionally keeps `status='completed'` so existing stats and history queries Just Work. Adding any `surrendered_by`-aware filter is **out of scope** for this story (Story 9.6 / honor system will consume it).
 
@@ -348,6 +370,7 @@ so that we can end a hopeless game without grinding it out to 1001.
     ```
     `NewGame` ([state.go:130-170](server/internal/game/state.go#L130)) needs no edits — Go zero values (`nil`, `[4]bool{}`) are already correct defaults.
   - [x] 2.3 Create new file `server/internal/game/surrender.go` mirroring the structure of [pause.go](server/internal/game/pause.go) — three pure handlers, no side effects, clone state before mutation:
+
     ```go
     func handleSurrenderRequest(state *GameState, action Action) (*GameState, error) {
         // Validate phase: only PhaseBidding and PhasePlaying allow surrender
@@ -413,6 +436,7 @@ so that we can end a hopeless game without grinding it out to 1001.
         return newState, nil
     }
     ```
+
   - [x] 2.4 Wire the three handlers into [server/internal/game/rules_engine.go](server/internal/game/rules_engine.go) `ApplyAction`. Insert **immediately after the pause/unpause/owner_unpause early-return block (after line 26, before the phase switch)** so surrender actions are phase-checked inside their own handlers (allowing accept/decline to clear a proposal even when the rules engine would otherwise reject the phase):
     ```go
     if action.Type == ActionSurrenderRequest {
@@ -440,6 +464,7 @@ so that we can end a hopeless game without grinding it out to 1001.
 - [x] **Task 4: Session manager — wire actions, broadcasts, match-end persistence (AC #1, #2, #3, #4, #10, #13, #14)**
   - [x] 4.1 Extend [server/internal/session/manager.go](server/internal/session/manager.go) `parseAction` (around lines 307-368) — surrender actions need no payload decoding, so the existing default path (`actionType` strip-prefix → `game.Action{Type, PlayerSeat}`) handles them automatically. **Verify the auto-mapping**: the WS event types `action:surrender_request`/`action:surrender_accept`/`action:surrender_decline` strip to `surrender_request`/`surrender_accept`/`surrender_decline`, which match the `game.ActionSurrenderRequest`/`Accept`/`Decline` constants exactly. No special-case mapping needed (unlike `decline_belot` → `skip_belot` at line 331).
   - [x] 4.2 Extend `broadcastActionResult` (around lines 374-549) with a new `case` block for the three surrender actions. Place after the `ActionAnnounceBelot, ActionSkipBelot` case:
+
     ```go
     case game.ActionSurrenderRequest:
         proposerSeat := action.PlayerSeat
@@ -475,6 +500,7 @@ so that we can end a hopeless game without grinding it out to 1001.
         // before match_end, breaking the announcement→state ordering established by
         // the natural-end path. Explicit no-op here.
     ```
+
   - [x] 4.3 In `HandleAction` (around line 237), keep the existing `if newState.Phase == game.PhaseMatchEnd { m.handleMatchEnd(...) }` path, but **broadcast `event:match_end` from inside `handleMatchEnd`** (or just before invoking it) for the surrender path so the ordering is `event:match_end` → `event:game_state` (mirroring [manager.go:450-465](server/internal/session/manager.go#L450-L465)). Refactor option: extract a new helper `broadcastMatchEnd(playerIDs, newState, oldState, action, startedAt) []byte` that emits the `match_end` payload (with `outcomeReason: "surrender"` if the triggering action was `ActionSurrenderAccept`). Call it from both the inline natural-end branch in `broadcastActionResult` and the surrender-accept path. **Preserve the natural-end ordering**: today the natural path emits `event:match_end` BEFORE `event:game_state` from inside `case game.ActionPlayCard`; the refactor must keep that contract.
   - [x] 4.4 Convert the inline `map[string]interface{}` payload at [manager.go:451-457](server/internal/session/manager.go#L451-L457) into the typed `ws.MatchEndPayload` struct (per AC #10). The natural-end branch sets `OutcomeReason: ""` (omitted via `omitempty`) and `SurrenderedByPlayer: nil`. The surrender branch sets `OutcomeReason: "surrender"` and `SurrenderedByPlayer: &proposerSeat`.
   - [x] 4.5 Extend `handleMatchEnd` ([manager.go:632-674](server/internal/session/manager.go#L632)) to accept (or read from `finalState`) the surrendering user's ID and persist it. Two clean shapes:
@@ -493,7 +519,7 @@ so that we can end a hopeless game without grinding it out to 1001.
   - [x] 5.1 Add the constants and payload structs to [server/internal/ws/events.go](server/internal/ws/events.go) per AC #10 verbatim. Place under a new comment header `// --- Surrender events (Story 8.2) ---` between the existing `// --- Disconnect/reconnect events ---` block and `// --- Game error events ---` (so related error consts stay grouped near their owners).
   - [x] 5.2 Add the `MatchEndPayload` struct definition (currently the `event:match_end` payload is constructed inline as a `map`; this story types it). Place it next to the existing `MatchAbandonedPayload` struct. **All four existing fields keep their JSON tags exactly** so wire-format is unchanged for natural ends.
   - [x] 5.3 Mirror in [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) per AC #10 verbatim. Place near `MatchEndPayload` (line 109) and `MatchAbandonedPayload` (line 165).
-  - [x] 5.4 **Same-commit rule** ([_bmad-output/project-context.md#L80, #L286](_bmad-output/project-context.md#L80)): both files updated together; no drift between commits.
+  - [x] 5.4 **Same-commit rule** ([\_bmad-output/project-context.md#L80, #L286](_bmad-output/project-context.md#L80)): both files updated together; no drift between commits.
 
 - [x] **Task 6: Frontend — store, dispatch, GamePage wiring (AC #6, #7, #8, #9, #11)**
   - [x] 6.1 Extend [client/src/shared/types/gameTypes.ts](client/src/shared/types/gameTypes.ts) `GameState` interface with the two new fields (per AC #11). Add `"surrender_request" | "surrender_accept" | "surrender_decline"` to the `ActionType` union.
@@ -502,6 +528,7 @@ so that we can end a hopeless game without grinding it out to 1001.
     - Include both new fields in `initialState` so `reset()`/`clearGame()` clear them.
     - **Note**: `pendingSurrenderProposerSeat` and `surrenderUsed` are NOT separate store fields — they live on the `gameState` itself (just like `pendingBelotSeat` and `pauseUsed`). The new store fields are for the transient toast/banner triggers, mirroring `belotReveal`.
   - [x] 6.3 Extend [client/src/shared/hooks/useWsDispatch.ts](client/src/shared/hooks/useWsDispatch.ts) with three new branches in `dispatchGameEvent` (next to `EVENT_BELOT_ANNOUNCED` and `EVENT_MATCH_ABANDONED`):
+
     ```ts
     if (type === EVENT_SURRENDER_PROPOSED) {
       const payload = message.payload as SurrenderProposedPayload;
@@ -518,14 +545,18 @@ so that we can end a hopeless game without grinding it out to 1001.
       return;
     }
     ```
+
     Add a branch for `ERROR_SURRENDER_EXHAUSTED` in the error-event dispatcher near the existing `ERROR_PAUSE_EXHAUSTED` branch:
+
     ```ts
     if (type === ERROR_SURRENDER_EXHAUSTED) {
       toast.error(i18n.t("game.surrender.errors.exhausted"));
       return;
     }
     ```
+
     Find the existing error-dispatch helper (`dispatchErrorEvent` per the file's structure) and add the case in the matching switch/if-chain. **Do NOT** add a generic toast for every error type — only the existing pattern for known codes.
+
   - [x] 6.4 Extend the `EVENT_MATCH_END` branch in `useWsDispatch.ts` (around [line 170](client/src/shared/hooks/useWsDispatch.ts#L170)) to read the two new optional fields off the payload and set them on the store via the existing `setMatchEndData(payload)` call (no signature change — `payload` is now the extended `MatchEndPayload` shape).
   - [x] 6.5 In [client/src/features/game/GamePage.tsx](client/src/features/game/GamePage.tsx):
     - Import `ACTION_SURRENDER_REQUEST`, `ACTION_SURRENDER_ACCEPT`, `ACTION_SURRENDER_DECLINE`.
@@ -544,11 +575,12 @@ so that we can end a hopeless game without grinding it out to 1001.
     - Compute four derived flags near the existing `canPause`/`isMyTurn` block (around line 328-360):
       ```ts
       const isProposer =
-        gameState.surrenderProposerSeat !== null && gameState.surrenderProposerSeat === myPlayerSeat;
+        gameState.surrenderProposerSeat !== null &&
+        gameState.surrenderProposerSeat === myPlayerSeat;
       const isPartnerOfProposer =
         gameState.surrenderProposerSeat !== null &&
         myPlayerSeat !== null &&
-        ((gameState.surrenderProposerSeat + 2) % 4) === myPlayerSeat;
+        (gameState.surrenderProposerSeat + 2) % 4 === myPlayerSeat;
       const isOpponentOfProposer =
         gameState.surrenderProposerSeat !== null &&
         myPlayerSeat !== null &&
@@ -567,7 +599,7 @@ so that we can end a hopeless game without grinding it out to 1001.
 
 - [x] **Task 7: Frontend — three new components (AC #6, #7, #8, #9)**
   - [x] 7.1 Create `client/src/features/game/components/SurrenderButton.tsx` — mirror the inline pause-button at [GamePage.tsx:451-463](client/src/features/game/GamePage.tsx#L451-L463) but extracted as a proper component (cleaner than inline because it carries the confirmation dialog). Props: `{ canRequest: boolean; isExhausted: boolean; isPending: boolean; onConfirm: () => void; }`. Internal state: `useState<boolean>(false)` for `confirmOpen`. On click: `setConfirmOpen(true)`. Confirm dialog: shadcn `AlertDialog` (already installed by Story 8.1 — verify with `ls client/src/shared/components/ui/alert-dialog.tsx`). `data-testid="surrender-button"` on the trigger; `data-testid="surrender-confirm"` and `data-testid="surrender-cancel"` on dialog buttons.
-    Caption logic:
+        Caption logic:
     ```ts
     const caption = isPending
       ? t("game.surrender.pending")
@@ -605,7 +637,7 @@ so that we can end a hopeless game without grinding it out to 1001.
     - **Reject: request from PhasePaused** → `ErrGamePaused` (the rules engine pre-empts surrender via the existing `case PhasePaused: return ErrGamePaused` at [rules_engine.go:36](server/internal/game/rules_engine.go#L36); confirm by reading the actual fall-through path — if surrender is intercepted before phase-switch, the test must instead assert the surrender handler's own phase rejection. Adjust based on Task 2.4 placement).
     - **Reject: request when `SurrenderUsed[seat] == true`** → `ErrSurrenderExhausted`.
     - **Reject: request when proposal already pending** → `ErrActionRequired`.
-    - **Happy path: accept by partner** → `Phase = PhaseMatchEnd`, `WinnerTeam = &(opposite team)`, `SurrenderProposerSeat = nil`, `SurrenderUsed` preserved. Assert opposite team correctly: proposer seat 0 (Red) → winner team 1 (Blue); seat 1 → 0; seat 2 → 1; seat 3 → 0.
+    - **Happy path: accept by partner** → `Phase = PhaseMatchEnd`, `WinnerTeam = &(opposite team)`, `SurrenderProposerSeat = nil`, `SurrenderUsed` preserved. Assert opposite team correctly: proposer seat 0 (Team A) → winner team 1 (Team B); seat 1 → 0; seat 2 → 1; seat 3 → 0.
     - **Reject: accept by non-partner** (proposer themselves, or either opponent) → `ErrInvalidAction`.
     - **Reject: accept when no proposal** → `ErrWrongPhase`.
     - **Happy path: decline by partner** → `SurrenderProposerSeat = nil`, `SurrenderUsed[proposer] == true` preserved, phase / scores / hands / trick unchanged.
@@ -668,13 +700,13 @@ so that we can end a hopeless game without grinding it out to 1001.
 - [x] **Task 11: Full-stack smoke + lint gates (run before marking the story `review`)**
   - [x] 11.1 Backend: `cd server && go test ./...` — all packages green. `cd server && go vet ./...` clean.
   - [x] 11.2 Frontend: `cd client && npx vitest run` — all tests green (existing + all new component, dispatch, and GamePage cases).
-  - [x] 11.3 **Lint: `cd client && npx prettier --write . && npx eslint .` — Prettier MUST run before committing** ([feedback memory: `feedback_prettier_before_commit.md`](C:\Users\Emilijan-LT\.claude\projects\d--My-Projects-belote\memory\feedback_prettier_before_commit.md); CI has failed repeatedly across Stories 7.1, 7.2, 8.1).
+  - [x] 11.3 **Lint: `cd client && npx prettier --write . && npx eslint .` — Prettier MUST run before committing** ([feedback memory: `feedback_prettier_before_commit.md`](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-belote\memory\feedback_prettier_before_commit.md); CI has failed repeatedly across Stories 7.1, 7.2, 8.1).
   - [x] 11.4 `make lint` (both stacks) — clean. On Windows shells without `golangci-lint` installed, fall back to `go vet ./...` as the static-analysis gate (matching Stories 7.2 + 8.1 Dev Agent Record practice).
   - [x] 11.5 Migration round-trip: `make migrate` (up) → check schema → `make migrate down` → check schema reverts → `make migrate` (up) again. Verify `surrendered_by` column and index appear/disappear cleanly.
   - [x] 11.6 Manual smoke (document outcomes in Completion Notes):
     - Start `make dev`; create a 4-player match. As seat 0, click Surrender → confirm; assert seats 1 + 3 (opponents) see the banner, seat 2 (partner) sees the prompt, seat 0 sees "Surrender pending…".
     - Have seat 2 decline → assert toast on all 4 clients, banner/prompt clear, seat 0's button now shows "Surrender used" and is disabled, seat 2's button is still enabled (their attempt wasn't consumed).
-    - Have seat 1 (opposite team) request a surrender — partner is seat 3. Have seat 3 accept → assert MatchResult renders with `match-result-surrender-note` showing seat 1's username. Verify the matches table has a new row with `status='completed'`, `winner_team=0` (Red won because seat 1 surrendered), `surrendered_by=<seat-1-userId>`.
+    - Have seat 1 (opposite team) request a surrender — partner is seat 3. Have seat 3 accept → assert MatchResult renders with `match-result-surrender-note` showing seat 1's username. Verify the matches table has a new row with `status='completed'`, `winner_team=0` (Team A won because seat 1 surrendered), `surrendered_by=<seat-1-userId>`.
     - Disconnect during a pending proposal: seat 0 proposes, seat 2 disconnects → wait for reconnect window → assert `event:match_abandoned` fires (existing flow), match row written with `status='abandoned'`, `surrendered_by=NULL`.
     - Pause/unpause during pending proposal: seat 0 proposes, seat 1 pauses, owner unpauses → assert proposal still pending after unpause; partner can still accept.
 
@@ -727,25 +759,25 @@ Story 8.2 is a **state-machine extension of the rules engine** plus three small 
 2. **Pending action awaiting a specific player's response** → `PendingBelotSeat *int` ([state.go:88](server/internal/game/state.go#L88)) is the precedent: a transient pointer that gates a follow-up action and is cleared when resolved. Surrender adds `SurrenderProposerSeat *int` with the same semantics — except the gating role is reversed: the proposer sets the pointer, the **partner** clears it via accept/decline. The accept-only-by-partner rule is enforced inside `handleSurrenderAccept`/`handleSurrenderDecline` via `seat == (proposer + 2) % 4`.
 3. **Match-end persistence** → the natural-end path at [manager.go:237-239](server/internal/session/manager.go#L237-L239) (`if Phase == PhaseMatchEnd → handleMatchEnd`) is the precedent. Surrender accept transitions `Phase = PhaseMatchEnd`, sets `WinnerTeam`, and the **same** `handleMatchEnd` runs — the only refinement is threading a `surrenderedBy *uint` argument through so the persistence call sets the new column. **`Status` stays `'completed'`** so existing wins/losses stats keep working without query changes (rationale in AC #4 — surrender IS a legitimate completed match, just with a different ending mechanism).
 
-The architecturally interesting choice is **typing `MatchEndPayload` as a struct** (currently it's an inline `map[string]interface{}` at [manager.go:451](server/internal/session/manager.go#L451)). This is required to add the optional `outcomeReason` and `surrenderedByPlayer` fields cleanly. The retrofit is additive — wire-format unchanged for natural-end matches because `omitempty` drops empty strings and nil pointers from JSON output. Existing client code reading `winnerTeam`/`redFinalScore`/`blueFinalScore`/`matchDurationSec` continues to work unchanged.
+The architecturally interesting choice is **typing `MatchEndPayload` as a struct** (currently it's an inline `map[string]interface{}` at [manager.go:451](server/internal/session/manager.go#L451)). This is required to add the optional `outcomeReason` and `surrenderedByPlayer` fields cleanly. The retrofit is additive — wire-format unchanged for natural-end matches because `omitempty` drops empty strings and nil pointers from JSON output. Existing client code reading `winnerTeam`/`teamAFinalScore`/`teamBFinalScore`/`matchDurationSec` continues to work unchanged.
 
 ### What Already Exists — Do NOT Recreate
 
-| Item | Location | Notes |
-|------|----------|-------|
-| `Manager.HandleAction` | [server/internal/session/manager.go:131-240](server/internal/session/manager.go#L131-L240) | Single chokepoint for all WS actions. Surrender actions flow through `parseAction` → `game.ApplyAction` → `broadcastActionResult` → `handleMatchEnd` (only on accept). No new handler infra needed. |
-| `parseAction` | [server/internal/session/manager.go:307-368](server/internal/session/manager.go#L307-L368) | Strip-prefix mapping handles `action:surrender_*` automatically. The `decline_belot → skip_belot` rename precedent is NOT needed for surrender (action names align). |
-| `handleMatchEnd` | [server/internal/session/manager.go:632-674](server/internal/session/manager.go#L632-L674) | Existing match-record persistence + room-status update + session removal. Add a `surrenderedBy *uint` param; pass `nil` from natural-end call site. |
-| `cloneGameState` | grep `cloneGameState` in `server/internal/game/` | Pure-function clone helper. Add the new pointer field's deep-copy block alongside the existing `TrumpCallerSeat` / `PendingBelotSeat` / `WinnerTeam` blocks. **Find the file first** — if it's `clone.go`, add there; if inline elsewhere, follow the existing pattern. |
-| `apperr.ErrActionRequired` | [server/internal/apperr/errors.go:92](server/internal/apperr/errors.go#L92) | `ACTION_REQUIRED` — already returns 400; right semantic match for "a surrender proposal is pending; resolve it first". Reuse, do not duplicate. |
-| `ws.ErrorInvalidAction` (string const) | [server/internal/ws/events.go:105](server/internal/ws/events.go#L105) | Default fall-through for unmapped errors. Surrender's "non-partner accept" maps here via `sendGameError`. |
-| `BelotPrompt.tsx` | [client/src/features/game/components/BelotPrompt.tsx](client/src/features/game/components/BelotPrompt.tsx) | The exact UI shape and `useFocusTrap` + `role="dialog"` pattern to mirror for `SurrenderPrompt`. |
-| Pause-button gating | [client/src/features/game/GamePage.tsx:451-463](client/src/features/game/GamePage.tsx#L451-L463) | Phase-gated render + `disabled={!canPause}` + caption-toggle pattern to mirror for `SurrenderButton`. |
-| shadcn `AlertDialog` | [client/src/shared/components/ui/alert-dialog.tsx](client/src/shared/components/ui/alert-dialog.tsx) | Installed by Story 8.1. Reuse for `SurrenderButton`'s confirm dialog. **Verify it exists** (`ls client/src/shared/components/ui/alert-dialog.tsx`); if not, run `npx shadcn@latest add alert-dialog` per the project shadcn workflow. |
-| `MatchResult.tsx` | [client/src/features/game/components/MatchResult.tsx](client/src/features/game/components/MatchResult.tsx) | Existing winner overlay. Extend with optional `surrenderedByUsername` prop and conditional sub-line; do NOT fork into a separate `SurrenderResult` component. |
-| `useWsDispatch` error-event branch | [client/src/shared/hooks/useWsDispatch.ts](client/src/shared/hooks/useWsDispatch.ts) | Existing `dispatchErrorEvent` (or equivalent) for `ERROR_PAUSE_EXHAUSTED` etc. Add the new `ERROR_SURRENDER_EXHAUSTED` branch alongside. |
-| `gameStore` transient-payload pattern | [client/src/shared/stores/gameStore.ts](client/src/shared/stores/gameStore.ts) | `belotReveal` / `setBelotReveal` is the exact shape to mirror for `surrenderProposed` / `setSurrenderProposed`. |
-| `mockMatchRepo` + `defaultPlayers()` test infra | [server/internal/session/manager_test.go](server/internal/session/manager_test.go) | Existing in-memory mock + 4-seat fixture. New surrender tests reuse both — no new test infra needed. |
+| Item                                            | Location                                                                                                   | Notes                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Manager.HandleAction`                          | [server/internal/session/manager.go:131-240](server/internal/session/manager.go#L131-L240)                 | Single chokepoint for all WS actions. Surrender actions flow through `parseAction` → `game.ApplyAction` → `broadcastActionResult` → `handleMatchEnd` (only on accept). No new handler infra needed.                                                                     |
+| `parseAction`                                   | [server/internal/session/manager.go:307-368](server/internal/session/manager.go#L307-L368)                 | Strip-prefix mapping handles `action:surrender_*` automatically. The `decline_belot → skip_belot` rename precedent is NOT needed for surrender (action names align).                                                                                                    |
+| `handleMatchEnd`                                | [server/internal/session/manager.go:632-674](server/internal/session/manager.go#L632-L674)                 | Existing match-record persistence + room-status update + session removal. Add a `surrenderedBy *uint` param; pass `nil` from natural-end call site.                                                                                                                     |
+| `cloneGameState`                                | grep `cloneGameState` in `server/internal/game/`                                                           | Pure-function clone helper. Add the new pointer field's deep-copy block alongside the existing `TrumpCallerSeat` / `PendingBelotSeat` / `WinnerTeam` blocks. **Find the file first** — if it's `clone.go`, add there; if inline elsewhere, follow the existing pattern. |
+| `apperr.ErrActionRequired`                      | [server/internal/apperr/errors.go:92](server/internal/apperr/errors.go#L92)                                | `ACTION_REQUIRED` — already returns 400; right semantic match for "a surrender proposal is pending; resolve it first". Reuse, do not duplicate.                                                                                                                         |
+| `ws.ErrorInvalidAction` (string const)          | [server/internal/ws/events.go:105](server/internal/ws/events.go#L105)                                      | Default fall-through for unmapped errors. Surrender's "non-partner accept" maps here via `sendGameError`.                                                                                                                                                               |
+| `BelotPrompt.tsx`                               | [client/src/features/game/components/BelotPrompt.tsx](client/src/features/game/components/BelotPrompt.tsx) | The exact UI shape and `useFocusTrap` + `role="dialog"` pattern to mirror for `SurrenderPrompt`.                                                                                                                                                                        |
+| Pause-button gating                             | [client/src/features/game/GamePage.tsx:451-463](client/src/features/game/GamePage.tsx#L451-L463)           | Phase-gated render + `disabled={!canPause}` + caption-toggle pattern to mirror for `SurrenderButton`.                                                                                                                                                                   |
+| shadcn `AlertDialog`                            | [client/src/shared/components/ui/alert-dialog.tsx](client/src/shared/components/ui/alert-dialog.tsx)       | Installed by Story 8.1. Reuse for `SurrenderButton`'s confirm dialog. **Verify it exists** (`ls client/src/shared/components/ui/alert-dialog.tsx`); if not, run `npx shadcn@latest add alert-dialog` per the project shadcn workflow.                                   |
+| `MatchResult.tsx`                               | [client/src/features/game/components/MatchResult.tsx](client/src/features/game/components/MatchResult.tsx) | Existing winner overlay. Extend with optional `surrenderedByUsername` prop and conditional sub-line; do NOT fork into a separate `SurrenderResult` component.                                                                                                           |
+| `useWsDispatch` error-event branch              | [client/src/shared/hooks/useWsDispatch.ts](client/src/shared/hooks/useWsDispatch.ts)                       | Existing `dispatchErrorEvent` (or equivalent) for `ERROR_PAUSE_EXHAUSTED` etc. Add the new `ERROR_SURRENDER_EXHAUSTED` branch alongside.                                                                                                                                |
+| `gameStore` transient-payload pattern           | [client/src/shared/stores/gameStore.ts](client/src/shared/stores/gameStore.ts)                             | `belotReveal` / `setBelotReveal` is the exact shape to mirror for `surrenderProposed` / `setSurrenderProposed`.                                                                                                                                                         |
+| `mockMatchRepo` + `defaultPlayers()` test infra | [server/internal/session/manager_test.go](server/internal/session/manager_test.go)                         | Existing in-memory mock + 4-seat fixture. New surrender tests reuse both — no new test infra needed.                                                                                                                                                                    |
 
 ### What Must Be Created
 
@@ -779,6 +811,7 @@ The architecturally interesting choice is **typing `MatchEndPayload` as a struct
 19. [client/src/shared/i18n/en.json](client/src/shared/i18n/en.json) + [sr.json](client/src/shared/i18n/sr.json) — `game.surrender.*` block + `game.matchResult.surrenderNote`.
 
 **No changes expected:**
+
 - [server/internal/match/gorm_repo.go](server/internal/match/gorm_repo.go) — stats and history queries already work because surrender uses `status='completed'`.
 - [server/internal/session/reconnect.go](server/internal/session/reconnect.go) — abandonment flow is separate; surrender state is discarded with `gs` on abandonment.
 - [server/internal/room/handler.go](server/internal/room/handler.go) — no room-level changes.
@@ -787,14 +820,14 @@ The architecturally interesting choice is **typing `MatchEndPayload` as a struct
 
 ### Architecture Patterns to Follow
 
-- **Pure-function rules engine** ([_bmad-output/project-context.md#L70](_bmad-output/project-context.md#L70)). All three surrender handlers follow `func handleX(state *GameState, action Action) (*GameState, error)`. Zero side effects. Clone state before mutation. The session manager owns broadcasts and persistence.
-- **Slice clone discipline** ([_bmad-output/project-context.md#L71](_bmad-output/project-context.md#L71)). The new `SurrenderUsed [4]bool` is a value-type fixed array (cloned by struct copy in `cloneGameState` already). The new `SurrenderProposerSeat *int` is a pointer that **must** be deep-cloned in `cloneGameState` next to the existing pointer fields (`TrumpCallerSeat`, `PendingBelotSeat`, `WinnerTeam`, etc.). Read the existing clone helper carefully and add the new field's block.
-- **Pointer for nullable optional fields** ([_bmad-output/project-context.md#L75](_bmad-output/project-context.md#L75)). `SurrenderProposerSeat *int` and `SurrenderedBy *uint` use pointers so JSON `null` distinguishes from "seat 0" / "userID 0". Same trick as `WinnerTeam *int`, `AbandonedBy *uint`, `PendingBelotSeat *int`.
-- **Multi-event WS broadcasts as separate ordered messages** ([_bmad-output/project-context.md#L109](_bmad-output/project-context.md#L109)). Surrender request: `event:surrender_proposed` then `event:game_state` (separate messages, ordered). Surrender accept: `event:match_end` then `event:game_state`. Surrender decline: `event:surrender_declined` then `event:game_state`. **Never batch.**
-- **WS event prefixes** ([_bmad-output/planning-artifacts/architecture.md#L327-L336](_bmad-output/planning-artifacts/architecture.md#L327-L336)). Game-state events use `event:`, errors use `error:`, client→server uses `action:`. Surrender events fit cleanly: `action:surrender_*`, `event:surrender_*`, `error:surrender_*`.
-- **Same-commit WS contract sync** ([_bmad-output/project-context.md#L80, #L286](_bmad-output/project-context.md#L80)). [server/internal/ws/events.go](server/internal/ws/events.go) and [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) MUST be updated together.
+- **Pure-function rules engine** ([\_bmad-output/project-context.md#L70](_bmad-output/project-context.md#L70)). All three surrender handlers follow `func handleX(state *GameState, action Action) (*GameState, error)`. Zero side effects. Clone state before mutation. The session manager owns broadcasts and persistence.
+- **Slice clone discipline** ([\_bmad-output/project-context.md#L71](_bmad-output/project-context.md#L71)). The new `SurrenderUsed [4]bool` is a value-type fixed array (cloned by struct copy in `cloneGameState` already). The new `SurrenderProposerSeat *int` is a pointer that **must** be deep-cloned in `cloneGameState` next to the existing pointer fields (`TrumpCallerSeat`, `PendingBelotSeat`, `WinnerTeam`, etc.). Read the existing clone helper carefully and add the new field's block.
+- **Pointer for nullable optional fields** ([\_bmad-output/project-context.md#L75](_bmad-output/project-context.md#L75)). `SurrenderProposerSeat *int` and `SurrenderedBy *uint` use pointers so JSON `null` distinguishes from "seat 0" / "userID 0". Same trick as `WinnerTeam *int`, `AbandonedBy *uint`, `PendingBelotSeat *int`.
+- **Multi-event WS broadcasts as separate ordered messages** ([\_bmad-output/project-context.md#L109](_bmad-output/project-context.md#L109)). Surrender request: `event:surrender_proposed` then `event:game_state` (separate messages, ordered). Surrender accept: `event:match_end` then `event:game_state`. Surrender decline: `event:surrender_declined` then `event:game_state`. **Never batch.**
+- **WS event prefixes** ([\_bmad-output/planning-artifacts/architecture.md#L327-L336](_bmad-output/planning-artifacts/architecture.md#L327-L336)). Game-state events use `event:`, errors use `error:`, client→server uses `action:`. Surrender events fit cleanly: `action:surrender_*`, `event:surrender_*`, `error:surrender_*`.
+- **Same-commit WS contract sync** ([\_bmad-output/project-context.md#L80, #L286](_bmad-output/project-context.md#L80)). [server/internal/ws/events.go](server/internal/ws/events.go) and [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) MUST be updated together.
 - **Additive JSON-extension discipline**. New `MatchEndPayload` fields are `omitempty` (`outcomeReason`, `surrenderedByPlayer`); new `GameState` fields default to zero values that serialize correctly. No existing client breaks.
-- **`data-testid` over text/Tailwind queries** ([Story 7.1, 7.2, 8.1 reinforced](C:\Users\Emilijan-LT\.claude\projects\d--My-Projects-belote\memory\MEMORY.md)). All new components expose stable `data-testid`s. No tests query by Tailwind class or visible string.
+- **`data-testid` over text/Tailwind queries** ([Story 7.1, 7.2, 8.1 reinforced](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-belote\memory\MEMORY.md)). All new components expose stable `data-testid`s. No tests query by Tailwind class or visible string.
 - **i18n parity is CI-enforced** by [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) recursive `flattenKeys` check. Any English key without a Serbian counterpart fails CI.
 - **Server is the authority for game state**; client UI is presentational. The surrender button does not optimistically set `surrenderProposerSeat` — it waits for the WS broadcast (which the proposer also receives, identical to how the pause button works).
 - **No `enum`s in TypeScript** — use union literal types (project-context Go/TS rule). The `outcomeReason` field is typed as `?: "surrender"` (literal), not an enum.
@@ -884,11 +917,11 @@ Carried-forward learnings that shape this story:
 
 ### Frontend Flow — Three Players' Perspectives on a Pending Proposal
 
-| Role | What They See | Driving State |
-|------|---------------|---------------|
-| **Proposer (seat 0)** | Surrender button shows `t("game.surrender.pending")`, disabled. No prompt. No banner. Hand of cards still active if it's their turn. | `gameState.surrenderProposerSeat === myPlayerSeat → caption flips, button disabled` |
-| **Partner (seat 2)** | `SurrenderPrompt` modal-style overlay with accept/decline buttons. Body text mentions seat-0 username. | `gameState.surrenderProposerSeat !== null && (gameState.surrenderProposerSeat + 2) % 4 === myPlayerSeat → mount SurrenderPrompt` |
-| **Opponent (seat 1, 3)** | `SurrenderOpponentBanner` slim non-modal banner near top. Game keeps going — they can play their turn. | `gameState.surrenderProposerSeat !== null && team-of-self ≠ team-of-proposer → mount banner` |
+| Role                     | What They See                                                                                                                        | Driving State                                                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Proposer (seat 0)**    | Surrender button shows `t("game.surrender.pending")`, disabled. No prompt. No banner. Hand of cards still active if it's their turn. | `gameState.surrenderProposerSeat === myPlayerSeat → caption flips, button disabled`                                              |
+| **Partner (seat 2)**     | `SurrenderPrompt` modal-style overlay with accept/decline buttons. Body text mentions seat-0 username.                               | `gameState.surrenderProposerSeat !== null && (gameState.surrenderProposerSeat + 2) % 4 === myPlayerSeat → mount SurrenderPrompt` |
+| **Opponent (seat 1, 3)** | `SurrenderOpponentBanner` slim non-modal banner near top. Game keeps going — they can play their turn.                               | `gameState.surrenderProposerSeat !== null && team-of-self ≠ team-of-proposer → mount banner`                                     |
 
 When the partner clicks Accept: the WS round-trip fires `event:match_end` → `MatchResult` overlay appears for everyone (with the surrender sub-line). When the partner clicks Decline: `event:surrender_declined` arrives → toast on all 4 clients ("Surrender declined — play continues") → `event:game_state` clears `surrenderProposerSeat` → banner/prompt unmount → game resumes. The proposer's button now reads "Surrender used".
 
@@ -897,7 +930,8 @@ When the partner clicks Accept: the WS round-trip fires `event:match_end` → `M
 **Modified files (expected): see "What Must Be Modified" — 19 files modified, 5 new files (1 SQL up, 1 SQL down, 1 Go handler, 1 Go test, 3 React components × 2 files each = 6, but counted together = ~10 net new files), 1 schema migration.**
 
 **Alignment with unified project structure:**
-- Backend: handlers as a new file in the existing `internal/game/` package; matches the package layout pattern at [_bmad-output/planning-artifacts/architecture.md#L356-L368](_bmad-output/planning-artifacts/architecture.md#L356-L368). Session manager and match repo are unchanged-package extensions.
+
+- Backend: handlers as a new file in the existing `internal/game/` package; matches the package layout pattern at [\_bmad-output/planning-artifacts/architecture.md#L356-L368](_bmad-output/planning-artifacts/architecture.md#L356-L368). Session manager and match repo are unchanged-package extensions.
 - Frontend: components live in the same feature folder (`features/game/components/`) as `BelotPrompt`, `MatchResult`, etc. — no new folder.
 - WS contract: both sides updated in the same commit per project rule.
 - Migration: next sequential number, full down-migration, indexed FK column — matches [server/migrations/000008_add_match_status.up.sql](server/migrations/000008_add_match_status.up.sql).
@@ -956,10 +990,10 @@ When the partner clicks Accept: the WS round-trip fires `event:match_end` → `M
 - [Source: client/src/shared/hooks/useWsDispatch.ts — dispatcher to extend with surrender event branches](client/src/shared/hooks/useWsDispatch.ts)
 - [Source: client/src/shared/types/wsEvents.ts — add new constants and payload interfaces; extend MatchEndPayload](client/src/shared/types/wsEvents.ts)
 - [Source: client/src/shared/types/gameTypes.ts — extend GameState with new fields; extend ActionType union](client/src/shared/types/gameTypes.ts)
-- [Source: client/src/shared/i18n/en.json + sr.json — game.surrender.* block to add; matchResult.surrenderNote sub-key](client/src/shared/i18n/en.json)
+- [Source: client/src/shared/i18n/en.json + sr.json — game.surrender.\* block to add; matchResult.surrenderNote sub-key](client/src/shared/i18n/en.json)
 - [Source: client/src/shared/i18n/i18n.test.ts — recursive flattenKeys parity check (CI gate)](client/src/shared/i18n/i18n.test.ts)
-- [Source: feedback memory — Prettier before every commit](C:\Users\Emilijan-LT\.claude\projects\d--My-Projects-belote\memory\feedback_prettier_before_commit.md)
-- [Source: project memory — Belote uses BMM module](C:\Users\Emilijan-LT\.claude\projects\d--My-Projects-belote\memory\project_bmad_module.md)
+- [Source: feedback memory — Prettier before every commit](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-belote\memory\feedback_prettier_before_commit.md)
+- [Source: project memory — Belote uses BMM module](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-belote\memory\project_bmad_module.md)
 
 ## Dev Agent Record
 
@@ -969,7 +1003,7 @@ claude-opus-4-7 (Opus 4.7, 1M context)
 
 ### Debug Log References
 
-- `cd server && go test ./...` — all packages green (game + session including new TestSurrenderRequest / TestSurrenderAccept / TestSurrenderDecline / TestSurrender_*).
+- `cd server && go test ./...` — all packages green (game + session including new TestSurrenderRequest / TestSurrenderAccept / TestSurrenderDecline / TestSurrender\_\*).
 - `cd client && npx vitest run` — 484 tests pass (54 files), including 5 new component / dispatch test files (SurrenderButton, SurrenderPrompt, SurrenderOpponentBanner, MatchResult surrender cases, useWsDispatch surrender cases).
 - `npx tsc --noEmit` clean. ESLint clean across all touched files.
 - `cd client && npx prettier --write …` — only formatting tweaks, applied.
@@ -997,6 +1031,7 @@ claude-opus-4-7 (Opus 4.7, 1M context)
 ### File List
 
 **Created (9):**
+
 - `server/migrations/000010_add_match_surrendered_by.up.sql`
 - `server/migrations/000010_add_match_surrendered_by.down.sql`
 - `server/internal/game/surrender.go`
@@ -1009,6 +1044,7 @@ claude-opus-4-7 (Opus 4.7, 1M context)
 - `client/src/features/game/components/SurrenderOpponentBanner.test.tsx`
 
 **Modified (server, 7):**
+
 - `server/internal/match/model.go` — added `SurrenderedBy *uint` field
 - `server/internal/game/types.go` — added `ActionSurrenderRequest/Accept/Decline` constants
 - `server/internal/game/state.go` — added `SurrenderProposerSeat *int` + `SurrenderUsed [4]bool`
@@ -1020,6 +1056,7 @@ claude-opus-4-7 (Opus 4.7, 1M context)
 - `server/internal/session/manager_test.go` — added 6 surrender end-to-end test cases
 
 **Modified (client, 11):**
+
 - `client/src/shared/types/wsEvents.ts` — surrender constants + payload interfaces, extended `MatchEndPayload`
 - `client/src/shared/types/gameTypes.ts` — extended `GameState` and `ActionType` union
 - `client/src/shared/stores/gameStore.ts` — `surrenderProposed` / `surrenderDeclined` slots + setters
@@ -1032,6 +1069,7 @@ claude-opus-4-7 (Opus 4.7, 1M context)
 - `client/src/shared/i18n/sr.json` — Serbian-Latin (Ekavian) mirror
 
 **Test fixtures touched (5):** Added `surrenderProposerSeat: null` + `surrenderUsed: [false, false, false, false]` to existing `GameState` fixtures so pre-existing tests still type-check:
+
 - `client/src/shared/types/gameTypes.test.ts`
 - `client/src/shared/hooks/useWsDispatch.test.ts`
 - `client/src/features/game/GamePage.test.tsx`

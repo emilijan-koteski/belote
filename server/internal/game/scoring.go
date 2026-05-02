@@ -13,8 +13,8 @@ func scoreHand(state *GameState) {
 	lastTrickTeam := TeamForSeat(*state.TrickWinnerSeat)
 
 	// Capture raw card points BEFORE bonus application
-	rawRedCardPoints := state.HandPoints[TeamRed]
-	rawBlueCardPoints := state.HandPoints[TeamBlue]
+	rawTeamACardPoints := state.HandPoints[TeamA]
+	rawTeamBCardPoints := state.HandPoints[TeamB]
 
 	// Step 2: Apply Capot bonus (+100) or last-trick bonus (+10)
 	isCapot := false
@@ -22,16 +22,16 @@ func scoreHand(state *GameState) {
 	capotBonus := 0
 	lastTrickBonus := 0
 
-	if state.TricksWon[TeamRed] == 8 {
-		state.HandPoints[TeamRed] += 100
+	if state.TricksWon[TeamA] == 8 {
+		state.HandPoints[TeamA] += 100
 		isCapot = true
-		t := TeamRed
+		t := TeamA
 		capotTeam = &t
 		capotBonus = 100
-	} else if state.TricksWon[TeamBlue] == 8 {
-		state.HandPoints[TeamBlue] += 100
+	} else if state.TricksWon[TeamB] == 8 {
+		state.HandPoints[TeamB] += 100
 		isCapot = true
-		t := TeamBlue
+		t := TeamB
 		capotTeam = &t
 		capotBonus = 100
 	} else {
@@ -40,50 +40,50 @@ func scoreHand(state *GameState) {
 	}
 
 	// Step 3: Calculate total hand score per team
-	redTotal := state.HandPoints[TeamRed] + state.DeclarationPoints[TeamRed]
-	blueTotal := state.HandPoints[TeamBlue] + state.DeclarationPoints[TeamBlue]
+	aTotal := state.HandPoints[TeamA] + state.DeclarationPoints[TeamA]
+	bTotal := state.HandPoints[TeamB] + state.DeclarationPoints[TeamB]
 
 	// Step 4: Failed contract check
 	contractingTeam := TeamForSeat(*state.TrumpCallerSeat)
 	opposingTeam := 1 - contractingTeam
 
 	var contractingTotal, opposingTotal int
-	if contractingTeam == TeamRed {
-		contractingTotal = redTotal
-		opposingTotal = blueTotal
+	if contractingTeam == TeamA {
+		contractingTotal = aTotal
+		opposingTotal = bTotal
 	} else {
-		contractingTotal = blueTotal
-		opposingTotal = redTotal
+		contractingTotal = bTotal
+		opposingTotal = aTotal
 	}
 
 	// Step 5: Award points — failed contract or normal scoring
 	failedContract := contractingTotal < opposingTotal
-	var redAwarded, blueAwarded int
+	var aAwarded, bAwarded int
 	if failedContract {
 		// Failed contract: contracting team gets 0, opponent gets ALL points
-		allPoints := redTotal + blueTotal
+		allPoints := aTotal + bTotal
 		state.TeamScores[opposingTeam] += allPoints
-		if opposingTeam == TeamRed {
-			redAwarded = allPoints
-			blueAwarded = 0
+		if opposingTeam == TeamA {
+			aAwarded = allPoints
+			bAwarded = 0
 		} else {
-			redAwarded = 0
-			blueAwarded = allPoints
+			aAwarded = 0
+			bAwarded = allPoints
 		}
 	} else {
 		// Normal scoring: each team keeps their own points
-		state.TeamScores[TeamRed] += redTotal
-		state.TeamScores[TeamBlue] += blueTotal
-		redAwarded = redTotal
-		blueAwarded = blueTotal
+		state.TeamScores[TeamA] += aTotal
+		state.TeamScores[TeamB] += bTotal
+		aAwarded = aTotal
+		bAwarded = bTotal
 	}
 
 	// Step 6: Populate LastHandResult for broadcast
 	state.LastHandResult = &HandResult{
-		RedCardPoints:   rawRedCardPoints,
-		BlueCardPoints:  rawBlueCardPoints,
-		RedDeclPoints:   state.DeclarationPoints[TeamRed],
-		BlueDeclPoints:  state.DeclarationPoints[TeamBlue],
+		TeamACardPoints: rawTeamACardPoints,
+		TeamBCardPoints: rawTeamBCardPoints,
+		TeamADeclPoints: state.DeclarationPoints[TeamA],
+		TeamBDeclPoints: state.DeclarationPoints[TeamB],
 		LastTrickTeam:   lastTrickTeam,
 		LastTrickBonus:  lastTrickBonus,
 		Capot:           isCapot,
@@ -91,17 +91,17 @@ func scoreHand(state *GameState) {
 		CapotBonus:      capotBonus,
 		FailedContract:  failedContract,
 		ContractingTeam: contractingTeam,
-		RedHandTotal:    redAwarded,
-		BlueHandTotal:   blueAwarded,
+		TeamAHandTotal:  aAwarded,
+		TeamBHandTotal:  bAwarded,
 	}
 
 	// Step 7: Check match-end condition with tiebreaker logic
 	target := matchTarget(state.MatchMode)
-	redOver := state.TeamScores[TeamRed] >= target
-	blueOver := state.TeamScores[TeamBlue] >= target
+	aOver := state.TeamScores[TeamA] >= target
+	bOver := state.TeamScores[TeamB] >= target
 
-	if redOver || blueOver {
-		winner := determineMatchWinner(state, redOver, blueOver)
+	if aOver || bOver {
+		winner := determineMatchWinner(state, aOver, bOver)
 		state.WinnerTeam = &winner
 		state.Phase = PhaseMatchEnd
 		return
@@ -208,23 +208,23 @@ func checkInstantWin(state *GameState) *int {
 // determineMatchWinner resolves which team wins when at least one team has crossed
 // the match target. Handles tiebreaker: if both teams crossed, higher score wins;
 // if tied, the contracting team (trump picker) wins.
-func determineMatchWinner(state *GameState, redOver, blueOver bool) int {
-	if redOver && blueOver {
+func determineMatchWinner(state *GameState, aOver, bOver bool) int {
+	if aOver && bOver {
 		// Both teams crossed — higher score wins
-		if state.TeamScores[TeamRed] > state.TeamScores[TeamBlue] {
-			return TeamRed
+		if state.TeamScores[TeamA] > state.TeamScores[TeamB] {
+			return TeamA
 		}
-		if state.TeamScores[TeamBlue] > state.TeamScores[TeamRed] {
-			return TeamBlue
+		if state.TeamScores[TeamB] > state.TeamScores[TeamA] {
+			return TeamB
 		}
 		// Tied scores — contracting team (trump picker) wins
 		return TeamForSeat(*state.TrumpCallerSeat)
 	}
 	// Only one team crossed
-	if redOver {
-		return TeamRed
+	if aOver {
+		return TeamA
 	}
-	return TeamBlue
+	return TeamB
 }
 
 // matchTarget returns the point threshold for match completion based on the match mode.

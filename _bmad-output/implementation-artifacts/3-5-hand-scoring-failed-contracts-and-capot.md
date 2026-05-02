@@ -66,7 +66,7 @@ So that the competitive integrity of the game is maintained.
   - [x] 3.2: Verify the call order: `resolveTrick()` → `resolveDeclarationsForHand()` (if needed) → `scoreHand()` — scoring must run AFTER declarations are resolved since it reads `DeclarationPoints`
 
 - [x] Task 4: Create test fixtures (AC: #6)
-  **Note:** `NewGameMidPlay(8)` already provides TrickNumber=8 with 1 card per player, but it has arbitrary HandPoints/TricksWon and no controlled TrumpCallerSeat for failed-contract testing. The new fixtures below provide deterministic scoring state needed for hand-scoring tests.
+      **Note:** `NewGameMidPlay(8)` already provides TrickNumber=8 with 1 card per player, but it has arbitrary HandPoints/TricksWon and no controlled TrumpCallerSeat for failed-contract testing. The new fixtures below provide deterministic scoring state needed for hand-scoring tests.
   - [x] 4.1: Add `NewGameLastTrick() *GameState` to `testfixtures/fixtures.go`
   - [x] 4.2: Add `NewGameCapotInProgress() *GameState` to `testfixtures/fixtures.go`
   - [x] 4.3: Write fixture validation tests in `testfixtures/fixtures_test.go`
@@ -109,23 +109,25 @@ So that the competitive integrity of the game is maintained.
 **Total Card Points:** A full 32-card Belot deck contains exactly **152 card points** (verified by existing test in `playing_test.go:783`). With the last-trick bonus, the baseline distributable points per hand = 162. With Capot, it's 252.
 
 **Card Points Per Suit:**
+
 - Trump suit: J(20) + 9(14) + A(11) + T(10) + K(4) + Q(3) + 8(0) + 7(0) = 62
 - Non-trump suit: A(11) + T(10) + K(4) + Q(3) + J(2) + 9(0) + 8(0) + 7(0) = 30
 - Total: 62 + 3×30 = 152
 
 **Hand Score Components (per team):**
 
-| Component | Source | Where Stored |
-|-----------|--------|--------------|
-| Card points from tricks | Sum of card values in won tricks | `HandPoints[team]` (set by `resolveTrick` in playing.go) |
-| Belot bonus | +20 if announced during hand | `HandPoints[team]` (set by Story 3.4 in declarations.go) |
-| Last-trick bonus | +10 to team winning trick 8 | `HandPoints[team]` (set by `scoreHand` — this story) |
-| Capot bonus | +100 if one team won all 8 tricks | `HandPoints[team]` (set by `scoreHand` — replaces last-trick) |
-| Declaration points | From trick 1 resolution | `DeclarationPoints[team]` (set by Story 3.4) |
+| Component               | Source                            | Where Stored                                                  |
+| ----------------------- | --------------------------------- | ------------------------------------------------------------- |
+| Card points from tricks | Sum of card values in won tricks  | `HandPoints[team]` (set by `resolveTrick` in playing.go)      |
+| Belot bonus             | +20 if announced during hand      | `HandPoints[team]` (set by Story 3.4 in declarations.go)      |
+| Last-trick bonus        | +10 to team winning trick 8       | `HandPoints[team]` (set by `scoreHand` — this story)          |
+| Capot bonus             | +100 if one team won all 8 tricks | `HandPoints[team]` (set by `scoreHand` — replaces last-trick) |
+| Declaration points      | From trick 1 resolution           | `DeclarationPoints[team]` (set by Story 3.4)                  |
 
 **Team Total:** `HandPoints[team] + DeclarationPoints[team]`
 
 **Scoring Steps (in order):**
+
 1. Add last-trick bonus (+10) OR Capot bonus (+100) to `HandPoints`
 2. Calculate each team's total: `teamTotal = HandPoints[team] + DeclarationPoints[team]`
 3. Check failed contract: is contracting team's total **strictly less than** opponent's total?
@@ -134,17 +136,20 @@ So that the competitive integrity of the game is maintained.
 6. Check match-end condition
 
 **Failed Contract — Precise Rule:**
+
 - The contracting team = the team of the player who picked trump: `TeamForSeat(*state.TrumpCallerSeat)`
 - **Strictly less than** triggers failure: `contractingTotal < opposingTotal`
 - **Equal** is NOT a failure — the contracting team succeeds when they tie
 - On failure: contracting team adds **0** to `TeamScores`, opponent adds the **sum of both totals**
 
 **Capot Rule:**
+
 - Capot = one team won all 8 tricks: `TricksWon[team] == 8`
 - Capot bonus is +100 to `HandPoints`, **replacing** the +10 last-trick bonus (not additive)
 - The last-trick bonus and Capot bonus are mutually exclusive — check Capot first, only apply +10 if not Capot
 
 **Match-End Check:**
+
 - Target: 1001 for MatchMode "1001", 501 for MatchMode "501"
 - If either team's `TeamScores >= target` → `Phase = PhaseMatchEnd`
 - Story 3.6 will add tiebreaker logic (both teams cross threshold simultaneously → contracting team wins)
@@ -160,18 +165,18 @@ scoreHand(state *GameState):
        HandPoints[capotTeam] += 100    // Capot bonus
      ELSE:
        HandPoints[lastTrickTeam] += 10  // Last-trick bonus
-  3. redTotal = HandPoints[TeamRed] + DeclarationPoints[TeamRed]
-     blueTotal = HandPoints[TeamBlue] + DeclarationPoints[TeamBlue]
+  3. teamATotal = HandPoints[TeamA] + DeclarationPoints[TeamA]
+     teamBTotal = HandPoints[TeamB] + DeclarationPoints[TeamB]
   4. contractingTeam = TeamForSeat(*state.TrumpCallerSeat)
      opposingTeam = 1 - contractingTeam
-     contractingTotal = IF contractingTeam == TeamRed THEN redTotal ELSE blueTotal
-     opposingTotal = IF opposingTeam == TeamRed THEN redTotal ELSE blueTotal
+     contractingTotal = IF contractingTeam == TeamA THEN teamATotal ELSE teamBTotal
+     opposingTotal = IF opposingTeam == TeamA THEN teamATotal ELSE teamBTotal
   5. IF contractingTotal < opposingTotal:
-       TeamScores[opposingTeam] += redTotal + blueTotal  // ALL points to opponent
+       TeamScores[opposingTeam] += teamATotal + teamBTotal  // ALL points to opponent
        // contractingTeam gets 0 — no addition to TeamScores
      ELSE:
-       TeamScores[TeamRed] += redTotal
-       TeamScores[TeamBlue] += blueTotal
+       TeamScores[TeamA] += teamATotal
+       TeamScores[TeamB] += teamBTotal
   6. target = matchTarget(state.MatchMode)
      IF TeamScores[0] >= target OR TeamScores[1] >= target:
        Phase = PhaseMatchEnd
@@ -185,30 +190,30 @@ This resets ALL per-hand state. Reference: `reshuffleAndRedeal()` in `bidding.go
 
 **Fields to reset:**
 
-| Field | Reset Value | Section |
-|-------|-------------|---------|
-| HandNumber | increment by 1 | Hand state |
-| DealerSeat | `(DealerSeat + 1) % 4` | Hand state |
-| TrumpSuit | `nil` | Hand state |
-| TrumpCallerSeat | `nil` | Hand state |
-| TrumpCandidate | `nil` (set by dealCards) | Hand state |
-| BiddingRound | `1` | Hand state |
-| BiddingPassCount | `0` | Hand state |
-| TrickNumber | `0` (becomes 1 in handlePickTrump) | Trick state |
-| CurrentTrick | `[]TrickCard{}` | Trick state |
-| LeadSuit | `nil` | Trick state |
-| TrickWinnerSeat | `nil` | Trick state |
-| AwaitingDeclaration | `false` | Trick state (Story 3.4) |
-| DeclarationsResolved | `false` | Trick state (Story 3.4) |
-| HandPoints | `[2]int{0, 0}` | Scoring |
-| DeclarationPoints | `[2]int{0, 0}` | Scoring |
-| TricksWon | `[2]int{0, 0}` | Scoring |
-| PendingBelotSeat | `nil` | Scoring (Story 3.4) |
-| BelotAnnounced | `false` | Scoring (Story 3.4) |
-| Players[i].Hand | `[]Card{}` (refilled by dealCards) | Player state |
-| Players[i].Declarations | `nil` | Player state (Story 3.4) |
-| ActivePlayerSeat | `(DealerSeat + 1) % 4` | Timer state |
-| Phase | `PhaseBidding` | Metadata |
+| Field                   | Reset Value                        | Section                  |
+| ----------------------- | ---------------------------------- | ------------------------ |
+| HandNumber              | increment by 1                     | Hand state               |
+| DealerSeat              | `(DealerSeat + 1) % 4`             | Hand state               |
+| TrumpSuit               | `nil`                              | Hand state               |
+| TrumpCallerSeat         | `nil`                              | Hand state               |
+| TrumpCandidate          | `nil` (set by dealCards)           | Hand state               |
+| BiddingRound            | `1`                                | Hand state               |
+| BiddingPassCount        | `0`                                | Hand state               |
+| TrickNumber             | `0` (becomes 1 in handlePickTrump) | Trick state              |
+| CurrentTrick            | `[]TrickCard{}`                    | Trick state              |
+| LeadSuit                | `nil`                              | Trick state              |
+| TrickWinnerSeat         | `nil`                              | Trick state              |
+| AwaitingDeclaration     | `false`                            | Trick state (Story 3.4)  |
+| DeclarationsResolved    | `false`                            | Trick state (Story 3.4)  |
+| HandPoints              | `[2]int{0, 0}`                     | Scoring                  |
+| DeclarationPoints       | `[2]int{0, 0}`                     | Scoring                  |
+| TricksWon               | `[2]int{0, 0}`                     | Scoring                  |
+| PendingBelotSeat        | `nil`                              | Scoring (Story 3.4)      |
+| BelotAnnounced          | `false`                            | Scoring (Story 3.4)      |
+| Players[i].Hand         | `[]Card{}` (refilled by dealCards) | Player state             |
+| Players[i].Declarations | `nil`                              | Player state (Story 3.4) |
+| ActivePlayerSeat        | `(DealerSeat + 1) % 4`             | Timer state              |
+| Phase                   | `PhaseBidding`                     | Metadata                 |
 
 **Do NOT reset:** `TeamScores` (cumulative across hands), `ID`, `RoomID`, `Variant`, `MatchMode`, `Players[i].Seat`, `Players[i].UserID`, `Players[i].Team`, `Players[i].Connected`
 
@@ -228,8 +233,9 @@ This must come AFTER the `resolveDeclarationsForHand` call (which is already gua
 ### Existing Code to Reuse
 
 **DO NOT DUPLICATE — reuse these existing functions and types:**
-- `TeamForSeat(seat int) int` in `state.go` — 0=Red (seats 0,2), 1=Blue (seats 1,3)
-- `TeamRed = 0`, `TeamBlue = 1` constants in `state.go`
+
+- `TeamForSeat(seat int) int` in `state.go` — 0=Team A (seats 0,2), 1=Team B (seats 1,3)
+- `TeamA = 0`, `TeamB = 1` constants in `state.go`
 - `NewDeck() []Card` in `types.go` — generates fresh 32-card deck
 - `ShuffleDeck(deck []Card)` in `state.go` — in-place shuffle
 - `dealCards(gs *GameState, deck []Card)` in `state.go` — deals using 3+2+3 Bitola sequence
@@ -241,6 +247,7 @@ This must come AFTER the `resolveDeclarationsForHand` call (which is already gua
 ### Forward Compatibility — Story 3.6 (Match Completion)
 
 Story 3.6 will:
+
 1. Refine the match-end check with tiebreaker logic: if both teams cross 1001 in the same hand, the team with the higher score wins; if tied, the contracting team wins
 2. Add instant-win detection: player holds all 8 trump in sequence → immediate match end after dealing
 3. Add `ErrWrongPhase` handling for `PhaseMatchEnd` and `ErrGamePaused` for `PhasePaused`
@@ -251,6 +258,7 @@ For this story: implement the basic match-end check (`TeamScores >= target → P
 ### Existing Code Patterns to Follow
 
 **Test pattern** (from `declarations_test.go`, `playing_test.go`):
+
 - Package: `package game_test` (external test package)
 - Import: `game "github.com/emilijan/belote/server/internal/game"` and `testfixtures "github.com/emilijan/belote/server/internal/game/testfixtures"`
 - Use table-driven tests: `[]struct{ name string; ... }` with `t.Run`
@@ -259,6 +267,7 @@ For this story: implement the basic match-end check (`TeamScores >= target → P
 - Use `testify/assert` for assertions
 
 **Fixture pattern** (from `testfixtures/fixtures.go`):
+
 - Return `*game.GameState` pointer
 - Set all fields explicitly — no reliance on zero values for fields that should be a specific value
 - Design hands carefully so all 32 cards are accounted for (8 per player for full hands, or 1 per player for last trick)
@@ -267,6 +276,7 @@ For this story: implement the basic match-end check (`TeamScores >= target → P
 ### Deferred Items from Story 3.4
 
 These items documented in Story 3.4 are now relevant to this story:
+
 - **State reset between hands**: Story 3.4 documented which fields must be reset. This story implements that reset in `startNewHand`. All fields listed in the "State Reset Between Hands" section of Story 3.4 MUST be reset
 - **`BelotAnnounced`/`DeclarationsResolved`/`DeclarationPoints` not reset between hands**: This was explicitly deferred to Story 3.5. Implement the reset
 - **`TrumpSuit` nil dereference in declaration functions**: Pre-existing pattern, still deferred. `TrumpCallerSeat` nil dereference in `scoreHand` is safe because `PhaseHandScoring` is only reached after trump is picked
@@ -274,6 +284,7 @@ These items documented in Story 3.4 are now relevant to this story:
 ### Deferred Review Items (Carry Forward)
 
 These items remain deferred and are NOT addressed by this story:
+
 - `legalCards` nil-guard on `TrumpSuit`/`LeadSuit` — safe through normal call paths (Story 3.3)
 - `currentTrickWinnerSeat` returns -1 for empty trick — unreachable (Story 3.3)
 - No bounds check on `action.PlayerSeat` — deferred to session manager (Epic 4)
@@ -282,6 +293,7 @@ These items remain deferred and are NOT addressed by this story:
 ### Project Structure Notes
 
 **New files:**
+
 ```
 server/internal/game/
   scoring.go          -- NEW: scoreHand, startNewHand, matchTarget helper
@@ -289,6 +301,7 @@ server/internal/game/
 ```
 
 **Modified files:**
+
 ```
 server/internal/game/
   declarations.go     -- MODIFIED: Add scoreHand call in resolveTrickWithDeclarations
@@ -298,6 +311,7 @@ server/internal/game/
 ```
 
 **Unchanged files:**
+
 ```
   rules_engine.go     -- UNCHANGED (no new phase case needed)
   playing.go          -- UNCHANGED (resolveTrick already transitions to PhaseHandScoring)
@@ -308,6 +322,7 @@ server/internal/game/
 ```
 
 **Error file:**
+
 ```
 server/internal/apperr/
   errors.go           -- UNCHANGED (no new error sentinels needed for scoring)
@@ -356,8 +371,8 @@ Claude Opus 4.6 (1M context)
 - Implemented `startNewHand()` in `scoring.go` — resets all 20+ per-hand state fields (bidding, trick, declaration/Belot, scoring, player hands), rotates dealer, shuffles and deals fresh deck via existing `dealCards()`.
 - Implemented `matchTarget()` helper — returns 1001 or 501 based on MatchMode.
 - Integrated scoring into game flow via single `if state.Phase == PhaseHandScoring` guard in `resolveTrickWithDeclarations()` in `declarations.go`. Scoring runs atomically within the same `ApplyAction` call after trick 8 resolves.
-- Created `NewGameLastTrick()` fixture — trick 8 state with controlled card distribution (AS, 8D, TD, 7H), TrumpCallerSeat=1 (Blue), TricksWon=[4,3], HandPoints=[70,61] (sum=131, matching 152-21 remaining).
-- Created `NewGameCapotInProgress()` fixture — trick 8 state with Red winning all 7 prior tricks, TricksWon=[7,0], HandPoints=[121,0], Red holds JH+AH (guaranteed to win).
+- Created `NewGameLastTrick()` fixture — trick 8 state with controlled card distribution (AS, 8D, TD, 7H), TrumpCallerSeat=1 (Team B), TricksWon=[4,3], HandPoints=[70,61] (sum=131, matching 152-21 remaining).
+- Created `NewGameCapotInProgress()` fixture — trick 8 state with Team A winning all 7 prior tricks, TricksWon=[7,0], HandPoints=[121,0], Team A holds JH+AH (guaranteed to win).
 - All 13 new scoring tests pass through `ApplyAction` — covering last-trick bonus, Capot, Capot broken, failed contract, equal points, normal scoring, match end, match continues, state reset, declarations in scoring, Belot in scoring, 501 mode, and state immutability.
 - Updated 2 existing tests in `playing_test.go` (TestEighthTrickTransition, TestFull8TrickHand) that expected `PhaseHandScoring` as final state — now expect `PhaseBidding` or `PhaseMatchEnd` since scoring processes atomically.
 - Full backend suite: all packages OK. Frontend: 109/109 tests pass. Zero regressions.
@@ -365,10 +380,12 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - `server/internal/game/scoring.go` — scoreHand, startNewHand, matchTarget
 - `server/internal/game/scoring_test.go` — 13 test cases through ApplyAction
 
 **Modified files:**
+
 - `server/internal/game/declarations.go` — Added scoreHand call in resolveTrickWithDeclarations
 - `server/internal/game/testfixtures/fixtures.go` — Added NewGameLastTrick(), NewGameCapotInProgress()
 - `server/internal/game/testfixtures/fixtures_test.go` — Added fixture validation tests

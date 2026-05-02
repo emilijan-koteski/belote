@@ -585,22 +585,22 @@ func TestPerMoveTimer_ConcurrentActionAndExpiry(t *testing.T) {
 
 // bufferTestResult produces a game.HandResult populated with distinctive values so
 // mapping correctness can be asserted.
-func bufferTestResult(red, blue int) *game.HandResult {
-	capotTeam := game.TeamBlue
+func bufferTestResult(a, b int) *game.HandResult {
+	capotTeam := game.TeamB
 	return &game.HandResult{
-		RedCardPoints:   red,
-		BlueCardPoints:  blue,
-		RedDeclPoints:   20,
-		BlueDeclPoints:  50,
-		LastTrickTeam:   game.TeamRed,
+		TeamACardPoints: a,
+		TeamBCardPoints: b,
+		TeamADeclPoints: 20,
+		TeamBDeclPoints: 50,
+		LastTrickTeam:   game.TeamA,
 		LastTrickBonus:  10,
 		Capot:           true,
 		CapotTeam:       &capotTeam,
 		CapotBonus:      100,
 		FailedContract:  true,
-		ContractingTeam: game.TeamRed,
-		RedHandTotal:    red + 20,
-		BlueHandTotal:   blue + 150,
+		ContractingTeam: game.TeamA,
+		TeamAHandTotal:  a + 20,
+		TeamBHandTotal:  b + 150,
 	}
 }
 
@@ -622,14 +622,14 @@ func TestBufferHandResultIfScored_HandAdvanced(t *testing.T) {
 	hands := mgr.HandResults(900)
 	require.Len(t, hands, 1)
 	assert.Equal(t, 3, hands[0].HandNumber, "buffered hand number must be oldState.HandNumber (the hand just completed)")
-	assert.Equal(t, 81, hands[0].RedCardPoints)
-	assert.Equal(t, 81, hands[0].BlueCardPoints)
+	assert.Equal(t, 81, hands[0].TeamACardPoints)
+	assert.Equal(t, 81, hands[0].TeamBCardPoints)
 	assert.True(t, hands[0].Capot)
 	require.NotNil(t, hands[0].CapotTeam)
-	assert.Equal(t, game.TeamBlue, *hands[0].CapotTeam)
+	assert.Equal(t, game.TeamB, *hands[0].CapotTeam)
 	assert.True(t, hands[0].FailedContract)
-	assert.Equal(t, 101, hands[0].RedHandTotal)
-	assert.Equal(t, 231, hands[0].BlueHandTotal)
+	assert.Equal(t, 101, hands[0].TeamAHandTotal)
+	assert.Equal(t, 231, hands[0].TeamBHandTotal)
 }
 
 func TestBufferHandResultIfScored_MatchEnd(t *testing.T) {
@@ -730,7 +730,7 @@ func TestSurrender_AcceptPersistsMatchAsCompleted(t *testing.T) {
 
 	require.NoError(t, mgr.StartGame(801, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
 
-	// Seat 0 (Red) requests surrender.
+	// Seat 0 (team A) requests surrender.
 	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
 		Type:    "action:surrender_request",
 		Payload: json.RawMessage(`{}`),
@@ -750,7 +750,7 @@ func TestSurrender_AcceptPersistsMatchAsCompleted(t *testing.T) {
 	require.Len(t, matches, 1)
 	m := matches[0]
 	assert.Equal(t, "completed", m.Status)
-	assert.Equal(t, 1, m.WinnerTeam, "Blue (team 1) wins because Red surrendered")
+	assert.Equal(t, 1, m.WinnerTeam, "Team B (team 1) wins because team A surrendered")
 	require.NotNil(t, m.SurrenderedBy)
 	assert.Equal(t, uint(10), *m.SurrenderedBy)
 	assert.Nil(t, m.AbandonedBy, "AbandonedBy stays nil for surrender end")

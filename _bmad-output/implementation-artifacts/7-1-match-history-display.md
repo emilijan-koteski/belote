@@ -17,19 +17,19 @@ so that I can review past games and track my performance.
    When `GET /api/v1/users/:id/matches?limit=<1-50>&offset=<>=0>` is called,
    Then the server returns `200 { "data": { "items": [...], "total": <int>, "limit": <echoed>, "offset": <echoed> } }` — items are `matches` rows where the authenticated user appears in **any** of `player1_id..player4_id` and `status IN ('completed','abandoned')`, ordered by `completed_at DESC, id DESC` (id tiebreaker is stable under same-tick completions)
    And the default `limit` is `20`, max `50` (values outside `[1,50]` → `400 BAD_REQUEST`); default `offset` is `0` (negative → `400 BAD_REQUEST`)
-   And each item embeds enough data to render AC #2 **without** an N+1 user lookup: `id`, `variant`, `matchMode`, `startedAt`, `completedAt`, `status`, `winnerTeam`, `teamRedScore`, `teamBlueScore`, `abandonedBy` (nullable), `viewerSeat` (0–3), `players: [{ seat, userId, username }, ...]` (4 entries, seat-ordered 0,1,2,3).
+   And each item embeds enough data to render AC #2 **without** an N+1 user lookup: `id`, `variant`, `matchMode`, `startedAt`, `completedAt`, `status`, `winnerTeam`, `teamAScore`, `teamBScore`, `abandonedBy` (nullable), `viewerSeat` (0–3), `players: [{ seat, userId, username }, ...]` (4 entries, seat-ordered 0,1,2,3).
    And if `:id` does NOT match the authenticated userID → `403 FORBIDDEN` (mirrors `GET /users/:id/profile` authorization exactly, per [server/internal/user/handler.go:56-58](server/internal/user/handler.go#L56-L58)).
 
 2. **`MatchHistory` component renders one row per match with derived human-readable metadata**
    Given match history data is returned,
    When `<MatchHistory userId={id} />` renders,
-   Then each row shows — using locale-formatted date (via `Intl.DateTimeFormat`, `i18n.language === "sr" ? "sr-Latn" : i18n.language`, pattern already established in [ProfilePage.tsx:23-34](client/src/features/profile/ProfilePage.tsx#L23-L34)): completed date (`YYYY MMM DD`), variant label (`bitola` → "Bitola"), mode label (`1001` → "1001 points"), **teammate** username (seat `(viewerSeat + 2) % 4`), **opponent** usernames (seats `(viewerSeat + 1) % 4` and `(viewerSeat + 3) % 4`), final score formatted as `"<red> – <blue>"` with team labels coloured via `text-team-red` / `text-team-blue` tokens, win/loss/abandoned outcome badge (see AC #7), and match duration `hh:mm:ss` (or `mm:ss` when < 1h) computed from `completedAt - startedAt`.
+   Then each row shows — using locale-formatted date (via `Intl.DateTimeFormat`, `i18n.language === "sr" ? "sr-Latn" : i18n.language`, pattern already established in [ProfilePage.tsx:23-34](client/src/features/profile/ProfilePage.tsx#L23-L34)): completed date (`YYYY MMM DD`), variant label (`bitola` → "Bitola"), mode label (`1001` → "1001 points"), **teammate** username (seat `(viewerSeat + 2) % 4`), **opponent** usernames (seats `(viewerSeat + 1) % 4` and `(viewerSeat + 3) % 4`), final score formatted as `"<a> – <b>"` with team labels coloured via `text-team-a` / `text-team-b` tokens, win/loss/abandoned outcome badge (see AC #7), and match duration `hh:mm:ss` (or `mm:ss` when < 1h) computed from `completedAt - startedAt`.
    And each row has `data-testid="match-history-row"` plus `data-match-id="<id>"` for test targeting.
 
 3. **Per-hand detail view renders when a match row is expanded (same API call, inline expansion — NOT a second HTTP request)**
    Given a player clicks a match row,
    When the row expands,
-   Then a per-hand breakdown renders from the **already-loaded** match item (see AC #6 — hands are embedded in the list payload): each hand shows hand number (`Hand 1`, `Hand 2`, …), red/blue card-points, red/blue declaration points, last-trick bonus (with owning team), Capot indicator (+100 badge + team when `capot === true`), failed-contract indicator (pill labelled `"Failed"` + contracting team) when `failedContract === true`, and final red/blue hand totals (`redHandTotal` / `blueHandTotal` from the `hand_results` row).
+   Then a per-hand breakdown renders from the **already-loaded** match item (see AC #6 — hands are embedded in the list payload): each hand shows hand number (`Hand 1`, `Hand 2`, …), Team A/Team B card-points, Team A/Team B declaration points, last-trick bonus (with owning team), Capot indicator (+100 badge + team when `capot === true`), failed-contract indicator (pill labelled `"Failed"` + contracting team) when `failedContract === true`, and final Team A/Team B hand totals (`teamAHandTotal` / `teamBHandTotal` from the `hand_results` row).
    And the expansion is a pure UI state toggle (no new fetch, no WS traffic).
    And the expanded section has `data-testid="match-history-detail"` with `data-match-id="<id>"` for test targeting; the toggle control has `aria-expanded="true|false"` and `aria-controls` referencing the detail container.
 
@@ -57,7 +57,7 @@ so that I can review past games and track my performance.
 7. **Outcome badge (win / loss / abandoned) is derived server-side per viewer**
    Given the matches list handler computes the viewer's outcome for each match,
    When building the response payload,
-   Then `outcome` is one of: `"win"` when `status === "completed"` AND `winnerTeam === team_for_seat(viewerSeat)` (where `team_for_seat(seat) = seat % 2` — seats 0/2 are Red team index 0, seats 1/3 are Blue team index 1, mirroring `game.TeamForSeat` in [server/internal/game/state.go:115-117](server/internal/game/state.go#L115-L117)); `"loss"` when `status === "completed"` AND `winnerTeam !== team_for_seat(viewerSeat)`; `"abandoned"` when `status === "abandoned"` regardless of `winnerTeam`.
+   Then `outcome` is one of: `"win"` when `status === "completed"` AND `winnerTeam === team_for_seat(viewerSeat)` (where `team_for_seat(seat) = seat % 2` — seats 0/2 are Team A index 0, seats 1/3 are Team B index 1, mirroring `game.TeamForSeat` in [server/internal/game/state.go:115-117](server/internal/game/state.go#L115-L117)); `"loss"` when `status === "completed"` AND `winnerTeam !== team_for_seat(viewerSeat)`; `"abandoned"` when `status === "abandoned"` regardless of `winnerTeam`.
    And the TS render renders the badge via the `<OutcomeBadge outcome="win|loss|abandoned" />` component (see Dev Notes) using tokens `success` (win), `text-secondary` (loss), `warning` (abandoned) — never `destructive` for loss (UX tone spec — no red-alert stigma on losses).
 
 8. **Integration into `ProfilePage` — replaces the placeholder section, preserves existing tests**
@@ -70,7 +70,7 @@ so that I can review past games and track my performance.
 9. **i18n keys added to both `en.json` and `sr.json` in the same commit**
    Given new copy introduced by this story,
    When the story lands,
-   Then the following keys exist in **both** [client/src/shared/i18n/en.json](client/src/shared/i18n/en.json) and [client/src/shared/i18n/sr.json](client/src/shared/i18n/sr.json) under `profile.matchHistory.*`: `title`, `empty` (replaces existing `profile.matchHistoryEmpty`), `loadMore`, `loading`, `error`, `duration`, `outcomeWin`, `outcomeLoss`, `outcomeAbandoned`, `teammate`, `opponents`, `vs`, `variant.bitola`, `mode.1001`, `handNumber`, `cardPoints`, `declarationPoints`, `lastTrickBonus`, `capot`, `failedContract`, `handTotal`, `expandRow`, `collapseRow`, `failedContractTeamRed`, `failedContractTeamBlue`.
+   Then the following keys exist in **both** [client/src/shared/i18n/en.json](client/src/shared/i18n/en.json) and [client/src/shared/i18n/sr.json](client/src/shared/i18n/sr.json) under `profile.matchHistory.*`: `title`, `empty` (replaces existing `profile.matchHistoryEmpty`), `loadMore`, `loading`, `error`, `duration`, `outcomeWin`, `outcomeLoss`, `outcomeAbandoned`, `teammate`, `opponents`, `vs`, `variant.bitola`, `mode.1001`, `handNumber`, `cardPoints`, `declarationPoints`, `lastTrickBonus`, `capot`, `failedContract`, `handTotal`, `expandRow`, `collapseRow`, `failedContractTeamA`, `failedContractTeamB`.
    And any removed key (`profile.matchHistoryEmpty`) is removed from **both** JSONs and all references updated; `i18n.test.ts` parity test continues to pass.
    And any new strings respect the Serbian-Latin register already established (e.g., "Istorija mečeva", "Pobjeda/Pobeda"); when in doubt, copy the register of adjacent keys in `sr.json`.
 
@@ -134,7 +134,7 @@ so that I can review past games and track my performance.
   - [x] 8.4 Helper subcomponents (same file — keep component files under ~200 LOC, splitting when needed per [project-context.md:149-166](../../_bmad-output/project-context.md#L149-L166) naming rules):
     - `<OutcomeBadge outcome="win|loss|abandoned" />` — `span` with token backgrounds: `bg-success/20 text-success` (win), `bg-surface-elevated text-text-secondary` (loss), `bg-warning/20 text-warning` (abandoned). `data-testid="match-history-outcome"`, `aria-label` from the matching i18n key.
     - `<MatchRow match={...} onToggle={...} isOpen={...} />` — the collapsible row; render the expanded section conditionally via `isOpen && ...` so jsdom tests assert visibility via presence/absence.
-    - `<HandResultsTable hands={...} />` — renders the per-hand breakdown table. Use `<table>` for screen-reader semantics; column headers: Hand / Red / Blue / Bonus / Notes. `data-testid="match-history-hand-row"` for each row inside.
+    - `<HandResultsTable hands={...} />` — renders the per-hand breakdown table. Use `<table>` for screen-reader semantics; column headers: Hand / Team A / Team B / Bonus / Notes. `data-testid="match-history-hand-row"` for each row inside.
 
 - [x] **Task 9: Wire `MatchHistory` into `ProfilePage` (AC #8)**
   - [x] 9.1 In [client/src/features/profile/ProfilePage.tsx](client/src/features/profile/ProfilePage.tsx), replace the placeholder `<p>{t("profile.matchHistoryEmpty")}</p>` inside `<section data-testid="profile-match-history">` with `<MatchHistory userId={user?.id} />`. Keep the section wrapper and its heading unchanged (existing tests lean on the outer testid).
@@ -161,22 +161,22 @@ so that I can review past games and track my performance.
 
 ### What Already Exists — Do NOT Recreate
 
-| Item | Location | Notes |
-|------|----------|-------|
-| `matches` table + GORM model | [server/migrations/000006_create_matches.up.sql](server/migrations/000006_create_matches.up.sql), [server/internal/match/model.go](server/internal/match/model.go) | Stores aggregate match data (final scores, status, variant, mode, player IDs 1–4). **No per-hand detail exists** — Task 1–2 adds it. |
-| `matches.status` + `abandoned_by` | [server/migrations/000008_add_match_status.up.sql](server/migrations/000008_add_match_status.up.sql) | Already distinguishes `completed` vs `abandoned`; reuse for AC #7. |
-| `matchRepo.Create(match)` | [server/internal/match/gorm_repo.go:15](server/internal/match/gorm_repo.go#L15) | Existing single-row insert. Keep it — extend with `CreateWithHands` (Task 2.3). |
-| Session manager persists the match on end | [server/internal/session/manager.go:576-596](server/internal/session/manager.go#L576-L596), [server/internal/session/reconnect.go:315-336](server/internal/session/reconnect.go#L315-L336) | Only edit these two call sites to use `CreateWithHands`. Other persistence paths do not exist. |
-| `game.HandResult` broadcast struct | [server/internal/game/state.go:29-43](server/internal/game/state.go#L29-L43) | The in-memory hand-scoring output. Task 3 buffers these into `session.handResults` then maps to `match.HandResult` (a new DB struct — different type, same package-adjacent). |
-| `game.TeamForSeat(seat)` | [server/internal/game/state.go:115-117](server/internal/game/state.go#L115-L117) | `seat % 2` — use for outcome derivation in Task 4.3. Do NOT re-derive. |
-| `hand_scored` WebSocket event | [server/internal/session/manager.go:420-440](server/internal/session/manager.go#L420-L440), [server/internal/ws/events.go](server/internal/ws/events.go) (`EventHandScored`) | This is the hook point where Task 3.2 appends to `session.handResults`. Do NOT modify the broadcast payload — the buffer is orthogonal to the broadcast. |
-| `UserHandler.GetProfile` authorization pattern | [server/internal/user/handler.go:45-58](server/internal/user/handler.go#L45-L58) | Copy the 3-step pattern verbatim for `ListMatches` (Task 4.2). |
-| `axiosClient` envelope unwrap + 401 refresh/retry | [client/src/shared/api/axiosClient.ts:131-183](client/src/shared/api/axiosClient.ts#L131-L183) | Auto-unwraps `{ data: T }` — API functions return T directly. Task 7.1 returns `{ items, total, limit, offset }` directly (no double unwrap). |
-| `useQuery` pattern + query keys | [client/src/shared/hooks/queries/useProfile.ts](client/src/shared/hooks/queries/useProfile.ts), [client/src/shared/api/queryKeys.ts](client/src/shared/api/queryKeys.ts) | Mirror exactly. `useInfiniteQuery` is net-new for this story — `@tanstack/react-query` v5 API is already installed ([client/package.json:14](client/package.json#L14)). |
-| `ProfilePage` skeleton-loading + locale-aware date pattern | [client/src/features/profile/ProfilePage.tsx:11-34](client/src/features/profile/ProfilePage.tsx#L11-L34) | Reuse the `Intl.DateTimeFormat(locale, {...})` block in `MatchRow` for the completed-at column. |
-| `FetchError` client-side error type | [client/src/shared/api/axiosClient.ts:21-31](client/src/shared/api/axiosClient.ts#L21-L31) | Use when surfacing API error copy (via the `profile.matchHistory.error` i18n key). |
-| Prettier + ESLint + Vitest + i18n parity test | repository-wide | Enforced in CI. Run `npx prettier --write .` before every commit (user memory — repeated failure point). |
-| `TodoWrite` / planning pattern inside stories | — | Keep Tasks / Subtasks hierarchical with explicit AC refs (`AC: #`); dev agent checks them off. |
+| Item                                                       | Location                                                                                                                                                                                   | Notes                                                                                                                                                                         |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `matches` table + GORM model                               | [server/migrations/000006_create_matches.up.sql](server/migrations/000006_create_matches.up.sql), [server/internal/match/model.go](server/internal/match/model.go)                         | Stores aggregate match data (final scores, status, variant, mode, player IDs 1–4). **No per-hand detail exists** — Task 1–2 adds it.                                          |
+| `matches.status` + `abandoned_by`                          | [server/migrations/000008_add_match_status.up.sql](server/migrations/000008_add_match_status.up.sql)                                                                                       | Already distinguishes `completed` vs `abandoned`; reuse for AC #7.                                                                                                            |
+| `matchRepo.Create(match)`                                  | [server/internal/match/gorm_repo.go:15](server/internal/match/gorm_repo.go#L15)                                                                                                            | Existing single-row insert. Keep it — extend with `CreateWithHands` (Task 2.3).                                                                                               |
+| Session manager persists the match on end                  | [server/internal/session/manager.go:576-596](server/internal/session/manager.go#L576-L596), [server/internal/session/reconnect.go:315-336](server/internal/session/reconnect.go#L315-L336) | Only edit these two call sites to use `CreateWithHands`. Other persistence paths do not exist.                                                                                |
+| `game.HandResult` broadcast struct                         | [server/internal/game/state.go:29-43](server/internal/game/state.go#L29-L43)                                                                                                               | The in-memory hand-scoring output. Task 3 buffers these into `session.handResults` then maps to `match.HandResult` (a new DB struct — different type, same package-adjacent). |
+| `game.TeamForSeat(seat)`                                   | [server/internal/game/state.go:115-117](server/internal/game/state.go#L115-L117)                                                                                                           | `seat % 2` — use for outcome derivation in Task 4.3. Do NOT re-derive.                                                                                                        |
+| `hand_scored` WebSocket event                              | [server/internal/session/manager.go:420-440](server/internal/session/manager.go#L420-L440), [server/internal/ws/events.go](server/internal/ws/events.go) (`EventHandScored`)               | This is the hook point where Task 3.2 appends to `session.handResults`. Do NOT modify the broadcast payload — the buffer is orthogonal to the broadcast.                      |
+| `UserHandler.GetProfile` authorization pattern             | [server/internal/user/handler.go:45-58](server/internal/user/handler.go#L45-L58)                                                                                                           | Copy the 3-step pattern verbatim for `ListMatches` (Task 4.2).                                                                                                                |
+| `axiosClient` envelope unwrap + 401 refresh/retry          | [client/src/shared/api/axiosClient.ts:131-183](client/src/shared/api/axiosClient.ts#L131-L183)                                                                                             | Auto-unwraps `{ data: T }` — API functions return T directly. Task 7.1 returns `{ items, total, limit, offset }` directly (no double unwrap).                                 |
+| `useQuery` pattern + query keys                            | [client/src/shared/hooks/queries/useProfile.ts](client/src/shared/hooks/queries/useProfile.ts), [client/src/shared/api/queryKeys.ts](client/src/shared/api/queryKeys.ts)                   | Mirror exactly. `useInfiniteQuery` is net-new for this story — `@tanstack/react-query` v5 API is already installed ([client/package.json:14](client/package.json#L14)).       |
+| `ProfilePage` skeleton-loading + locale-aware date pattern | [client/src/features/profile/ProfilePage.tsx:11-34](client/src/features/profile/ProfilePage.tsx#L11-L34)                                                                                   | Reuse the `Intl.DateTimeFormat(locale, {...})` block in `MatchRow` for the completed-at column.                                                                               |
+| `FetchError` client-side error type                        | [client/src/shared/api/axiosClient.ts:21-31](client/src/shared/api/axiosClient.ts#L21-L31)                                                                                                 | Use when surfacing API error copy (via the `profile.matchHistory.error` i18n key).                                                                                            |
+| Prettier + ESLint + Vitest + i18n parity test              | repository-wide                                                                                                                                                                            | Enforced in CI. Run `npx prettier --write .` before every commit (user memory — repeated failure point).                                                                      |
+| `TodoWrite` / planning pattern inside stories              | —                                                                                                                                                                                          | Keep Tasks / Subtasks hierarchical with explicit AC refs (`AC: #`); dev agent checks them off.                                                                                |
 
 ### What Must Be Created
 
@@ -210,6 +210,7 @@ so that I can review past games and track my performance.
 **Chosen approach:** Buffer per-hand `HandResult` rows in `session.handResults` (in memory) during the match; persist them **atomically** with the `matches` row inside the same GORM transaction via `CreateWithHands`.
 
 **Rationale:**
+
 - Single transaction means the match record and its hands are consistent in the DB — no partial-match orphaned hand rows if the server crashes mid-match (those are simply lost, same failure mode as today).
 - The `matches.id` is auto-generated; writing hands before the match row means forward-referencing an unknown FK. Transactional create-then-bulk-insert via GORM callbacks (or manual `tx.Create(match)` then `for _, h := range hands { h.MatchID = match.ID }; tx.Create(&hands)`) avoids that.
 - Hand count per match is bounded (`1001/162 ≈ 7` hands upper bound for Bitola; Capot/failures extend but 20 hands is a pathological ceiling). Buffering 20×`HandResult` structs in memory is negligible.
@@ -236,6 +237,7 @@ so that I can review past games and track my performance.
 **Choice:** `useInfiniteQuery` for page-append semantics + visible `Load more` button.
 
 **Rationale:**
+
 - Epic AC allows either; button is simpler to test (no `IntersectionObserver` mocking in jsdom), and aligns with the project's Balatro "composed-not-busy" aesthetic (no auto-triggering UI).
 - `useInfiniteQuery` naturally handles the append-without-remounting; data stays cached across navigations.
 - Upgrading to infinite scroll later is a single component change — the server contract is already pagination-ready.
@@ -245,6 +247,7 @@ so that I can review past games and track my performance.
 **Choice:** The per-hand detail is **embedded** in the list response; click-to-expand is a local `useState<Set<number>>` (match IDs currently open). No `GET /matches/:id` endpoint.
 
 **Rationale:**
+
 - Hand count per match is small (≤ 20). Embedding 20×13 scalar fields × 20 matches = ~5KB per page — negligible.
 - A detail endpoint would double the backend surface area for marginal payload savings.
 - Eliminates an extra HTTP round-trip on every expand — feels instant.
@@ -308,6 +311,7 @@ Error paths are unchanged from existing `GetProfile` — the same `appErrorHandl
 ### Project Structure Notes
 
 **New files (expected):**
+
 - `server/migrations/000009_create_hand_results.up.sql`
 - `server/migrations/000009_create_hand_results.down.sql`
 - `server/internal/match/hand_result.go`
@@ -317,6 +321,7 @@ Error paths are unchanged from existing `GetProfile` — the same `appErrorHandl
 - `client/src/features/profile/MatchHistory.test.tsx`
 
 **Modified files (expected):**
+
 - `server/internal/match/model.go`
 - `server/internal/match/repository.go`
 - `server/internal/match/gorm_repo.go`
@@ -335,6 +340,7 @@ Error paths are unchanged from existing `GetProfile` — the same `appErrorHandl
 - `client/src/shared/i18n/sr.json`
 
 **No changes expected:**
+
 - `server/internal/game/*` (rules engine untouched — we read `HandResult` only; pure function contract preserved).
 - `server/internal/ws/*` (WebSocket contract unchanged).
 - `server/internal/apperr/errors.go` (all required errors already exist: `ErrForbidden`, `ErrBadRequest`, `ErrUnauthorized`, `ErrUserNotFound`).
@@ -389,12 +395,13 @@ Claude Opus 4.7 (1M context)
 - **`MatchHistory` component** implements all four render states (loading skeleton, empty state with lobby link, error, loaded list). `OutcomeBadge` uses `success` / `text-secondary` / `warning` tokens per UX spec — never `destructive` on a loss. `HandResultsTable` shows per-hand breakdown as a semantic `<table>` with per-row Capot / last-trick / failed-contract badges. Row expansion is a pure UI toggle (no second fetch) via `useState<Set<number>>`. `aria-expanded` / `aria-controls` announce state to assistive tech. `Load more` button appears only when `items.length < total`.
 - **Component tests (10)** cover: loading skeleton on mount, empty state + lobby CTA, row rendering with teammate / opponents / score / outcome, all three outcome variants render, detail expansion toggles aria and shows N hand rows, Capot badge + failed-contract pill, Load more visibility on both sides of the threshold, no fetch when userId is undefined.
 - **ProfilePage wiring** replaces only the placeholder `<p>` — the outer `<section data-testid="profile-match-history">` wrapper and its heading remain, so the five existing `ProfilePage.test.tsx` assertions pass unchanged. The old `profile.matchHistoryEmpty` key (no longer referenced) was removed from both i18n JSONs.
-- **i18n**: 27 keys added under `profile.matchHistory.*` in both `en.json` and `sr.json` (title, empty, emptyCta, loading, error, loadMore, duration + durationHms/Ms, vs, teammate, opponents, outcomeWin/Loss/Abandoned, expandRow, collapseRow, variant.bitola, mode.1001, hand.number/cardPoints/declarationPoints/lastTrickBonus/capot/failedContract/handTotal/failedContractTeamRed/failedContractTeamBlue). Serbian-Latin register matches adjacent profile keys.
+- **i18n**: 27 keys added under `profile.matchHistory.*` in both `en.json` and `sr.json` (title, empty, emptyCta, loading, error, loadMore, duration + durationHms/Ms, vs, teammate, opponents, outcomeWin/Loss/Abandoned, expandRow, collapseRow, variant.bitola, mode.1001, hand.number/cardPoints/declarationPoints/lastTrickBonus/capot/failedContract/handTotal/failedContractTeamA/failedContractTeamB). Serbian-Latin register matches adjacent profile keys.
 - **Mock state hygiene**: `MatchHistory.test.tsx` uses `mockReset()` in `beforeEach` (not `clearAllMocks()`) so queued `mockResolvedValueOnce` values do not leak across tests. `ProfilePage.test.tsx` adopts the same pattern and provides a default empty-page resolution for matches so existing cases don't need per-case setup.
 
 ### File List
 
 **New files:**
+
 - server/migrations/000009_create_hand_results.up.sql
 - server/migrations/000009_create_hand_results.down.sql
 - server/internal/match/hand_result.go
@@ -405,6 +412,7 @@ Claude Opus 4.7 (1M context)
 - client/src/features/profile/MatchHistory.test.tsx
 
 **Modified files:**
+
 - server/internal/match/model.go (added `Hands []HandResult` with CASCADE FK)
 - server/internal/match/repository.go (added `CreateWithHands`, `GetMatchesForUser`)
 - server/internal/match/gorm_repo.go (implemented both via `db.Transaction` and preload-ordered list)
@@ -432,7 +440,7 @@ _Generated 2026-04-19 by `/bmad-code-review` — three parallel review layers (B
 - [x] `[Review][Patch]` [MEDIUM] `getNextPageParam` infinite-loop guard added — returns `undefined` immediately when a page returns `items.length === 0`. [client/src/shared/hooks/queries/useMatches.ts:11-14]
 - [x] `[Review][Patch]` [MEDIUM] "appends rows on click" Load more test rewritten — now clicks the button and asserts a second row appears and the button disappears. [client/src/features/profile/MatchHistory.test.tsx]
 - [x] `[Review][Patch]` [MEDIUM] Handler tests now assert `completed_at DESC, id DESC` ordering — the mock sorts to match production, and a new `TestListMatches_OrdersByCompletedAtDesc` test seeds oldest-first then asserts newest-first response. Existing pagination test reseeded with descending completedAt so the newest-first order preserves the IDs-3-and-4-at-offset-2 assertion. [server/internal/user/handler_test.go]
-- [x] `[Review][Patch]` [MEDIUM] Failed-contract pill now renders the contracting team as visible text (`Red` / `Plavi`) in team colour next to "Failed" — new testid `match-history-hand-failed-team`. i18n keys `failedContractTeamRed/Blue` shortened accordingly. [client/src/features/profile/MatchHistory.tsx:233-250, en.json, sr.json]
+- [x] `[Review][Patch]` [MEDIUM] Failed-contract pill now renders the contracting team as visible text (`Team A` / `Tim B`) in team colour next to "Failed" — new testid `match-history-hand-failed-team`. i18n keys `failedContractTeamA/B` shortened accordingly. [client/src/features/profile/MatchHistory.tsx:233-250, en.json, sr.json]
 - [x] `[Review][Patch]` [LOW] `i18n.test.ts` now includes a recursive `flattenKeys` parity test — fails if any nested key exists in one locale but not the other. [client/src/shared/i18n/i18n.test.ts]
 - [x] `[Review][Patch]` [LOW] Duration format switched to colon-separated zero-padded `hh:mm:ss` / `mm:ss` per AC #2. [en.json/sr.json `durationHms`/`durationMs`]
 - [x] `[Review][Patch]` [LOW] `formatDuration` now returns `"—"` on non-finite or negative durations (clock skew). [client/src/features/profile/MatchHistory.tsx]
@@ -442,7 +450,7 @@ _Generated 2026-04-19 by `/bmad-code-review` — three parallel review layers (B
 - [x] `[Review][Patch]` [LOW] Test helper `strconvUint` now calls `strconv.FormatUint(uint64(u), 10)`; the hand-rolled digit loop was removed. [server/internal/user/handler_test.go]
 - [x] `[Review][Patch]` [LOW] `Match.Hands` field is now tagged `json:"-"` — hands are only exposed through the `MatchListItem` DTO projection. [server/internal/match/model.go]
 - [x] `[Review][Patch]` [LOW] `bufferHandResultIfScored` now early-returns on `oldState == nil` alongside the existing nil checks. [server/internal/session/manager.go:582-585]
-- [ ] `[Review][Patch]` [LOW] `buildMatchListItem` silently defaults `viewerSeat = 0` when the viewer isn't one of the 4 players — unreachable today because `GetMatchesForUser` filters by `userID ∈ {player1..4}`, but if the filter is ever relaxed (admin endpoints, public profiles in Epic 11), a non-participant would get a fabricated "Red team" outcome. **SKIPPED during batch-apply:** changing the contract (to `-1` sentinel or error) affects the `MatchListItem.viewerSeat` JSON shape and the client's expand/outcome logic — warrants explicit decision with the user. [server/internal/user/handler.go:284-290]
+- [ ] `[Review][Patch]` [LOW] `buildMatchListItem` silently defaults `viewerSeat = 0` when the viewer isn't one of the 4 players — unreachable today because `GetMatchesForUser` filters by `userID ∈ {player1..4}`, but if the filter is ever relaxed (admin endpoints, public profiles in Epic 11), a non-participant would get a fabricated "Team A" outcome. **SKIPPED during batch-apply:** changing the contract (to `-1` sentinel or error) affects the `MatchListItem.viewerSeat` JSON shape and the client's expand/outcome logic — warrants explicit decision with the user. [server/internal/user/handler.go:284-290]
 - [x] `[Review][Defer]` Offset-based pagination duplicates / skips rows on concurrent match completions — a new match completing between page fetches shifts the rest down by one, causing `useInfiniteQuery` to request the same offset and React to warn about duplicate keys. Consider cursor pagination on `(completed_at, id)` or client-side dedupe by match id. — deferred, pre-existing offset-pagination pattern across the codebase
 - [x] `[Review][Defer]` `openIds` state accumulates entries for matches no longer in the list — tiny memory leak, no functional break. Prune against current `items` on each render. — deferred, micro-optimisation
 - [x] `[Review][Defer]` `Load more` button remains enabled during background refetch (`isFetching` true but `isFetchingNextPage` false) — a second click while page 1 refreshes can fire a `fetchNextPage` with stale `total`. Also disable on `query.isFetching`. — deferred, rare interaction

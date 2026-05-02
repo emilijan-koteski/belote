@@ -143,7 +143,7 @@ This story wires all four layers end-to-end. It resolves deferred items D20, D23
   - [x] Same applies for `QuickPlay` handler when it creates a new room
 
 - [x] Task 7: Client — Move WebSocket connection to app level (AC: 7)
-  - [x] Currently `useWebSocket` + `useWsDispatch` are initialized in `GamePage.tsx` (line 58-59). Per the Story 4.1 architecture spec: *"The hook must be used at the app level (inside AppLayout or similar) so the connection persists across page navigations"*
+  - [x] Currently `useWebSocket` + `useWsDispatch` are initialized in `GamePage.tsx` (line 58-59). Per the Story 4.1 architecture spec: _"The hook must be used at the app level (inside AppLayout or similar) so the connection persists across page navigations"_
   - [x] Create a new component `WebSocketProvider` (or use a custom hook) that wraps the authenticated app:
     - Initialize `useWsDispatch()` and `useWebSocket({ onMessage: dispatch })`
     - Render children
@@ -182,8 +182,8 @@ This story wires all four layers end-to-end. It resolves deferred items D20, D23
     - Test Quick Play auto-start triggers `system:game_started` broadcast to all 4 players
   - [x] Use a mock hub interface or spy to capture broadcast calls without needing real WS connections
   - [x] **Important**: The current `RoomHandler` tests use a mock repo. Either:
-    (a) Create a `Broadcaster` interface that the handler depends on (easier to mock), or
-    (b) Create a mock Hub (more realistic). Choose based on project patterns.
+        (a) Create a `Broadcaster` interface that the handler depends on (easier to mock), or
+        (b) Create a mock Hub (more realistic). Choose based on project patterns.
 
 - [x] Task 11: Client — Frontend tests (AC: 1-4, 7)
   - [x] Add tests for `roomLobbyStore` (if created):
@@ -230,34 +230,35 @@ This story wires all four layers end-to-end. It resolves deferred items D20, D23
 
 ### Key Existing Infrastructure
 
-| What | Where | Status |
-|------|-------|--------|
-| Hub with `BroadcastToUsers`, `SendToUser` | `server/internal/ws/hub.go:135-153` | Working |
-| Event constants (Go) | `server/internal/ws/events.go:70-82` | Defined, unused for room events |
-| Event constants + payload types (TS) | `client/src/shared/types/wsEvents.ts:163-237` | Defined, unused for room events |
-| `handleWsMessage` for room lobby | `client/src/features/lobby/useRoomLobbyUpdates.ts:35-79` | Defined, never called |
-| `handleWsMessage` for room list | `client/src/features/lobby/useRoomUpdates.ts:26-46` | Called by dispatch but only via synthetic MessageEvent |
-| `useWebSocket` hook | `client/src/shared/hooks/useWebSocket.ts` | Working, but only used in GamePage |
-| `useWsDispatch` dispatch | `client/src/shared/hooks/useWsDispatch.ts:186-205` | Silently drops room lobby events |
-| `WSMessage` wire format | `server/internal/ws/message.go` | Working |
-| `RoomHandler` struct | `server/internal/room/handler.go:61-64` | Missing hub field |
-| `NewRoomHandler` | `server/internal/room/handler.go:66-68` | Missing hub parameter |
-| `main.go` wiring | `server/cmd/api/main.go:103` | Hub not passed to RoomHandler |
+| What                                      | Where                                                    | Status                                                 |
+| ----------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| Hub with `BroadcastToUsers`, `SendToUser` | `server/internal/ws/hub.go:135-153`                      | Working                                                |
+| Event constants (Go)                      | `server/internal/ws/events.go:70-82`                     | Defined, unused for room events                        |
+| Event constants + payload types (TS)      | `client/src/shared/types/wsEvents.ts:163-237`            | Defined, unused for room events                        |
+| `handleWsMessage` for room lobby          | `client/src/features/lobby/useRoomLobbyUpdates.ts:35-79` | Defined, never called                                  |
+| `handleWsMessage` for room list           | `client/src/features/lobby/useRoomUpdates.ts:26-46`      | Called by dispatch but only via synthetic MessageEvent |
+| `useWebSocket` hook                       | `client/src/shared/hooks/useWebSocket.ts`                | Working, but only used in GamePage                     |
+| `useWsDispatch` dispatch                  | `client/src/shared/hooks/useWsDispatch.ts:186-205`       | Silently drops room lobby events                       |
+| `WSMessage` wire format                   | `server/internal/ws/message.go`                          | Working                                                |
+| `RoomHandler` struct                      | `server/internal/room/handler.go:61-64`                  | Missing hub field                                      |
+| `NewRoomHandler`                          | `server/internal/room/handler.go:66-68`                  | Missing hub parameter                                  |
+| `main.go` wiring                          | `server/cmd/api/main.go:103`                             | Hub not passed to RoomHandler                          |
 
 ### Deferred Items Resolved by This Story
 
-| ID | Description | Resolution |
-|----|-------------|------------|
-| D20 | WS events system:player_joined and system:player_left are TODO-only | Server broadcasts wired |
-| D23 | No unit test for useRoomLobbyUpdates handler logic | Tests added |
-| D24 | useRoomLobbyUpdates hardcodes id: 0 for joined players | Fixed in dispatch handler |
-| D25 | onRoomUpdated uses unsafe `as unknown as Room` cast | Fixed with proper type mapping |
-| D27 | Only 4th-seat player receives gameStarted notification | All players receive `system:game_started` via WS |
-| D31 | RoomLobby has no real-time refresh for other players' actions | WS events now update room lobby state |
+| ID  | Description                                                         | Resolution                                       |
+| --- | ------------------------------------------------------------------- | ------------------------------------------------ |
+| D20 | WS events system:player_joined and system:player_left are TODO-only | Server broadcasts wired                          |
+| D23 | No unit test for useRoomLobbyUpdates handler logic                  | Tests added                                      |
+| D24 | useRoomLobbyUpdates hardcodes id: 0 for joined players              | Fixed in dispatch handler                        |
+| D25 | onRoomUpdated uses unsafe `as unknown as Room` cast                 | Fixed with proper type mapping                   |
+| D27 | Only 4th-seat player receives gameStarted notification              | All players receive `system:game_started` via WS |
+| D31 | RoomLobby has no real-time refresh for other players' actions       | WS events now update room lobby state            |
 
 ### Quick Play Auto-Start Gap
 
 Currently the `SelectSeat` handler auto-starts Quick Play rooms by setting `room.Status = "playing"` (line 494), but does NOT call `gameStarter.StartGame()`. This means:
+
 - Room status changes to "playing" but no game session is created
 - No `event:game_state` is broadcast to players
 - Players navigate to `/game/:roomId` but see "Loading..." forever
@@ -278,6 +279,7 @@ App.tsx
 ```
 
 The `sendMessage` function needs to be accessible from `GamePage` and potentially other components. Options:
+
 - **React Context** — `WebSocketProvider` exposes `sendMessage` via context
 - **Zustand store** — store the `sendMessage` ref in a `wsStore`
 - **Module-level ref** — export a mutable ref from `useWebSocket.ts`
@@ -286,33 +288,34 @@ Choose the approach that best fits the existing patterns. The React Context appr
 
 ### Files to Create
 
-| File | Purpose |
-|------|---------|
-| `client/src/shared/providers/WebSocketProvider.tsx` | App-level WS connection + dispatch |
-| `client/src/shared/stores/roomLobbyStore.ts` | Zustand store for room lobby real-time state |
-| `client/src/shared/stores/roomLobbyStore.test.ts` | Tests for roomLobbyStore |
+| File                                                | Purpose                                      |
+| --------------------------------------------------- | -------------------------------------------- |
+| `client/src/shared/providers/WebSocketProvider.tsx` | App-level WS connection + dispatch           |
+| `client/src/shared/stores/roomLobbyStore.ts`        | Zustand store for room lobby real-time state |
+| `client/src/shared/stores/roomLobbyStore.test.ts`   | Tests for roomLobbyStore                     |
 
 ### Files to Modify
 
-| File | Changes |
-|------|---------|
-| `server/internal/room/handler.go` | Add hub field, update constructor, add broadcast helper, replace 4 TODOs with actual broadcasts, wire gameStarter in Quick Play auto-start |
-| `server/cmd/api/main.go` | Pass hub to NewRoomHandler |
-| `server/internal/room/handler_test.go` | Update NewRoomHandler calls to pass hub/nil |
-| `client/src/App.tsx` | Wrap ProtectedRoute subtree with WebSocketProvider |
-| `client/src/features/game/GamePage.tsx` | Remove useWebSocket/useWsDispatch, use context for sendMessage |
-| `client/src/shared/hooks/useWsDispatch.ts` | Route room lobby events to roomLobbyStore instead of no-op return |
-| `client/src/shared/hooks/useWsDispatch.test.ts` | Add tests for room lobby event routing |
-| `client/src/features/lobby/RoomLobby.tsx` | Subscribe to roomLobbyStore for real-time updates, handle game_started navigation |
-| `client/src/features/lobby/RoomLobby.test.tsx` | Add real-time update tests |
-| `client/src/features/lobby/useRoomLobbyUpdates.ts` | May be refactored into roomLobbyStore or kept as utility |
-| `client/src/features/lobby/useRoomUpdates.ts` | Remove TODO comment, may be wired directly or refactored |
-| `client/src/shared/i18n/en.json` | Add any new i18n keys if needed |
-| `client/src/shared/i18n/sr.json` | Add matching Serbian translations |
+| File                                               | Changes                                                                                                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `server/internal/room/handler.go`                  | Add hub field, update constructor, add broadcast helper, replace 4 TODOs with actual broadcasts, wire gameStarter in Quick Play auto-start |
+| `server/cmd/api/main.go`                           | Pass hub to NewRoomHandler                                                                                                                 |
+| `server/internal/room/handler_test.go`             | Update NewRoomHandler calls to pass hub/nil                                                                                                |
+| `client/src/App.tsx`                               | Wrap ProtectedRoute subtree with WebSocketProvider                                                                                         |
+| `client/src/features/game/GamePage.tsx`            | Remove useWebSocket/useWsDispatch, use context for sendMessage                                                                             |
+| `client/src/shared/hooks/useWsDispatch.ts`         | Route room lobby events to roomLobbyStore instead of no-op return                                                                          |
+| `client/src/shared/hooks/useWsDispatch.test.ts`    | Add tests for room lobby event routing                                                                                                     |
+| `client/src/features/lobby/RoomLobby.tsx`          | Subscribe to roomLobbyStore for real-time updates, handle game_started navigation                                                          |
+| `client/src/features/lobby/RoomLobby.test.tsx`     | Add real-time update tests                                                                                                                 |
+| `client/src/features/lobby/useRoomLobbyUpdates.ts` | May be refactored into roomLobbyStore or kept as utility                                                                                   |
+| `client/src/features/lobby/useRoomUpdates.ts`      | Remove TODO comment, may be wired directly or refactored                                                                                   |
+| `client/src/shared/i18n/en.json`                   | Add any new i18n keys if needed                                                                                                            |
+| `client/src/shared/i18n/sr.json`                   | Add matching Serbian translations                                                                                                          |
 
 ### Testing Patterns
 
 **Backend (Go):**
+
 - To mock the hub for handler tests, define a `Broadcaster` interface:
   ```go
   type Broadcaster interface {
@@ -322,6 +325,7 @@ Choose the approach that best fits the existing patterns. The React Context appr
   Or use the concrete `*ws.Hub` and pass `nil` in tests that don't verify broadcasts (existing tests). For broadcast-specific tests, create a spy that captures calls.
 
 **Frontend (Vitest):**
+
 - Test roomLobbyStore actions in isolation
 - Test useWsDispatch routing by dispatching WsMessage objects and verifying store state
 - Test RoomLobby integration by populating the store and verifying renders
@@ -337,15 +341,18 @@ Choose the approach that best fits the existing patterns. The React Context appr
 ### Previous Story Intelligence
 
 **From Story 4.1 (WebSocket Gateway):**
+
 - Hub's `BroadcastToUsers` takes pre-marshaled `[]byte` — marshal once, send to many
 - `Client.Send()` is safe to call concurrently (has internal closed flag)
 - Hub dispatches handlers in goroutines — be careful with shared state
 
 **From Story 4.2 (Session Manager):**
+
 - Session manager builds messages via `json.Marshal(ws.WSMessage{Type, Payload})` — follow same pattern in room handler
 - `system:game_started` and `system:room_updated` were wired in StartGame per review finding — verify they work end-to-end
 
 **From Story 2.4 (Team Assignment):**
+
 - RoomLobby uses local useState for players — this story migrates to a shared store or augments with WS events
 - `hasLeftRef` pattern prevents cleanup leave on navigation — preserve this when handling `system:game_started`
 

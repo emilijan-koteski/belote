@@ -104,6 +104,7 @@ So that I can set up a Belot game exactly how my group wants to play.
 ### Architecture Compliance
 
 **Backend domain package shape** — follow exactly:
+
 ```
 server/internal/room/
 ├── model.go          # Room GORM struct
@@ -144,6 +145,7 @@ type Room struct {
 ```
 
 **Key conventions:**
+
 - All JSON tags use `camelCase` (matches project standard)
 - `TimerDurationSeconds` is `*int` (pointer for nullable — only set when `timerStyle` is `per-move`)
 - `DeletedAt` uses GORM soft delete, excluded from JSON with `json:"-"`
@@ -178,6 +180,7 @@ CREATE UNIQUE INDEX idx_rooms_name_active ON rooms(name) WHERE deleted_at IS NUL
 ```
 
 **Notes:**
+
 - The unique constraint on `name` is partial — only among active (non-deleted, non-completed) rooms. Players can reuse names after rooms close.
 - `deleted_at IS NULL` partial index on status speeds up the most common query (browsing active rooms).
 - Migration numbering: `000003` — after existing `000001_init` and `000002_create_users`.
@@ -190,10 +193,12 @@ DROP TABLE IF EXISTS rooms;
 ### Room Code Generation
 
 Generate a 6-character uppercase alphanumeric code (A-Z, 0-9, excluding ambiguous chars I/O/0/1):
+
 ```go
 const codeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const codeLength = 6
 ```
+
 Use `crypto/rand` for generation. On unique constraint violation (extremely rare), retry up to 3 times.
 
 ### API Endpoint
@@ -232,6 +237,7 @@ Response (201):
 ```
 
 **Error responses:**
+
 - 400 `ROOM_NAME_REQUIRED` — empty or whitespace-only name
 - 409 `ROOM_NAME_TAKEN` — active room with this name already exists
 - 401 — missing/invalid auth token (handled by auth middleware)
@@ -239,6 +245,7 @@ Response (201):
 ### Error Definitions
 
 Add to `server/internal/apperr/errors.go`:
+
 ```go
 // Room errors
 var ErrRoomNameRequired = NewAppError("ROOM_NAME_REQUIRED", "room name is required", http.StatusBadRequest)
@@ -331,15 +338,17 @@ The `api` group already has auth middleware applied.
 **Both files must be updated in the same commit.**
 
 Add to `server/internal/ws/events.go`:
+
 ```go
 // Room events
 const SystemRoomCreated = "system:room_created"
 ```
 
 Add to `client/src/shared/types/wsEvents.ts`:
+
 ```typescript
 // Room events
-export const SYSTEM_ROOM_CREATED = 'system:room_created' as const;
+export const SYSTEM_ROOM_CREATED = "system:room_created" as const;
 
 export interface RoomCreatedPayload {
   id: number;
@@ -362,6 +371,7 @@ export interface RoomCreatedPayload {
 #### Room Type Definition
 
 Add to `client/src/shared/types/apiTypes.ts`:
+
 ```typescript
 export interface Room {
   id: number;
@@ -434,6 +444,7 @@ Use immutable updates — replace the `rooms` array, never mutate it directly.
 #### CreateRoomModal Component
 
 Use the existing `Dialog` component (already installed at `shared/components/ui/dialog.tsx`). This is a **Base UI** (`@base-ui/react/dialog`) component, not Radix. The API is similar but note:
+
 - `Dialog` accepts `open` and `onOpenChange` props (passed through to `DialogPrimitive.Root`)
 - `DialogContent` accepts an optional `showCloseButton` prop (defaults to `true`)
 - Backdrop click closes the dialog automatically (Base UI handles this — no manual wiring needed)
@@ -442,6 +453,7 @@ Use the existing `Dialog` component (already installed at `shared/components/ui/
 Install shadcn `Select` component: `npx shadcn@latest add select`
 
 **Component structure:**
+
 ```
 <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
   <DialogContent className="sm:max-w-md">
@@ -511,8 +523,10 @@ Create `client/src/features/lobby/RoomLobby.tsx` — simple placeholder page sho
 Add route to `App.tsx` — nest inside the existing `<Route element={<ProtectedRoute />}>` → `<Route element={<AppLayout />}>` group (do NOT wrap inline — follow the existing nesting pattern):
 
 ```tsx
-{/* Inside the existing <Route element={<AppLayout />}> group, after /rules */}
-<Route path="/rooms/:id" element={<RoomLobby />} />
+{
+  /* Inside the existing <Route element={<AppLayout />}> group, after /rules */
+}
+<Route path="/rooms/:id" element={<RoomLobby />} />;
 ```
 
 #### Navigation After Creation
@@ -522,6 +536,7 @@ On successful `createRoom()` API call, use `useNavigate()` from React Router to 
 ### i18n Keys
 
 **English (`en.json`):**
+
 ```json
 {
   "lobby": {
@@ -557,6 +572,7 @@ On successful `createRoom()` API call, use `useNavigate()` from React Router to 
 ```
 
 **Serbian (`sr.json`):**
+
 ```json
 {
   "lobby": {
@@ -603,6 +619,7 @@ On successful `createRoom()` API call, use `useNavigate()` from React Router to 
 ### Testing Strategy
 
 **Backend (Go):**
+
 - External test package: `package room_test`
 - Mock repository with in-memory `[]Room` slice — same pattern as `auth/handler_test.go`
 - Test via real HTTP requests using `httptest.NewRecorder()` + `echo.New()`
@@ -616,6 +633,7 @@ On successful `createRoom()` API call, use `useNavigate()` from React Router to 
   - Timer duration set when timerStyle is per-move, null when relaxed
 
 **Frontend (Vitest):**
+
 - Co-located: `CreateRoomModal.test.tsx` next to `CreateRoomModal.tsx`
 - Use `@testing-library/react` with `BrowserRouter` wrapper
 - Use `data-testid` for element selection
@@ -719,6 +737,7 @@ _Code review performed 2026-04-11 by Blind Hunter + Edge Case Hunter + Acceptanc
 ### File List
 
 **New files:**
+
 - server/migrations/000003_create_rooms.up.sql
 - server/migrations/000003_create_rooms.down.sql
 - server/internal/room/model.go
@@ -734,14 +753,15 @@ _Code review performed 2026-04-11 by Blind Hunter + Edge Case Hunter + Acceptanc
 - client/src/features/lobby/LobbyPage.test.tsx
 
 **Modified files:**
+
 - server/internal/apperr/errors.go (added room errors)
 - server/internal/ws/events.go (added SystemRoomCreated constant)
 - server/cmd/api/main.go (wired room routes)
 - client/src/shared/types/apiTypes.ts (added Room, CreateRoomRequest)
 - client/src/shared/types/wsEvents.ts (added SYSTEM_ROOM_CREATED, RoomCreatedPayload)
 - client/src/shared/stores/lobbyStore.ts (added rooms state + actions)
-- client/src/shared/i18n/en.json (added lobby.* keys)
-- client/src/shared/i18n/sr.json (added lobby.* keys)
+- client/src/shared/i18n/en.json (added lobby.\* keys)
+- client/src/shared/i18n/sr.json (added lobby.\* keys)
 - client/src/features/lobby/LobbyPage.tsx (redesigned with play option cards)
 - client/src/App.tsx (added RoomLobby route)
 - client/src/App.test.tsx (updated lobby assertion)

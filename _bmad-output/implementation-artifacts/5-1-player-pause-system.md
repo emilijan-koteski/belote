@@ -246,12 +246,14 @@ Critical: Several pause-related constants and types are **already defined** in t
 ### Session Manager Timer Integration Details
 
 The session manager (`server/internal/session/manager.go`) handles timers:
+
 - `cancelTurnTimer()` in `timer.go` (lines 5-10) — call this when pausing
 - `startTimerLocked()` (lines 514-527) — call this when resuming
 - `setTurnExpiry()` (lines 500-509) — sets `TurnExpiresAt` on game state
 - `handleTimerExpiry()` (lines 532-626) — auto-play logic when timer fires
 
 **Pause timer flow**:
+
 1. On pause: compute `remaining = session.gameState.TurnExpiresAt - time.Now()`, store as milliseconds in `state.TurnTimeRemaining`, call `cancelTurnTimer()`
 2. On resume (phase leaves paused): compute new `TurnExpiresAt = time.Now() + remaining`, call `setTurnExpiry()`, then `startTimerLocked()`
 3. If no timer was active when paused (`TurnTimeRemaining == 0`), skip timer restart
@@ -259,6 +261,7 @@ The session manager (`server/internal/session/manager.go`) handles timers:
 ### Frontend Overlay Z-Index Order
 
 Current overlay z-index stack in `GamePage.tsx` (lines 326-437):
+
 - z-10: DealAnimation
 - z-20: **PauseOverlay** (new — insert here)
 - z-25: TrumpPrompt, DeclarationPrompt, BelotPrompt
@@ -271,6 +274,7 @@ PauseOverlay should NOT block TrumpPrompt or DeclarationPrompt — but it SHOULD
 ### UX Design Requirements
 
 Per UX spec (`ux-design-specification.md`):
+
 - **Visual tone**: Composed, calm. `surface-elevated` background, no red alerts, no panic typography
 - **Overlays are blocking**: PauseOverlay requires action (unpause) or auto-resolves — no dismiss button
 - **Toasts**: Use `info` toast (neutral, 3s auto-dismiss) when game resumes: "Game resumed" or when owner overrides: "Room owner resumed the game"
@@ -280,6 +284,7 @@ Per UX spec (`ux-design-specification.md`):
 ### Cross-Story Context — Story 5.2 Dependency
 
 Story 5.2 (Room Owner Pause Override) builds on this story:
+
 - `ActionOwnerUnpause` is already defined in types but should NOT be fully implemented here
 - The `handleUnpause` function should accept `ActionOwnerUnpause` as a valid action type in the `PhasePaused` case of `ApplyAction()` but the owner validation logic belongs in Story 5.2
 - For now, `ActionOwnerUnpause` behaves identically to `ActionUnpause` (clears the acting player's pause only). Story 5.2 will add the "clear ALL pauses" behavior and ownership validation
@@ -288,6 +293,7 @@ Story 5.2 (Room Owner Pause Override) builds on this story:
 ### Cross-Story Context — Story 5.3/5.4 Dependency
 
 Stories 5.3/5.4 (Disconnect Detection and Reconnection) will add:
+
 - `PhaseDisconnected` handling (already a constant in types.go)
 - `ReconnectOverlay.tsx` (already listed in architecture file tree)
 - The pause system and disconnect system share the "previous phase" pattern — both save the phase before transitioning to their respective overlay phase
@@ -346,12 +352,14 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - `server/internal/game/pause.go`
 - `server/internal/game/pause_test.go`
 - `client/src/features/game/components/PauseOverlay.tsx`
 - `client/src/features/game/components/PauseOverlay.test.tsx`
 
 **Modified files:**
+
 - `server/internal/game/state.go`
 - `server/internal/game/rules_engine.go`
 - `server/internal/game/testfixtures/fixtures.go`

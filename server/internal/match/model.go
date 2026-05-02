@@ -10,8 +10,8 @@ type Match struct {
 	Player2ID     uint         `gorm:"not null;index" json:"player2Id"`
 	Player3ID     uint         `gorm:"not null;index" json:"player3Id"`
 	Player4ID     uint         `gorm:"not null;index" json:"player4Id"`
-	TeamRedScore  int          `gorm:"not null" json:"teamRedScore"`
-	TeamBlueScore int          `gorm:"not null" json:"teamBlueScore"`
+	TeamAScore    int          `gorm:"column:team_a_score;not null" json:"teamAScore"`
+	TeamBScore    int          `gorm:"column:team_b_score;not null" json:"teamBScore"`
 	WinnerTeam    int          `gorm:"not null" json:"winnerTeam"`
 	Variant       string       `gorm:"size:20;not null" json:"variant"`
 	MatchMode     string       `gorm:"size:10;not null" json:"matchMode"`

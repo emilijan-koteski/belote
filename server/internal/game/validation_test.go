@@ -23,7 +23,7 @@ func TestValidationAllTrumpCards(t *testing.T) {
 			{Rank: game.Rank7, Suit: game.SuitHearts},
 		}
 
-		// Seat 1 (Blue) leads with JS — opponent to seat 2
+		// Seat 1 (team B) leads with JS — opponent to seat 2
 		gs.ActivePlayerSeat = 1
 		leadAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
 			Card: &game.Card{Rank: game.RankJack, Suit: game.SuitSpades}}
@@ -80,12 +80,12 @@ func TestValidationFourthPlayer(t *testing.T) {
 		}
 
 		// Seat 3 has 4 diamonds and 4 clubs, no spades.
-		// Seat 2 (Red, partner of seat 0) played trump KH and is winning.
-		// Seat 3 is Blue — partner exemption does NOT apply (opponent winning).
+		// Seat 2 (team A, partner of seat 0) played trump KH and is winning.
+		// Seat 3 is team B — partner exemption does NOT apply (opponent winning).
 		// Actually seat 2 played trump KH — who is winning?
 		// Cards: AS(seat 0, rank 7 non-trump), JS(seat 1, rank 3 non-trump), KH(seat 2, trump rank 3)
-		// Trump beats non-trump — seat 2 (Red) is winning.
-		// Seat 3 is Blue — opponent (Red) is winning.
+		// Trump beats non-trump — seat 2 (team A) is winning.
+		// Seat 3 is team B — opponent (team A) is winning.
 		// Seat 3 has no spades AND no trump — any card is legal.
 		anyCard := game.Action{Type: game.ActionPlayCard, PlayerSeat: 3,
 			Card: &game.Card{Rank: game.RankKing, Suit: game.SuitClubs}}
@@ -102,7 +102,7 @@ func TestValidationFourthPlayer(t *testing.T) {
 func TestValidationPartnerTrumped(t *testing.T) {
 	t.Run("partner trumped and is winning - has led suit, must follow", func(t *testing.T) {
 		gs := testfixtures.NewGameMidPlay(1)
-		// Seat 1 (Blue) leads spade, Seat 2 (Red) trumps (partner to seat 0)
+		// Seat 1 (team B) leads spade, Seat 2 (team A) trumps (partner to seat 0)
 		gs.ActivePlayerSeat = 1
 		plays := []struct {
 			seat int
@@ -121,7 +121,7 @@ func TestValidationPartnerTrumped(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		// Seat 0 (Red) — partner seat 2 trumped and is winning.
+		// Seat 0 (team A) — partner seat 2 trumped and is winning.
 		// Spade was led. Seat 0 has spades; must follow suit regardless of partner state.
 		validSpade := game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
 			Card: &game.Card{Rank: game.RankAce, Suit: game.SuitSpades}}

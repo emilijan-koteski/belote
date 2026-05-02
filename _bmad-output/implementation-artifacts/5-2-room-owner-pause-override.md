@@ -140,7 +140,8 @@ so that I can keep the game moving if a pause is taking too long.
   - [x] 7.2 Import `ACTION_OWNER_UNPAUSE` from wsEvents.
   - [x] 7.3 Compute `isRoomOwner`:
     ```tsx
-    const isRoomOwner = myPlayerSeat !== null && gameState.ownerSeat === myPlayerSeat;
+    const isRoomOwner =
+      myPlayerSeat !== null && gameState.ownerSeat === myPlayerSeat;
     ```
   - [x] 7.4 Pass `isRoomOwner` and `onOwnerResume={handleOwnerUnpause}` to PauseOverlay.
 
@@ -181,19 +182,19 @@ so that I can keep the game moving if a pause is taking too long.
 
 Critical: The following were scaffolded in Story 5.1. They already exist and MUST NOT be duplicated:
 
-| Item | Location | Status |
-|------|----------|--------|
-| `ActionOwnerUnpause = "owner_unpause"` | `server/internal/game/types.go:105` | Exists |
-| `const ActionOwnerUnpause = "action:owner_unpause"` | `server/internal/ws/events.go:27` | Exists |
-| `ACTION_OWNER_UNPAUSE` | `client/src/shared/types/wsEvents.ts:41` | Exists |
-| `"owner_unpause"` in `ActionType` union | `client/src/shared/types/gameTypes.ts:32` | Exists |
-| `GameResumedPayload.OwnerOverride bool` | `server/internal/ws/events.go:58` | Exists |
-| `GameResumedPayload.ownerOverride` | `client/src/shared/types/wsEvents.ts:153` | Exists |
-| `ErrNotRoomOwner` | `server/internal/apperr/errors.go:60` | Exists |
-| `game.pause.ownerResumedToast` i18n key | `en.json:232`, `sr.json` | Exists |
-| Toast on `ownerOverride` | `client/src/shared/hooks/useWsDispatch.ts:182-185` | Exists |
-| Session manager timer handling for `ActionOwnerUnpause` | `server/internal/session/manager.go:170` | Exists |
-| `broadcastActionResult` case for `ActionOwnerUnpause` | `server/internal/session/manager.go:462-471` | Exists |
+| Item                                                    | Location                                           | Status |
+| ------------------------------------------------------- | -------------------------------------------------- | ------ |
+| `ActionOwnerUnpause = "owner_unpause"`                  | `server/internal/game/types.go:105`                | Exists |
+| `const ActionOwnerUnpause = "action:owner_unpause"`     | `server/internal/ws/events.go:27`                  | Exists |
+| `ACTION_OWNER_UNPAUSE`                                  | `client/src/shared/types/wsEvents.ts:41`           | Exists |
+| `"owner_unpause"` in `ActionType` union                 | `client/src/shared/types/gameTypes.ts:32`          | Exists |
+| `GameResumedPayload.OwnerOverride bool`                 | `server/internal/ws/events.go:58`                  | Exists |
+| `GameResumedPayload.ownerOverride`                      | `client/src/shared/types/wsEvents.ts:153`          | Exists |
+| `ErrNotRoomOwner`                                       | `server/internal/apperr/errors.go:60`              | Exists |
+| `game.pause.ownerResumedToast` i18n key                 | `en.json:232`, `sr.json`                           | Exists |
+| Toast on `ownerOverride`                                | `client/src/shared/hooks/useWsDispatch.ts:182-185` | Exists |
+| Session manager timer handling for `ActionOwnerUnpause` | `server/internal/session/manager.go:170`           | Exists |
+| `broadcastActionResult` case for `ActionOwnerUnpause`   | `server/internal/session/manager.go:462-471`       | Exists |
 
 ### What Must Be Changed
 
@@ -226,13 +227,16 @@ Critical: The following were scaffolded in Story 5.1. They already exist and MUS
 ### Session Manager — No Timer Changes Needed
 
 The session manager's `HandleAction` already handles `ActionOwnerUnpause` correctly for timer management at line 170:
+
 ```go
 } else if (action.Type == game.ActionUnpause || action.Type == game.ActionOwnerUnpause) && newState.Phase != game.PhasePaused {
     // Game resumed — restore timer from preserved remaining time
 ```
+
 This branch fires when the game leaves `PhasePaused`, which is exactly what `handleOwnerUnpause` does. No changes needed to timer logic.
 
 The `broadcastActionResult` already handles `ActionOwnerUnpause` at line 462:
+
 ```go
 case game.ActionUnpause, game.ActionOwnerUnpause:
     resumed := ws.GameResumedPayload{
@@ -240,11 +244,13 @@ case game.ActionUnpause, game.ActionOwnerUnpause:
         OwnerOverride: action.Type == game.ActionOwnerUnpause,
     }
 ```
+
 This correctly sets `OwnerOverride: true` for owner unpause. No changes needed.
 
 ### Room Owner Detection — Design Decision
 
 The room owner is tracked by `Room.OwnerID` (uint) in the database. To make this available to the rules engine:
+
 - Add `OwnerSeat int` to `GameState` (mapped from `OwnerID` to seat index during `StartGame`)
 - This is the cleanest approach since the rules engine operates on seat indices, not user IDs
 - The client receives `ownerSeat` in every `event:game_state` broadcast, so it always knows who the owner is
@@ -252,6 +258,7 @@ The room owner is tracked by `Room.OwnerID` (uint) in the database. To make this
 ### UX Design Requirements
 
 Per UX spec (`ux-design-specification.md`):
+
 - **"Resume All" button style**: Destructive ghost — border and text in a subdued red/warning tone, not a filled destructive button. It's a powerful action but not dangerous.
 - **Visual tone**: Composed, calm — consistent with the existing PauseOverlay design (surface-elevated card, no red alerts)
 - **Toast**: Already wired — `useWsDispatch.ts:182-185` shows `game.pause.ownerResumedToast` ("Room owner resumed the game") when `ownerOverride` is true. No additional work needed.
@@ -264,6 +271,7 @@ The client determines `isRoomOwner` from `gameState.ownerSeat === myPlayerSeat`.
 ### Previous Story Intelligence (Story 5.1)
 
 Key learnings from Story 5.1 implementation:
+
 - `handlePause` accepts `PhasePaused` as source phase for stacking — `handleOwnerUnpause` doesn't need this (it just clears everything)
 - Unpause routing was moved before phase-specific dispatch in `ApplyAction()` — maintain this pattern
 - Timer remaining floor of 3 seconds is enforced in session manager — applies to owner unpause resume too (already handled)
@@ -279,6 +287,7 @@ Key learnings from Story 5.1 implementation:
 ### Project Structure Notes
 
 **Modified files (expected):**
+
 - `server/internal/game/state.go` — Add `OwnerSeat` field
 - `server/internal/game/pause.go` — Add `handleOwnerUnpause` function
 - `server/internal/game/rules_engine.go` — Split `ActionOwnerUnpause` routing
@@ -348,6 +357,7 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **Modified files:**
+
 - `server/internal/game/state.go` — Added `OwnerSeat int` field to GameState
 - `server/internal/game/pause.go` — Added `handleOwnerUnpause` function
 - `server/internal/game/rules_engine.go` — Split routing: ActionUnpause → handleUnpause, ActionOwnerUnpause → handleOwnerUnpause

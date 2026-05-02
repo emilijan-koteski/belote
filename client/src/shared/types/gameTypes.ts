@@ -37,6 +37,15 @@ export type ActionType =
 
 export type DeclarationType = "sequence" | "four_of_a_kind";
 
+// Team string literal — full word, never bare "a"/"b" (Winston's grep-ability rule).
+// Conversion between the integer team index (0/1) used in payload fields and this
+// string literal lives in exactly one helper, `teamStringForIndex`.
+export type TeamString = "teamA" | "teamB";
+
+export function teamStringForIndex(i: 0 | 1): TeamString {
+  return i === 0 ? "teamA" : "teamB";
+}
+
 export interface Card {
   rank: Rank;
   suit: Suit;
@@ -59,16 +68,16 @@ export interface PlayerState {
   seat: number;
   userId: number;
   username: string;
-  team: string;
+  team: TeamString;
   declarations: Declaration[];
   connected: boolean;
 }
 
 export interface HandResult {
-  redCardPoints: number;
-  blueCardPoints: number;
-  redDeclPoints: number;
-  blueDeclPoints: number;
+  teamACardPoints: number;
+  teamBCardPoints: number;
+  teamADeclPoints: number;
+  teamBDeclPoints: number;
   lastTrickTeam: number;
   lastTrickBonus: number;
   capot: boolean;
@@ -76,8 +85,8 @@ export interface HandResult {
   capotBonus: number;
   failedContract: boolean;
   contractingTeam: number;
-  redHandTotal: number;
-  blueHandTotal: number;
+  teamAHandTotal: number;
+  teamBHandTotal: number;
 }
 
 export interface GameState {

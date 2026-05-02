@@ -70,6 +70,7 @@ so that I can socialize with other players and find people to play with.
 
 - [x] Task 2: Add WS event constants + payload types to **both** contract files (AC: #2)
   - [x] 2.1 In [server/internal/ws/events.go](server/internal/ws/events.go), under `// --- Chat events ---`, add the new action constant and payload structs (the `SystemChatMessage` constant already exists — do NOT duplicate):
+
     ```go
     const ActionChatMessage = "action:chat_message"
 
@@ -90,7 +91,9 @@ so that I can socialize with other players and find people to play with.
         Scope     string `json:"scope"`     // "global" | "match"
     }
     ```
+
   - [x] 2.2 In [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) — `SYSTEM_CHAT_MESSAGE` and `ChatMessagePayload` already exist (lines 257-265). **Add** the action constant + request payload right above them:
+
     ```typescript
     export const ACTION_CHAT_MESSAGE = "action:chat_message" as const;
 
@@ -100,10 +103,12 @@ so that I can socialize with other players and find people to play with.
       text: string;
     }
     ```
+
     Verify the existing `ChatMessagePayload` matches the Go struct exactly (camelCase, `scope: "global" | "match"`, `timestamp: string`). No change needed.
 
 - [x] Task 3: Create the chat handler package (AC: #2, #6, #7)
   - [x] 3.1 Replace the placeholder [server/internal/chat/chat.go](server/internal/chat/chat.go) (currently `package chat` only) with a new file [server/internal/chat/handler.go](server/internal/chat/handler.go):
+
     ```go
     package chat
 
@@ -223,6 +228,7 @@ so that I can socialize with other players and find people to play with.
         return msg
     }
     ```
+
   - [x] 3.2 Delete (or keep empty) the legacy [server/internal/chat/chat.go](server/internal/chat/chat.go) file — `handler.go` becomes the package's primary file.
 
 - [x] Task 4: Add `Hub.ConnectedUserIDs()` helper (AC: #2)
@@ -261,6 +267,7 @@ so that I can socialize with other players and find people to play with.
 
 - [x] Task 6: Frontend — wire `chatStore` for global messages (AC: #3, #4)
   - [x] 6.1 Replace the placeholder [client/src/shared/stores/chatStore.ts](client/src/shared/stores/chatStore.ts) with a real partitioned store:
+
     ```typescript
     import { create } from "zustand";
 
@@ -287,6 +294,7 @@ so that I can socialize with other players and find people to play with.
       clearGlobal: () => set({ globalMessages: [] }),
     }));
     ```
+
   - [x] 6.2 Add a co-located test [client/src/shared/stores/chatStore.test.ts](client/src/shared/stores/chatStore.test.ts) covering: appends a single message, drops oldest when exceeding `MAX_MESSAGES`, `clearGlobal` resets state.
 
 - [x] Task 7: Frontend — dispatch `system:chat_message` events (AC: #3, #6)
@@ -329,13 +337,17 @@ so that I can socialize with other players and find people to play with.
 - [x] Task 9: Mount `ChatPanel` inside the lobby layout (AC: #1)
   - [x] 9.1 Update [client/src/features/lobby/LobbyPage.tsx](client/src/features/lobby/LobbyPage.tsx). The current right-hand column is the leaderboard placeholder (lines 167-170). Replace its content (or convert to a 2-row stack) so that the right-hand column hosts both the leaderboard placeholder **and** the `ChatPanel` underneath, with the chat panel taking the majority of the vertical space:
     ```tsx
-    {/* Right column: Leaderboard placeholder above, ChatPanel below */}
+    {
+      /* Right column: Leaderboard placeholder above, ChatPanel below */
+    }
     <div className="flex flex-col gap-4 min-h-[600px]">
       <div className="rounded-lg border border-border bg-surface p-6">
-        <p className="text-text-secondary">{t("lobby.leaderboardPlaceholder")}</p>
+        <p className="text-text-secondary">
+          {t("lobby.leaderboardPlaceholder")}
+        </p>
       </div>
       <ChatPanel className="flex-1" />
-    </div>
+    </div>;
     ```
     Add the import: `import { ChatPanel } from "@/features/chat/ChatPanel";`.
   - [x] 9.2 If the design requires the panel to fill the column height, expose an optional `className` prop on `ChatPanel` so the parent can apply `flex-1` / sizing classes (Tailwind, no design-token edits).
@@ -391,24 +403,24 @@ so that I can socialize with other players and find people to play with.
 
 ### What Already Exists — Do NOT Recreate
 
-| Item | Location | Status |
-|------|----------|--------|
-| `package chat` placeholder | [server/internal/chat/chat.go](server/internal/chat/chat.go) | Exists (empty) — REPLACE with `handler.go` |
-| `ChatPage` placeholder component | [client/src/features/chat/ChatPage.tsx](client/src/features/chat/ChatPage.tsx) | Exists — leave as-is, NOT used in this story |
-| `chatStore` placeholder (`isLoading` only) | [client/src/shared/stores/chatStore.ts](client/src/shared/stores/chatStore.ts) | Exists — REPLACE with `globalMessages` partition |
-| `SystemChatMessage = "system:chat_message"` constant | [server/internal/ws/events.go:117](server/internal/ws/events.go#L117) | Exists — DO NOT redeclare |
-| `SYSTEM_CHAT_MESSAGE` constant + `ChatMessagePayload` interface | [client/src/shared/types/wsEvents.ts:257-265](client/src/shared/types/wsEvents.ts#L257-L265) | Exists — payload shape already defined |
-| `useWsDispatch.ts` chat no-op stub | [client/src/shared/hooks/useWsDispatch.ts:303-305](client/src/shared/hooks/useWsDispatch.ts#L303-L305) | Exists — REPLACE with real handler |
-| `useWsSendMessage()` hook | [client/src/shared/providers/WebSocketContext.ts:12-18](client/src/shared/providers/WebSocketContext.ts#L12-L18) | Exists — reuse for sending `action:chat_message` |
-| `useWsConnectionState()` hook | [client/src/shared/providers/WebSocketContext.ts:20-26](client/src/shared/providers/WebSocketContext.ts#L20-L26) | Exists — use to disable input when not `"connected"` |
-| `WebSocketProvider` wrapping all protected routes | [client/src/shared/components/ProtectedRoute.tsx:24-28](client/src/shared/components/ProtectedRoute.tsx#L24-L28) | Exists — `LobbyPage` already inside provider |
-| `Hub.BroadcastToUsers([]uint, []byte)` | [server/internal/ws/hub.go:174-182](server/internal/ws/hub.go#L174-L182) | Exists — reuse for fan-out |
-| `Hub.BroadcastAll([]byte)` | [server/internal/ws/hub.go:185-191](server/internal/ws/hub.go#L185-L191) | Exists — DO NOT use here (would hit in-game users) |
-| `Hub.SetActionHandler(handler)` | [server/internal/ws/hub.go:56-58](server/internal/ws/hub.go#L56-L58) | Exists — there is exactly ONE action handler slot, so `main.go` MUST compose chat + session into a single closure |
-| `session.Manager.userToRoom` map | [server/internal/session/manager.go:44](server/internal/session/manager.go#L44) | Exists — used to enforce in-game exclusion via new `IsUserInGame` helper |
-| `user.UserRepository.FindByID(id uint) (*User, error)` | [server/internal/user/repository.go:7](server/internal/user/repository.go#L7) | Exists — use to resolve sender username for outgoing payload |
-| `WSMessage{Type, Payload}` envelope | [server/internal/ws/message.go](server/internal/ws/message.go) | Exists — payload is `json.RawMessage`; build with two-step `json.Marshal` (see `room.handler.broadcastToUsers` and `session.buildMessage` for the exact pattern) |
-| `Intl.DateTimeFormat` / `react-i18next` `useTranslation` | client | Exists — standard for all locale-formatted UI |
+| Item                                                            | Location                                                                                                         | Status                                                                                                                                                           |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package chat` placeholder                                      | [server/internal/chat/chat.go](server/internal/chat/chat.go)                                                     | Exists (empty) — REPLACE with `handler.go`                                                                                                                       |
+| `ChatPage` placeholder component                                | [client/src/features/chat/ChatPage.tsx](client/src/features/chat/ChatPage.tsx)                                   | Exists — leave as-is, NOT used in this story                                                                                                                     |
+| `chatStore` placeholder (`isLoading` only)                      | [client/src/shared/stores/chatStore.ts](client/src/shared/stores/chatStore.ts)                                   | Exists — REPLACE with `globalMessages` partition                                                                                                                 |
+| `SystemChatMessage = "system:chat_message"` constant            | [server/internal/ws/events.go:117](server/internal/ws/events.go#L117)                                            | Exists — DO NOT redeclare                                                                                                                                        |
+| `SYSTEM_CHAT_MESSAGE` constant + `ChatMessagePayload` interface | [client/src/shared/types/wsEvents.ts:257-265](client/src/shared/types/wsEvents.ts#L257-L265)                     | Exists — payload shape already defined                                                                                                                           |
+| `useWsDispatch.ts` chat no-op stub                              | [client/src/shared/hooks/useWsDispatch.ts:303-305](client/src/shared/hooks/useWsDispatch.ts#L303-L305)           | Exists — REPLACE with real handler                                                                                                                               |
+| `useWsSendMessage()` hook                                       | [client/src/shared/providers/WebSocketContext.ts:12-18](client/src/shared/providers/WebSocketContext.ts#L12-L18) | Exists — reuse for sending `action:chat_message`                                                                                                                 |
+| `useWsConnectionState()` hook                                   | [client/src/shared/providers/WebSocketContext.ts:20-26](client/src/shared/providers/WebSocketContext.ts#L20-L26) | Exists — use to disable input when not `"connected"`                                                                                                             |
+| `WebSocketProvider` wrapping all protected routes               | [client/src/shared/components/ProtectedRoute.tsx:24-28](client/src/shared/components/ProtectedRoute.tsx#L24-L28) | Exists — `LobbyPage` already inside provider                                                                                                                     |
+| `Hub.BroadcastToUsers([]uint, []byte)`                          | [server/internal/ws/hub.go:174-182](server/internal/ws/hub.go#L174-L182)                                         | Exists — reuse for fan-out                                                                                                                                       |
+| `Hub.BroadcastAll([]byte)`                                      | [server/internal/ws/hub.go:185-191](server/internal/ws/hub.go#L185-L191)                                         | Exists — DO NOT use here (would hit in-game users)                                                                                                               |
+| `Hub.SetActionHandler(handler)`                                 | [server/internal/ws/hub.go:56-58](server/internal/ws/hub.go#L56-L58)                                             | Exists — there is exactly ONE action handler slot, so `main.go` MUST compose chat + session into a single closure                                                |
+| `session.Manager.userToRoom` map                                | [server/internal/session/manager.go:44](server/internal/session/manager.go#L44)                                  | Exists — used to enforce in-game exclusion via new `IsUserInGame` helper                                                                                         |
+| `user.UserRepository.FindByID(id uint) (*User, error)`          | [server/internal/user/repository.go:7](server/internal/user/repository.go#L7)                                    | Exists — use to resolve sender username for outgoing payload                                                                                                     |
+| `WSMessage{Type, Payload}` envelope                             | [server/internal/ws/message.go](server/internal/ws/message.go)                                                   | Exists — payload is `json.RawMessage`; build with two-step `json.Marshal` (see `room.handler.broadcastToUsers` and `session.buildMessage` for the exact pattern) |
+| `Intl.DateTimeFormat` / `react-i18next` `useTranslation`        | client                                                                                                           | Exists — standard for all locale-formatted UI                                                                                                                    |
 
 ### What Must Be Created
 
@@ -455,6 +467,7 @@ so that I can socialize with other players and find people to play with.
 ### Key Design Decision — Ephemeral Chat (No History)
 
 AC #4 mandates no message history loading. This is a **deliberate** Phase 1 simplification:
+
 - No `chat_messages` table, no migration, no repository.
 - No moderation, no rate-limiting, no spam controls (acceptable for the small Phase 1 user base).
 - The 200-message ring buffer in `chatStore` is **client-side only** — server holds zero state per chat channel.
@@ -496,6 +509,7 @@ Pick (1). It also paves the way for Story 6.2's match-scoped chat where the same
 ### Previous Story Intelligence (Story 5.5 — done 2026-04-14)
 
 Carried-forward learnings relevant here:
+
 - **Build messages BEFORE broadcasting** — for chat we don't hold any session lock, but the same principle applies: marshal once, broadcast once, do not call `json.Marshal` inside a hot loop.
 - **WS contract files updated in the same commit** — strictly enforced. The new `ChatMessageRequest` lives in both files atop the existing `ChatMessagePayload`.
 - **i18n keys added to both EN and SR JSON** — Story 5.5 added `matchAbandoned`, `matchAbandonedScores`, `returningToLobby` to both. Same discipline here: no missing keys.
@@ -510,6 +524,7 @@ Carried-forward learnings relevant here:
 ### Project Structure Notes
 
 **New files (expected):**
+
 - `server/internal/chat/handler.go`
 - `server/internal/chat/handler_test.go`
 - `client/src/features/chat/ChatPanel.tsx`
@@ -517,6 +532,7 @@ Carried-forward learnings relevant here:
 - `client/src/shared/stores/chatStore.test.ts`
 
 **Modified files (expected):**
+
 - `server/internal/ws/events.go` (add chat action constant + payload structs)
 - `server/internal/ws/hub.go` (add `ConnectedUserIDs()`)
 - `server/internal/ws/ws_test.go` (add hub helper test)
@@ -575,6 +591,7 @@ Claude Opus 4.7 (1M context)
 ### File List
 
 **New files:**
+
 - server/internal/chat/handler.go
 - server/internal/chat/handler_test.go
 - client/src/features/chat/ChatPanel.tsx
@@ -582,9 +599,11 @@ Claude Opus 4.7 (1M context)
 - client/src/shared/stores/chatStore.test.ts
 
 **Deleted files:**
+
 - server/internal/chat/chat.go (empty placeholder; replaced by handler.go)
 
 **Modified files:**
+
 - server/internal/ws/events.go (added `ActionChatMessage`, `ChatMessageRequest`, `ChatMessagePayload`)
 - server/internal/ws/hub.go (added `ConnectedUserIDs()`)
 - server/internal/ws/ws_test.go (added `TestHub_ConnectedUserIDs`)
@@ -602,6 +621,7 @@ Claude Opus 4.7 (1M context)
 - client/src/shared/i18n/sr.json (added `chat.*` namespace)
 
 **Modified files (review patches, 2026-04-18):**
+
 - server/internal/chat/handler.go — sender exempt from per-recipient `IsUserInGame` filter (own-echo guarantee), `utf8.RuneCountInString` for 500-char cap, `RFC3339Nano` timestamps, defensive `make([]uint, 0, len(recipients))` instead of slice alias, added `unicode/utf8` import
 - server/internal/chat/handler_test.go — added `TestHandler_GlobalMessage_SenderAlwaysReceivesOwnEcho` and `TestHandler_LengthCapIsRunesNotBytes`
 - client/src/features/chat/ChatPanel.tsx — moved `listEndRef` outside the conditional `<ul>` (auto-scroll fires on first message) and dropped `index` from React key (`${userId}-${timestamp}` is now unique thanks to nanosecond server timestamps)

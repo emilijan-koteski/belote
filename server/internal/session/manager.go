@@ -482,10 +482,10 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		if (oldState.HandNumber < newState.HandNumber || newState.Phase == game.PhaseMatchEnd) && newState.LastHandResult != nil {
 			hr := newState.LastHandResult
 			handScored := map[string]interface{}{
-				"redCardPoints":   hr.RedCardPoints,
-				"blueCardPoints":  hr.BlueCardPoints,
-				"redDeclPoints":   hr.RedDeclPoints,
-				"blueDeclPoints":  hr.BlueDeclPoints,
+				"teamACardPoints": hr.TeamACardPoints,
+				"teamBCardPoints": hr.TeamBCardPoints,
+				"teamADeclPoints": hr.TeamADeclPoints,
+				"teamBDeclPoints": hr.TeamBDeclPoints,
 				"lastTrickTeam":   hr.LastTrickTeam,
 				"lastTrickBonus":  hr.LastTrickBonus,
 				"capot":           hr.Capot,
@@ -493,10 +493,10 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 				"capotBonus":      hr.CapotBonus,
 				"failedContract":  hr.FailedContract,
 				"contractingTeam": hr.ContractingTeam,
-				"redHandTotal":    hr.RedHandTotal,
-				"blueHandTotal":   hr.BlueHandTotal,
-				"redMatchScore":   newState.TeamScores[game.TeamRed],
-				"blueMatchScore":  newState.TeamScores[game.TeamBlue],
+				"teamAHandTotal":  hr.TeamAHandTotal,
+				"teamBHandTotal":  hr.TeamBHandTotal,
+				"teamAMatchScore": newState.TeamScores[game.TeamA],
+				"teamBMatchScore": newState.TeamScores[game.TeamB],
 			}
 			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventHandScored, handScored))
 		}
@@ -669,10 +669,10 @@ func (m *Manager) broadcastDeclarationsResolvedIfTransition(oldState, newState *
 	}
 
 	var declWinnerTeam interface{} = nil
-	if newState.DeclarationPoints[game.TeamRed] > 0 {
-		declWinnerTeam = game.TeamRed
-	} else if newState.DeclarationPoints[game.TeamBlue] > 0 {
-		declWinnerTeam = game.TeamBlue
+	if newState.DeclarationPoints[game.TeamA] > 0 {
+		declWinnerTeam = game.TeamA
+	} else if newState.DeclarationPoints[game.TeamB] > 0 {
+		declWinnerTeam = game.TeamB
 	}
 
 	payload := map[string]interface{}{
@@ -706,10 +706,10 @@ func (m *Manager) bufferHandResultIfScored(session *Session, oldState, newState 
 	}
 	row := match.HandResult{
 		HandNumber:      oldState.HandNumber,
-		RedCardPoints:   hr.RedCardPoints,
-		BlueCardPoints:  hr.BlueCardPoints,
-		RedDeclPoints:   hr.RedDeclPoints,
-		BlueDeclPoints:  hr.BlueDeclPoints,
+		TeamACardPoints: hr.TeamACardPoints,
+		TeamBCardPoints: hr.TeamBCardPoints,
+		TeamADeclPoints: hr.TeamADeclPoints,
+		TeamBDeclPoints: hr.TeamBDeclPoints,
 		LastTrickTeam:   hr.LastTrickTeam,
 		LastTrickBonus:  hr.LastTrickBonus,
 		Capot:           hr.Capot,
@@ -717,8 +717,8 @@ func (m *Manager) bufferHandResultIfScored(session *Session, oldState, newState 
 		CapotBonus:      hr.CapotBonus,
 		FailedContract:  hr.FailedContract,
 		ContractingTeam: hr.ContractingTeam,
-		RedHandTotal:    hr.RedHandTotal,
-		BlueHandTotal:   hr.BlueHandTotal,
+		TeamAHandTotal:  hr.TeamAHandTotal,
+		TeamBHandTotal:  hr.TeamBHandTotal,
 	}
 	session.mu.Lock()
 	session.handResults = append(session.handResults, row)
@@ -742,8 +742,8 @@ func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState, s
 		Player2ID:     session.playerIDs[1],
 		Player3ID:     session.playerIDs[2],
 		Player4ID:     session.playerIDs[3],
-		TeamRedScore:  finalState.TeamScores[game.TeamRed],
-		TeamBlueScore: finalState.TeamScores[game.TeamBlue],
+		TeamAScore:    finalState.TeamScores[game.TeamA],
+		TeamBScore:    finalState.TeamScores[game.TeamB],
 		WinnerTeam:    winnerTeam,
 		Variant:       string(finalState.Variant),
 		MatchMode:     finalState.MatchMode,
@@ -973,8 +973,8 @@ func safeDerefInt(p *int) int {
 func buildMatchEndPayload(oldState, newState *game.GameState, action game.Action, startedAt time.Time) ws.MatchEndPayload {
 	payload := ws.MatchEndPayload{
 		WinnerTeam:       safeDerefInt(newState.WinnerTeam),
-		RedFinalScore:    newState.TeamScores[game.TeamRed],
-		BlueFinalScore:   newState.TeamScores[game.TeamBlue],
+		TeamAFinalScore:  newState.TeamScores[game.TeamA],
+		TeamBFinalScore:  newState.TeamScores[game.TeamB],
 		MatchDurationSec: int(time.Since(startedAt).Seconds()),
 	}
 	if action.Type == game.ActionSurrenderAccept && oldState != nil && oldState.SurrenderProposerSeat != nil {

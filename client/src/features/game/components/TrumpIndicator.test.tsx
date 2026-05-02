@@ -43,20 +43,24 @@ describe("TrumpIndicator", () => {
     expect(screen.getByTestId("trump-indicator")).toHaveAttribute("aria-label");
   });
 
-  it("shows a red team badge when the trump caller is on an even seat", () => {
+  it("shows a teamA badge when the trump caller is on an even seat", () => {
     render(<TrumpIndicator trumpSuit="S" trumpCallerSeat={0} />);
     const badge = screen.getByTestId("trump-caller-team");
-    expect(badge).toHaveAttribute("data-team", "red");
-    expect(badge.className).toContain("text-team-red");
-    expect(screen.getByTestId("trump-indicator").className).toContain("border-team-red");
+    expect(badge).toHaveAttribute("data-team", "teamA");
+    expect(badge.className).toContain("text-team-a");
+    const container = screen.getByTestId("trump-indicator");
+    expect(container.className).toContain("border-team-a");
+    expect(container).toHaveAttribute("data-team", "teamA");
   });
 
-  it("shows a blue team badge when the trump caller is on an odd seat", () => {
+  it("shows a teamB badge when the trump caller is on an odd seat", () => {
     render(<TrumpIndicator trumpSuit="H" trumpCallerSeat={3} />);
     const badge = screen.getByTestId("trump-caller-team");
-    expect(badge).toHaveAttribute("data-team", "blue");
-    expect(badge.className).toContain("text-team-blue");
-    expect(screen.getByTestId("trump-indicator").className).toContain("border-team-blue");
+    expect(badge).toHaveAttribute("data-team", "teamB");
+    expect(badge.className).toContain("text-team-b");
+    const container = screen.getByTestId("trump-indicator");
+    expect(container.className).toContain("border-team-b");
+    expect(container).toHaveAttribute("data-team", "teamB");
   });
 
   it("omits the team badge when trump caller seat is null", () => {

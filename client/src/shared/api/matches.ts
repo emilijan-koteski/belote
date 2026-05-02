@@ -10,10 +10,10 @@ export interface MatchPlayer {
 
 export interface MatchHandView {
   handNumber: number;
-  redCardPoints: number;
-  blueCardPoints: number;
-  redDeclPoints: number;
-  blueDeclPoints: number;
+  teamACardPoints: number;
+  teamBCardPoints: number;
+  teamADeclPoints: number;
+  teamBDeclPoints: number;
   lastTrickTeam: number;
   lastTrickBonus: number;
   capot: boolean;
@@ -21,8 +21,8 @@ export interface MatchHandView {
   capotBonus: number;
   failedContract: boolean;
   contractingTeam: number;
-  redHandTotal: number;
-  blueHandTotal: number;
+  teamAHandTotal: number;
+  teamBHandTotal: number;
 }
 
 export interface MatchListItem {
@@ -33,8 +33,8 @@ export interface MatchListItem {
   completedAt: string;
   status: string;
   winnerTeam: number;
-  teamRedScore: number;
-  teamBlueScore: number;
+  teamAScore: number;
+  teamBScore: number;
   abandonedBy?: number;
   viewerSeat: number;
   outcome: MatchOutcome;

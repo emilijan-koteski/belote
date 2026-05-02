@@ -1,5 +1,11 @@
 ---
-stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation']
+stepsCompleted:
+  [
+    "step-01-validate-prerequisites",
+    "step-02-design-epics",
+    "step-03-create-stories",
+    "step-04-final-validation",
+  ]
 inputDocuments:
   - prd.md
   - architecture.md
@@ -35,7 +41,7 @@ FR16: Players can create a room and configure settings: game variant (Bitola/Cro
 FR17: Players can browse a searchable list of open rooms by room name or code
 FR18: Players can join a room via the browse list or by entering a room name/code directly
 FR19: Players can queue for Quick Play to be matched into a random available game
-FR20: Players can self-assign to Red or Blue team within a room lobby before a game starts
+FR20: Players can self-assign to Team A or Team B within a room lobby before a game starts
 FR21: Room owners can start the game once all four player slots are filled
 FR22: Room owners can override and clear all active player pauses during a match
 FR23: Four players can participate in a real-time Belot match with game state continuously synchronized to all participants
@@ -99,12 +105,14 @@ NFR17: A single player's disconnection must not affect game state integrity or c
 ### Additional Requirements
 
 **From Architecture — Starter Template (impacts Epic 1 Story 1):**
+
 - Project scaffold uses Composed (Vite + Go Module Monorepo): `npm create vite@latest client -- --template react-swc-ts` + `npx shadcn@latest init` for frontend; Go module with Echo v4, GORM, coder/websocket for backend
 - Makefile for unified dev/build/test commands (`make dev`, `make build`, `make test`, `make lint`, `make migrate`, `make seed`, `make deploy`)
 - Docker Compose for local PostgreSQL; Docker containers for production
 - GitHub Actions CI: `make test` + `make lint` on every push
 
 **From Architecture — Data & Auth:**
+
 - In-memory game state as serializable Go structs + PostgreSQL for persistent data
 - JWT authentication: access token in memory (Zustand), refresh token in httpOnly cookie; access ~15min, refresh ~7 days
 - WebSocket auth: JWT in first message after connection
@@ -113,6 +121,7 @@ NFR17: A single player's disconnection must not affect game state integrity or c
 - GORM as ORM with repository pattern per domain
 
 **From Architecture — API & Communication:**
+
 - RESTful JSON for HTTP API (auth, profiles, rooms, match history, stats)
 - Single multiplexed WebSocket per client with JSON typed events: `action:`, `event:`, `error:`, `system:` prefixes
 - WebSocket message structure: `{ "type": "event_name", "payload": { ... } }`
@@ -120,6 +129,7 @@ NFR17: A single player's disconnection must not affect game state integrity or c
 - Formal WebSocket event contract maintained in both `wsEvents.ts` and `events.go`
 
 **From Architecture — Frontend:**
+
 - Zustand partitioned stores: auth, lobby, game, chat
 - React Router v7 for routing
 - react-i18next with JSON translation files for i18n
@@ -127,28 +137,32 @@ NFR17: A single player's disconnection must not affect game state integrity or c
 - shadcn/ui components themed to Balatro register; custom game components (PlayingCard, HandCards, TrickArea, etc.)
 
 **From Architecture — Backend:**
+
 - Echo v4 framework
 - Rules engine as pure function: `ApplyAction(state, action) → (state, error)` — no side effects
 - Session manager orchestrates rules engine + WebSocket + timers
 - Game state machine phases: dealing → bidding → playing → trick_resolving → hand_scoring → match_end (+ paused, disconnected)
 - Card encoding: 2-char format `{Rank}{Suit}` (e.g., KS, TH, 7D)
-- Player seats: 0-3 counter-clockwise, teams 0+2 (Red) vs 1+3 (Blue)
-- Backend domain package shape: model.go, repository.go, gorm_repo.go, handler.go, service.go, _test.go
+- Player seats: 0-3 counter-clockwise, teams 0+2 (Team A) vs 1+3 (Team B)
+- Backend domain package shape: model.go, repository.go, gorm_repo.go, handler.go, service.go, \_test.go
 - Centralized errors in `internal/apperr/errors.go`
 
 **From Architecture — Infrastructure:**
+
 - Contabo VPS with Caddy reverse proxy (host-level, auto TLS)
 - Production: Caddy → Docker Go container → Docker PostgreSQL container
 - Go slog for structured JSON logging
 - Health endpoint + UptimeRobot for Phase 1 monitoring
 
 **From Architecture — Quality Gates:**
+
 - `internal/game/` coverage >90%, `internal/auth/` >80%, `internal/session/` >70%
 - Test fixture factory functions required in `internal/game/testfixtures/`
 - Feature-complete checklist: handler + repo + tests, domain errors, WS events in both files, frontend + test, API client, i18n strings, linter pass
 - Deployment smoke test: register, login, create room, join room, complete one hand, WS reconnect
 
 **From Architecture — Phase Scoping:**
+
 - Phase 1: ~25 FRs (auth, Bitola variant only, lobby/rooms, real-time session, chat, disconnect handling, basic match history, i18n EN+SR, desktop web)
 - Phase 2: Coin economy (FR53–55), XP/lifetime level (FR33–34), honor system (FR56–57), room owner kick/seat (FR58), team surrender (FR28a), in-game emotes (FR32), additional languages MK+HR (FR45)
 - Phase 3: Player search (FR5), friends (FR6), public profiles (FR47), Croatian variant (FR8), 501 mode (FR15), in-app rules reference (FR29)
@@ -158,7 +172,8 @@ NFR17: A single player's disconnection must not affect game state integrity or c
 - FR28 and FR43 have undefined formulas — require product decisions before implementation (abandonment mechanics must be settled to wire Honor FR56 and partial XP FR43 correctly)
 
 **From UX Design:**
-- Balatro-inspired dark/neon visual register: near-black background (#0a0a0f), teal accent (#00e5a0), team Red/Blue colours
+
+- Balatro-inspired dark/neon visual register: near-black background (#0a0a0f), teal accent (#00e5a0), team A/B colours
 - Typography: Space Grotesk (display/headings), Inter (UI/body)
 - Direction 5 lobby layout: top nav, rank banner, play options column + leaderboard panel
 - Single-click card play (no confirm step), one-click copy-link for room sharing
@@ -193,7 +208,7 @@ FR16: Epic 2 — Create room with configuration
 FR17: Epic 2 — Browse/search rooms
 FR18: Epic 2 — Join room via list or code
 FR19: Epic 2 — Quick Play matchmaking queue
-FR20: Epic 2 — Team self-assignment (Red/Blue)
+FR20: Epic 2 — Team self-assignment (Team A/Team B)
 FR21: Epic 2 — Room owner starts game
 FR22: Epic 5 — Room owner pause override
 FR23: Epic 4 — Real-time game state sync (4 players)
@@ -381,7 +396,7 @@ So that I can begin building features on a solid, consistent development environ
 
 **Given** the Tailwind config is set up
 **When** I inspect `client/src/index.css` and Tailwind configuration
-**Then** the Balatro design tokens are defined: `background` (#0a0a0f), `surface` (#13131a), `surface-elevated` (#1c1c26), `border` (#2a2a38), `accent` (#00e5a0), `accent-glow`, `team-red` (#ff4d4d), `team-blue` (#4d9fff), `text-primary` (#f0f0f8), `text-secondary` (#8888a0), `text-disabled` (#44445a), `success`, `warning`, `destructive`
+**Then** the Balatro design tokens are defined: `background` (#0a0a0f), `surface` (#13131a), `surface-elevated` (#1c1c26), `border` (#2a2a38), `accent` (#00e5a0), `accent-glow`, `team-a` (#ff4d4d), `team-b` (#4d9fff), `text-primary` (#f0f0f8), `text-secondary` (#8888a0), `text-disabled` (#44445a), `success`, `warning`, `destructive`
 **And** Space Grotesk and Inter fonts are loaded from Google Fonts
 
 **Given** i18n is configured
@@ -617,10 +632,10 @@ So that we can begin playing with the teams arranged how we want.
 **Acceptance Criteria:**
 
 **Given** a player is in the RoomLobby
-**When** they click an empty seat on Red or Blue team
+**When** they click an empty seat on Team A or Team B
 **Then** they are assigned to that team and seat
 **And** all players in the room see the updated seat assignment via WebSocket
-**And** partners face each other (seats 0+2 = Red, seats 1+3 = Blue per Architecture seat mapping)
+**And** partners face each other (seats 0+2 = Team A, seats 1+3 = Team B per Architecture seat mapping)
 
 **Given** a player is already seated
 **When** they click a different empty seat
@@ -901,7 +916,7 @@ So that match outcomes are resolved accurately.
 
 **Given** test fixtures
 **When** I inspect `testfixtures/`
-**Then** `NewGameNearEnd(redScore, blueScore int)` exists for testing match completion thresholds
+**Then** `NewGameNearEnd(teamAScore, teamBScore int)` exists for testing match completion thresholds
 **And** all 7 minimum fixture factory functions from the Architecture spec are present
 
 ## Epic 4: Real-Time Game Experience
@@ -973,7 +988,7 @@ So that all four players see the same game state at all times.
 
 **Given** the `matches` migration
 **When** I inspect the database schema
-**Then** the `matches` table contains: `id`, `room_id`, `player1_id` through `player4_id`, `team_red_score`, `team_blue_score`, `winner_team`, `variant`, `match_mode`, `started_at`, `completed_at`
+**Then** the `matches` table contains: `id`, `room_id`, `player1_id` through `player4_id`, `team_a_score`, `team_b_score`, `winner_team`, `variant`, `match_mode`, `started_at`, `completed_at`
 
 **Given** the frontend receives a game event
 **When** `useWsDispatch.ts` processes the event
@@ -996,7 +1011,7 @@ So that the game feels like sitting at a real card table.
 
 **Given** a PlayerSeat is occupied
 **When** it renders
-**Then** it shows the player's username, team color border (Red or Blue), and avatar placeholder
+**Then** it shows the player's username, team color border (Team A or Team B), and avatar placeholder
 **And** the current player's own seat (South) is slightly larger with a "You" label
 
 **Given** it is a player's turn
@@ -1115,7 +1130,7 @@ So that scoring feels transparent, accurate, and satisfying.
 
 **Given** a game is in progress
 **When** the ScorePanel renders
-**Then** it is fixed to the top-left of the game viewport showing: two rows (Red / Blue) with team color labels, current match scores in Space Grotesk bold (`display-xl` for scores), and current hand trick count
+**Then** it is fixed to the top-left of the game viewport showing: two rows (Team A / Team B) with team color labels, current match scores in Space Grotesk bold (`display-xl` for scores), and current hand trick count
 **And** the panel never reflows during play
 
 **Given** a trick is won
@@ -1383,7 +1398,7 @@ So that I can review past games and track my performance.
 
 **Given** match history data is returned
 **When** the MatchHistory component renders
-**Then** each match entry shows: date, variant, mode, teammate username, opponent usernames, final score (Red vs Blue), win/loss/abandoned status, and match duration
+**Then** each match entry shows: date, variant, mode, teammate username, opponent usernames, final score (Team A vs Team B), win/loss/abandoned status, and match duration
 
 **Given** a player clicks on a match entry
 **When** the detail view expands
@@ -1445,7 +1460,7 @@ So that I can curate the roster and team composition without tearing down the ro
 **Given** a room owner drags a seated player's avatar to a different seat (or uses a swap-seats affordance)
 **When** `action:room_swap_seats` is sent with the two seat indices
 **Then** the two players' seat indices are swapped server-side
-**And** team assignments are recomputed from seat indices (seats 0+2 → Red, seats 1+3 → Blue)
+**And** team assignments are recomputed from seat indices (seats 0+2 → Team A, seats 1+3 → Team B)
 **And** all occupants receive `event:room_state` with the new seat + team layout
 
 **Given** the room owner attempts to kick or swap seats after the game has started
@@ -1550,7 +1565,7 @@ So that I have an ongoing currency to spend on entering games.
 
 **Given** the wallet backend package
 **When** structured
-**Then** a `wallet` domain package exists with model, repository, service, handler, _test.go per the feature-complete checklist
+**Then** a `wallet` domain package exists with model, repository, service, handler, \_test.go per the feature-complete checklist
 **And** wallet mutations are atomic and transactional
 
 ### Story 9.2: Room Buy-In & Match Coin Settlement

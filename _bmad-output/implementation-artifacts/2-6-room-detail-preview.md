@@ -19,12 +19,12 @@ Currently, the Browse Rooms view shows `RoomCard` components with only summary i
    **Then** a detail panel or expandable section shows the room's player information:
    - Each player's username
    - Their seat assignment (or "Not seated" if they haven't picked a seat)
-   - Their team color (Red/Blue) if seated
+   - Their team color (Team A/Team B) if seated
    - Empty seats shown as available slots
 
 2. **Given** the room detail is expanded/shown
    **When** the player views the detail
-   **Then** the detail displays the same 2x2 seat grid layout used in the RoomLobby (Red team left, Blue team right) at a compact size, making it visually clear which seats are taken and by whom
+   **Then** the detail displays the same 2x2 seat grid layout used in the RoomLobby (Team A left, Team B right) at a compact size, making it visually clear which seats are taken and by whom
 
 3. **Given** the room detail is shown
    **When** the player clicks the Join button (either in the card or detail view)
@@ -50,14 +50,14 @@ Currently, the Browse Rooms view shows `RoomCard` components with only summary i
   - [x] On mount: call `getRoom(roomId)` to fetch full room details (players list)
   - [x] Show loading skeleton while fetching
   - [x] Render a compact 2x2 seat grid:
-    - Left column: Red Team (seats 0, 2)
-    - Right column: Blue Team (seats 1, 3)
+    - Left column: Team A (seats 0, 2)
+    - Right column: Team B (seats 1, 3)
     - Occupied seats show player username with team color indicator
     - Empty seats show "Empty" or a dashed border placeholder
   - [x] Include a Join button at the bottom of the detail view
   - [x] Use `data-testid="room-detail-preview"` on the container
   - [x] Use `data-testid="room-detail-seat-{index}"` on each seat slot
-  - [x] Reuse the same team color tokens as RoomLobby: `border-team-red`, `border-team-blue`
+  - [x] Reuse the same team color tokens as RoomLobby: `border-team-a`, `border-team-b`
 
 - [x] Task 2: Frontend — Update `RoomCard` to support expandable detail (AC: 1, 3, 5, 6)
   - [x] Modify `client/src/features/lobby/RoomCard.tsx`:
@@ -81,8 +81,8 @@ Currently, the Browse Rooms view shows `RoomCard` components with only summary i
     {
       "emptySlot": "Empty",
       "notSeated": "Not seated",
-      "teamRed": "Red",
-      "teamBlue": "Blue"
+      "teamA": "Team A",
+      "teamB": "Team B"
     }
     ```
   - [x] Add matching keys to `sr.json`:
@@ -90,8 +90,8 @@ Currently, the Browse Rooms view shows `RoomCard` components with only summary i
     {
       "emptySlot": "Prazno",
       "notSeated": "Ne e sednat",
-      "teamRed": "Crven",
-      "teamBlue": "Plav"
+      "teamA": "Tim A",
+      "teamB": "Tim B"
     }
     ```
 
@@ -115,7 +115,7 @@ Currently, the Browse Rooms view shows `RoomCard` components with only summary i
 
 ### Review Findings
 
-- [x] [Review][Patch] Team label keys use `lobby.roomLobby.*` instead of `lobby.roomDetail.*` — Fixed: changed to `t("lobby.roomDetail.teamRed/Blue")`
+- [x] [Review][Patch] Team label keys use `lobby.roomLobby.*` instead of `lobby.roomDetail.*` — Fixed: changed to `t("lobby.roomDetail.teamA/B")`
 - [x] [Review][Patch] Players with `seat === null` silently dropped from preview — Fixed: added unseated player section below seat grid with `notSeated` label + test
 - [x] [Review][Patch] Serbian translations use Macedonian words — Fixed: "Nije seo", "Crveni", "Plavi"
 
@@ -130,14 +130,14 @@ Currently, the Browse Rooms view shows `RoomCard` components with only summary i
 
 ### Existing Code to Reuse
 
-| What | Where | Notes |
-|------|-------|-------|
-| `getRoom(id)` API | `client/src/shared/api/rooms.ts:20-22` | Returns `RoomDetail` (room + players) |
-| `RoomDetail` type | `client/src/shared/types/apiTypes.ts:56-59` | `{ room: Room; players: RoomPlayer[] }` |
-| `RoomPlayer` type | `client/src/shared/types/apiTypes.ts:46-54` | Has `username`, `seat`, `team` |
-| Seat layout pattern | `client/src/features/lobby/RoomLobby.tsx:20-24` | `SEAT_LAYOUT = [[0,1],[2,3]]` |
-| Team color logic | `client/src/features/lobby/RoomLobby.tsx:26-28` | `seat % 2 === 0 ? "red" : "blue"` |
-| Team color tokens | Tailwind config | `border-team-red`, `border-team-blue`, `text-team-red`, `text-team-blue` |
+| What                | Where                                           | Notes                                                          |
+| ------------------- | ----------------------------------------------- | -------------------------------------------------------------- |
+| `getRoom(id)` API   | `client/src/shared/api/rooms.ts:20-22`          | Returns `RoomDetail` (room + players)                          |
+| `RoomDetail` type   | `client/src/shared/types/apiTypes.ts:56-59`     | `{ room: Room; players: RoomPlayer[] }`                        |
+| `RoomPlayer` type   | `client/src/shared/types/apiTypes.ts:46-54`     | Has `username`, `seat`, `team`                                 |
+| Seat layout pattern | `client/src/features/lobby/RoomLobby.tsx:20-24` | `SEAT_LAYOUT = [[0,1],[2,3]]`                                  |
+| Team color logic    | `client/src/features/lobby/RoomLobby.tsx:26-28` | `seat % 2 === 0 ? "teamA" : "teamB"`                           |
+| Team color tokens   | Tailwind config                                 | `border-team-a`, `border-team-b`, `text-team-a`, `text-team-b` |
 
 ### Design Sketch
 
@@ -146,7 +146,7 @@ Currently, the Browse Rooms view shows `RoomCard` components with only summary i
 │  Room Name                 2/4 players    [Join] │  ← existing RoomCard summary
 │  Bitola · 1001 · Relaxed                         │
 ├─────────────────────────────────────────────────┤
-│  Red Team           Blue Team                    │  ← expanded detail (new)
+│  Team A             Team B                       │  ← expanded detail (new)
 │  ┌────────┐        ┌────────┐                    │
 │  │ Kiro   │        │ Empty  │                    │
 │  └────────┘        └────────┘                    │
@@ -159,19 +159,19 @@ Currently, the Browse Rooms view shows `RoomCard` components with only summary i
 
 ### Files to Create
 
-| File | Purpose |
-|------|---------|
-| `client/src/features/lobby/RoomDetailPreview.tsx` | Compact room detail with seat grid |
-| `client/src/features/lobby/RoomDetailPreview.test.tsx` | Tests |
+| File                                                   | Purpose                            |
+| ------------------------------------------------------ | ---------------------------------- |
+| `client/src/features/lobby/RoomDetailPreview.tsx`      | Compact room detail with seat grid |
+| `client/src/features/lobby/RoomDetailPreview.test.tsx` | Tests                              |
 
 ### Files to Modify
 
-| File | Changes |
-|------|---------|
+| File                                     | Changes                                 |
+| ---------------------------------------- | --------------------------------------- |
 | `client/src/features/lobby/RoomCard.tsx` | Add expandable behavior, toggle handler |
-| `client/src/features/lobby/RoomList.tsx` | Add accordion state management |
-| `client/src/shared/i18n/en.json` | Add `lobby.roomDetail.*` keys |
-| `client/src/shared/i18n/sr.json` | Add matching Serbian translations |
+| `client/src/features/lobby/RoomList.tsx` | Add accordion state management          |
+| `client/src/shared/i18n/en.json`         | Add `lobby.roomDetail.*` keys           |
+| `client/src/shared/i18n/sr.json`         | Add matching Serbian translations       |
 
 ### Scope Boundaries
 
@@ -213,16 +213,16 @@ No issues encountered during implementation.
 
 ## File List
 
-| File | Action |
-|------|--------|
-| `client/src/features/lobby/RoomDetailPreview.tsx` | Created |
-| `client/src/features/lobby/RoomDetailPreview.test.tsx` | Created |
-| `client/src/features/lobby/RoomCard.tsx` | Modified |
-| `client/src/features/lobby/RoomCard.test.tsx` | Modified |
-| `client/src/features/lobby/RoomList.tsx` | Modified |
-| `client/src/features/lobby/RoomList.test.tsx` | Modified |
-| `client/src/shared/i18n/en.json` | Modified |
-| `client/src/shared/i18n/sr.json` | Modified |
+| File                                                   | Action   |
+| ------------------------------------------------------ | -------- |
+| `client/src/features/lobby/RoomDetailPreview.tsx`      | Created  |
+| `client/src/features/lobby/RoomDetailPreview.test.tsx` | Created  |
+| `client/src/features/lobby/RoomCard.tsx`               | Modified |
+| `client/src/features/lobby/RoomCard.test.tsx`          | Modified |
+| `client/src/features/lobby/RoomList.tsx`               | Modified |
+| `client/src/features/lobby/RoomList.test.tsx`          | Modified |
+| `client/src/shared/i18n/en.json`                       | Modified |
+| `client/src/shared/i18n/sr.json`                       | Modified |
 
 ## Change Log
 

@@ -1,17 +1,17 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 lastStep: 8
-status: 'complete'
-completedAt: '2026-04-05'
+status: "complete"
+completedAt: "2026-04-05"
 inputDocuments:
   - product-brief-belote-2026-02-21.md
   - prd.md
   - prd-validation-report.md
   - ux-design-specification.md
-workflowType: 'architecture'
-project_name: 'belote'
-user_name: 'Emilijan'
-date: '2026-04-05'
+workflowType: "architecture"
+project_name: "belote"
+user_name: "Emilijan"
+date: "2026-04-05"
 ---
 
 # Architecture Decision Document
@@ -26,16 +26,16 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 52 FRs across 8 domain groups, with clear Phase 1/Phase 2+ separation (though not labeled in the FR section):
 
-| Domain | FRs | Phase 1 | Phase 2+ | Architectural Weight |
-| --- | --- | --- | --- | --- |
-| User Account Management | FR1–FR6 | FR1–FR2, FR4 | FR3, FR5, FR6 | Auth system, session management, profile storage |
-| Game Rules Engine | FR7–FR15 | FR7, FR9–FR14 | FR8, FR15 | Core server-side state machine, variant-branching rules engine |
-| Lobby & Room Management | FR16–FR22 | FR16–FR22 | — | Room lifecycle, lobby state broadcasting, matchmaking queue |
-| Real-Time Game Session | FR23–FR29 | FR23–FR28 | FR28a, FR29 | WebSocket game sync, pause/reconnect system, auto-play |
-| Communication | FR30–FR32 | FR30–FR31 | FR32 | Global + match-scoped chat channels |
-| Player Progression | FR33–FR40 | — | FR33–FR40 | XP/level system, ELO engine, rank tiers, seasons |
-| Stats & Match History | FR41–FR43 | FR41 (basic) | FR42–FR43 | Match recording, career statistics, partial XP |
-| Platform & Localization | FR44–FR52 | FR44, FR46 | FR45, FR47–FR52 | i18n framework, future mobile/social extensibility |
+| Domain                  | FRs       | Phase 1       | Phase 2+        | Architectural Weight                                           |
+| ----------------------- | --------- | ------------- | --------------- | -------------------------------------------------------------- |
+| User Account Management | FR1–FR6   | FR1–FR2, FR4  | FR3, FR5, FR6   | Auth system, session management, profile storage               |
+| Game Rules Engine       | FR7–FR15  | FR7, FR9–FR14 | FR8, FR15       | Core server-side state machine, variant-branching rules engine |
+| Lobby & Room Management | FR16–FR22 | FR16–FR22     | —               | Room lifecycle, lobby state broadcasting, matchmaking queue    |
+| Real-Time Game Session  | FR23–FR29 | FR23–FR28     | FR28a, FR29     | WebSocket game sync, pause/reconnect system, auto-play         |
+| Communication           | FR30–FR32 | FR30–FR31     | FR32            | Global + match-scoped chat channels                            |
+| Player Progression      | FR33–FR40 | —             | FR33–FR40       | XP/level system, ELO engine, rank tiers, seasons               |
+| Stats & Match History   | FR41–FR43 | FR41 (basic)  | FR42–FR43       | Match recording, career statistics, partial XP                 |
+| Platform & Localization | FR44–FR52 | FR44, FR46    | FR45, FR47–FR52 | i18n framework, future mobile/social extensibility             |
 
 **Phase 1 MVP core:** Auth + Bitola rules engine + lobby/rooms + real-time game session + chat + disconnect handling + basic match history. Approximately 25 FRs in active scope.
 
@@ -43,12 +43,12 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 13 NFRs across 4 categories — all with specific numeric targets:
 
-| Category | Key Constraints | Architectural Impact |
-| --- | --- | --- |
-| Performance | Timer sync ±1s, state render <200ms, card sync <500ms, page load <3s, WS reconnect <1s | Server clock authority, optimized WebSocket payloads, lightweight SPA bundle |
-| Security | HTTPS/WSS, hashed passwords, server-only game logic, time-limited tokens, data access control | Server-authoritative architecture is non-negotiable; zero client-side game logic |
-| Scalability | Phase 1: 10 concurrent games, Phase 2: 50 concurrent, horizontal scaling ready | Stateless-friendly server design, externalized game state storage |
-| Reliability | 99.5% uptime, <5% disconnection rate, full state preservation, single-player isolation | Durable game state, graceful degradation, connection health monitoring |
+| Category    | Key Constraints                                                                               | Architectural Impact                                                             |
+| ----------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Performance | Timer sync ±1s, state render <200ms, card sync <500ms, page load <3s, WS reconnect <1s        | Server clock authority, optimized WebSocket payloads, lightweight SPA bundle     |
+| Security    | HTTPS/WSS, hashed passwords, server-only game logic, time-limited tokens, data access control | Server-authoritative architecture is non-negotiable; zero client-side game logic |
+| Scalability | Phase 1: 10 concurrent games, Phase 2: 50 concurrent, horizontal scaling ready                | Stateless-friendly server design, externalized game state storage                |
+| Reliability | 99.5% uptime, <5% disconnection rate, full state preservation, single-player isolation        | Durable game state, graceful degradation, connection health monitoring           |
 
 **Scale & Complexity:**
 
@@ -98,11 +98,11 @@ Full-stack real-time web application — TypeScript React SPA frontend + Go back
 
 ### Starter Options Considered
 
-| Option | Description | Verdict |
-| --- | --- | --- |
-| Composed (Vite + Go module) | Official Vite react-swc-ts template + Go module with Echo, assembled in a monorepo | **Selected** — clean foundations, official tooling, matches developer experience |
-| Community Go+React boilerplate | Third-party monorepo templates | Rejected — CRUD-focused, poorly maintained, not suited to real-time multiplayer |
-| Turborepo/Nx monorepo | JS-focused monorepo orchestration | Rejected — designed for JS/TS monorepos, adds complexity with no value for Go backend |
+| Option                         | Description                                                                        | Verdict                                                                               |
+| ------------------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Composed (Vite + Go module)    | Official Vite react-swc-ts template + Go module with Echo, assembled in a monorepo | **Selected** — clean foundations, official tooling, matches developer experience      |
+| Community Go+React boilerplate | Third-party monorepo templates                                                     | Rejected — CRUD-focused, poorly maintained, not suited to real-time multiplayer       |
+| Turborepo/Nx monorepo          | JS-focused monorepo orchestration                                                  | Rejected — designed for JS/TS monorepos, adds complexity with no value for Go backend |
 
 ### Selected Starter: Composed (Vite + Go Module Monorepo)
 
@@ -198,71 +198,71 @@ go get nhooyr.io/websocket
 
 ### Data Architecture
 
-| Decision | Choice | Rationale |
-| --- | --- | --- |
-| Active game state | In-memory as serializable Go structs (not raw maps) | Fastest read/write; serializable struct enables reconnection state snapshots and future Redis migration as a mechanical change. Phase 1 scale (10 concurrent games) doesn't justify external state store. |
-| Persistent storage | PostgreSQL (via GORM) | Accounts, match history, stats, leaderboard, room config. Developer's known stack. |
-| Migration strategy | golang-migrate + seed script | Explicit versioned SQL migrations with rollback support. `make seed` target populates dev database with test accounts, rooms, and game states in various phases for faster development. |
-| Caching | None (Phase 1) | 40 concurrent players don't justify a caching layer. Design DB queries with caching in mind (clean single queries, no N+1) so Redis layers on trivially in Phase 2. |
-| Game state on crash | Lost (acceptable Phase 1) | In-memory state lost on restart. Serializable struct design means Redis-backed persistence is a Phase 2 drop-in upgrade. |
+| Decision            | Choice                                              | Rationale                                                                                                                                                                                                 |
+| ------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active game state   | In-memory as serializable Go structs (not raw maps) | Fastest read/write; serializable struct enables reconnection state snapshots and future Redis migration as a mechanical change. Phase 1 scale (10 concurrent games) doesn't justify external state store. |
+| Persistent storage  | PostgreSQL (via GORM)                               | Accounts, match history, stats, leaderboard, room config. Developer's known stack.                                                                                                                        |
+| Migration strategy  | golang-migrate + seed script                        | Explicit versioned SQL migrations with rollback support. `make seed` target populates dev database with test accounts, rooms, and game states in various phases for faster development.                   |
+| Caching             | None (Phase 1)                                      | 40 concurrent players don't justify a caching layer. Design DB queries with caching in mind (clean single queries, no N+1) so Redis layers on trivially in Phase 2.                                       |
+| Game state on crash | Lost (acceptable Phase 1)                           | In-memory state lost on restart. Serializable struct design means Redis-backed persistence is a Phase 2 drop-in upgrade.                                                                                  |
 
 ### Authentication & Security
 
-| Decision | Choice | Rationale |
-| --- | --- | --- |
-| Auth strategy | JWT (access + refresh tokens) | Stateless, works across HTTP and WebSocket. No session store required. |
-| Access token storage | In-memory only (Zustand auth store) | Never in localStorage — prevents XSS token theft. On page refresh, client calls `/auth/refresh` to get a new access token. |
-| Access token lifetime | ~15 minutes | Short-lived, limits exposure window. |
-| Refresh token storage | httpOnly cookie | Secure, auto-sent on `/auth/refresh` calls. Not accessible to JavaScript. |
-| Refresh token lifetime | ~7 days | Used to rotate access tokens silently. |
-| Password hashing | bcrypt | Battle-tested, secure, well-supported in Go ecosystem. |
-| WebSocket auth | JWT in first message after connection | Server validates before accepting game commands. On token expiry mid-game: reconnect → call /auth/refresh (cookie auto-sent) → get new access token → authenticate WebSocket with new token. |
-| CORS | Configured for specific origin(s) | Only the frontend domain allowed; no wildcard. |
-| Transport security | HTTPS + WSS only | Enforced by Caddy with automatic Let's Encrypt certificates. |
+| Decision               | Choice                                | Rationale                                                                                                                                                                                    |
+| ---------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth strategy          | JWT (access + refresh tokens)         | Stateless, works across HTTP and WebSocket. No session store required.                                                                                                                       |
+| Access token storage   | In-memory only (Zustand auth store)   | Never in localStorage — prevents XSS token theft. On page refresh, client calls `/auth/refresh` to get a new access token.                                                                   |
+| Access token lifetime  | ~15 minutes                           | Short-lived, limits exposure window.                                                                                                                                                         |
+| Refresh token storage  | httpOnly cookie                       | Secure, auto-sent on `/auth/refresh` calls. Not accessible to JavaScript.                                                                                                                    |
+| Refresh token lifetime | ~7 days                               | Used to rotate access tokens silently.                                                                                                                                                       |
+| Password hashing       | bcrypt                                | Battle-tested, secure, well-supported in Go ecosystem.                                                                                                                                       |
+| WebSocket auth         | JWT in first message after connection | Server validates before accepting game commands. On token expiry mid-game: reconnect → call /auth/refresh (cookie auto-sent) → get new access token → authenticate WebSocket with new token. |
+| CORS                   | Configured for specific origin(s)     | Only the frontend domain allowed; no wildcard.                                                                                                                                               |
+| Transport security     | HTTPS + WSS only                      | Enforced by Caddy with automatic Let's Encrypt certificates.                                                                                                                                 |
 
 ### API & Communication Patterns
 
-| Decision | Choice | Rationale |
-| --- | --- | --- |
-| HTTP API style | RESTful JSON | Standard REST for: auth, profiles, rooms, match history, stats, leaderboard. |
-| Real-time protocol | WebSocket (coder/websocket) | Single multiplexed connection per client. All game state, lobby updates, chat, timer sync, disconnect detection over one pipe — distinguished by event `type`. No separate connections per concern. |
-| WS message format | JSON with typed events + formal contract | Typed event system with documented TypeScript type file and Go equivalent defined before implementation. Prevents frontend/backend drift. |
-| WS message structure | `{ "type": "event_name", "payload": { ... } }` | Incremental events during play, full state snapshots on reconnection (enabled by serializable game state struct). |
-| Timer synchronization | Absolute server timestamps | Server sends "turn expires at Unix timestamp X" — clients render their own countdown. Eliminates drift entirely. Never send relative "start a 30s countdown." |
-| Error handling | Structured error responses | HTTP: `{ "error": { "code": "...", "message": "..." } }`. WS: `{ "type": "error", "payload": { "code": "...", "message": "..." } }` |
-| API documentation | Swagger/OpenAPI for REST | WebSocket event contract documented as TypeScript types + Go types (the formal contract). |
+| Decision              | Choice                                         | Rationale                                                                                                                                                                                           |
+| --------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP API style        | RESTful JSON                                   | Standard REST for: auth, profiles, rooms, match history, stats, leaderboard.                                                                                                                        |
+| Real-time protocol    | WebSocket (coder/websocket)                    | Single multiplexed connection per client. All game state, lobby updates, chat, timer sync, disconnect detection over one pipe — distinguished by event `type`. No separate connections per concern. |
+| WS message format     | JSON with typed events + formal contract       | Typed event system with documented TypeScript type file and Go equivalent defined before implementation. Prevents frontend/backend drift.                                                           |
+| WS message structure  | `{ "type": "event_name", "payload": { ... } }` | Incremental events during play, full state snapshots on reconnection (enabled by serializable game state struct).                                                                                   |
+| Timer synchronization | Absolute server timestamps                     | Server sends "turn expires at Unix timestamp X" — clients render their own countdown. Eliminates drift entirely. Never send relative "start a 30s countdown."                                       |
+| Error handling        | Structured error responses                     | HTTP: `{ "error": { "code": "...", "message": "..." } }`. WS: `{ "type": "error", "payload": { "code": "...", "message": "..." } }`                                                                 |
+| API documentation     | Swagger/OpenAPI for REST                       | WebSocket event contract documented as TypeScript types + Go types (the formal contract).                                                                                                           |
 
 ### Frontend Architecture
 
-| Decision | Choice | Rationale |
-| --- | --- | --- |
-| State management | Zustand — partitioned stores | Separate stores: auth/session, lobby state, game state, chat. Game store wiped on match end; auth store persists. Clean boundaries prevent cross-concern state leaks. |
-| Routing | React Router v7 | Standard, well-documented, matches developer experience. |
-| i18n | react-i18next | JSON-based translation files, large ecosystem, straightforward setup. |
-| WebSocket client | Native WebSocket API + custom hook | Thin wrapper managing connection lifecycle, reconnection, and event dispatch to appropriate Zustand stores. Single multiplexed connection. |
-| Component architecture | Feature folders (game/, lobby/, profile/, shared/) | Game components are purely presentational — all state from server via WebSocket, no local game logic. |
+| Decision               | Choice                                             | Rationale                                                                                                                                                             |
+| ---------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| State management       | Zustand — partitioned stores                       | Separate stores: auth/session, lobby state, game state, chat. Game store wiped on match end; auth store persists. Clean boundaries prevent cross-concern state leaks. |
+| Routing                | React Router v7                                    | Standard, well-documented, matches developer experience.                                                                                                              |
+| i18n                   | react-i18next                                      | JSON-based translation files, large ecosystem, straightforward setup.                                                                                                 |
+| WebSocket client       | Native WebSocket API + custom hook                 | Thin wrapper managing connection lifecycle, reconnection, and event dispatch to appropriate Zustand stores. Single multiplexed connection.                            |
+| Component architecture | Feature folders (game/, lobby/, profile/, shared/) | Game components are purely presentational — all state from server via WebSocket, no local game logic.                                                                 |
 
 ### Backend Architecture
 
-| Decision | Choice | Rationale |
-| --- | --- | --- |
-| Framework | Echo v4 | Battle-tested, developer's known stack, supported through Dec 2026. v5 migration deferred until v5 has 6+ months of community hardening. |
+| Decision            | Choice                                    | Rationale                                                                                                                                                                                                                 |
+| ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework           | Echo v4                                   | Battle-tested, developer's known stack, supported through Dec 2026. v5 migration deferred until v5 has 6+ months of community hardening.                                                                                  |
 | Rules engine design | Pure function: state + action → new state | No side effects inside engine. Session manager handles broadcasting, persistence, timers. Makes rules engine trivially testable — feed state, feed action, assert output. Critical for "rule correctness is priority #1." |
-| Session manager | Orchestrator calling rules engine | Receives player actions via WebSocket, calls rules engine, broadcasts results, manages timers, handles disconnect/reconnect. Side effects live here, not in the rules engine. |
-| Game state shape | Serializable Go struct | Clean struct with JSON tags. Enables: reconnection state snapshots, future Redis serialization, test fixture creation. Not raw maps. |
+| Session manager     | Orchestrator calling rules engine         | Receives player actions via WebSocket, calls rules engine, broadcasts results, manages timers, handles disconnect/reconnect. Side effects live here, not in the rules engine.                                             |
+| Game state shape    | Serializable Go struct                    | Clean struct with JSON tags. Enables: reconnection state snapshots, future Redis serialization, test fixture creation. Not raw maps.                                                                                      |
 
 ### Infrastructure & Deployment
 
-| Decision | Choice | Rationale |
-| --- | --- | --- |
-| Production host | Contabo VPS | Self-hosted, cost-effective for passion project. Single server for Phase 1–2. |
-| Reverse proxy | Caddy — on host (not in Docker) | Automatic HTTPS via Let's Encrypt with direct port 80/443 access. No Docker networking complexity for TLS renewal. |
-| Containerization | Docker (dev + prod) | Docker Compose for local dev. Production: Go app + PostgreSQL as Docker containers behind host-level Caddy. |
-| Production topology | Host Caddy → Docker Go container (API + WS) → Docker PostgreSQL container | Caddy handles TLS termination and proxies to Go container. Vite build output served as static files by Go or Caddy. |
-| CI/CD | GitHub Actions | Automated build + test on push. Deployment starts manual (`make deploy`), automated later. |
-| Logging | Go slog (stdlib) | Structured JSON logging to stdout, captured by Docker logs. |
-| Monitoring (Phase 1) | Health endpoint + UptimeRobot | Basic uptime monitoring. Prometheus + Grafana for Phase 2. |
-| Environment config | Environment variables | `.env` in dev (Docker Compose), Docker env vars in production. No secrets in repo. |
+| Decision             | Choice                                                                    | Rationale                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Production host      | Contabo VPS                                                               | Self-hosted, cost-effective for passion project. Single server for Phase 1–2.                                       |
+| Reverse proxy        | Caddy — on host (not in Docker)                                           | Automatic HTTPS via Let's Encrypt with direct port 80/443 access. No Docker networking complexity for TLS renewal.  |
+| Containerization     | Docker (dev + prod)                                                       | Docker Compose for local dev. Production: Go app + PostgreSQL as Docker containers behind host-level Caddy.         |
+| Production topology  | Host Caddy → Docker Go container (API + WS) → Docker PostgreSQL container | Caddy handles TLS termination and proxies to Go container. Vite build output served as static files by Go or Caddy. |
+| CI/CD                | GitHub Actions                                                            | Automated build + test on push. Deployment starts manual (`make deploy`), automated later.                          |
+| Logging              | Go slog (stdlib)                                                          | Structured JSON logging to stdout, captured by Docker logs.                                                         |
+| Monitoring (Phase 1) | Health endpoint + UptimeRobot                                             | Basic uptime monitoring. Prometheus + Grafana for Phase 2.                                                          |
+| Environment config   | Environment variables                                                     | `.env` in dev (Docker Compose), Docker env vars in production. No secrets in repo.                                  |
 
 ### Decision Impact Analysis
 
@@ -301,17 +301,18 @@ go get nhooyr.io/websocket
 
 **Database Naming Conventions (PostgreSQL):**
 
-| Element | Convention | Example |
-| --- | --- | --- |
-| Tables | `snake_case`, plural | `users`, `matches`, `rooms` |
-| Columns | `snake_case` | `player_id`, `created_at` |
-| Foreign keys | `{table_singular}_id` | `user_id`, `match_id` |
-| Indexes | `idx_{table}_{column}` | `idx_users_email` |
-| Enums | `snake_case` | `game_variant`, `match_mode` |
+| Element      | Convention             | Example                      |
+| ------------ | ---------------------- | ---------------------------- |
+| Tables       | `snake_case`, plural   | `users`, `matches`, `rooms`  |
+| Columns      | `snake_case`           | `player_id`, `created_at`    |
+| Foreign keys | `{table_singular}_id`  | `user_id`, `match_id`        |
+| Indexes      | `idx_{table}_{column}` | `idx_users_email`            |
+| Enums        | `snake_case`           | `game_variant`, `match_mode` |
 
 **JSON Wire Format (API + WebSocket):**
 
 `camelCase` for all fields — enforced via Go struct tags:
+
 ```go
 type User struct {
     ID        uint      `json:"id"`
@@ -328,23 +329,23 @@ Plural, kebab-case: `/api/v1/match-history`, `/api/v1/rooms`, `/api/v1/auth/refr
 
 Four prefixes with `snake_case` names:
 
-| Prefix | Direction | Domain | Examples |
-| --- | --- | --- | --- |
-| `action:` | Client → Server | Player game actions | `action:play_card`, `action:pick_trump`, `action:pause` |
-| `event:` | Server → Client | Game state changes | `event:card_played`, `event:trick_resolved`, `event:game_state` |
-| `error:` | Server → Client | Error responses | `error:invalid_action`, `error:not_your_turn` |
+| Prefix    | Direction       | Domain                   | Examples                                                                   |
+| --------- | --------------- | ------------------------ | -------------------------------------------------------------------------- |
+| `action:` | Client → Server | Player game actions      | `action:play_card`, `action:pick_trump`, `action:pause`                    |
+| `event:`  | Server → Client | Game state changes       | `event:card_played`, `event:trick_resolved`, `event:game_state`            |
+| `error:`  | Server → Client | Error responses          | `error:invalid_action`, `error:not_your_turn`                              |
 | `system:` | Server → Client | Non-game platform events | `system:room_updated`, `system:chat_message`, `system:player_joined_lobby` |
 
 **Frontend File Naming:**
 
-| Type | Convention | Example |
-| --- | --- | --- |
-| Components | `PascalCase.tsx` | `PlayingCard.tsx`, `ScorePanel.tsx` |
-| Hooks | `camelCase.ts` | `useWebSocket.ts`, `useGameStore.ts` |
-| Stores | `camelCase.ts` | `gameStore.ts`, `authStore.ts` |
-| Utils | `camelCase.ts` | `formatScore.ts` |
-| Types | `camelCase.ts` | `gameTypes.ts`, `wsEvents.ts` |
-| API clients | `camelCase.ts` | `auth.ts`, `rooms.ts`, `matches.ts` |
+| Type        | Convention       | Example                              |
+| ----------- | ---------------- | ------------------------------------ |
+| Components  | `PascalCase.tsx` | `PlayingCard.tsx`, `ScorePanel.tsx`  |
+| Hooks       | `camelCase.ts`   | `useWebSocket.ts`, `useGameStore.ts` |
+| Stores      | `camelCase.ts`   | `gameStore.ts`, `authStore.ts`       |
+| Utils       | `camelCase.ts`   | `formatScore.ts`                     |
+| Types       | `camelCase.ts`   | `gameTypes.ts`, `wsEvents.ts`        |
+| API clients | `camelCase.ts`   | `auth.ts`, `rooms.ts`, `matches.ts`  |
 
 **Backend File Naming:**
 
@@ -442,11 +443,13 @@ New fields added in the correct section. No random ordering.
 **HTTP API Response Format:**
 
 Success:
+
 ```json
 { "data": { ... } }
 ```
 
 Error:
+
 ```json
 { "error": { "code": "ROOM_FULL", "message": "This room is already full" } }
 ```
@@ -454,6 +457,7 @@ Error:
 HTTP status codes used correctly: 200, 201, 400, 401, 403, 404, 409, 500.
 
 **WebSocket Message Format:**
+
 ```json
 { "type": "event:card_played", "payload": { "cardId": "KS", "playerId": 3 } }
 ```
@@ -467,6 +471,7 @@ HTTP status codes used correctly: 200, 201, 400, 401, 403, 404, 409, 500.
 **Zustand Store Pattern:**
 
 Each store follows the same shape:
+
 ```typescript
 interface GameStore {
   // State
@@ -482,32 +487,36 @@ Immutable updates only — replace whole objects, no direct mutation.
 
 **State Store Partitioning:**
 
-| Store | Lifecycle | Contents |
-| --- | --- | --- |
-| `authStore` | Persists across app | Access token, user profile, login state |
-| `lobbyStore` | Active in lobby | Room list, filters, matchmaking status |
-| `gameStore` | Active during match, wiped on match end | Full game state from server |
-| `chatStore` | Active when connected | Global + match chat messages |
+| Store        | Lifecycle                               | Contents                                |
+| ------------ | --------------------------------------- | --------------------------------------- |
+| `authStore`  | Persists across app                     | Access token, user profile, login state |
+| `lobbyStore` | Active in lobby                         | Room list, filters, matchmaking status  |
+| `gameStore`  | Active during match, wiped on match end | Full game state from server             |
+| `chatStore`  | Active when connected                   | Global + match chat messages            |
 
 ### Process Patterns
 
 **Error Handling — Backend:**
+
 - All domain errors defined in `internal/apperr/errors.go`
 - Echo error handler middleware maps domain errors → HTTP status codes / WS error events
 - Internal errors logged via slog; user-facing message is generic
 - Handlers use `errors.Is()` for control flow
 
 **Error Handling — Frontend:**
+
 - HTTP errors caught in `fetchClient.ts` wrapper → toast for user-facing errors
 - WebSocket errors dispatched to relevant Zustand store → UI reacts to store state
 - React Error Boundary at app level as safety net
 
 **Loading States:**
+
 - Each Zustand store manages its own `isLoading` boolean
 - Skeleton loaders for lists (room list, match history)
 - No full-page spinners — local loading indicators only
 
 **Validation:**
+
 - Server is the authority — all input validated server-side
 - Frontend validation is cosmetic/UX only (blur validation on forms)
 - Never trust client-submitted game actions
@@ -539,7 +548,7 @@ Every new feature, every agent, every time:
 
 - [ ] Server handler + repository layer + tests
 - [ ] Domain errors added to `internal/apperr/errors.go` (if new error cases)
-- [ ] WebSocket events added to *both* contract files (if real-time feature)
+- [ ] WebSocket events added to _both_ contract files (if real-time feature)
 - [ ] Frontend component + co-located test
 - [ ] API client function in `shared/api/` (if HTTP endpoint)
 - [ ] i18n strings added to all translation files
@@ -564,16 +573,16 @@ Every new feature, every agent, every time:
 
 ### Anti-Patterns
 
-| Do NOT | Do Instead |
-| --- | --- |
-| Call `fetch()` directly in components | Use `shared/api/` client functions |
-| Define errors inline in handlers | Add to `internal/apperr/errors.go` |
-| Put game logic in handlers or WebSocket layer | Keep in `internal/game/` as pure functions |
-| Store JWT in localStorage | Keep access token in memory (Zustand) |
-| Build game state with raw struct literals in tests | Use `testfixtures/` factory functions |
+| Do NOT                                             | Do Instead                                         |
+| -------------------------------------------------- | -------------------------------------------------- |
+| Call `fetch()` directly in components              | Use `shared/api/` client functions                 |
+| Define errors inline in handlers                   | Add to `internal/apperr/errors.go`                 |
+| Put game logic in handlers or WebSocket layer      | Keep in `internal/game/` as pure functions         |
+| Store JWT in localStorage                          | Keep access token in memory (Zustand)              |
+| Build game state with raw struct literals in tests | Use `testfixtures/` factory functions              |
 | Add WS events to only one language's contract file | Update both `wsEvents.ts` and `events.go` together |
-| Use `PascalCase` or `snake_case` in JSON | Always `camelCase` in wire format |
-| Send relative timer durations ("30 seconds") | Send absolute timestamps ("expires at X") |
+| Use `PascalCase` or `snake_case` in JSON           | Always `camelCase` in wire format                  |
+| Send relative timer durations ("30 seconds")       | Send absolute timestamps ("expires at X")          |
 
 ## Project Structure & Boundaries
 
@@ -802,13 +811,13 @@ belote/
 
 **API Boundaries:**
 
-| Boundary | Protocol | Authentication | Description |
-| --- | --- | --- | --- |
-| Client ↔ REST API | HTTPS | JWT Bearer (access token) | Auth, profile, rooms CRUD, match history, stats |
-| Client ↔ WebSocket | WSS | JWT in first message | Game state, lobby presence, chat, timers, disconnect |
-| Echo Handlers ↔ Repositories | Go interface | N/A (internal) | Handlers call repository interfaces, never GORM directly |
-| Session Manager ↔ Rules Engine | Go function call | N/A (internal) | Session manager calls pure functions, handles side effects |
-| Middleware ↔ Handlers | Echo middleware chain | N/A (internal) | Auth, CORS, logging, error handling wrap all routes |
+| Boundary                       | Protocol              | Authentication            | Description                                                |
+| ------------------------------ | --------------------- | ------------------------- | ---------------------------------------------------------- |
+| Client ↔ REST API              | HTTPS                 | JWT Bearer (access token) | Auth, profile, rooms CRUD, match history, stats            |
+| Client ↔ WebSocket             | WSS                   | JWT in first message      | Game state, lobby presence, chat, timers, disconnect       |
+| Echo Handlers ↔ Repositories   | Go interface          | N/A (internal)            | Handlers call repository interfaces, never GORM directly   |
+| Session Manager ↔ Rules Engine | Go function call      | N/A (internal)            | Session manager calls pure functions, handles side effects |
+| Middleware ↔ Handlers          | Echo middleware chain | N/A (internal)            | Auth, CORS, logging, error handling wrap all routes        |
 
 **Component Boundary Diagram:**
 
@@ -856,54 +865,54 @@ belote/
 
 **Data Boundaries:**
 
-| Layer | Access Pattern | Who Calls It |
-| --- | --- | --- |
-| GORM models | Repository implementations only | Never called from handlers directly |
-| Repository interfaces | Handlers and services | Defined per domain package |
-| Game state (in-memory) | Session manager only | WS hub routes actions to session manager |
-| PostgreSQL | GORM via repository layer | Accounts, rooms, completed matches, stats |
-| Config | `config.Config` struct | Loaded once in `main.go`, passed via DI — no `os.Getenv()` elsewhere |
+| Layer                  | Access Pattern                  | Who Calls It                                                         |
+| ---------------------- | ------------------------------- | -------------------------------------------------------------------- |
+| GORM models            | Repository implementations only | Never called from handlers directly                                  |
+| Repository interfaces  | Handlers and services           | Defined per domain package                                           |
+| Game state (in-memory) | Session manager only            | WS hub routes actions to session manager                             |
+| PostgreSQL             | GORM via repository layer       | Accounts, rooms, completed matches, stats                            |
+| Config                 | `config.Config` struct          | Loaded once in `main.go`, passed via DI — no `os.Getenv()` elsewhere |
 
 ### Requirements to Structure Mapping
 
 **FR Category → Directory Mapping:**
 
-| FR Category | Backend Location | Frontend Location |
-| --- | --- | --- |
-| User Account (FR1–FR6) | `internal/auth/`, `internal/user/` | `features/auth/`, `shared/api/auth.ts` |
-| Game Rules Engine (FR7–FR15) | `internal/game/` | N/A (server-only) |
-| Lobby & Rooms (FR16–FR22) | `internal/lobby/` | `features/lobby/`, `shared/api/rooms.ts` |
+| FR Category                   | Backend Location                    | Frontend Location                                |
+| ----------------------------- | ----------------------------------- | ------------------------------------------------ |
+| User Account (FR1–FR6)        | `internal/auth/`, `internal/user/`  | `features/auth/`, `shared/api/auth.ts`           |
+| Game Rules Engine (FR7–FR15)  | `internal/game/`                    | N/A (server-only)                                |
+| Lobby & Rooms (FR16–FR22)     | `internal/lobby/`                   | `features/lobby/`, `shared/api/rooms.ts`         |
 | Real-Time Session (FR23–FR29) | `internal/session/`, `internal/ws/` | `features/game/`, `shared/hooks/useWebSocket.ts` |
-| Communication (FR30–FR32) | `internal/chat/` | `features/chat/` |
-| Progression (FR33–FR40) | `internal/user/` (extended Phase 2) | `features/lobby/RankBanner.tsx` (Phase 2) |
-| Stats & History (FR41–FR43) | `internal/user/handler.go` | `features/profile/`, `shared/api/matches.ts` |
-| i18n (FR44–FR46) | N/A (frontend-only) | `shared/i18n/` |
+| Communication (FR30–FR32)     | `internal/chat/`                    | `features/chat/`                                 |
+| Progression (FR33–FR40)       | `internal/user/` (extended Phase 2) | `features/lobby/RankBanner.tsx` (Phase 2)        |
+| Stats & History (FR41–FR43)   | `internal/user/handler.go`          | `features/profile/`, `shared/api/matches.ts`     |
+| i18n (FR44–FR46)              | N/A (frontend-only)                 | `shared/i18n/`                                   |
 
 **Cross-Cutting Concerns → Location:**
 
-| Concern | Backend | Frontend |
-| --- | --- | --- |
-| Configuration | `internal/config/config.go` | `.env.example` (reference) |
-| Authentication | `internal/auth/`, `internal/middleware/` | `shared/hooks/useAuth.ts`, `shared/stores/authStore.ts` |
-| WebSocket lifecycle | `internal/ws/` | `shared/hooks/useWebSocket.ts`, `useWsAuth.ts`, `useWsDispatch.ts` |
-| Error handling | `internal/apperr/`, `internal/middleware/error_handler.go` | `shared/api/fetchClient.ts`, `shared/components/ErrorBoundary.tsx` |
-| i18n | N/A | `shared/i18n/` |
-| Logging | `internal/middleware/logging.go` (slog) | Browser console (dev only) |
+| Concern             | Backend                                                    | Frontend                                                           |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| Configuration       | `internal/config/config.go`                                | `.env.example` (reference)                                         |
+| Authentication      | `internal/auth/`, `internal/middleware/`                   | `shared/hooks/useAuth.ts`, `shared/stores/authStore.ts`            |
+| WebSocket lifecycle | `internal/ws/`                                             | `shared/hooks/useWebSocket.ts`, `useWsAuth.ts`, `useWsDispatch.ts` |
+| Error handling      | `internal/apperr/`, `internal/middleware/error_handler.go` | `shared/api/fetchClient.ts`, `shared/components/ErrorBoundary.tsx` |
+| i18n                | N/A                                                        | `shared/i18n/`                                                     |
+| Logging             | `internal/middleware/logging.go` (slog)                    | Browser console (dev only)                                         |
 
 ### Integration Points
 
 **Internal Communication:**
 
-| From | To | Mechanism |
-| --- | --- | --- |
-| WS Hub | Session Manager | Go channel or direct method call per game room |
-| Session Manager | Rules Engine | Pure function call: `ApplyAction(state, action)` |
-| Session Manager | WS Hub | Broadcast game state to room participants |
-| Session Manager | Timer | Start/cancel per-move timer via goroutine |
-| Lobby Handler | WS Hub | Broadcast room state changes to lobby subscribers |
-| Chat Handler | WS Hub | Broadcast chat messages to room or global channel |
-| All Handlers | Repository interfaces | Data persistence via GORM implementations |
-| All packages | Config | `config.Config` struct injected at startup |
+| From            | To                    | Mechanism                                         |
+| --------------- | --------------------- | ------------------------------------------------- |
+| WS Hub          | Session Manager       | Go channel or direct method call per game room    |
+| Session Manager | Rules Engine          | Pure function call: `ApplyAction(state, action)`  |
+| Session Manager | WS Hub                | Broadcast game state to room participants         |
+| Session Manager | Timer                 | Start/cancel per-move timer via goroutine         |
+| Lobby Handler   | WS Hub                | Broadcast room state changes to lobby subscribers |
+| Chat Handler    | WS Hub                | Broadcast chat messages to room or global channel |
+| All Handlers    | Repository interfaces | Data persistence via GORM implementations         |
+| All packages    | Config                | `config.Config` struct injected at startup        |
 
 **Data Flow — Card Play Action:**
 
@@ -922,19 +931,23 @@ Client clicks card
 ### Development Workflow Integration
 
 **`make dev`** — runs concurrently:
+
 - `docker compose up -d postgres` (PostgreSQL only, port 5432)
 - `cd client && npm run dev` (Vite dev server, port 5173)
 - `cd server && go run cmd/api/main.go` (Echo server, port 8080)
 
 **`make build`** — production build:
+
 - `cd client && npm run build` → `client/dist/` (static files)
 - `cd server && docker build -t belote-server .` (multi-stage Dockerfile → minimal image)
 
 **`make test`** — both stacks:
+
 - `cd client && npx vitest run`
 - `cd server && go test ./...`
 
 **`make lint`** — both stacks:
+
 - `cd client && npx eslint . && npx prettier --check .`
 - `cd server && golangci-lint run`
 
@@ -948,12 +961,12 @@ Client clicks card
 
 **Environment Variable Convention:**
 
-| Context | Source | DB_URL Example |
-| --- | --- | --- |
-| Dev | `.env` loaded by Docker Compose + `go run` | `postgres://belote:dev@localhost:5432/belote?sslmode=disable` |
+| Context    | Source                                       | DB_URL Example                                                    |
+| ---------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| Dev        | `.env` loaded by Docker Compose + `go run`   | `postgres://belote:dev@localhost:5432/belote?sslmode=disable`     |
 | Production | Docker env vars in `docker-compose.prod.yml` | `postgres://belote:$PROD_PW@postgres:5432/belote?sslmode=disable` |
-| CI | GitHub Actions secrets | `postgres://test:test@localhost:5432/belote_test?sslmode=disable` |
-| Migrate | Same `.env` or `$DB_URL` env var | (matches current context) |
+| CI         | GitHub Actions secrets                       | `postgres://test:test@localhost:5432/belote_test?sslmode=disable` |
+| Migrate    | Same `.env` or `$DB_URL` env var             | (matches current context)                                         |
 
 ## Architecture Validation Results
 
@@ -973,13 +986,13 @@ Client clicks card
 
 **Phase 1 Validated User Journeys:**
 
-| Journey | Phase 1 Status | Notes |
-| --- | --- | --- |
-| Journey 1 — Ana (Casual) | Phase 1 | Valid if using Bitola variant + 1001 mode (PRD bug: journey says 501, but 501 is Phase 2) |
-| Journey 2 — Marko (Competitive) | Phase 2 | Requires ranked system, XP/levels, Croatian variant |
-| Journey 3 — Ivan (Diaspora) | Phase 1 | Bitola variant, room code join, all Phase 1 features |
-| Journey 4 — Darko (Room Owner) | Phase 1 | Valid if using Bitola variant only (PRD bug: journey says Croatian, but Croatian is Phase 2) |
-| Journey 5 — Edge Cases | Phase 1 | Disconnect/reconnect, timer expiry — all Phase 1 |
+| Journey                         | Phase 1 Status | Notes                                                                                        |
+| ------------------------------- | -------------- | -------------------------------------------------------------------------------------------- |
+| Journey 1 — Ana (Casual)        | Phase 1        | Valid if using Bitola variant + 1001 mode (PRD bug: journey says 501, but 501 is Phase 2)    |
+| Journey 2 — Marko (Competitive) | Phase 2        | Requires ranked system, XP/levels, Croatian variant                                          |
+| Journey 3 — Ivan (Diaspora)     | Phase 1        | Bitola variant, room code join, all Phase 1 features                                         |
+| Journey 4 — Darko (Room Owner)  | Phase 1        | Valid if using Bitola variant only (PRD bug: journey says Croatian, but Croatian is Phase 2) |
+| Journey 5 — Edge Cases          | Phase 1        | Disconnect/reconnect, timer expiry — all Phase 1                                             |
 
 Agents must not implement Croatian variant or 501 mode in Phase 1 — even if referenced in user journeys. The PRD validation report flagged these contradictions.
 
@@ -997,16 +1010,16 @@ These Phase 2 FRs have undefined formulas in the PRD. Do not invent values — t
 
 The rules engine must enforce phase-based action validation. This is the contract between the session manager and the rules engine:
 
-| Phase | Valid Player Actions | Transitions To |
-| --- | --- | --- |
-| `dealing` | (automatic — no player actions) | `bidding` |
-| `bidding` | `pick_trump`, `pass_trump` | `playing` (if picked) or `dealing` (Bitola reshuffle) |
-| `playing` | `play_card`, `declare`, `skip_declare` | `trick_resolving` (4th card played) |
-| `trick_resolving` | (automatic — score, sweep) | `playing` (next trick) or `hand_scoring` (8th trick) |
-| `hand_scoring` | (automatic — calculate, check match end) | `dealing` (next hand) or `match_end` |
-| `match_end` | (none — persist results to DB) | — |
-| `paused` | `unpause`, `owner_unpause` | (return to previous phase) |
-| `disconnected` | `reconnect` | (return to previous phase) |
+| Phase             | Valid Player Actions                     | Transitions To                                        |
+| ----------------- | ---------------------------------------- | ----------------------------------------------------- |
+| `dealing`         | (automatic — no player actions)          | `bidding`                                             |
+| `bidding`         | `pick_trump`, `pass_trump`               | `playing` (if picked) or `dealing` (Bitola reshuffle) |
+| `playing`         | `play_card`, `declare`, `skip_declare`   | `trick_resolving` (4th card played)                   |
+| `trick_resolving` | (automatic — score, sweep)               | `playing` (next trick) or `hand_scoring` (8th trick)  |
+| `hand_scoring`    | (automatic — calculate, check match end) | `dealing` (next hand) or `match_end`                  |
+| `match_end`       | (none — persist results to DB)           | —                                                     |
+| `paused`          | `unpause`, `owner_unpause`               | (return to previous phase)                            |
+| `disconnected`    | `reconnect`                              | (return to previous phase)                            |
 
 The `GameState.Phase` field must always reflect the current phase. `ApplyAction()` rejects any action not valid for the current phase.
 
@@ -1016,25 +1029,25 @@ Two-character format: `{Rank}{Suit}` — used in WebSocket payloads, GameState s
 
 **Ranks:**
 
-| Card | Code |
-| --- | --- |
-| 7 | `7` |
-| 8 | `8` |
-| 9 | `9` |
-| 10 | `T` |
-| Jack | `J` |
-| Queen | `Q` |
-| King | `K` |
-| Ace | `A` |
+| Card  | Code |
+| ----- | ---- |
+| 7     | `7`  |
+| 8     | `8`  |
+| 9     | `9`  |
+| 10    | `T`  |
+| Jack  | `J`  |
+| Queen | `Q`  |
+| King  | `K`  |
+| Ace   | `A`  |
 
 **Suits:**
 
-| Suit | Code |
-| --- | --- |
-| Spades | `S` |
-| Hearts | `H` |
-| Diamonds | `D` |
-| Clubs | `C` |
+| Suit     | Code |
+| -------- | ---- |
+| Spades   | `S`  |
+| Hearts   | `H`  |
+| Diamonds | `D`  |
+| Clubs    | `C`  |
 
 Examples: `KS` = King of Spades, `TH` = 10 of Hearts, `7D` = 7 of Diamonds, `AC` = Ace of Clubs.
 
@@ -1045,13 +1058,13 @@ Full deck (32 cards): `7S 8S 9S TS JS QS KS AS 7H 8H 9H TH JH QH KH AH 7D 8D 9D 
 **Server canonical:** `seat 0, 1, 2, 3` — counter-clockwise from dealer.
 
 | Seat | Team | Play Order |
-| --- | --- | --- |
-| 0 | A (Red) | 1st |
-| 1 | B (Blue) | 2nd |
-| 2 | A (Red) | 3rd |
-| 3 | B (Blue) | 4th |
+| ---- | ---- | ---------- |
+| 0    | A    | 1st        |
+| 1    | B    | 2nd        |
+| 2    | A    | 3rd        |
+| 3    | B    | 4th        |
 
-- Partners: 0+2 (Red) vs 1+3 (Blue) — partners face each other
+- Partners: 0+2 (Team A) vs 1+3 (Team B) — partners face each other
 - Play order: `0 → 1 → 2 → 3 → 0` (counter-clockwise)
 - Dealer rotates: `0 → 1 → 2 → 3 → 0` each hand
 
@@ -1061,45 +1074,45 @@ Full deck (32 cards): `7S 8S 9S TS JS QS KS AS 7H 8H 9H TH JH QH KH AH 7D 8D 9D 
 
 Negative test cases — every entry becomes a rules engine test:
 
-| Phase | Invalid Action | Expected Error | Test Priority |
-| --- | --- | --- | --- |
-| `bidding` | `play_card` | `ErrWrongPhase` | High |
-| `playing` | `pick_trump` | `ErrWrongPhase` | High |
-| `playing` | Card not in hand | `ErrInvalidCard` | Critical |
-| `playing` | Card violating suit-following | `ErrIllegalPlay` | Critical |
-| `playing` | Action from non-active player | `ErrNotYourTurn` | Critical |
-| `playing` | Declare after first trick | `ErrWrongPhase` | High |
-| `bidding` | Pick trump when not active bidder | `ErrNotYourTurn` | High |
-| `paused` | Any game action | `ErrGamePaused` | Medium |
-| `disconnected` | Any game action from disconnected player | `ErrPlayerDisconnected` | Medium |
-| `match_end` | Any game action | `ErrWrongPhase` | Low |
+| Phase          | Invalid Action                           | Expected Error          | Test Priority |
+| -------------- | ---------------------------------------- | ----------------------- | ------------- |
+| `bidding`      | `play_card`                              | `ErrWrongPhase`         | High          |
+| `playing`      | `pick_trump`                             | `ErrWrongPhase`         | High          |
+| `playing`      | Card not in hand                         | `ErrInvalidCard`        | Critical      |
+| `playing`      | Card violating suit-following            | `ErrIllegalPlay`        | Critical      |
+| `playing`      | Action from non-active player            | `ErrNotYourTurn`        | Critical      |
+| `playing`      | Declare after first trick                | `ErrWrongPhase`         | High          |
+| `bidding`      | Pick trump when not active bidder        | `ErrNotYourTurn`        | High          |
+| `paused`       | Any game action                          | `ErrGamePaused`         | Medium        |
+| `disconnected` | Any game action from disconnected player | `ErrPlayerDisconnected` | Medium        |
+| `match_end`    | Any game action                          | `ErrWrongPhase`         | Low           |
 
 ### Testing & Quality Gates
 
 #### Test Coverage Targets
 
-| Component | Coverage Target | Rationale | CI Enforcement |
-| --- | --- | --- | --- |
-| `internal/game/` | >90% | Rule correctness is priority #1 (PRD) | Fail build below threshold |
-| `internal/auth/` | >80% | Security-critical path | Fail build below threshold |
-| `internal/session/` | >70% | Complex orchestration | Warn below threshold |
-| `internal/lobby/` | >60% | Mostly CRUD, lower risk | Warn below threshold |
-| `internal/ws/` | >60% | Connection lifecycle | Warn below threshold |
-| Frontend components | >50% | UI testing diminishing returns | Informational |
+| Component           | Coverage Target | Rationale                             | CI Enforcement             |
+| ------------------- | --------------- | ------------------------------------- | -------------------------- |
+| `internal/game/`    | >90%            | Rule correctness is priority #1 (PRD) | Fail build below threshold |
+| `internal/auth/`    | >80%            | Security-critical path                | Fail build below threshold |
+| `internal/session/` | >70%            | Complex orchestration                 | Warn below threshold       |
+| `internal/lobby/`   | >60%            | Mostly CRUD, lower risk               | Warn below threshold       |
+| `internal/ws/`      | >60%            | Connection lifecycle                  | Warn below threshold       |
+| Frontend components | >50%            | UI testing diminishing returns        | Informational              |
 
 #### Minimum Test Fixture Set
 
 The `internal/game/testfixtures/fixtures.go` must include factory functions for at minimum these 7 critical game states:
 
-| Fixture | Factory Function | Covers |
-| --- | --- | --- |
-| Fresh deal | `NewGameJustDealt()` | Bidding tests |
-| Mid-bidding | `NewGameMidBidding(passCount int)` | Bidding logic, Bitola reshuffle |
-| Trump selected, first trick | `NewGameFirstTrick(trump Suit)` | Declaration tests |
-| Mid-game | `NewGameMidPlay(trickNum int)` | Card play, suit-following, scoring |
-| Last trick | `NewGameLastTrick()` | Last trick bonus, hand scoring |
-| Near match end | `NewGameNearEnd(redScore, blueScore int)` | Match completion, 1001 threshold |
-| Capot in progress | `NewGameCapotInProgress()` | Capot detection and scoring |
+| Fixture                     | Factory Function                             | Covers                             |
+| --------------------------- | -------------------------------------------- | ---------------------------------- |
+| Fresh deal                  | `NewGameJustDealt()`                         | Bidding tests                      |
+| Mid-bidding                 | `NewGameMidBidding(passCount int)`           | Bidding logic, Bitola reshuffle    |
+| Trump selected, first trick | `NewGameFirstTrick(trump Suit)`              | Declaration tests                  |
+| Mid-game                    | `NewGameMidPlay(trickNum int)`               | Card play, suit-following, scoring |
+| Last trick                  | `NewGameLastTrick()`                         | Last trick bonus, hand scoring     |
+| Near match end              | `NewGameNearEnd(teamAScore, teamBScore int)` | Match completion, 1001 threshold   |
+| Capot in progress           | `NewGameCapotInProgress()`                   | Capot detection and scoring        |
 
 #### Deployment Smoke Test
 

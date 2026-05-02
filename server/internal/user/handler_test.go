@@ -395,24 +395,24 @@ func doListMatches(e *echo.Echo, userID, query, token string) *httptest.Response
 	return rec
 }
 
-func seedMatch(id uint, started, completed time.Time, seats [4]uint, status string, winnerTeam int, abandonedBy *uint, variant, mode string, red, blue int, hands []match.HandResult) match.Match {
+func seedMatch(id uint, started, completed time.Time, seats [4]uint, status string, winnerTeam int, abandonedBy *uint, variant, mode string, a, b int, hands []match.HandResult) match.Match {
 	return match.Match{
-		ID:            id,
-		RoomID:        id,
-		Player1ID:     seats[0],
-		Player2ID:     seats[1],
-		Player3ID:     seats[2],
-		Player4ID:     seats[3],
-		TeamRedScore:  red,
-		TeamBlueScore: blue,
-		WinnerTeam:    winnerTeam,
-		Variant:       variant,
-		MatchMode:     mode,
-		StartedAt:     started,
-		CompletedAt:   completed,
-		Status:        status,
-		AbandonedBy:   abandonedBy,
-		Hands:         hands,
+		ID:          id,
+		RoomID:      id,
+		Player1ID:   seats[0],
+		Player2ID:   seats[1],
+		Player3ID:   seats[2],
+		Player4ID:   seats[3],
+		TeamAScore:  a,
+		TeamBScore:  b,
+		WinnerTeam:  winnerTeam,
+		Variant:     variant,
+		MatchMode:   mode,
+		StartedAt:   started,
+		CompletedAt: completed,
+		Status:      status,
+		AbandonedBy: abandonedBy,
+		Hands:       hands,
 	}
 }
 
@@ -450,12 +450,12 @@ func TestListMatches_WinLossAbandonedOutcomes(t *testing.T) {
 	opp1 := repo.addUser("opp1", "o1@example.com", "en")
 	opp2 := repo.addUser("opp2", "o2@example.com", "en")
 
-	// Viewer sits at seat 0 (Red team). seats: [viewer, opp1, mate, opp2].
+	// Viewer sits at seat 0 (team A). seats: [viewer, opp1, mate, opp2].
 	seats := [4]uint{viewer.ID, opp1.ID, mate.ID, opp2.ID}
 	base := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 
-	// Completed, Red wins -> outcome "win".
-	// Completed, Blue wins -> outcome "loss".
+	// Completed, team A wins -> outcome "win".
+	// Completed, team B wins -> outcome "loss".
 	// Abandoned (regardless of winnerTeam) -> outcome "abandoned".
 	abandoner := opp1.ID
 	matchRepo.matches = []match.Match{
@@ -578,12 +578,12 @@ func TestListMatches_HandsEmbedded(t *testing.T) {
 	base := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 	capotTeam := 1
 	hands := []match.HandResult{
-		{HandNumber: 1, RedCardPoints: 60, BlueCardPoints: 102, RedDeclPoints: 20, BlueDeclPoints: 0,
+		{HandNumber: 1, TeamACardPoints: 60, TeamBCardPoints: 102, TeamADeclPoints: 20, TeamBDeclPoints: 0,
 			LastTrickTeam: 1, LastTrickBonus: 10, Capot: false, CapotTeam: nil, CapotBonus: 0,
-			FailedContract: false, ContractingTeam: 0, RedHandTotal: 80, BlueHandTotal: 112},
-		{HandNumber: 2, RedCardPoints: 0, BlueCardPoints: 162, RedDeclPoints: 0, BlueDeclPoints: 50,
+			FailedContract: false, ContractingTeam: 0, TeamAHandTotal: 80, TeamBHandTotal: 112},
+		{HandNumber: 2, TeamACardPoints: 0, TeamBCardPoints: 162, TeamADeclPoints: 0, TeamBDeclPoints: 50,
 			LastTrickTeam: 1, LastTrickBonus: 0, Capot: true, CapotTeam: &capotTeam, CapotBonus: 100,
-			FailedContract: false, ContractingTeam: 1, RedHandTotal: 0, BlueHandTotal: 312},
+			FailedContract: false, ContractingTeam: 1, TeamAHandTotal: 0, TeamBHandTotal: 312},
 	}
 	matchRepo.matches = []match.Match{
 		seedMatch(1, base, base.Add(20*time.Minute), seats, "completed", 1, nil, "bitola", "1001", 80, 424, hands),
@@ -603,7 +603,7 @@ func TestListMatches_HandsEmbedded(t *testing.T) {
 	assert.True(t, resp.Items[0].Hands[1].Capot)
 	require.NotNil(t, resp.Items[0].Hands[1].CapotTeam)
 	assert.Equal(t, 1, *resp.Items[0].Hands[1].CapotTeam)
-	assert.Equal(t, "loss", resp.Items[0].Outcome, "viewer is Red, winner is Blue -> loss")
+	assert.Equal(t, "loss", resp.Items[0].Outcome, "viewer is team A, winner is team B -> loss")
 }
 
 func TestListMatches_Forbidden_ForeignUserID(t *testing.T) {
@@ -825,10 +825,10 @@ func TestGetProfile_StatsMatchListTotal(t *testing.T) {
 	bystander := repo.addUser("bystander", "b@example.com", "en")
 
 	// Viewer across multiple seats + team outcomes:
-	//  - seat 0 (Red), completed, Red wins -> win
-	//  - seat 0 (Red), completed, Blue wins -> loss
-	//  - seat 3 (Blue), completed, Blue wins -> win (exercises CASE at seat 3)
-	//  - seat 2 (Red), abandoned -> abandoned
+	//  - seat 0 (team A), completed, team A wins -> win
+	//  - seat 0 (team A), completed, team B wins -> loss
+	//  - seat 3 (team B), completed, team B wins -> win (exercises CASE at seat 3)
+	//  - seat 2 (team A), abandoned -> abandoned
 	//  - match not involving viewer (bystander-only) -> ignored in both paths
 	base := time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)
 	abandoner := viewer.ID
@@ -876,7 +876,7 @@ func TestGetProfile_StatsMatchListTotal(t *testing.T) {
 	assert.Equal(t, 1, prof.Losses)
 	assert.Equal(t, 1, prof.Abandoned)
 
-	// Bystander's profile: sees only their one match (a win — seat 0 Red, Red wins).
+	// Bystander's profile: sees only their one match (a win — seat 0 team A, team A wins).
 	byToken, err := auth.GenerateAccessToken(bystander.ID, testJWTSecret)
 	require.NoError(t, err)
 	byRec := doGetProfile(e, strconvUint(bystander.ID), byToken)

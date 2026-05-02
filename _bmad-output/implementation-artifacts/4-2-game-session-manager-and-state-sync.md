@@ -30,7 +30,7 @@ So that all four players see the same game state at all times.
 
 5. **Given** the `matches` migration
    **When** I inspect the database schema
-   **Then** the `matches` table contains: `id`, `room_id`, `player1_id` through `player4_id`, `team_red_score`, `team_blue_score`, `winner_team`, `variant`, `match_mode`, `started_at`, `completed_at`
+   **Then** the `matches` table contains: `id`, `room_id`, `player1_id` through `player4_id`, `team_a_score`, `team_b_score`, `winner_team`, `variant`, `match_mode`, `started_at`, `completed_at`
 
 6. **Given** the frontend receives a game event
    **When** `useWsDispatch.ts` processes the event
@@ -39,7 +39,7 @@ So that all four players see the same game state at all times.
 ## Tasks / Subtasks
 
 - [x] Task 1: Create `matches` database migration (AC: 5)
-  - [x] Create `server/migrations/000006_create_matches.up.sql` with columns: `id` (serial PK), `room_id` (int, FK rooms), `player1_id` through `player4_id` (int, FK users), `team_red_score` (int), `team_blue_score` (int), `winner_team` (int), `variant` (varchar), `match_mode` (varchar), `started_at` (timestamptz), `completed_at` (timestamptz), `created_at` (timestamptz default now)
+  - [x] Create `server/migrations/000006_create_matches.up.sql` with columns: `id` (serial PK), `room_id` (int, FK rooms), `player1_id` through `player4_id` (int, FK users), `team_a_score` (int), `team_b_score` (int), `winner_team` (int), `variant` (varchar), `match_mode` (varchar), `started_at` (timestamptz), `completed_at` (timestamptz), `created_at` (timestamptz default now)
   - [x] Create `server/migrations/000006_create_matches.down.sql` — DROP TABLE matches
   - [x] Add indexes: `idx_matches_room_id`, `idx_matches_player1_id` through `idx_matches_player4_id`
 
@@ -77,7 +77,7 @@ So that all four players see the same game state at all times.
   - [x] Detect phase transitions after ApplyAction and broadcast accordingly:
     - [x] If trick completed (4 cards in trick): broadcast `event:trick_resolved` with `{winnerSeat, winnerTeam, cards}`
     - [x] If hand scored: broadcast `event:hand_scored` with scores
-    - [x] If match ended: broadcast `event:match_end` with `{winnerTeam, redFinalScore, blueFinalScore}`
+    - [x] If match ended: broadcast `event:match_end` with `{winnerTeam, teamAFinalScore, teamBFinalScore}`
   - [x] All multi-event sequences sent as **separate ordered messages** (e.g., card_played, then trick_resolved, then hand_scored)
 
 - [x] Task 5: Implement match persistence on game completion (AC: 4)
@@ -193,13 +193,15 @@ Client sends action:play_card
 ### RoomPlayerInfo for StartGame
 
 The session manager needs player info from the room to initialize the game. Define a simple struct:
+
 ```go
 type RoomPlayerInfo struct {
     UserID uint
     Seat   int
-    Team   string // "red" or "blue"
+    Team   string // "teamA" or "teamB"
 }
 ```
+
 This is populated from `RoomPlayer` records by the StartGame handler before calling `manager.StartGame()`.
 
 ### Mapping UserID to PlayerSeat
@@ -209,6 +211,7 @@ GameState stores `Players[4]PlayerState` where each has `UserID` and `Seat`. The
 ### Event Payload Construction
 
 After `ApplyAction` succeeds, compare old state vs new state to determine what changed:
+
 - **Card played**: New card in `CurrentTrick` that wasn't there before
 - **Trump selected**: `TrumpSuit` changed from nil to a value, phase changed to `PhasePlaying`
 - **Trick resolved**: `TrickNumber` incremented, `CurrentTrick` cleared
@@ -227,8 +230,8 @@ type Match struct {
     Player2ID      uint       `gorm:"not null;index" json:"player2Id"`
     Player3ID      uint       `gorm:"not null;index" json:"player3Id"`
     Player4ID      uint       `gorm:"not null;index" json:"player4Id"`
-    TeamRedScore   int        `gorm:"not null" json:"teamRedScore"`
-    TeamBlueScore  int        `gorm:"not null" json:"teamBlueScore"`
+    TeamAScore     int        `gorm:"not null" json:"teamAScore"`
+    TeamBScore     int        `gorm:"not null" json:"teamBScore"`
     WinnerTeam     int        `gorm:"not null" json:"winnerTeam"`
     Variant        string     `gorm:"size:20;not null" json:"variant"`
     MatchMode      string     `gorm:"size:10;not null" json:"matchMode"`
@@ -240,53 +243,54 @@ type Match struct {
 
 ### Existing Code to Reuse — DO NOT Reinvent
 
-| Function / File | Location | Purpose |
-|---|---|---|
-| `game.NewGame(playerIDs, variant, matchMode, roomID)` | `internal/game/state.go` | Creates new GameState with dealt cards |
-| `game.ApplyAction(state, action)` | `internal/game/rules_engine.go` | Pure function rules engine |
-| `game.ParseCard(id string)` | `internal/game/types.go` | Parses "KS" card ID to Card struct |
-| `game.PhaseMatchEnd` | `internal/game/types.go` | Phase constant for match completion |
-| `game.TeamForSeat(seat)` | `internal/game/state.go` | Maps seat to team index |
-| `ws.Hub.SetActionHandler()` | `internal/ws/hub.go` | Registers action handler — wire session manager here |
-| `ws.Hub.SendToUser()` | `internal/ws/hub.go` | Send error to acting player |
-| `ws.Hub.BroadcastToUsers()` | `internal/ws/hub.go` | Broadcast state to all 4 players |
-| `ws.WSMessage` | `internal/ws/message.go` | Wire format struct |
-| `ws.Event*` constants | `internal/ws/events.go` | All event type strings |
-| `auth.GetUserID(c)` | `internal/auth/middleware.go` | Extract userID in HTTP handlers |
-| Room model + repo | `internal/room/` | Room and RoomPlayer for StartGame |
-| `GameState` TS type | `client/src/shared/types/gameTypes.ts` | Complete frontend game state type — already matches server |
-| `useGameStore` | `client/src/shared/stores/gameStore.ts` | Stub to expand |
-| `dispatchGameEvent` | `client/src/shared/hooks/useWsDispatch.ts` | Empty function to implement |
-| All WS event payloads | `client/src/shared/types/wsEvents.ts` | Already defined — CardPlayedPayload, TrickResolvedPayload, etc. |
+| Function / File                                       | Location                                   | Purpose                                                         |
+| ----------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
+| `game.NewGame(playerIDs, variant, matchMode, roomID)` | `internal/game/state.go`                   | Creates new GameState with dealt cards                          |
+| `game.ApplyAction(state, action)`                     | `internal/game/rules_engine.go`            | Pure function rules engine                                      |
+| `game.ParseCard(id string)`                           | `internal/game/types.go`                   | Parses "KS" card ID to Card struct                              |
+| `game.PhaseMatchEnd`                                  | `internal/game/types.go`                   | Phase constant for match completion                             |
+| `game.TeamForSeat(seat)`                              | `internal/game/state.go`                   | Maps seat to team index                                         |
+| `ws.Hub.SetActionHandler()`                           | `internal/ws/hub.go`                       | Registers action handler — wire session manager here            |
+| `ws.Hub.SendToUser()`                                 | `internal/ws/hub.go`                       | Send error to acting player                                     |
+| `ws.Hub.BroadcastToUsers()`                           | `internal/ws/hub.go`                       | Broadcast state to all 4 players                                |
+| `ws.WSMessage`                                        | `internal/ws/message.go`                   | Wire format struct                                              |
+| `ws.Event*` constants                                 | `internal/ws/events.go`                    | All event type strings                                          |
+| `auth.GetUserID(c)`                                   | `internal/auth/middleware.go`              | Extract userID in HTTP handlers                                 |
+| Room model + repo                                     | `internal/room/`                           | Room and RoomPlayer for StartGame                               |
+| `GameState` TS type                                   | `client/src/shared/types/gameTypes.ts`     | Complete frontend game state type — already matches server      |
+| `useGameStore`                                        | `client/src/shared/stores/gameStore.ts`    | Stub to expand                                                  |
+| `dispatchGameEvent`                                   | `client/src/shared/hooks/useWsDispatch.ts` | Empty function to implement                                     |
+| All WS event payloads                                 | `client/src/shared/types/wsEvents.ts`      | Already defined — CardPlayedPayload, TrickResolvedPayload, etc. |
 
 ### Files to Create
 
-| File | Purpose |
-|---|---|
-| `server/migrations/000006_create_matches.up.sql` | Matches table migration |
-| `server/migrations/000006_create_matches.down.sql` | Matches table rollback |
-| `server/internal/match/model.go` | Match GORM model |
-| `server/internal/match/repository.go` | MatchRepository interface |
-| `server/internal/match/gorm_repo.go` | GORM implementation |
-| `server/internal/session/manager.go` | Session manager (replaces empty session.go) |
-| `server/internal/session/manager_test.go` | Session manager tests |
-| `server/internal/match/match_test.go` | Match model tests |
-| `client/src/shared/stores/gameStore.test.ts` | gameStore tests |
+| File                                               | Purpose                                     |
+| -------------------------------------------------- | ------------------------------------------- |
+| `server/migrations/000006_create_matches.up.sql`   | Matches table migration                     |
+| `server/migrations/000006_create_matches.down.sql` | Matches table rollback                      |
+| `server/internal/match/model.go`                   | Match GORM model                            |
+| `server/internal/match/repository.go`              | MatchRepository interface                   |
+| `server/internal/match/gorm_repo.go`               | GORM implementation                         |
+| `server/internal/session/manager.go`               | Session manager (replaces empty session.go) |
+| `server/internal/session/manager_test.go`          | Session manager tests                       |
+| `server/internal/match/match_test.go`              | Match model tests                           |
+| `client/src/shared/stores/gameStore.test.ts`       | gameStore tests                             |
 
 ### Files to Modify
 
-| File | Changes |
-|---|---|
-| `server/internal/session/session.go` | Remove empty stub (replaced by manager.go) |
-| `server/cmd/api/main.go` | Create Manager, wire hub.SetActionHandler, pass manager to room handler |
-| `server/internal/room/handler.go` | Update StartGame to call manager.StartGame(), broadcast events |
-| `client/src/shared/stores/gameStore.ts` | Expand with full GameState, setGameState, clearGame |
-| `client/src/shared/hooks/useWsDispatch.ts` | Implement dispatchGameEvent with all game event handlers |
-| `client/src/shared/hooks/useWsDispatch.test.ts` | Add game event dispatch tests |
+| File                                            | Changes                                                                 |
+| ----------------------------------------------- | ----------------------------------------------------------------------- |
+| `server/internal/session/session.go`            | Remove empty stub (replaced by manager.go)                              |
+| `server/cmd/api/main.go`                        | Create Manager, wire hub.SetActionHandler, pass manager to room handler |
+| `server/internal/room/handler.go`               | Update StartGame to call manager.StartGame(), broadcast events          |
+| `client/src/shared/stores/gameStore.ts`         | Expand with full GameState, setGameState, clearGame                     |
+| `client/src/shared/hooks/useWsDispatch.ts`      | Implement dispatchGameEvent with all game event handlers                |
+| `client/src/shared/hooks/useWsDispatch.test.ts` | Add game event dispatch tests                                           |
 
 ### Testing Patterns — MANDATORY
 
 **Backend (Go):**
+
 - Session manager tests in `internal/session/manager_test.go` using `package session_test`
 - Use a **mock hub** that captures sent messages — don't need real WebSocket connections for unit tests
 - Use `testfixtures/` factory functions for game states
@@ -295,6 +299,7 @@ type Match struct {
 - Table-driven tests with `t.Run` for action types
 
 **Frontend (Vitest):**
+
 - gameStore tests co-located: `gameStore.test.ts` next to `gameStore.ts`
 - Test that `setGameState` replaces the full state
 - Test that `clearGame` resets everything
@@ -311,6 +316,7 @@ type Match struct {
 ### Previous Story Intelligence (from 4.1)
 
 **Critical learnings:**
+
 - Hub's `SetActionHandler` registers the handler — call it once at startup with `manager.HandleAction`
 - Hub dispatches action handlers in goroutines (`go h.actionHandler(...)`) — the handler must be safe for concurrent calls
 - `Client.UserID` is `uint` — matches `game.PlayerState.UserID`
@@ -323,6 +329,7 @@ type Match struct {
 ### Git Intelligence (from recent commits)
 
 Recent commit pattern: `feat(scope): implement <feature> with code review fixes`
+
 - Commit scope for this story: `feat(session): implement game session manager and state sync`
 - Backend tests: `go test ./server/internal/session/...`
 - Frontend tests: `npx vitest run`

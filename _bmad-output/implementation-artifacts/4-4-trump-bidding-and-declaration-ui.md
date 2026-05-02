@@ -135,16 +135,19 @@ So that I can make game-critical decisions confidently without confusion.
 ### Technical Requirements
 
 **Frontend Stack (exact versions):**
+
 - React 19, Vite 8, TypeScript strict, Tailwind CSS v4, Zustand, shadcn/ui, react-i18next
 - Testing: Vitest + React Testing Library + @testing-library/user-event
 
 **WebSocket Events (already defined in contract files):**
+
 - Client → Server: `ACTION_PICK_TRUMP`, `ACTION_PASS_TRUMP`, `ACTION_DECLARE`, `ACTION_SKIP_DECLARE`, `ACTION_ANNOUNCE_BELOT`, `ACTION_DECLINE_BELOT`
 - Server → Client: `EVENT_TRUMP_SELECTED`, `EVENT_DECLARATIONS_RESOLVED`, `EVENT_BELOT_ANNOUNCED`
 - Error events: `ERROR_WRONG_PHASE`, `ERROR_NOT_YOUR_TURN`, `ERROR_INVALID_ACTION`
 - Contract files: `client/src/shared/types/wsEvents.ts` + `server/internal/ws/events.go` — verify events exist before using; add any missing ones to BOTH files in the same commit.
 
 **Game State Fields (from `gameTypes.ts`):**
+
 - `phase: Phase` — check for `"dealing"`, `"bidding"`, `"playing"`
 - `trumpCandidate: Card | null` — the face-up card during bidding round 1
 - `trumpSuit: Suit | null` — set after trump is picked
@@ -157,6 +160,7 @@ So that I can make game-critical decisions confidently without confusion.
 - `players[seat].declarations: Declaration[]` — detected declarations for display
 
 **Bitola Bidding Rules (from rules engine `bidding.go`):**
+
 - Round 1: Active bidder can PICK the trump candidate's suit or PASS
 - Round 2: Active bidder can PICK any of the 4 suits or PASS
 - If all 4 pass in both rounds (8 total passes): reshuffle + rotate dealer
@@ -164,6 +168,7 @@ So that I can make game-critical decisions confidently without confusion.
 - First bidder is player after dealer: `(dealerSeat + 1) % 4`
 
 **Declaration Logic (from rules engine `declarations.go`):**
+
 - Declarations detected server-side via `checkDeclarationPrompt()` after trump is picked and after each card play in trick 1
 - Server sets `awaitingDeclaration = true` in GameState when active player has declarable combinations
 - Types: sequences (3+ consecutive same suit) and four-of-a-kind
@@ -180,23 +185,27 @@ So that I can make game-critical decisions confidently without confusion.
 ### Design System Tokens
 
 **Colors:**
+
 - `surface-elevated` (#1c1c26) — modal/overlay background
 - `accent` (#00e5a0) — primary buttons, active indicators, trump suit icon
 - `accent-glow` (#00e5a040) — neon glow effects (box-shadow)
 - `text-primary` (#f0f0f8) — main text
 - `text-secondary` (#8888a0) — labels, muted text
-- `team-red` (#ff4d4d) / `team-blue` (#4d9fff) — team colors
+- `team-a` (#ff4d4d) / `team-b` (#4d9fff) — team colors
 
 **Typography:**
+
 - Space Grotesk: declaration values, suit symbols, score numbers (`heading-md` 18px 600)
 - Inter: button text, labels, prompt body text (`body-lg` 16px 400)
 
 **Spacing:**
+
 - Modal padding: 24px (`p-6`)
 - Button padding: 12px vertical / 24px horizontal (`py-3 px-6`)
 - 8px base unit spacing
 
 **Animation Timings:**
+
 - Modal scale-in: 150ms ease-out
 - Card deal travel: 150ms ease-in per card
 - Declaration float-up: 300ms ease-out (translateY + opacity)
@@ -206,6 +215,7 @@ So that I can make game-critical decisions confidently without confusion.
 ### File Structure Requirements
 
 **New files to create:**
+
 ```
 client/src/features/game/components/
 ├── TrumpPrompt.tsx          + TrumpPrompt.test.tsx
@@ -218,6 +228,7 @@ client/src/features/game/components/
 ```
 
 **Files to modify:**
+
 - `client/src/features/game/GamePage.tsx` — add overlay rendering for all new components
 - `client/src/shared/hooks/useWsDispatch.ts` — add handlers for `EVENT_TRUMP_SELECTED`, `EVENT_DECLARATIONS_RESOLVED`, `EVENT_BELOT_ANNOUNCED`
 - `client/src/shared/types/gameTypes.ts` — add `awaitingDeclaration: boolean` and `awaitingBelot: boolean` to `GameState`; add `"announce_belot" | "decline_belot"` to `ActionType` union
@@ -226,6 +237,7 @@ client/src/features/game/components/
 - `client/src/shared/i18n/sr.json` — add all new i18n keys (Serbian Latin)
 
 **Files NOT to modify (complete from Story 4.3):**
+
 - `PlayingCard.tsx` — reuse as-is for trump candidate display (size-lg variant)
 - `HandCards.tsx` — reuse as-is
 - `PlayerSeat.tsx` — reuse as-is (already supports active state with accent glow)
@@ -236,6 +248,7 @@ client/src/features/game/components/
 **Test Framework:** Vitest + React Testing Library + @testing-library/user-event
 
 **Test Strategy:**
+
 - Unit tests for each new component (pure props-driven testing)
 - Integration test for GamePage overlay rendering
 - Mock `useGameStore` via `useGameStore.setState()` for integration tests
@@ -244,6 +257,7 @@ client/src/features/game/components/
 - Mock `window.matchMedia("(prefers-reduced-motion: reduce)")` for both motion paths
 
 **Data test IDs to use:**
+
 - `data-testid="trump-prompt"` — TrumpPrompt overlay
 - `data-testid="trump-prompt-pick"` — PICK button
 - `data-testid="trump-prompt-pass"` — PASS button
@@ -256,6 +270,7 @@ client/src/features/game/components/
 - `data-testid="declaration-reveal"` — Declaration result display
 
 **Key test scenarios:**
+
 1. TrumpPrompt renders when `phase === "bidding"` (regardless of active player)
 2. TrumpPrompt shows PICK/PASS buttons ONLY when `activePlayerSeat === myPlayerSeat`
 3. TrumpPrompt PICK button calls `sendMessage(ACTION_PICK_TRUMP, {})`
@@ -273,6 +288,7 @@ client/src/features/game/components/
 ### Previous Story Intelligence (from Story 4.3)
 
 **Established Patterns to Follow:**
+
 - Compass seating: `compassOffset = (seat - myPlayerSeat + 4) % 4` → 0=South, 1=West, 2=North, 3=East
 - GamePage is outside AppLayout — manages its own `useWebSocket` connection
 - Tailwind variant ordering: `motion-safe:hover:` (prefix variants first, NOT `hover:motion-safe:`)
@@ -282,6 +298,7 @@ client/src/features/game/components/
 - `useRef` guard for one-time side effects (e.g., `pushState` only once per mount)
 
 **Review Findings to Avoid Repeating:**
+
 - P5: Tailwind variant order matters — always `motion-safe:hover:`, never `hover:motion-safe:`
 - P6: PlayingCard applies transitions unconditionally — use `withTransition` prop when needed
 - P7: Never hardcode user-facing strings — always use i18n keys
@@ -290,6 +307,7 @@ client/src/features/game/components/
 - P11-P13: Always write tests for `prefers-reduced-motion`, back-button interception, and phase transitions
 
 **Files created in 4.3 (available for reuse):**
+
 - `PlayingCard.tsx` — card display with size variants (sm/md/lg), states (default/playable/unplayable/face-down), keyboard a11y
 - `HandCards.tsx` — fanned hand layout, derives card states from `playableCardIds`
 - `PlayerSeat.tsx` — compass-positioned seats with active/occupied/empty states, pulse animation
@@ -298,6 +316,7 @@ client/src/features/game/components/
 ### Git Intelligence
 
 **Recent commits show established patterns:**
+
 - `79bc052` feat(game): implement game table UI — Story 4.3 (most recent, directly relevant)
 - `ce992f3` feat(session): implement game session manager — Story 4.2 (WebSocket dispatch patterns)
 - `7780388` feat(ws): implement WebSocket gateway — Story 4.1 (event contract foundation)
@@ -377,7 +396,7 @@ Claude Opus 4.6 (1M context)
 - Created 7 new game components: TrumpPrompt, TrumpIndicator, DealAnimation, DeclarationPrompt, BelotPrompt, DeclarationReveal, ReshuffleAnimation
 - Integrated all overlays into GamePage with proper z-index ordering and phase gating
 - TrumpPrompt supports both round 1 (pick candidate suit) and round 2 (free suit picker with 4 suit buttons)
-- Server uses `pendingBelotSeat` (*int) instead of `awaitingBelot` (bool) — adapted BelotPrompt gating accordingly
+- Server uses `pendingBelotSeat` (\*int) instead of `awaitingBelot` (bool) — adapted BelotPrompt gating accordingly
 - Reshuffle detection via server-driven phase transition (bidding→dealing), not client-side pass counting
 - All prompts block card interaction via backdrop overlay
 - Added error toast system via gameStore.lastError + useWsDispatch error routing
@@ -390,6 +409,7 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - client/src/features/game/components/TrumpPrompt.tsx
 - client/src/features/game/components/TrumpPrompt.test.tsx
 - client/src/features/game/components/TrumpIndicator.tsx
@@ -406,6 +426,7 @@ Claude Opus 4.6 (1M context)
 - client/src/features/game/components/ReshuffleAnimation.test.tsx
 
 **Modified files:**
+
 - client/src/features/game/GamePage.tsx — integrated all new overlays, trump indicator, error toasts
 - client/src/shared/types/gameTypes.ts — added GameState fields and ActionType values
 - client/src/shared/types/wsEvents.ts — added suit field to PickTrumpPayload

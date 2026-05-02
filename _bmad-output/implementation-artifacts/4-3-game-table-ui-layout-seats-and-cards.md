@@ -19,7 +19,7 @@ So that the game feels like sitting at a real card table.
 
 2. **Given** a PlayerSeat is occupied
    **When** it renders
-   **Then** it shows the player's username, team color border (Red or Blue), and avatar placeholder
+   **Then** it shows the player's username, team color border (Team A or Team B), and avatar placeholder
    **And** the current player's own seat (South) is slightly larger with a "You" label
 
 3. **Given** it is a player's turn
@@ -108,13 +108,13 @@ So that the game feels like sitting at a real card table.
 
 - [x] Task 6: Create `PlayerSeat` component (AC: 2, 3)
   - [x] Create `client/src/features/game/components/PlayerSeat.tsx`
-  - [x] Props: `player: PlayerState | null`, `isSelf: boolean`, `isActive: boolean`, `teamColor: "red" | "blue"`, `cardCount?: number`
+  - [x] Props: `player: PlayerState | null`, `isSelf: boolean`, `isActive: boolean`, `teamColor: "teamA" | "teamB"`, `cardCount?: number`
   - [x] States:
     - Empty seat: dashed border, "Waiting..." label (`text-text-secondary`) — use i18n key `game.seat.waiting`
     - Occupied: avatar circle (initials from username) + username label + team color border
     - Active: `border-accent shadow-[0_0_16px_var(--color-accent-glow)] motion-safe:animate-pulse` (Tailwind `animate-pulse` with `motion-safe:` prefix)
     - Self seat: slightly larger (`scale-110`) with "You" badge below username — use i18n key `game.seat.you`
-  - [x] Team colors: Red = `border-team-red`, Blue = `border-team-blue`
+  - [x] Team colors: Team A = `border-team-a`, Team B = `border-team-b`
   - [x] Avatar: circle div, initials = first letter of username, uppercase. Background: `bg-surface-elevated`
   - [x] For non-self occupied seats: render `cardCount` face-down PlayingCard components stacked or show card count badge (e.g., "×8")
   - [x] Font: username label uses `font-body text-sm`, "You" badge uses `font-body text-xs`
@@ -234,7 +234,7 @@ So that the game feels like sitting at a real card table.
 
 ### Route Fix Required
 
-RoomLobby navigates `navigate(\`/game/${room.id}\`)` but the current route in `App.tsx` is `path="/game"`. This causes a 404-style redirect. Fix: update App.tsx route to `path="/game/:roomId"`. GamePage extracts the param:
+RoomLobby navigates `navigate(\`/game/${room.id}\`)`but the current route in`App.tsx`is`path="/game"`. This causes a 404-style redirect. Fix: update App.tsx route to `path="/game/:roomId"`. GamePage extracts the param:
 
 ```tsx
 import { useParams } from "react-router";
@@ -270,10 +270,10 @@ function compassOffset(seat: number, myPlayerSeat: number): number {
 
 // CSS positions for each compass point
 const SEAT_POSITIONS = {
-  0: "bottom-4 left-1/2 -translate-x-1/2",   // South (self)
-  1: "left-4 top-1/2 -translate-y-1/2",       // West
-  2: "top-4 left-1/2 -translate-x-1/2",       // North
-  3: "right-4 top-1/2 -translate-y-1/2",      // East
+  0: "bottom-4 left-1/2 -translate-x-1/2", // South (self)
+  1: "left-4 top-1/2 -translate-y-1/2", // West
+  2: "top-4 left-1/2 -translate-x-1/2", // North
+  3: "right-4 top-1/2 -translate-y-1/2", // East
 };
 ```
 
@@ -282,13 +282,13 @@ Counter-clockwise play direction: seat index increments counter-clockwise. So if
 ### Derive `myPlayerSeat` in GamePage
 
 ```tsx
-const user = useAuthStore(s => s.user);
-const gameState = useGameStore(s => s.gameState);
+const user = useAuthStore((s) => s.user);
+const gameState = useGameStore((s) => s.gameState);
 const { myPlayerSeat, setMyPlayerSeat } = useGameStore();
 
 useEffect(() => {
   if (gameState && user && myPlayerSeat === null) {
-    const myPlayer = gameState.players.find(p => p.userId === user.id);
+    const myPlayer = gameState.players.find((p) => p.userId === user.id);
     if (myPlayer !== undefined) setMyPlayerSeat(myPlayer.seat);
   }
 }, [gameState, user, myPlayerSeat, setMyPlayerSeat]);
@@ -319,9 +319,9 @@ useEffect(() => {
 ### Team Color from Seat
 
 ```ts
-// From architecture: teams 0+2 = Red, 1+3 = Blue
-function teamColor(seat: number): "red" | "blue" {
-  return seat % 2 === 0 ? "red" : "blue";
+// From architecture: teams 0+2 = Team A, 1+3 = Team B
+function teamColor(seat: number): "teamA" | "teamB" {
+  return seat % 2 === 0 ? "teamA" : "teamB";
 }
 ```
 
@@ -339,21 +339,39 @@ Display rank mapping for UI — the wire format uses `T` for ten but users see `
 
 ```ts
 const DISPLAY_RANK: Record<Rank, string> = {
-  "7": "7", "8": "8", "9": "9", "T": "10",
-  "J": "J", "Q": "Q", "K": "K", "A": "A",
+  "7": "7",
+  "8": "8",
+  "9": "9",
+  T: "10",
+  J: "J",
+  Q: "Q",
+  K: "K",
+  A: "A",
 };
 
 const DISPLAY_SUIT: Record<Suit, string> = {
-  S: "♠", H: "♥", D: "♦", C: "♣",
+  S: "♠",
+  H: "♥",
+  D: "♦",
+  C: "♣",
 };
 
 const SUIT_FULL_NAME: Record<Suit, string> = {
-  S: "Spades", H: "Hearts", D: "Diamonds", C: "Clubs",
+  S: "Spades",
+  H: "Hearts",
+  D: "Diamonds",
+  C: "Clubs",
 };
 
 const RANK_FULL_NAME: Record<Rank, string> = {
-  "7": "Seven", "8": "Eight", "9": "Nine", "T": "Ten",
-  "J": "Jack", "Q": "Queen", "K": "King", "A": "Ace",
+  "7": "Seven",
+  "8": "Eight",
+  "9": "Nine",
+  T: "Ten",
+  J: "Jack",
+  Q: "Queen",
+  K: "King",
+  A: "Ace",
 };
 ```
 
@@ -364,19 +382,19 @@ Use `DISPLAY_RANK` and `DISPLAY_SUIT` for visual rendering.
 
 Use these exact Tailwind token names — do NOT use raw hex values:
 
-| Token | Tailwind class | Value |
-|---|---|---|
-| Background | `bg-background` | `#0a0a0f` |
-| Surface | `bg-surface` | `#13131a` |
-| Surface elevated | `bg-surface-elevated` | `#1c1c26` |
-| Border | `border-border` | `#2a2a38` |
-| Accent (teal) | `border-accent`, `text-accent` | `#00e5a0` |
-| Accent glow | custom shadow | `#00e5a040` |
-| Team Red | `border-team-red`, `text-team-red` | `#ff4d4d` |
-| Team Blue | `border-team-blue`, `text-team-blue` | `#4d9fff` |
-| Text primary | `text-text-primary` | `#f0f0f8` |
-| Text secondary | `text-text-secondary` | `#8888a0` |
-| Warning | `text-warning` | `#eab308` |
+| Token            | Tailwind class                 | Value       |
+| ---------------- | ------------------------------ | ----------- |
+| Background       | `bg-background`                | `#0a0a0f`   |
+| Surface          | `bg-surface`                   | `#13131a`   |
+| Surface elevated | `bg-surface-elevated`          | `#1c1c26`   |
+| Border           | `border-border`                | `#2a2a38`   |
+| Accent (teal)    | `border-accent`, `text-accent` | `#00e5a0`   |
+| Accent glow      | custom shadow                  | `#00e5a040` |
+| Team A           | `border-team-a`, `text-team-a` | `#ff4d4d`   |
+| Team B           | `border-team-b`, `text-team-b` | `#4d9fff`   |
+| Text primary     | `text-text-primary`            | `#f0f0f8`   |
+| Text secondary   | `text-text-secondary`          | `#8888a0`   |
+| Warning          | `text-warning`                 | `#eab308`   |
 
 For accent glow shadow (not a direct Tailwind utility), use arbitrary value: `shadow-[0_0_12px_var(--color-accent-glow)]`
 
@@ -395,7 +413,7 @@ Per UX spec (WCAG 2.1 AA):
 2. **Focus ring**: `focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background` on all interactive elements.
 3. **`aria-live` regions**: PlayerSeat active indicator uses `aria-live="polite"`.
 4. **`aria-disabled`**: Set on unplayable cards.
-5. **Color independence**: Team identity uses color + text label ("Red"/"Blue"). Card playability uses glow + positional lift (not color alone).
+5. **Color independence**: Team identity uses color + text label ("Team A"/"Team B"). Card playability uses glow + positional lift (not color alone).
 6. **`prefers-reduced-motion`**: ALL animations/transitions must use `motion-safe:` prefix. Animations must not play for users with reduced motion preference.
 
 ### prefers-reduced-motion Pattern
@@ -429,10 +447,10 @@ Place each played card in its compass quadrant within the TrickArea box:
 
 ```ts
 const TRICK_CARD_POSITIONS = {
-  0: "bottom-0 left-1/2 -translate-x-1/2",  // South
-  1: "top-1/2 left-0 -translate-y-1/2",      // West
-  2: "top-0 left-1/2 -translate-x-1/2",      // North
-  3: "top-1/2 right-0 -translate-y-1/2",     // East
+  0: "bottom-0 left-1/2 -translate-x-1/2", // South
+  1: "top-1/2 left-0 -translate-y-1/2", // West
+  2: "top-0 left-1/2 -translate-x-1/2", // North
+  3: "top-1/2 right-0 -translate-y-1/2", // East
 };
 ```
 
@@ -447,7 +465,7 @@ const [resolving, setResolving] = useState(false);
 // Check if user prefers reduced motion
 const prefersReducedMotion = useMemo(
   () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  []
+  [],
 );
 
 useEffect(() => {
@@ -483,43 +501,43 @@ Story 4.3 only implements the sidebar shell:
 
 ### Existing Code to Reuse — DO NOT Reinvent
 
-| Symbol | File | Use |
-|---|---|---|
-| `useGameStore` | `shared/stores/gameStore.ts` | `gameState`, `myPlayerSeat`, `setMyPlayerSeat`, `clearGame` |
-| `useAuthStore` | `shared/stores/authStore.ts` | `user.id` to find myPlayerSeat |
-| `useWebSocket` | `shared/hooks/useWebSocket.ts` | `sendMessage(type, payload)` for play_card action |
-| `useWsDispatch` | `shared/hooks/useWsDispatch.ts` | Already routes `event:card_played` / `event:trick_resolved` to gameStore |
-| `ACTION_PLAY_CARD` | `shared/types/wsEvents.ts` | WS event constant for card play — value is `"action:play_card"` |
-| `GameState`, `Card`, `TrickCard`, `PlayerState` | `shared/types/gameTypes.ts` | All types already defined |
-| `Rank`, `Suit` | `shared/types/gameTypes.ts` | Union literal types for card encoding |
-| `Button` | `shared/components/ui/button.tsx` | shadcn Button for chat toggle — variants: `default`, `ghost`, `outline`, etc. |
-| `useTranslation` | `react-i18next` | `const { t } = useTranslation()` — use for all user-facing strings |
-| `useParams` | `react-router` | `const { roomId } = useParams<{ roomId: string }>()` — extract URL param |
-| `useNavigate` | `react-router` | `const navigate = useNavigate()` — for lobby redirect on match end |
-| `AppLayout` is NOT used | `App.tsx` | GamePage is outside AppLayout — no top nav bar |
+| Symbol                                          | File                              | Use                                                                           |
+| ----------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------- |
+| `useGameStore`                                  | `shared/stores/gameStore.ts`      | `gameState`, `myPlayerSeat`, `setMyPlayerSeat`, `clearGame`                   |
+| `useAuthStore`                                  | `shared/stores/authStore.ts`      | `user.id` to find myPlayerSeat                                                |
+| `useWebSocket`                                  | `shared/hooks/useWebSocket.ts`    | `sendMessage(type, payload)` for play_card action                             |
+| `useWsDispatch`                                 | `shared/hooks/useWsDispatch.ts`   | Already routes `event:card_played` / `event:trick_resolved` to gameStore      |
+| `ACTION_PLAY_CARD`                              | `shared/types/wsEvents.ts`        | WS event constant for card play — value is `"action:play_card"`               |
+| `GameState`, `Card`, `TrickCard`, `PlayerState` | `shared/types/gameTypes.ts`       | All types already defined                                                     |
+| `Rank`, `Suit`                                  | `shared/types/gameTypes.ts`       | Union literal types for card encoding                                         |
+| `Button`                                        | `shared/components/ui/button.tsx` | shadcn Button for chat toggle — variants: `default`, `ghost`, `outline`, etc. |
+| `useTranslation`                                | `react-i18next`                   | `const { t } = useTranslation()` — use for all user-facing strings            |
+| `useParams`                                     | `react-router`                    | `const { roomId } = useParams<{ roomId: string }>()` — extract URL param      |
+| `useNavigate`                                   | `react-router`                    | `const navigate = useNavigate()` — for lobby redirect on match end            |
+| `AppLayout` is NOT used                         | `App.tsx`                         | GamePage is outside AppLayout — no top nav bar                                |
 
 ### Files to Create
 
-| File | Purpose |
-|---|---|
-| `client/src/features/game/components/PlayingCard.tsx` | Single card (face-up or face-down) |
-| `client/src/features/game/components/PlayingCard.test.tsx` | PlayingCard unit tests |
-| `client/src/features/game/components/HandCards.tsx` | Fanned hand at bottom of viewport |
-| `client/src/features/game/components/HandCards.test.tsx` | HandCards unit tests |
-| `client/src/features/game/components/PlayerSeat.tsx` | Seat with player info, active state |
-| `client/src/features/game/components/PlayerSeat.test.tsx` | PlayerSeat unit tests |
-| `client/src/features/game/components/TrickArea.tsx` | Central trick display with resolution animation |
-| `client/src/features/game/components/TrickArea.test.tsx` | TrickArea unit tests |
-| `client/src/features/game/GamePage.test.tsx` | GamePage integration tests |
+| File                                                       | Purpose                                         |
+| ---------------------------------------------------------- | ----------------------------------------------- |
+| `client/src/features/game/components/PlayingCard.tsx`      | Single card (face-up or face-down)              |
+| `client/src/features/game/components/PlayingCard.test.tsx` | PlayingCard unit tests                          |
+| `client/src/features/game/components/HandCards.tsx`        | Fanned hand at bottom of viewport               |
+| `client/src/features/game/components/HandCards.test.tsx`   | HandCards unit tests                            |
+| `client/src/features/game/components/PlayerSeat.tsx`       | Seat with player info, active state             |
+| `client/src/features/game/components/PlayerSeat.test.tsx`  | PlayerSeat unit tests                           |
+| `client/src/features/game/components/TrickArea.tsx`        | Central trick display with resolution animation |
+| `client/src/features/game/components/TrickArea.test.tsx`   | TrickArea unit tests                            |
+| `client/src/features/game/GamePage.test.tsx`               | GamePage integration tests                      |
 
 ### Files to Modify
 
-| File | Changes |
-|---|---|
+| File                                    | Changes                                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `client/src/features/game/GamePage.tsx` | Replace stub with full layout — compass seats, TrickArea, HandCards, chat shell, WS wiring |
-| `client/src/App.tsx` | Route `path="/game"` → `path="/game/:roomId"` |
-| `client/src/i18n/en.json` | Add `game.seat.*`, `game.chat.*`, `game.loading` keys |
-| `client/src/i18n/sr.json` | Add same keys with Serbian (Latin) translations |
+| `client/src/App.tsx`                    | Route `path="/game"` → `path="/game/:roomId"`                                              |
+| `client/src/i18n/en.json`               | Add `game.seat.*`, `game.chat.*`, `game.loading` keys                                      |
+| `client/src/i18n/sr.json`               | Add same keys with Serbian (Latin) translations                                            |
 
 ### Testing Patterns — MANDATORY
 
@@ -557,6 +575,7 @@ Story 4.3 only implements the sidebar shell:
 ### Git Intelligence (from recent commits)
 
 Recent commit pattern: `feat(scope): implement <feature> with code review fixes`
+
 - Commit scope for this story: `feat(game): implement game table UI, seats, and cards`
 - Frontend tests: `npx vitest run`
 - TypeScript check: `npx tsc --noEmit`
@@ -571,7 +590,7 @@ Recent commit pattern: `feat(scope): implement <feature> with code review fixes`
 - [Source: client/src/shared/stores/gameStore.ts — myPlayerSeat, setMyPlayerSeat, clearGame, setGameState]
 - [Source: client/src/shared/hooks/useWebSocket.ts — sendMessage(type, payload) API, UseWebSocketReturn interface]
 - [Source: client/src/shared/hooks/useWsDispatch.ts — event:card_played and event:trick_resolved routing to gameStore]
-- [Source: client/src/index.css — design tokens: --color-accent, --color-team-red, --color-team-blue, font-display, font-body]
+- [Source: client/src/index.css — design tokens: --color-accent, --color-team-a, --color-team-b, font-display, font-body]
 - [Source: client/src/App.tsx — GamePage route currently path="/game" at line 37, needs fix to "/game/:roomId"]
 - [Source: client/src/features/lobby/RoomLobby.tsx — navigates to /game/${room.id} at line 107]
 - [Source: client/src/shared/components/ui/button.tsx — shadcn Button with ghost/default/outline variants]

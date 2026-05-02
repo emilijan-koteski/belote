@@ -127,6 +127,7 @@ so that the game feels correct and familiar to experienced players.
 **State Cloning:** Clone the `GameState` before any mutation. Use `slices.Clone()` for slice fields (player hands). Go slices share underlying arrays -- modifying without cloning violates the pure function contract. The returned `*GameState` must be a new object; the input state must remain unchanged.
 
 **Phase-Based Dispatch in ApplyAction:** Story 3.2 converts the `ApplyAction` stub into a real dispatcher. The pattern:
+
 ```go
 func ApplyAction(state *GameState, action Action) (*GameState, error) {
     switch state.Phase {
@@ -138,17 +139,20 @@ func ApplyAction(state *GameState, action Action) (*GameState, error) {
     }
 }
 ```
+
 Inside `handleBidding`, further dispatch on `action.Type` (`ActionPickTrump` / `ActionPassTrump`). Return `ErrWrongPhase` for any other action type within bidding phase.
 
 **Counter-Clockwise Turn Order:** All rotation uses `(seat + 1) % 4`. Seats: 0->1->2->3->0. Dealer rotates counter-clockwise on reshuffle. First bidder is always `(DealerSeat + 1) % 4`. First player to act after trump is picked is `(DealerSeat + 1) % 4`.
 
 **Bitola Variant Bidding Rules (Complete Specification):**
+
 1. **Round 1:** Trump candidate card (`TrumpCandidate`) is revealed (already set by `NewGame`/`dealCards`). Starting from `(DealerSeat + 1) % 4`, each player can PICK (accept candidate suit as trump) or PASS. If anyone picks, bidding ends immediately.
 2. **Round 2:** If all 4 pass in round 1, round 2 begins. Starting from `(DealerSeat + 1) % 4` again, each player can PICK any of the 4 suits as trump, or PASS. If anyone picks, bidding ends immediately.
 3. **Reshuffle:** If all 4 pass in round 2 (8 total passes), the deck is reshuffled, dealer rotates to `(DealerSeat + 1) % 4`, cards are re-dealt in 3+2+3 sequence, new trump candidate is revealed, and round 1 restarts with the new dealer.
 4. **No limit on reshuffles** -- the process repeats until someone picks trump.
 
 **Action.Suit Field Usage:**
+
 - Round 1 `pick_trump`: `Action.Suit` is IGNORED -- trump is always the candidate card's suit
 - Round 2 `pick_trump`: `Action.Suit` is REQUIRED -- player chooses any suit. Return `ErrInvalidBid` if nil
 - `pass_trump` (any round): `Action.Suit` is ignored
@@ -156,6 +160,7 @@ Inside `handleBidding`, further dispatch on `action.Type` (`ActionPickTrump` / `
 ### Existing Code to Reuse
 
 **DO NOT DUPLICATE -- reuse these existing functions and types:**
+
 - `ShuffleDeck(deck []Card)` in `state.go` -- shuffles in place using `math/rand/v2`
 - `dealCards(gs *GameState, deck []Card)` in `state.go` -- implements 3+2+3 dealing, sets `TrumpCandidate`
 - `NewDeck()` in `types.go` -- generates fresh 32-card deck
@@ -183,12 +188,14 @@ server/internal/game/
 ```
 
 **Files to modify:**
+
 - `server/internal/game/rules_engine.go` -- Replace stub with phase dispatch
 - `server/internal/game/testfixtures/fixtures.go` -- Add `NewGameMidBidding`
 - `server/internal/game/testfixtures/fixtures_test.go` -- Add fixture tests
 - `server/internal/apperr/errors.go` -- Add `ErrInvalidBid`
 
 **New files:**
+
 - `server/internal/game/bidding.go`
 - `server/internal/game/bidding_test.go`
 
@@ -209,28 +216,28 @@ server/internal/game/
 ### Card Point Values Reference
 
 | Card | Trump Points | Non-Trump Points |
-|------|-------------|-----------------|
-| J    | 20          | 2               |
-| 9    | 14          | 0               |
-| A    | 11          | 11              |
-| T    | 10          | 10              |
-| K    | 4           | 4               |
-| Q    | 3           | 3               |
-| 8    | 0           | 0               |
-| 7    | 0           | 0               |
+| ---- | ------------ | ---------------- |
+| J    | 20           | 2                |
+| 9    | 14           | 0                |
+| A    | 11           | 11               |
+| T    | 10           | 10               |
+| K    | 4            | 4                |
+| Q    | 3            | 3                |
+| 8    | 0            | 0                |
+| 7    | 0            | 0                |
 
 ### Game Phase State Machine Reference
 
-| Phase            | Valid Actions                           | Transitions To                              |
-|------------------|-----------------------------------------|---------------------------------------------|
-| `dealing`        | (automatic)                             | `bidding`                                   |
-| `bidding`        | `pick_trump`, `pass_trump`              | `playing` or `dealing` (Bitola reshuffle)   |
-| `playing`        | `play_card`, `declare`, `skip_declare`  | `trick_resolving`                           |
-| `trick_resolving`| (automatic)                             | `playing` or `hand_scoring`                 |
-| `hand_scoring`   | (automatic)                             | `dealing` or `match_end`                    |
-| `match_end`      | (none)                                  | --                                          |
-| `paused`         | `unpause`, `owner_unpause`              | (previous phase)                            |
-| `disconnected`   | `reconnect`                             | (previous phase)                            |
+| Phase             | Valid Actions                          | Transitions To                            |
+| ----------------- | -------------------------------------- | ----------------------------------------- |
+| `dealing`         | (automatic)                            | `bidding`                                 |
+| `bidding`         | `pick_trump`, `pass_trump`             | `playing` or `dealing` (Bitola reshuffle) |
+| `playing`         | `play_card`, `declare`, `skip_declare` | `trick_resolving`                         |
+| `trick_resolving` | (automatic)                            | `playing` or `hand_scoring`               |
+| `hand_scoring`    | (automatic)                            | `dealing` or `match_end`                  |
+| `match_end`       | (none)                                 | --                                        |
+| `paused`          | `unpause`, `owner_unpause`             | (previous phase)                          |
+| `disconnected`    | `reconnect`                            | (previous phase)                          |
 
 ### Project Structure Notes
 
@@ -292,10 +299,12 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - `server/internal/game/bidding.go`
 - `server/internal/game/bidding_test.go`
 
 **Modified files:**
+
 - `server/internal/apperr/errors.go` (added ErrInvalidBid, fixed gofmt alignment)
 - `server/internal/game/rules_engine.go` (replaced stub with phase-based dispatch)
 - `server/internal/game/rules_engine_test.go` (updated stub test to reflect new bidding behavior)

@@ -12,7 +12,7 @@ So that we can begin playing with the teams arranged how we want.
 
 ## Acceptance Criteria
 
-1. **Seat Selection** — When a player in the RoomLobby clicks an empty seat on Red or Blue team, they are assigned to that team and seat. All players in the room see the updated seat assignment via WebSocket. Partners face each other (seats 0+2 = Red, seats 1+3 = Blue per Architecture seat mapping).
+1. **Seat Selection** — When a player in the RoomLobby clicks an empty seat on Team A or Team B, they are assigned to that team and seat. All players in the room see the updated seat assignment via WebSocket. Partners face each other (seats 0+2 = Team A, seats 1+3 = Team B per Architecture seat mapping).
 
 2. **Seat Switching** — When a player who is already seated clicks a different empty seat, they move to the new seat and their old seat becomes empty. All players see the update in real-time.
 
@@ -37,7 +37,7 @@ So that we can begin playing with the teams arranged how we want.
     - `UpdatePlayerSeat`: `UPDATE room_players SET seat = ?, team = ? WHERE room_id = ? AND user_id = ?`. If no rows affected -> return `ErrNotInRoom`
     - `ClearPlayerSeat`: `UPDATE room_players SET seat = NULL, team = NULL WHERE room_id = ? AND user_id = ?`. If no rows affected -> return `ErrNotInRoom`
     - `FindPlayerBySeat`: `SELECT rp.*, u.username FROM room_players rp JOIN users u ON u.id = rp.user_id WHERE rp.room_id = ? AND rp.seat = ?`. Returns `(nil, nil)` if no player at that seat
-  - [x] **Seat-to-team derivation**: The team is deterministic from seat index — seats 0,2 = `"red"`, seats 1,3 = `"blue"`. The handler computes the team from the seat, NOT the client. Never trust client-submitted team values
+  - [x] **Seat-to-team derivation**: The team is deterministic from seat index — seats 0,2 = `"teamA"`, seats 1,3 = `"teamB"`. The handler computes the team from the seat, NOT the client. Never trust client-submitted team values
 
 - [x] **Task 2: Backend — Add new domain errors** (AC: #1, #2, #3, #5)
   - [x] Add to `server/internal/apperr/errors.go`:
@@ -67,7 +67,7 @@ So that we can begin playing with the teams arranged how we want.
     4. Validate `seat` is 0, 1, 2, or 3 — if not, return `ErrInvalidSeat`
     5. `repo.FindByID(roomID)` — if nil, return `ErrRoomNotFound`
     6. Check `room.Status == "waiting"` — if not, return `ErrGameNotStartable`
-    7. Derive team: `if seat % 2 == 0 { team = "red" } else { team = "blue" }`
+    7. Derive team: `if seat % 2 == 0 { team = "teamA" } else { team = "teamB" }`
     8. Run in transaction:
        a. `repo.FindPlayerBySeat(roomID, seat)` — if occupied by another user, return `ErrSeatTaken`. If occupied by same user, return 200 (no-op)
        b. Find current player record: call `repo.FindPlayerRoom(userID)` within the transaction — this returns the player's existing `RoomPlayer` record. If `player.Seat != nil`, call `repo.ClearPlayerSeat(roomID, userID)` first (seat switching per AC #2). This leverages the existing method from Story 2.3 rather than scanning `FindPlayersByRoomID`
@@ -117,9 +117,10 @@ So that we can begin playing with the teams arranged how we want.
     const SystemGameStarted = "system:game_started"
     ```
   - [x] Add to `client/src/shared/types/wsEvents.ts`:
+
     ```typescript
-    export const SYSTEM_SEAT_UPDATED = 'system:seat_updated' as const;
-    export const SYSTEM_GAME_STARTED = 'system:game_started' as const;
+    export const SYSTEM_SEAT_UPDATED = "system:seat_updated" as const;
+    export const SYSTEM_GAME_STARTED = "system:game_started" as const;
 
     export interface SeatUpdatedPayload {
       roomId: number;
@@ -134,22 +135,28 @@ So that we can begin playing with the teams arranged how we want.
       roomId: number;
     }
     ```
+
   - [x] **Both files updated in the same commit** — per project convention
 
 - [x] **Task 7: Frontend — Add API client functions** (AC: #1, #5)
   - [x] Add to `client/src/shared/api/rooms.ts`:
+
     ```typescript
-    export function selectSeat(roomId: number, seat: number): Promise<{ players: RoomPlayer[] }> {
+    export function selectSeat(
+      roomId: number,
+      seat: number,
+    ): Promise<{ players: RoomPlayer[] }> {
       return fetchClient<{ players: RoomPlayer[] }>(`/rooms/${roomId}/seat`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({ seat }),
       });
     }
 
     export function startGame(roomId: number): Promise<Room> {
-      return fetchClient<Room>(`/rooms/${roomId}/start`, { method: 'POST' });
+      return fetchClient<Room>(`/rooms/${roomId}/start`, { method: "POST" });
     }
     ```
+
   - [x] Import `RoomPlayer` from `apiTypes.ts` (already imported via `RoomDetail`)
   - [x] **Important:** `fetchClient<T>` auto-unwraps `{ data: T }` — do NOT double-unwrap
 
@@ -161,17 +168,17 @@ So that we can begin playing with the teams arranged how we want.
     │  <- Back to Lobby        Room Name        Copy Link  │
     ├─────────────────────────────────────────────────────┤
     │                                                     │
-    │  RED TEAM                          BLUE TEAM        │
+    │  TEAM A                            TEAM B           │
     │  ┌──────────┐                    ┌──────────┐       │
     │  │  Seat 0  │                    │  Seat 1  │       │
     │  │ Player A │                    │ Waiting..│       │
-    │  │  (Red)   │                    │  (Blue)  │       │
+    │  │ (Team A) │                    │ (Team B) │       │
     │  └──────────┘                    └──────────┘       │
     │                                                     │
     │  ┌──────────┐                    ┌──────────┐       │
     │  │  Seat 2  │                    │  Seat 3  │       │
     │  │ Waiting..│                    │ Player B │       │
-    │  │  (Red)   │                    │  (Blue)  │       │
+    │  │ (Team A) │                    │ (Team B) │       │
     │  └──────────┘                    └──────────┘       │
     │                                                     │
     │  Bitola · 1001 · Relaxed                            │
@@ -180,8 +187,8 @@ So that we can begin playing with the teams arranged how we want.
     │                              Leave Room             │
     └─────────────────────────────────────────────────────┘
     ```
-  - [x] **Seat rendering logic:** Render seats as a 2-column layout. Left column = Red team (seats 0, 2), right column = Blue team (seats 1, 3). Each seat is clickable if empty or occupied by the current user (for switching). Partner seats are vertically aligned (0 above 2, 1 above 3) — partners face each other
-  - [x] **Team color indicators:** Red seats use `border-team-red` (or fallback `border-red-500`), Blue seats use `border-team-blue` (or fallback `border-blue-500`). Team color label text above each column
+  - [x] **Seat rendering logic:** Render seats as a 2-column layout. Left column = Team A (seats 0, 2), right column = Team B (seats 1, 3). Each seat is clickable if empty or occupied by the current user (for switching). Partner seats are vertically aligned (0 above 2, 1 above 3) — partners face each other
+  - [x] **Team color indicators:** Team A seats use `border-team-a` (or fallback `border-red-500`), Team B seats use `border-team-b` (or fallback `border-blue-500`). Team color label text above each column
   - [x] **Click handler on empty seats:** Call `selectSeat(roomId, seatIndex)`. On success, update local `players` state from response. On error, show toast with error message (SEAT_TAKEN, INVALID_SEAT, etc.)
   - [x] **Click handler on own seat:** Same as empty — the backend handles seat switching (clears old seat, assigns new one)
   - [x] **Occupied seats (other players):** Show player username, team color border, NOT clickable. Use `cursor-default`
@@ -211,8 +218,8 @@ So that we can begin playing with the teams arranged how we want.
   - [x] Add to `client/src/shared/i18n/en.json` under `lobby.roomLobby`:
     ```json
     {
-      "teamRed": "Red Team",
-      "teamBlue": "Blue Team",
+      "teamA": "Team A",
+      "teamB": "Team B",
       "startGame": "Start Game",
       "startGameDisabled": "All 4 players must be seated",
       "waitingForOwner": "Waiting for {{owner}} to start the game...",
@@ -230,8 +237,8 @@ So that we can begin playing with the teams arranged how we want.
   - [x] Add matching keys to `client/src/shared/i18n/sr.json`:
     ```json
     {
-      "teamRed": "Crven tim",
-      "teamBlue": "Plav tim",
+      "teamA": "Tim A",
+      "teamB": "Tim B",
       "startGame": "Započni igra",
       "startGameDisabled": "Site 4 igrači mora da se sednat",
       "waitingForOwner": "Čekanje {{owner}} da ja započne igrata...",
@@ -251,7 +258,7 @@ So that we can begin playing with the teams arranged how we want.
   - [x] Add test cases to `server/internal/room/handler_test.go`:
     - **SelectSeat** tests:
       - Successful seat selection — returns 200 with updated players list, correct seat and team
-      - Select seat 0 -> team is "red"; seat 1 -> team is "blue"; seat 2 -> "red"; seat 3 -> "blue"
+      - Select seat 0 -> team is "teamA"; seat 1 -> team is "teamB"; seat 2 -> "teamA"; seat 3 -> "teamB"
       - Seat switching — player moves from seat 0 to seat 3, old seat freed
       - Seat already occupied by another player — returns 409 `SEAT_TAKEN`
       - Invalid seat number (5, -1) — returns 400 `INVALID_SEAT`
@@ -275,8 +282,8 @@ So that we can begin playing with the teams arranged how we want.
     - Empty seats are clickable and call `selectSeat` API on click
     - Occupied seats (other players) are NOT clickable
     - Own seat is clickable (for switching)
-    - Red team seats (0, 2) show red team color indicator
-    - Blue team seats (1, 3) show blue team color indicator
+    - Team A seats (0, 2) show Team A color indicator
+    - Team B seats (1, 3) show Team B color indicator
     - Room owner sees Start Game button
     - Start Game button disabled when fewer than 4 players seated
     - Start Game button enabled when all 4 seated, calls `startGame` API on click
@@ -298,12 +305,14 @@ So that we can begin playing with the teams arranged how we want.
 **This story extends the existing `room/` package** — `SelectSeat` and `StartGame` handlers belong alongside JoinRoom, LeaveRoom, GetRoom. Do NOT create a separate package.
 
 **Seat mapping is canonical per Architecture:**
-- Seats 0+2 = Red team (partners)
-- Seats 1+3 = Blue team (partners)
-- Team is derived server-side from seat index: `seat % 2 == 0 -> "red"`, `seat % 2 != 0 -> "blue"`
+
+- Seats 0+2 = Team A (partners)
+- Seats 1+3 = Team B (partners)
+- Team is derived server-side from seat index: `seat % 2 == 0 -> "teamA"`, `seat % 2 != 0 -> "teamB"`
 - The client NEVER sends a team value — it sends only the seat number. Server computes team
 
 **Room status lifecycle for this story:**
+
 - `waiting` -> `in_progress` (via StartGame endpoint)
 - Only the room owner can trigger StartGame
 - Once `in_progress`, the room no longer appears in browse list (existing `GET /rooms?status=waiting` filter handles this)
@@ -348,6 +357,7 @@ client/src/shared/i18n/
 ### Previous Story (2.3) Intelligence
 
 **Key patterns established:**
+
 - `RoomPlayer` model already has nullable `Seat *int` and `Team *string` fields — ready for this story
 - Transaction pattern: `h.repo.RunInTransaction(func(tx RoomRepository) error { ... })` — use this for SelectSeat to prevent race conditions on seat assignment
 - Response pattern: `c.JSON(http.StatusOK, map[string]interface{}{"data": ...})`
@@ -358,6 +368,7 @@ client/src/shared/i18n/
 - Existing `data-testid` conventions: `player-seat-{index}`, `room-lobby`, `copy-link`, `leave-room`, `back-to-lobby`
 
 **Things NOT to break:**
+
 - Leave Room functionality (navigate away cleanup via `useEffect` return)
 - Copy Link button
 - Loading/error states
@@ -377,14 +388,15 @@ Two players clicking the same seat simultaneously could both pass the "seat empt
 ### Frontend Implementation Details
 
 **Seat layout structure:**
-The 2x2 grid should visually group seats by team. Left column = Red (seats 0, 2), right column = Blue (seats 1, 3). Each column has a team label header. This maps to the Architecture seat mapping where partners face each other.
+The 2x2 grid should visually group seats by team. Left column = Team A (seats 0, 2), right column = Team B (seats 1, 3). Each column has a team label header. This maps to the Architecture seat mapping where partners face each other.
 
 **Game route navigation:**
 On `StartGame` success (owner) or `system:game_started` event (all players), navigate to `/game/${roomId}`. This route may not exist yet — wire the navigation anyway. React Router will show a 404 or blank page until Epic 4 implements the game view.
 
 **Existing CSS tokens available:**
-- `team-red` (#ff4d4d) and `team-blue` (#4d9fff) are defined in the Tailwind design tokens (Story 1.1)
-- Use `border-team-red`, `text-team-red`, `border-team-blue`, `text-team-blue` classes
+
+- `team-a` (#ff4d4d) and `team-b` (#4d9fff) are defined in the Tailwind design tokens (Story 1.1)
+- Use `border-team-a`, `text-team-a`, `border-team-b`, `text-team-b` classes
 - If tokens are not yet wired as Tailwind classes, fall back to `border-red-400`, `text-red-400`, `border-blue-400`, `text-blue-400` and add a TODO to align with design tokens
 
 **Disabled button styling:**
@@ -411,11 +423,11 @@ Claude Opus 4.6 (1M context)
 ### Completion Notes List
 
 - Implemented `SelectSeat` handler (POST /rooms/:id/seat) with `*int` pointer for seat to distinguish missing from seat 0
-- Team derived server-side: seats 0,2 = "red", seats 1,3 = "blue" — client never sends team
+- Team derived server-side: seats 0,2 = "teamA", seats 1,3 = "teamB" — client never sends team
 - Seat switching handled atomically in transaction: clear old seat, assign new seat
 - Implemented `StartGame` handler (POST /rooms/:id/start) — owner-only, requires all 4 seated
 - StartGame only changes room status to `in_progress` — no game session creation (Epic 3/4)
-- RoomLobby rewritten with team-colored 2-column seat layout (Red left, Blue right)
+- RoomLobby rewritten with team-colored 2-column seat layout (Team A left, Team B right)
 - Empty seats clickable, own seat clickable (for switching), other players' seats disabled
 - Owner sees Start Game button (enabled when all 4 seated, disabled at 40% opacity otherwise)
 - Non-owner sees "Waiting for [owner] to start the game..." when all 4 seated

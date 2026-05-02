@@ -133,7 +133,7 @@ func TestSurrenderRequest(t *testing.T) {
 
 func TestSurrenderAccept(t *testing.T) {
 	// Each case proposer → expected winning team.
-	// Seat 0/2 = Red (team 0); Seat 1/3 = Blue (team 1). Winner is the
+	// Seat 0/2 = team A (team 0); Seat 1/3 = team B (team 1). Winner is the
 	// opposite team of the proposer.
 	cases := []struct {
 		proposer   int

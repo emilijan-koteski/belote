@@ -22,7 +22,7 @@ function player(seat: number, cards: Card[]): PlayerState {
     hand: cards,
     userId: seat + 1,
     username: `p${seat}`,
-    team: seat % 2 === 0 ? "red" : "blue",
+    team: seat % 2 === 0 ? "teamA" : "teamB",
     declarations: [],
     connected: true,
   };
@@ -209,8 +209,8 @@ describe("legalCards", () => {
   });
 
   it("must trump when void in led suit and opponent is winning", () => {
-    // Opponent (seat 0, Red) led 10D and is winning the trick.
-    // I'm seat 1 (Blue), void in diamonds, holding two clubs (trump) and a heart.
+    // Opponent (seat 0, team A) led 10D and is winning the trick.
+    // I'm seat 1 (team B), void in diamonds, holding two clubs (trump) and a heart.
     // Must trump.
     const myHand = hand(["8C", "9C", "AH"]);
     const state = makeState({
@@ -242,7 +242,7 @@ describe("legalCards", () => {
   it("void in led suit with trump in hand → must cut even when partner is winning", () => {
     // Bitola variant has no partner-winning exemption: a void player who holds
     // any trump must cut. Seat 2 leads TD; seat 3 plays 7D. Seat 0 (partner of
-    // seat 2 — Red team) is void in D and holds trump clubs 8C/9C plus AH.
+    // seat 2 — team A) is void in D and holds trump clubs 8C/9C plus AH.
     // No trump is on the table yet, so the over-trump filter falls through and
     // both trumps are legal; AH (non-trump) must be excluded.
     const myHand = hand(["8C", "9C", "AH"]);
@@ -275,7 +275,7 @@ describe("legalCards", () => {
 
   it("img_three: void with one trump, partner winning non-trump — only that trump", () => {
     // Trump = Spades. Trick: cvetanka(seat 1) 9C, kiro(seat 2) AC (partner of
-    // seat 0 — Red), irena(seat 3) TC. Emilijan(seat 0) is void in clubs and
+    // seat 0 — team A), irena(seat 3) TC. Emilijan(seat 0) is void in clubs and
     // holds the single trump 8S plus J♦ + K♦. With no trump on the table yet,
     // the only legal play is 8S; both diamonds must be excluded.
     const myHand = hand(["8S", "JD", "KD"]);

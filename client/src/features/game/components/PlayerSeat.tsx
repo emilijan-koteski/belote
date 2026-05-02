@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import type { PlayerState } from "@/shared/types/gameTypes";
+import type { PlayerState, TeamString } from "@/shared/types/gameTypes";
 
 import { TimerRing } from "./TimerRing";
 
@@ -8,7 +8,7 @@ interface PlayerSeatProps {
   player: PlayerState | null;
   isSelf: boolean;
   isActive: boolean;
-  teamColor: "red" | "blue";
+  team: TeamString;
   cardCount?: number;
   turnExpiresAt?: string | null;
   timerDuration?: number;
@@ -18,21 +18,22 @@ export function PlayerSeat({
   player,
   isSelf,
   isActive,
-  teamColor,
+  team,
   cardCount,
   turnExpiresAt,
   timerDuration,
 }: PlayerSeatProps) {
   const { t } = useTranslation();
 
-  const borderColor = teamColor === "red" ? "border-team-red" : "border-team-blue";
-  const teamLabel = teamColor === "red" ? "Red" : "Blue";
+  const borderColor = team === "teamA" ? "border-team-a" : "border-team-b";
+  const teamLabel = team === "teamA" ? t("team.a") : t("team.b");
 
   if (!player) {
     return (
       <div
         className="flex flex-col items-center gap-1 p-2 rounded-lg border-2 border-dashed border-border"
-        aria-label={`Empty seat, ${teamLabel} team, waiting`}
+        aria-label={`Empty seat, ${teamLabel}, waiting`}
+        data-team={team}
       >
         <div className="w-10 h-10 rounded-full bg-surface-elevated border border-border flex items-center justify-center">
           <span className="text-text-secondary text-sm font-body">?</span>
@@ -59,7 +60,8 @@ export function PlayerSeat({
   return (
     <div
       className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 ${activeClasses} ${scaleClass} ${disconnectedClass}`}
-      aria-label={`${displayName}, ${teamLabel} team, ${statusLabel}`}
+      aria-label={`${displayName}, ${teamLabel}, ${statusLabel}`}
+      data-team={team}
     >
       <div className="relative w-12 h-12 flex items-center justify-center">
         <div className="w-10 h-10 rounded-full bg-surface-elevated flex items-center justify-center">

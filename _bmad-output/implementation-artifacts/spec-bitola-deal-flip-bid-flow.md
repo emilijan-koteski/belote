@@ -1,9 +1,9 @@
 ---
-title: 'Bitola dealing & trump-selection: deal-flip-bid-finish flow'
-type: 'refactor'
-created: '2026-04-25'
-status: 'done'
-baseline_commit: 'd04a1f0'
+title: "Bitola dealing & trump-selection: deal-flip-bid-finish flow"
+type: "refactor"
+created: "2026-04-25"
+status: "done"
+baseline_commit: "d04a1f0"
 context:
   - _bmad-output/implementation-artifacts/3-2-trump-bidding-bitola-variant.md
   - _bmad-output/planning-artifacts/project-context.md
@@ -20,6 +20,7 @@ context:
 ## Boundaries & Constraints
 
 **Always:**
+
 - Initial deal stores 5 cards per seat in `Players[i].Hand`, sets `TrumpCandidate` (next card), assigns the remaining 11 cards to `GameState.Deck` in deck order.
 - Round 1 `pick_trump`: `TrumpSuit = TrumpCandidate.Suit` (action.Suit ignored). Stage-2 distribution mimics a real-table deal: walk the seats in turn order from `(DealerSeat+1) % 4`, taking the next slice off the front of `Deck` — 3 cards for each non-picker seat, **2 cards for the picker (in their natural rotation slot, not first)**. After the rotation, append `TrumpCandidate` to the picker's hand. Final hand size = 8 for everyone, `Deck` fully consumed (11 cards distributed).
 - Round 2 `pick_trump`: requires `action.Suit` (else `ErrInvalidBid`); same real-table distribution rule as round 1 — picker waits their slot for 2 cards, others get 3 each in turn order; candidate appended to picker's hand last.
@@ -28,9 +29,11 @@ context:
 - Pure-function rules engine preserved; `cloneGameState` deep-clones the new `Deck` slice.
 
 **Ask First:**
+
 - If the test corpus uses `NewGameJustDealt` to assert 8-card hands during bidding outside the bidding-flow tests themselves, flag the affected files before mass-editing — the fixture's contract is changing.
 
 **Never:**
+
 - Don't deal all 8 cards upfront, and don't write the candidate into a hand during stage 1.
 - Don't change scoring, declaration, trick-resolution, pause/disconnect, or play-phase rules.
 - Don't add hand or deck privacy filtering on the WebSocket broadcast — existing all-hands-visible exposure is a separate concern and out of scope.
@@ -38,16 +41,16 @@ context:
 
 ## I/O & Edge-Case Matrix
 
-| Scenario | Input / State | Expected Output / Behavior | Error Handling |
-|----------|--------------|----------------------------|----------------|
-| Stage-1 deal | fresh `NewGame` | each `Players[i].Hand` has 5 cards, `TrumpCandidate` non-nil, `len(Deck) == 11`, `Phase == PhaseDealing` | n/a |
-| Round 1 pick by first bidder (seat 1) | dealer=0, active=1, candidate=7H, Deck has 11 cards | rotation order (1,2,3,0) draws (2,3,3,3) from Deck → seat 1 gets Deck[0:2]+candidate, seat 2 gets Deck[2:5], seat 3 gets Deck[5:8], seat 0 gets Deck[8:11]; all hands = 8, Deck=[], TrumpCandidate=nil, TrumpSuit=H, Phase=playing | n/a |
-| Round 1 pick by 4th bidder (seat 0, 3 prior passes) | dealer=0, active=0 | rotation (1,2,3,0) draws (3,3,3,2) → seat 1 gets Deck[0:3], seat 2 gets Deck[3:6], seat 3 gets Deck[6:9], seat 0 gets Deck[9:11]+candidate; all hands = 8 | n/a |
-| Round 2 pick with action.Suit=S (seat 1) | dealer=0, active=1, BiddingRound=2 | same rotation as round-1-seat-1 row, but TrumpSuit=S | n/a |
-| Round 2 pick without action.Suit | nil action.Suit | state unchanged | `ErrInvalidBid` |
-| 8 total passes | round 2, 3 prior passes, picker passes | hands + Deck + TrumpCandidate pooled (32), shuffled, dealer +1, stage-1 re-deal: 5 per player + new candidate + 11-card Deck, BiddingRound=1, BiddingPassCount=0, Phase=PhaseDealing | n/a |
-| Pick when TrumpCandidate is nil (defensive) | inconsistent state | unchanged | `ErrWrongPhase` |
-| Instant-win after pick | picker ends up with all 8 of trump suit (e.g., contrived deck) | `WinnerTeam` set, `Phase = PhaseMatchEnd` | n/a |
+| Scenario                                            | Input / State                                                  | Expected Output / Behavior                                                                                                                                                                                                         | Error Handling  |
+| --------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| Stage-1 deal                                        | fresh `NewGame`                                                | each `Players[i].Hand` has 5 cards, `TrumpCandidate` non-nil, `len(Deck) == 11`, `Phase == PhaseDealing`                                                                                                                           | n/a             |
+| Round 1 pick by first bidder (seat 1)               | dealer=0, active=1, candidate=7H, Deck has 11 cards            | rotation order (1,2,3,0) draws (2,3,3,3) from Deck → seat 1 gets Deck[0:2]+candidate, seat 2 gets Deck[2:5], seat 3 gets Deck[5:8], seat 0 gets Deck[8:11]; all hands = 8, Deck=[], TrumpCandidate=nil, TrumpSuit=H, Phase=playing | n/a             |
+| Round 1 pick by 4th bidder (seat 0, 3 prior passes) | dealer=0, active=0                                             | rotation (1,2,3,0) draws (3,3,3,2) → seat 1 gets Deck[0:3], seat 2 gets Deck[3:6], seat 3 gets Deck[6:9], seat 0 gets Deck[9:11]+candidate; all hands = 8                                                                          | n/a             |
+| Round 2 pick with action.Suit=S (seat 1)            | dealer=0, active=1, BiddingRound=2                             | same rotation as round-1-seat-1 row, but TrumpSuit=S                                                                                                                                                                               | n/a             |
+| Round 2 pick without action.Suit                    | nil action.Suit                                                | state unchanged                                                                                                                                                                                                                    | `ErrInvalidBid` |
+| 8 total passes                                      | round 2, 3 prior passes, picker passes                         | hands + Deck + TrumpCandidate pooled (32), shuffled, dealer +1, stage-1 re-deal: 5 per player + new candidate + 11-card Deck, BiddingRound=1, BiddingPassCount=0, Phase=PhaseDealing                                               | n/a             |
+| Pick when TrumpCandidate is nil (defensive)         | inconsistent state                                             | unchanged                                                                                                                                                                                                                          | `ErrWrongPhase` |
+| Instant-win after pick                              | picker ends up with all 8 of trump suit (e.g., contrived deck) | `WinnerTeam` set, `Phase = PhaseMatchEnd`                                                                                                                                                                                          | n/a             |
 
 </frozen-after-approval>
 
@@ -64,6 +67,7 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
+
 - [x] `server/internal/game/state.go` — Add `Deck []Card json:"deck"` to `GameState`. Rewrite `dealCards` to: deal 3 then 2 cards per seat (counter-clockwise from `(Dealer+1) % 4`), set `TrumpCandidate = &deck[20]`, assign `gs.Deck = slices.Clone(deck[21:32])`. Drop the `checkInstantWin` call from `NewGame` (move responsibility to post-pick).
 - [x] `server/internal/game/bidding.go` — In `handlePickTrump`: after suit is locked, do a real-table rotation — for `i` in 0..3 take seat `s = (Dealer+1+i) % 4` and slice off `n` cards from the front of `newState.Deck` where `n = 2` if `s == picker` else `3`; append slice to `Players[s].Hand`. After the rotation append `*TrumpCandidate` to the picker's hand; assert `len(newState.Deck) == 0` after distribution; set `newState.Deck = nil` and `newState.TrumpCandidate = nil`; run `checkInstantWin` (set `WinnerTeam`/`Phase=PhaseMatchEnd` on positive result, otherwise `Phase=PhasePlaying`). In `reshuffleAndRedeal`: build the 32-card pool from hands + `state.Deck` + (if non-nil) `*state.TrumpCandidate` before shuffling, then call `dealCards`. In `cloneGameState`: `newState.Deck = slices.Clone(state.Deck)`.
 - [x] `server/internal/game/scoring.go` — `checkInstantWin` now prefers `TrumpSuit` (the locked trump after a round 2 pick that differs from the candidate) and falls back to `TrumpCandidate.Suit` for legacy/internal-test states.
@@ -79,6 +83,7 @@ context:
 - [x] Frontend test fixtures — Added `deck: []` to the default-state literals in `gameStore.test.ts`, `gameTypes.test.ts`, `useWsDispatch.test.ts`, `useReconnectionRedirect.test.tsx`, `legalCards.test.ts`, and `GamePage.test.tsx`.
 
 **Acceptance Criteria:**
+
 - Given a fresh game, when `NewGame` runs, then every seat holds exactly 5 cards, `TrumpCandidate` is set, `Deck` has 11 cards, and no card appears twice across hands ∪ Deck ∪ candidate.
 - Given the bidding phase with the candidate revealed, when the active bidder submits `pick_trump` in round 1, then stage-2 distribution walks the seats from `(Dealer+1) % 4` taking the next slice off `Deck` — 2 cards in the picker's slot, 3 elsewhere — and finally appends the candidate to the picker's hand; every seat ends with 8 cards, `Deck` is empty, `TrumpCandidate` is nil, `TrumpSuit` equals the candidate's suit, `Phase` is `playing`, `ActivePlayerSeat = (Dealer+1) % 4`, `TrickNumber = 1`.
 - Given bidding round 2, when the active bidder submits `pick_trump` with `action.Suit = SuitSpades`, then the same distribution rule applies and `TrumpSuit = SuitSpades`.
@@ -130,6 +135,7 @@ Card-conservation invariant for tests: across `Players[*].Hand` ∪ `Deck` ∪ `
 ## Verification
 
 **Commands:**
+
 - `cd server && go test ./...` — all packages green
 - `cd server && go vet ./...` — clean
 - `cd client && npx vitest run` — all frontend tests green

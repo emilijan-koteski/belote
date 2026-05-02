@@ -164,16 +164,16 @@ Phased, reflecting passion project → public launch trajectory:
 
 ### Key Performance Indicators
 
-| KPI | Target | Phase |
-| --- | --- | --- |
-| Monthly Active Players | 20+ (Phase 1), 100+ (Phase 2), 200+ (Phase 3) | Growth |
-| Match completion rate | >85% | Quality |
-| D7 new player retention | >70% | Retention |
-| Session return rate (D14) | >60% | Retention |
-| Ranked participation rate | >30% of Level 5+ players | Engagement |
-| Season completion rate | >50% of ranked players finish a season | Engagement |
-| Disconnection rate | <5% of active game sessions | Technical |
-| Server uptime | >99.5% | Technical |
+| KPI                       | Target                                        | Phase      |
+| ------------------------- | --------------------------------------------- | ---------- |
+| Monthly Active Players    | 20+ (Phase 1), 100+ (Phase 2), 200+ (Phase 3) | Growth     |
+| Match completion rate     | >85%                                          | Quality    |
+| D7 new player retention   | >70%                                          | Retention  |
+| Session return rate (D14) | >60%                                          | Retention  |
+| Ranked participation rate | >30% of Level 5+ players                      | Engagement |
+| Season completion rate    | >50% of ranked players finish a season        | Engagement |
+| Disconnection rate        | <5% of active game sessions                   | Technical  |
+| Server uptime             | >99.5%                                        | Technical  |
 
 ---
 
@@ -205,7 +205,7 @@ Phased, reflecting passion project → public launch trajectory:
 - **Quick Play** — random matchmaking queue
 - **Browse/Search Rooms** — searchable room list by name/code
 - **Create Room** — owner configures: mode (1001/501), trump variant (Croatian/Bitola), per-move timer or relaxed, reconnect window duration
-- Team assignment (Red/Blue) in lobby — friends can self-assign
+- Team assignment (Team A/Team B) in lobby — friends can self-assign
 - 2, 3, or 4 friends can queue together; remaining slots filled by matchmaking
 
 #### Chat

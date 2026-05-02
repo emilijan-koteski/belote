@@ -1,10 +1,10 @@
 ---
-title: 'Join Room by Code'
-type: 'feature'
-created: '2026-04-12'
-status: 'done'
-baseline_commit: 'a9dab56'
-context: ['_bmad-output/project-context.md']
+title: "Join Room by Code"
+type: "feature"
+created: "2026-04-12"
+status: "done"
+baseline_commit: "a9dab56"
+context: ["_bmad-output/project-context.md"]
 ---
 
 <frozen-after-approval reason="human-owned intent -- do not modify unless human renegotiates">
@@ -25,13 +25,13 @@ context: ['_bmad-output/project-context.md']
 
 ## I/O & Edge-Case Matrix
 
-| Scenario | Input / State | Expected Output / Behavior | Error Handling |
-|----------|--------------|---------------------------|----------------|
-| Valid code, room waiting | 6-char code, room status=waiting | Room found, join succeeds, navigate to `/rooms/:id` | N/A |
-| Valid code, room full | 6-char code, room 4/4 players | Join attempt returns 409 | Toast: "Room is full" (reuse existing) |
-| Invalid/expired code | Non-existent code string | 404 from lookup | Toast: "Room not found" |
-| Empty input | Submit with blank field | Button disabled, no request | N/A |
-| Already in room | Valid code, user already joined | Join returns 409 ALREADY_IN_ROOM | Toast: reuse existing error |
+| Scenario                 | Input / State                    | Expected Output / Behavior                          | Error Handling                         |
+| ------------------------ | -------------------------------- | --------------------------------------------------- | -------------------------------------- |
+| Valid code, room waiting | 6-char code, room status=waiting | Room found, join succeeds, navigate to `/rooms/:id` | N/A                                    |
+| Valid code, room full    | 6-char code, room 4/4 players    | Join attempt returns 409                            | Toast: "Room is full" (reuse existing) |
+| Invalid/expired code     | Non-existent code string         | 404 from lookup                                     | Toast: "Room not found"                |
+| Empty input              | Submit with blank field          | Button disabled, no request                         | N/A                                    |
+| Already in room          | Valid code, user already joined  | Join returns 409 ALREADY_IN_ROOM                    | Toast: reuse existing error            |
 
 </frozen-after-approval>
 
@@ -50,6 +50,7 @@ context: ['_bmad-output/project-context.md']
 ## Tasks & Acceptance
 
 **Execution:**
+
 - [x] `server/internal/room/repository.go` -- Add `FindByCode(code string) (*Room, error)` to `Repository` interface
 - [x] `server/internal/room/gorm_repo.go` -- Implement `FindByCode` using GORM `Where("code = ?", code).First(&room)`
 - [x] `server/internal/room/handler.go` -- Add `GetRoomByCode(c echo.Context) error` handler: extract `:code` param, call `FindByCode`, return 404 if not found, else return `RoomDetailResponse`
@@ -62,6 +63,7 @@ context: ['_bmad-output/project-context.md']
 - [x] `server/internal/room/handler_test.go` -- Add `FindByCode` to mock repository (interface compliance)
 
 **Acceptance Criteria:**
+
 - Given a player on the lobby page, when they see the options view, then a "Join by Code" input is visible below the option cards
 - Given a player enters a valid room code and clicks Join, when the room exists and has space, then they are navigated to the room lobby
 - Given a player enters an invalid code, when they click Join, then a "Room not found" toast appears and they remain on the lobby page
@@ -69,12 +71,14 @@ context: ['_bmad-output/project-context.md']
 ## Verification
 
 **Commands:**
+
 - `cd server && go build ./...` -- expected: compiles without errors
 - `cd server && go test ./internal/room/...` -- expected: existing tests pass
 - `cd client && npx tsc --noEmit` -- expected: no type errors
 - `cd client && npx vitest run` -- expected: existing tests pass
 
 **Manual checks:**
+
 - Open lobby, enter a valid room code, verify join + navigation works
 - Enter garbage code, verify error toast appears
 

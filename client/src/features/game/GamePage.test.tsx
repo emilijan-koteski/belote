@@ -50,7 +50,7 @@ const mockGameState: GameState = {
       seat: 0,
       userId: 10,
       username: "Alice",
-      team: "red",
+      team: "teamA",
       declarations: [],
       connected: true,
     },
@@ -59,7 +59,7 @@ const mockGameState: GameState = {
       seat: 1,
       userId: 20,
       username: "Bob",
-      team: "blue",
+      team: "teamB",
       declarations: [],
       connected: true,
     },
@@ -68,7 +68,7 @@ const mockGameState: GameState = {
       seat: 2,
       userId: 30,
       username: "Carol",
-      team: "red",
+      team: "teamA",
       declarations: [],
       connected: true,
     },
@@ -77,7 +77,7 @@ const mockGameState: GameState = {
       seat: 3,
       userId: 40,
       username: "Dave",
-      team: "blue",
+      team: "teamB",
       declarations: [],
       connected: true,
     },
@@ -202,15 +202,15 @@ describe("GamePage", () => {
       useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
       useGameStore.getState().setMatchEndData({
         winnerTeam: 0,
-        redFinalScore: 1020,
-        blueFinalScore: 850,
+        teamAFinalScore: 1020,
+        teamBFinalScore: 850,
         matchDurationSec: 300,
       });
     });
 
     // Match result overlay should appear
     expect(screen.getByTestId("match-result")).toBeInTheDocument();
-    expect(screen.getByTestId("match-result-red-score")).toHaveTextContent("1020");
+    expect(screen.getByTestId("match-result-team-a-score")).toHaveTextContent("1020");
   });
 
   it("shows error toast when lastError is set and dismisses it on close button click", () => {
@@ -282,8 +282,8 @@ describe("GamePage", () => {
       useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
       useGameStore.getState().setMatchEndData({
         winnerTeam: 0,
-        redFinalScore: 1020,
-        blueFinalScore: 850,
+        teamAFinalScore: 1020,
+        teamBFinalScore: 850,
         matchDurationSec: 300,
       });
     });
@@ -320,7 +320,7 @@ describe("GamePage", () => {
   });
 
   it("shows SurrenderOpponentBanner for opponents when surrenderProposerSeat is set", () => {
-    // Local player is seat 1 (Bob, Blue team); proposer is seat 0 (Alice, Red).
+    // Local player is seat 1 (Bob, team B); proposer is seat 0 (Alice, team A).
     useAuthStore.setState({
       token: "test-token",
       user: {
@@ -399,8 +399,8 @@ describe("GamePage", () => {
       useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
       useGameStore.getState().setMatchEndData({
         winnerTeam: 0,
-        redFinalScore: 1020,
-        blueFinalScore: 850,
+        teamAFinalScore: 1020,
+        teamBFinalScore: 850,
         matchDurationSec: 300,
       });
     });
@@ -477,8 +477,8 @@ describe("GamePage", () => {
       useGameStore.getState().setGameState({ ...mockGameState, phase: "match_end" });
       useGameStore.getState().setMatchEndData({
         winnerTeam: 0,
-        redFinalScore: 1020,
-        blueFinalScore: 850,
+        teamAFinalScore: 1020,
+        teamBFinalScore: 850,
         matchDurationSec: 300,
       });
     });

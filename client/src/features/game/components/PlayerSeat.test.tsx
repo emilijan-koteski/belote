@@ -13,7 +13,7 @@ function makePlayer(overrides: Partial<PlayerState> = {}): PlayerState {
     seat: 0,
     userId: 10,
     username: "Alice",
-    team: "red",
+    team: "teamA",
     declarations: [],
     connected: true,
     ...overrides,
@@ -22,41 +22,43 @@ function makePlayer(overrides: Partial<PlayerState> = {}): PlayerState {
 
 describe("PlayerSeat", () => {
   it("renders empty seat with 'Waiting...' text when player is null", () => {
-    render(<PlayerSeat player={null} isSelf={false} isActive={false} teamColor="red" />);
+    render(<PlayerSeat player={null} isSelf={false} isActive={false} team="teamA" />);
 
     expect(screen.getByText("Waiting...")).toBeInTheDocument();
   });
 
-  it("renders occupied seat with username and team color border", () => {
+  it("renders occupied seat with username, team-a border, and data-team='teamA'", () => {
     const { container } = render(
       <PlayerSeat
         player={makePlayer({ username: "Bob" })}
         isSelf={false}
         isActive={false}
-        teamColor="red"
+        team="teamA"
       />,
     );
 
     expect(screen.getByText("Bob")).toBeInTheDocument();
-    expect(container.firstChild).toHaveClass("border-team-red");
+    expect(container.firstChild).toHaveClass("border-team-a");
+    expect(container.firstChild).toHaveAttribute("data-team", "teamA");
   });
 
-  it("renders blue team border correctly", () => {
+  it("renders teamB border and data-team='teamB' correctly", () => {
     const { container } = render(
       <PlayerSeat
-        player={makePlayer({ team: "blue" })}
+        player={makePlayer({ team: "teamB" })}
         isSelf={false}
         isActive={false}
-        teamColor="blue"
+        team="teamB"
       />,
     );
 
-    expect(container.firstChild).toHaveClass("border-team-blue");
+    expect(container.firstChild).toHaveClass("border-team-b");
+    expect(container.firstChild).toHaveAttribute("data-team", "teamB");
   });
 
   it("renders active state with accent border and pulse animation class", () => {
     const { container } = render(
-      <PlayerSeat player={makePlayer()} isSelf={false} isActive={true} teamColor="red" />,
+      <PlayerSeat player={makePlayer()} isSelf={false} isActive={true} team="teamA" />,
     );
 
     expect(container.firstChild).toHaveClass("border-accent");
@@ -65,7 +67,7 @@ describe("PlayerSeat", () => {
 
   it("renders self seat with 'You' badge and scale-110", () => {
     const { container } = render(
-      <PlayerSeat player={makePlayer()} isSelf={true} isActive={false} teamColor="red" />,
+      <PlayerSeat player={makePlayer()} isSelf={true} isActive={false} team="teamA" />,
     );
 
     expect(screen.getByText("You")).toBeInTheDocument();
@@ -78,11 +80,11 @@ describe("PlayerSeat", () => {
         player={makePlayer({ username: "Alice" })}
         isSelf={false}
         isActive={true}
-        teamColor="red"
+        team="teamA"
       />,
     );
 
-    expect(container.firstChild).toHaveAttribute("aria-label", "Alice, Red team, active");
+    expect(container.firstChild).toHaveAttribute("aria-label", "Alice, Team A, active");
   });
 
   it("has correct aria-label for waiting state", () => {
@@ -91,11 +93,11 @@ describe("PlayerSeat", () => {
         player={makePlayer({ username: "Bob" })}
         isSelf={false}
         isActive={false}
-        teamColor="blue"
+        team="teamB"
       />,
     );
 
-    expect(container.firstChild).toHaveAttribute("aria-label", "Bob, Blue team, waiting");
+    expect(container.firstChild).toHaveAttribute("aria-label", "Bob, Team B, waiting");
   });
 
   it("shows card count for non-self occupied seats", () => {
@@ -104,7 +106,7 @@ describe("PlayerSeat", () => {
         player={makePlayer()}
         isSelf={false}
         isActive={false}
-        teamColor="red"
+        team="teamA"
         cardCount={8}
       />,
     );
@@ -118,7 +120,7 @@ describe("PlayerSeat", () => {
         player={makePlayer({ username: "Charlie" })}
         isSelf={false}
         isActive={false}
-        teamColor="red"
+        team="teamA"
       />,
     );
 

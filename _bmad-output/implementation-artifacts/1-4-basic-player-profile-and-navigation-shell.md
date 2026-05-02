@@ -75,6 +75,7 @@ So that I can access different sections and manage my language preference.
 ### Architecture & Patterns
 
 **Backend — User Domain Package:**
+
 - User domain package already exists at `server/internal/user/` with `model.go`, `repository.go`, `gorm_repo.go`
 - Add `handler.go` following the same pattern as `server/internal/auth/handler.go` — struct with dependencies injected via constructor
 - `UserHandler` needs `UserRepository` interface and `jwtSecret string` (or use `auth.GetUserID()` helper from middleware)
@@ -84,11 +85,13 @@ So that I can access different sections and manage my language preference.
 - Language validation: accept only `"en"` or `"sr"` — reject all other values with `ErrInvalidLanguage`
 
 **Backend — Route Wiring in main.go:**
+
 - Current authenticated group: `api := e.Group("", auth.AuthMiddleware(cfg.JWTSecret))`
 - Add to this group: `api.GET("/api/v1/users/:id/profile", userHandler.GetProfile)` and `api.PATCH("/api/v1/users/:id/preferences", userHandler.UpdatePreferences)`
 - `UserHandler` must be instantiated in `main.go` with the existing `userRepo` instance
 
 **Frontend — AppLayout Component:**
+
 - This is a NEW layout component wrapping authenticated non-game routes
 - Renders: fixed top nav bar + `<Outlet />` for child route content
 - Must NOT wrap the `/game` route (game is full-viewport, no nav bar per UX spec)
@@ -106,6 +109,7 @@ So that I can access different sections and manage my language preference.
   ```
 
 **Frontend — Nav Bar Styling (from UX Design Spec — Direction 5):**
+
 - Fixed position, full-width, `surface` (#13131a) background
 - `border-bottom` using `border` token (#2a2a38)
 - Tabs: Play / Leaderboard / Profile / Rules — use Inter Medium 16px
@@ -116,6 +120,7 @@ So that I can access different sections and manage my language preference.
 - Nav is NOT visible during active game (handled by routing structure)
 
 **Frontend — Profile Page:**
+
 - Located at `client/src/features/profile/ProfilePage.tsx` (file exists as stub — replace content)
 - Fetch profile using `getProfile(user.id)` where `user` comes from `useAuthStore`
 - Display username with `heading-lg` (Space Grotesk 24px 600)
@@ -126,6 +131,7 @@ So that I can access different sections and manage my language preference.
 - Structure placeholders as separate components/sections so Epic 7 (Stories 7.1-7.2) can replace content without restructuring
 
 **Frontend — Language Selector:**
+
 - Use shadcn/ui `DropdownMenu` component (needs installation)
 - Show current language as trigger button (e.g., "EN" or "SR" with a globe icon from lucide-react)
 - Options: English, Srpski (Serbian)
@@ -133,28 +139,29 @@ So that I can access different sections and manage my language preference.
 - The `useAuthInit()` hook from Story 1.3 already syncs i18n language from `user.languagePreference` on page load
 
 **Frontend — API Client:**
+
 - Create `client/src/shared/api/profile.ts` following pattern from `client/src/shared/api/auth.ts`
 - Use `fetchClient` (NOT raw `fetch`) for authenticated requests
 - `getProfile()` returns unwrapped data from `{ "data": { ... } }` response
 
 ### Existing Files to Reuse (DO NOT Recreate)
 
-| File | What It Provides |
-|------|-----------------|
-| `server/internal/user/model.go` | `User` GORM model with all fields including `LanguagePreference` |
-| `server/internal/user/repository.go` | `UserRepository` interface — extend, don't replace |
-| `server/internal/user/gorm_repo.go` | GORM implementation — extend, don't replace |
-| `server/internal/auth/middleware.go` | `AuthMiddleware()` + `GetUserID(c)` helper |
-| `server/internal/apperr/errors.go` | Centralized error definitions — add new errors here |
-| `server/cmd/api/main.go` | Route wiring — add to existing authenticated group |
-| `client/src/shared/api/fetchClient.ts` | Authenticated HTTP client with refresh-retry |
-| `client/src/shared/stores/authStore.ts` | `useAuthStore` with `token`, `user`, `setUser` |
-| `client/src/shared/hooks/useAuth.ts` | `useAuthInit()` — already syncs i18n language |
-| `client/src/shared/components/ProtectedRoute.tsx` | Auth guard — already handles redirects |
-| `client/src/shared/components/ui/tabs.tsx` | shadcn/ui Tabs — use for nav styling reference |
-| `client/src/shared/lib/utils.ts` | `cn()` class merge utility |
-| `client/src/shared/i18n/i18n.ts` | i18next config — already set up with EN/SR |
-| `client/src/index.css` | All Balatro design tokens as CSS custom properties |
+| File                                              | What It Provides                                                 |
+| ------------------------------------------------- | ---------------------------------------------------------------- |
+| `server/internal/user/model.go`                   | `User` GORM model with all fields including `LanguagePreference` |
+| `server/internal/user/repository.go`              | `UserRepository` interface — extend, don't replace               |
+| `server/internal/user/gorm_repo.go`               | GORM implementation — extend, don't replace                      |
+| `server/internal/auth/middleware.go`              | `AuthMiddleware()` + `GetUserID(c)` helper                       |
+| `server/internal/apperr/errors.go`                | Centralized error definitions — add new errors here              |
+| `server/cmd/api/main.go`                          | Route wiring — add to existing authenticated group               |
+| `client/src/shared/api/fetchClient.ts`            | Authenticated HTTP client with refresh-retry                     |
+| `client/src/shared/stores/authStore.ts`           | `useAuthStore` with `token`, `user`, `setUser`                   |
+| `client/src/shared/hooks/useAuth.ts`              | `useAuthInit()` — already syncs i18n language                    |
+| `client/src/shared/components/ProtectedRoute.tsx` | Auth guard — already handles redirects                           |
+| `client/src/shared/components/ui/tabs.tsx`        | shadcn/ui Tabs — use for nav styling reference                   |
+| `client/src/shared/lib/utils.ts`                  | `cn()` class merge utility                                       |
+| `client/src/shared/i18n/i18n.ts`                  | i18next config — already set up with EN/SR                       |
+| `client/src/index.css`                            | All Balatro design tokens as CSS custom properties               |
 
 ### Critical Anti-Patterns (DO NOT Do These)
 
@@ -183,17 +190,17 @@ So that I can access different sections and manage my language preference.
 
 ### Design System Quick Reference
 
-| Token | CSS Variable | Value | Usage in This Story |
-|-------|-------------|-------|-------------------|
-| `background` | `--background` | `#0a0a0f` | Page background |
-| `surface` | `--surface` | `#13131a` | Nav bar bg, profile cards |
-| `surface-elevated` | `--surface-elevated` | `#1c1c26` | Dropdowns, modals |
-| `border` | `--border` | `#2a2a38` | Nav bottom border, card borders |
-| `accent` | `--accent` | `#00e5a0` | Active tab indicator |
-| `text-primary` | `--text-primary` | `#f0f0f8` | Username, headings |
-| `text-secondary` | `--text-secondary` | `#8888a0` | Labels, placeholder text |
-| Display font | `font-display` | Space Grotesk | App name, headings |
-| Body font | `font-body` | Inter | Tab labels, body text |
+| Token              | CSS Variable         | Value         | Usage in This Story             |
+| ------------------ | -------------------- | ------------- | ------------------------------- |
+| `background`       | `--background`       | `#0a0a0f`     | Page background                 |
+| `surface`          | `--surface`          | `#13131a`     | Nav bar bg, profile cards       |
+| `surface-elevated` | `--surface-elevated` | `#1c1c26`     | Dropdowns, modals               |
+| `border`           | `--border`           | `#2a2a38`     | Nav bottom border, card borders |
+| `accent`           | `--accent`           | `#00e5a0`     | Active tab indicator            |
+| `text-primary`     | `--text-primary`     | `#f0f0f8`     | Username, headings              |
+| `text-secondary`   | `--text-secondary`   | `#8888a0`     | Labels, placeholder text        |
+| Display font       | `font-display`       | Space Grotesk | App name, headings              |
+| Body font          | `font-body`          | Inter         | Tab labels, body text           |
 
 ### Project Structure Notes
 
@@ -215,14 +222,17 @@ So that I can access different sections and manage my language preference.
 ## Dev Agent Record
 
 ### Agent Model Used
+
 Claude Opus 4.6 (1M context)
 
 ### Debug Log References
+
 - Import cycle detected: `user/handler.go` initially imported `auth` package for `GetUserID()`, creating `user -> auth -> user` cycle. Resolved by duplicating the context extraction as a package-private `getUserID()` function in the user package.
 - Used `package user_test` (external test package) for handler tests to allow importing both `auth` and `user` without cycle.
 - 2 pre-existing GORM integration test failures in `user_test.go` (`TestGormUserRepository_FindByEmail_NotFound`, `TestGormUserRepository_FindByUsername_NotFound`) — these expect `record not found` errors but the repo returns `(nil, nil)` by design. Not caused by this story.
 
 ### Completion Notes List
+
 - **Task 1**: Backend profile and preferences endpoints implemented. `GetProfile` (GET) and `UpdatePreferences` (PATCH) handlers created in `server/internal/user/handler.go`. Added `UpdateLanguagePreference` to repository interface and GORM implementation. Added `ErrUserNotFound` and `ErrInvalidLanguage` domain errors. Wired routes in `main.go` with auth middleware. Added `PATCH` to CORS allowed methods. 8 handler tests pass.
 - **Task 2**: Created `client/src/shared/api/profile.ts` with `getProfile()` and `updatePreferences()` using `fetchClient`.
 - **Task 3**: Created `AppLayout` with fixed top nav bar (surface bg, border bottom), tabs (Play/Leaderboard/Profile/Rules) with accent active indicator, app name, language selector, and `<Outlet />`. Updated `App.tsx` routing to wrap authenticated non-game routes with `AppLayout`; `/game` route remains outside.
@@ -233,7 +243,9 @@ Claude Opus 4.6 (1M context)
 - **Task 8**: TypeScript compiles cleanly. All new files pass ESLint. Frontend: 42/42 tests pass. Backend: auth 40/40 pass, user handler 8/8 pass. `go vet` clean.
 
 ### File List
+
 **New files:**
+
 - `server/internal/user/handler.go` — UserHandler with GetProfile and UpdatePreferences
 - `server/internal/user/handler_test.go` — 8 handler tests (external test package)
 - `client/src/shared/api/profile.ts` — Profile API client
@@ -247,6 +259,7 @@ Claude Opus 4.6 (1M context)
 - `client/src/features/rules/RulesPage.tsx` — Placeholder rules page
 
 **Modified files:**
+
 - `server/internal/user/repository.go` — Added `UpdateLanguagePreference` to interface
 - `server/internal/user/gorm_repo.go` — Implemented `UpdateLanguagePreference`
 - `server/internal/apperr/errors.go` — Added `ErrUserNotFound`, `ErrInvalidLanguage`
@@ -273,5 +286,6 @@ Claude Opus 4.6 (1M context)
 - [x] [Review][Defer] Path parameter `:id` accepts 0 — GORM `First(&u, 0)` may return arbitrary record [handler.go:50] — deferred, mitigated by JWT IDs starting at 1
 
 ### Change Log
+
 - 2026-04-11: Story 1.4 implemented — Backend profile/preferences API, frontend navigation shell with AppLayout, profile page, language selector, i18n keys, placeholder pages, and 22 new tests (8 backend + 14 frontend)
 - 2026-04-11: Code review complete — 1 decision-needed, 8 patches, 3 deferred, 7 dismissed

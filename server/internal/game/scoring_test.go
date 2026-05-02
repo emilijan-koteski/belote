@@ -33,109 +33,109 @@ func playTrick8(t *testing.T, gs *game.GameState) *game.GameState {
 func TestHandScoring_LastTrickBonus(t *testing.T) {
 	gs := testfixtures.NewGameLastTrick()
 
-	// Seat 0 (Red) leads with AS (Ace of Spades)
+	// Seat 0 (team A) leads with AS (Ace of Spades)
 	// Seat 1 plays 8D, seat 2 plays TD, seat 3 plays 7H (trump)
-	// Trump 7H beats non-trump cards — seat 3 (Blue) wins trick 8
+	// Trump 7H beats non-trump cards — seat 3 (team B) wins trick 8
 	result := playTrick8(t, gs)
 
 	// After trick 8 + scoring, state should be PhaseBidding (new hand) or PhaseMatchEnd
 	assert.NotEqual(t, game.PhasePlaying, result.Phase, "should have left playing phase")
 
-	// Blue team (seat 3) won trick 8 — check that +10 bonus was applied
-	// Initial: Red=70, Blue=61. Trick 8 cards: AS(11) + 8D(0) + TD(10) + 7H(0) = 21
-	// Trump 7H wins (it's a trump card beating non-trump), so Blue gets 21 card pts + 10 bonus
-	// Red total: 70 + 0 (declarations) = 70
-	// Blue total: 61 + 21 (trick 8 card points) + 10 (last trick bonus) + 0 (declarations) = 92
-	// Blue is contracting team (seat 1), and blue total (92) > red total (70), so normal scoring
-	// TeamScores: Red += 70, Blue += 92
-	assert.Equal(t, 70, result.TeamScores[game.TeamRed], "Red team score")
-	assert.Equal(t, 92, result.TeamScores[game.TeamBlue], "Blue team score (includes +10 bonus)")
+	// Team B (seat 3) won trick 8 — check that +10 bonus was applied
+	// Initial: team A=70, team B=61. Trick 8 cards: AS(11) + 8D(0) + TD(10) + 7H(0) = 21
+	// Trump 7H wins (it's a trump card beating non-trump), so team B gets 21 card pts + 10 bonus
+	// Team A total: 70 + 0 (declarations) = 70
+	// Team B total: 61 + 21 (trick 8 card points) + 10 (last trick bonus) + 0 (declarations) = 92
+	// Team B is contracting team (seat 1), and team B total (92) > team A total (70), so normal scoring
+	// TeamScores: team A += 70, team B += 92
+	assert.Equal(t, 70, result.TeamScores[game.TeamA], "Team A score")
+	assert.Equal(t, 92, result.TeamScores[game.TeamB], "Team B score (includes +10 bonus)")
 }
 
 func TestHandScoring_CapotScoring(t *testing.T) {
 	gs := testfixtures.NewGameCapotInProgress()
 
-	// Seat 0 leads with JH (trump Jack, strongest card) — Red wins
+	// Seat 0 leads with JH (trump Jack, strongest card) — team A wins
 	result := playTrick8(t, gs)
 
-	// Red won all 8 tricks — Capot!
-	// HandPoints before scoring: Red=121, Blue=0
-	// Trick 8: JH(20 trump) + 7D(0) + AH(11 trump) + 7C(0) = 31 pts to Red
-	// After trick resolve: Red HandPoints = 121 + 31 = 152 (all card points)
+	// Team A won all 8 tricks — Capot!
+	// HandPoints before scoring: team A=121, team B=0
+	// Trick 8: JH(20 trump) + 7D(0) + AH(11 trump) + 7C(0) = 31 pts to team A
+	// After trick resolve: team A HandPoints = 121 + 31 = 152 (all card points)
 	// Capot bonus: +100 (replaces +10 last-trick)
-	// Red total: 152 + 100 = 252 + 0 declarations = 252
-	// Blue total: 0
-	// Red is contracting team (seat 0), red total > blue total → normal scoring
-	assert.Equal(t, 252, result.TeamScores[game.TeamRed], "Red gets all 152 card pts + 100 Capot")
-	assert.Equal(t, 0, result.TeamScores[game.TeamBlue], "Blue gets nothing")
+	// Team A total: 152 + 100 = 252 + 0 declarations = 252
+	// Team B total: 0
+	// Team A is contracting team (seat 0), team A total > team B total → normal scoring
+	assert.Equal(t, 252, result.TeamScores[game.TeamA], "Team A gets all 152 card pts + 100 Capot")
+	assert.Equal(t, 0, result.TeamScores[game.TeamB], "Team B gets nothing")
 }
 
 func TestHandScoring_CapotBroken(t *testing.T) {
 	gs := testfixtures.NewGameCapotInProgress()
-	// Swap seat 0 and seat 1 cards so Blue can win trick 8
+	// Swap seat 0 and seat 1 cards so team B can win trick 8
 	// Give seat 1 the JH (trump Jack) and seat 0 the 7D
 	gs.Players[0].Hand = []game.Card{{Rank: game.Rank7, Suit: game.SuitDiamonds}}
 	gs.Players[1].Hand = []game.Card{{Rank: game.RankJack, Suit: game.SuitHearts}}
 
 	result := playTrick8(t, gs)
 
-	// Red won 7, Blue wins trick 8 → TricksWon = [7, 1] — no Capot
-	// Last-trick bonus (+10) goes to Blue (seat 1 wins with JH)
-	// Trick 8: 7D(0) + JH(20 trump) + AH(11 trump) + 7C(0) = 31 pts to Blue
-	// After trick resolve: Red=121, Blue=0+31=31
-	// Last-trick bonus: Blue += 10 → Blue=41
-	// Red total: 121 + 0 = 121, Blue total: 41 + 0 = 41
-	// Red is contracting (seat 0), red(121) > blue(41) → normal scoring
-	assert.Equal(t, 121, result.TeamScores[game.TeamRed], "Red keeps their card points")
-	assert.Equal(t, 41, result.TeamScores[game.TeamBlue], "Blue gets trick 8 pts + 10 bonus")
+	// Team A won 7, team B wins trick 8 → TricksWon = [7, 1] — no Capot
+	// Last-trick bonus (+10) goes to team B (seat 1 wins with JH)
+	// Trick 8: 7D(0) + JH(20 trump) + AH(11 trump) + 7C(0) = 31 pts to team B
+	// After trick resolve: team A=121, team B=0+31=31
+	// Last-trick bonus: team B += 10 → team B=41
+	// Team A total: 121 + 0 = 121, team B total: 41 + 0 = 41
+	// Team A is contracting (seat 0), team A(121) > team B(41) → normal scoring
+	assert.Equal(t, 121, result.TeamScores[game.TeamA], "Team A keeps their card points")
+	assert.Equal(t, 41, result.TeamScores[game.TeamB], "Team B gets trick 8 pts + 10 bonus")
 }
 
 func TestHandScoring_FailedContract(t *testing.T) {
 	gs := testfixtures.NewGameLastTrick()
-	// Blue (seat 1) is contracting team. Adjust HandPoints so Blue has fewer total.
-	// Set Red high, Blue low to guarantee failed contract after trick 8.
+	// Team B (seat 1) is contracting team. Adjust HandPoints so team B has fewer total.
+	// Set team A high, team B low to guarantee failed contract after trick 8.
 	gs.HandPoints = [2]int{100, 20}
 
 	result := playTrick8(t, gs)
 
 	// Trick 8: AS(11) + 8D(0) + TD(10) + 7H(0 trump) = 21 pts
-	// 7H is trump, so Blue (seat 3) wins trick 8 → Blue gets 21 pts + 10 bonus
-	// Red total: 100 + 0 (declarations) = 100
-	// Blue total: 20 + 21 + 10 + 0 (declarations) = 51
-	// Blue is contracting (seat 1), blue(51) < red(100) → FAILED CONTRACT
-	// Red gets ALL: 100 + 51 = 151
-	assert.Equal(t, 151, result.TeamScores[game.TeamRed], "Red gets ALL points on failed contract")
-	assert.Equal(t, 0, result.TeamScores[game.TeamBlue], "Blue gets 0 on failed contract")
+	// 7H is trump, so team B (seat 3) wins trick 8 → team B gets 21 pts + 10 bonus
+	// Team A total: 100 + 0 (declarations) = 100
+	// Team B total: 20 + 21 + 10 + 0 (declarations) = 51
+	// Team B is contracting (seat 1), team B(51) < team A(100) → FAILED CONTRACT
+	// Team A gets ALL: 100 + 51 = 151
+	assert.Equal(t, 151, result.TeamScores[game.TeamA], "Team A gets ALL points on failed contract")
+	assert.Equal(t, 0, result.TeamScores[game.TeamB], "Team B gets 0 on failed contract")
 }
 
 func TestHandScoring_EqualPointsNotFailure(t *testing.T) {
 	gs := testfixtures.NewGameLastTrick()
-	// Blue (seat 1) is contracting. Arrange so totals are equal after trick 8.
-	// Trick 8: 7H(trump) wins, Blue gets 21 card pts + 10 bonus = 31
-	// Blue after trick 8: handPts + 31 + declarations(0) should equal Red total
-	// Red total = redHandPts + 0 (declarations)
-	// Set: Red=80, Blue=49 → after trick 8: Red=80, Blue=49+21+10=80. Equal!
+	// Team B (seat 1) is contracting. Arrange so totals are equal after trick 8.
+	// Trick 8: 7H(trump) wins, team B gets 21 card pts + 10 bonus = 31
+	// Team B after trick 8: handPts + 31 + declarations(0) should equal team A total
+	// Team A total = aHandPts + 0 (declarations)
+	// Set: team A=80, team B=49 → after trick 8: team A=80, team B=49+21+10=80. Equal!
 	gs.HandPoints = [2]int{80, 49}
 
 	result := playTrick8(t, gs)
 
 	// Equal totals (80 = 80): contracting team succeeds → normal scoring
-	assert.Equal(t, 80, result.TeamScores[game.TeamRed], "Red keeps own points")
-	assert.Equal(t, 80, result.TeamScores[game.TeamBlue], "Blue keeps own points (equal = not failure)")
+	assert.Equal(t, 80, result.TeamScores[game.TeamA], "Team A keeps own points")
+	assert.Equal(t, 80, result.TeamScores[game.TeamB], "Team B keeps own points (equal = not failure)")
 }
 
 func TestHandScoring_NormalScoring(t *testing.T) {
 	gs := testfixtures.NewGameLastTrick()
-	// Blue is contracting. Set points so Blue wins comfortably after trick 8.
+	// Team B is contracting. Set points so team B wins comfortably after trick 8.
 	gs.HandPoints = [2]int{40, 91}
 
 	result := playTrick8(t, gs)
 
-	// Trick 8: 7H(trump) wins, Blue gets 21 card pts + 10 bonus = 31
-	// Red total: 40, Blue total: 91 + 21 + 10 = 122
-	// Blue is contracting, blue(122) > red(40) → normal scoring
-	assert.Equal(t, 40, result.TeamScores[game.TeamRed], "Red keeps own points")
-	assert.Equal(t, 122, result.TeamScores[game.TeamBlue], "Blue keeps own points")
+	// Trick 8: 7H(trump) wins, team B gets 21 card pts + 10 bonus = 31
+	// Team A total: 40, team B total: 91 + 21 + 10 = 122
+	// Team B is contracting, team B(122) > team A(40) → normal scoring
+	assert.Equal(t, 40, result.TeamScores[game.TeamA], "Team A keeps own points")
+	assert.Equal(t, 122, result.TeamScores[game.TeamB], "Team B keeps own points")
 }
 
 func TestHandScoring_MatchEndTriggered(t *testing.T) {
@@ -145,12 +145,12 @@ func TestHandScoring_MatchEndTriggered(t *testing.T) {
 
 	result := playTrick8(t, gs)
 
-	// Red starts at 950. After trick 8 scoring, Red gains their hand points.
-	// This should push Red over 1001 → PhaseMatchEnd
+	// Team A starts at 950. After trick 8 scoring, team A gains their hand points.
+	// This should push team A over 1001 → PhaseMatchEnd
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase, "match should end when team crosses 1001")
-	assert.GreaterOrEqual(t, result.TeamScores[game.TeamRed], 1001)
+	assert.GreaterOrEqual(t, result.TeamScores[game.TeamA], 1001)
 	require.NotNil(t, result.WinnerTeam, "WinnerTeam must be set on match end")
-	assert.Equal(t, game.TeamRed, *result.WinnerTeam, "Red team should win")
+	assert.Equal(t, game.TeamA, *result.WinnerTeam, "Team A should win")
 }
 
 func TestHandScoring_MatchContinues(t *testing.T) {
@@ -204,49 +204,49 @@ func TestHandScoring_NewHandStateReset(t *testing.T) {
 
 func TestHandScoring_DeclarationsIncluded(t *testing.T) {
 	gs := testfixtures.NewGameLastTrick()
-	gs.DeclarationPoints = [2]int{50, 0} // Red has 50 declaration points
+	gs.DeclarationPoints = [2]int{50, 0} // Team A has 50 declaration points
 
 	result := playTrick8(t, gs)
 
-	// Red total: 70 (hand) + 50 (declarations) = 120
-	// Blue wins trick 8 with 7H trump: Blue gets 21 + 10 = 31
-	// Blue total: 61 + 31 + 0 (declarations) = 92
-	// Blue is contracting (seat 1), blue(92) < red(120) → FAILED CONTRACT
-	// Red gets ALL: 120 + 92 = 212
-	assert.Equal(t, 212, result.TeamScores[game.TeamRed], "declarations included in scoring")
-	assert.Equal(t, 0, result.TeamScores[game.TeamBlue], "failed contract = 0 for contracting team")
+	// Team A total: 70 (hand) + 50 (declarations) = 120
+	// Team B wins trick 8 with 7H trump: team B gets 21 + 10 = 31
+	// Team B total: 61 + 31 + 0 (declarations) = 92
+	// Team B is contracting (seat 1), team B(92) < team A(120) → FAILED CONTRACT
+	// Team A gets ALL: 120 + 92 = 212
+	assert.Equal(t, 212, result.TeamScores[game.TeamA], "declarations included in scoring")
+	assert.Equal(t, 0, result.TeamScores[game.TeamB], "failed contract = 0 for contracting team")
 }
 
 func TestHandScoring_FailedContractBothTeamsHaveDeclarations(t *testing.T) {
 	gs := testfixtures.NewGameLastTrick()
-	// Blue (seat 1) is contracting. Give both teams declaration points.
+	// Team B (seat 1) is contracting. Give both teams declaration points.
 	gs.HandPoints = [2]int{60, 20}
 	gs.DeclarationPoints = [2]int{40, 30}
 
 	result := playTrick8(t, gs)
 
-	// Trick 8: 7H (trump) wins, Blue gets 21 card pts + 10 bonus
-	// Red total: 60 + 40 (declarations) = 100
-	// Blue total: 20 + 21 + 10 + 30 (declarations) = 81
-	// Blue is contracting (seat 1), blue(81) < red(100) → FAILED CONTRACT
-	// Red gets ALL: 100 + 81 = 181 (includes Blue's own declarations)
-	assert.Equal(t, 181, result.TeamScores[game.TeamRed], "Red gets ALL points including Blue's declarations")
-	assert.Equal(t, 0, result.TeamScores[game.TeamBlue], "Blue gets 0 on failed contract")
+	// Trick 8: 7H (trump) wins, team B gets 21 card pts + 10 bonus
+	// Team A total: 60 + 40 (declarations) = 100
+	// Team B total: 20 + 21 + 10 + 30 (declarations) = 81
+	// Team B is contracting (seat 1), team B(81) < team A(100) → FAILED CONTRACT
+	// Team A gets ALL: 100 + 81 = 181 (includes team B's own declarations)
+	assert.Equal(t, 181, result.TeamScores[game.TeamA], "Team A gets ALL points including team B's declarations")
+	assert.Equal(t, 0, result.TeamScores[game.TeamB], "Team B gets 0 on failed contract")
 }
 
 func TestHandScoring_BelotBonusIncluded(t *testing.T) {
 	gs := testfixtures.NewGameLastTrick()
 	// Belot bonus (+20) is already in HandPoints from Story 3.4.
-	// Simulate: Red already got +20 Belot during the hand
+	// Simulate: team A already got +20 Belot during the hand
 	gs.HandPoints = [2]int{90, 61}
 
 	result := playTrick8(t, gs)
 
-	// Red total: 90 + 0 (declarations) = 90
-	// Blue gets trick 8: 21 card pts + 10 bonus → Blue total: 61 + 21 + 10 = 92
-	// Blue is contracting (seat 1), blue(92) > red(90) → normal scoring
-	assert.Equal(t, 90, result.TeamScores[game.TeamRed], "Red total includes Belot bonus in HandPoints")
-	assert.Equal(t, 92, result.TeamScores[game.TeamBlue], "Blue keeps own total")
+	// Team A total: 90 + 0 (declarations) = 90
+	// Team B gets trick 8: 21 card pts + 10 bonus → team B total: 61 + 21 + 10 = 92
+	// Team B is contracting (seat 1), team B(92) > team A(90) → normal scoring
+	assert.Equal(t, 90, result.TeamScores[game.TeamA], "Team A total includes Belot bonus in HandPoints")
+	assert.Equal(t, 92, result.TeamScores[game.TeamB], "Team B keeps own total")
 }
 
 func TestHandScoring_501MatchMode(t *testing.T) {
@@ -256,11 +256,11 @@ func TestHandScoring_501MatchMode(t *testing.T) {
 
 	result := playTrick8(t, gs)
 
-	// Red starts at 450. After scoring, Red gains 70 pts → 520 >= 501
+	// Team A starts at 450. After scoring, team A gains 70 pts → 520 >= 501
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase, "match should end at 501 threshold")
-	assert.GreaterOrEqual(t, result.TeamScores[game.TeamRed], 501)
+	assert.GreaterOrEqual(t, result.TeamScores[game.TeamA], 501)
 	require.NotNil(t, result.WinnerTeam, "WinnerTeam must be set")
-	assert.Equal(t, game.TeamRed, *result.WinnerTeam, "Red team wins at 501 threshold")
+	assert.Equal(t, game.TeamA, *result.WinnerTeam, "Team A wins at 501 threshold")
 }
 
 func TestHandScoring_StateImmutability(t *testing.T) {
@@ -286,46 +286,46 @@ func TestMatchEnd_SingleTeamReaches1001(t *testing.T) {
 
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
 	require.NotNil(t, result.WinnerTeam)
-	assert.Equal(t, game.TeamRed, *result.WinnerTeam, "only Red crossed 1001")
+	assert.Equal(t, game.TeamA, *result.WinnerTeam, "only team A crossed 1001")
 }
 
 func TestMatchEnd_BothTeamsExceed1001_HigherScoreWins(t *testing.T) {
-	// Blue is contracting (seat 1). After trick 8:
-	// Trick 8: 7H (trump) wins → Blue gets 21 + 10 = 31
-	// Blue total: 61 + 31 = 92 → Blue contracting succeeds (92 > 70)
-	// Normal scoring: Red += 70, Blue += 92
-	// Red final: 950 + 70 = 1020, Blue final: 920 + 92 = 1012
-	// Both >= 1001, Red has higher score → Red wins
+	// Team B is contracting (seat 1). After trick 8:
+	// Trick 8: 7H (trump) wins → team B gets 21 + 10 = 31
+	// Team B total: 61 + 31 = 92 → team B contracting succeeds (92 > 70)
+	// Normal scoring: team A += 70, team B += 92
+	// Team A final: 950 + 70 = 1020, team B final: 920 + 92 = 1012
+	// Both >= 1001, team A has higher score → team A wins
 	gs := testfixtures.NewGameNearEnd(950, 920)
 
 	result := playTrick8(t, gs)
 
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
 	require.NotNil(t, result.WinnerTeam)
-	assert.Equal(t, game.TeamRed, *result.WinnerTeam, "Red has higher score when both cross 1001")
-	assert.Greater(t, result.TeamScores[game.TeamRed], result.TeamScores[game.TeamBlue])
+	assert.Equal(t, game.TeamA, *result.WinnerTeam, "Team A has higher score when both cross 1001")
+	assert.Greater(t, result.TeamScores[game.TeamA], result.TeamScores[game.TeamB])
 }
 
 func TestMatchEnd_BothTeamsExceed1001_TiedScore_ContractingTeamWins(t *testing.T) {
 	// Need both teams to end at EXACTLY the same score.
-	// Blue is contracting (seat 1). After trick 8:
-	// 7H (trump) wins → Blue gets trick 8 (21 pts) + last-trick bonus (10) = 31
-	// Blue total: 61 + 31 = 92, Red total: 70
-	// Blue(92) > Red(70) → normal scoring: Red += 70, Blue += 92
+	// Team B is contracting (seat 1). After trick 8:
+	// 7H (trump) wins → team B gets trick 8 (21 pts) + last-trick bonus (10) = 31
+	// Team B total: 61 + 31 = 92, team A total: 70
+	// Team B(92) > team A(70) → normal scoring: team A += 70, team B += 92
 	//
-	// We need: redScore + 70 == blueScore + 92
-	// So: redScore - blueScore = 22
-	// Example: Red=1000, Blue=978 → Red final=1070, Blue final=1070
+	// We need: teamAScore + 70 == teamBScore + 92
+	// So: teamAScore - teamBScore = 22
+	// Example: team A=1000, team B=978 → team A final=1070, team B final=1070
 	gs := testfixtures.NewGameNearEnd(1000, 978)
 
 	result := playTrick8(t, gs)
 
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
 	require.NotNil(t, result.WinnerTeam)
-	assert.Equal(t, result.TeamScores[game.TeamRed], result.TeamScores[game.TeamBlue],
+	assert.Equal(t, result.TeamScores[game.TeamA], result.TeamScores[game.TeamB],
 		"scores should be tied")
-	// Blue is contracting team (seat 1 = Blue team)
-	assert.Equal(t, game.TeamBlue, *result.WinnerTeam,
+	// Team B is contracting team (seat 1 = team B)
+	assert.Equal(t, game.TeamB, *result.WinnerTeam,
 		"contracting team wins tiebreaker")
 }
 
@@ -356,21 +356,21 @@ func TestMatchEnd_501Mode(t *testing.T) {
 
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
 	require.NotNil(t, result.WinnerTeam)
-	assert.Equal(t, game.TeamRed, *result.WinnerTeam)
-	assert.GreaterOrEqual(t, result.TeamScores[game.TeamRed], 501)
+	assert.Equal(t, game.TeamA, *result.WinnerTeam)
+	assert.GreaterOrEqual(t, result.TeamScores[game.TeamA], 501)
 }
 
 func TestMatchEnd_BlueTeamWins(t *testing.T) {
-	// Blue is contracting (seat 1). Set Blue near 1001 so Blue's scoring pushes over.
-	// After trick 8: Blue total = 92 (see above). Blue needs: blueScore + 92 >= 1001
-	// Set Blue at 920: 920 + 92 = 1012 >= 1001
+	// Team B is contracting (seat 1). Set team B near 1001 so team B's scoring pushes over.
+	// After trick 8: team B total = 92 (see above). Team B needs: teamBScore + 92 >= 1001
+	// Set team B at 920: 920 + 92 = 1012 >= 1001
 	gs := testfixtures.NewGameNearEnd(0, 920)
 
 	result := playTrick8(t, gs)
 
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
 	require.NotNil(t, result.WinnerTeam)
-	assert.Equal(t, game.TeamBlue, *result.WinnerTeam, "Blue team should win")
+	assert.Equal(t, game.TeamB, *result.WinnerTeam, "Team B should win")
 }
 
 // --- Instant-Win Tests (Story 3.6) ---
@@ -463,7 +463,7 @@ func TestInstantWin_TriggeredOnPick(t *testing.T) {
 	require.NotNil(t, result)
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase, "instant-win should set match-end phase")
 	require.NotNil(t, result.WinnerTeam, "instant-win must populate WinnerTeam")
-	assert.Equal(t, game.TeamBlue, *result.WinnerTeam, "seat 1 holds all 8 hearts → Blue team wins")
+	assert.Equal(t, game.TeamB, *result.WinnerTeam, "seat 1 holds all 8 hearts → team B wins")
 }
 
 // --- LastHandResult Tests (Story 4.6) ---
@@ -476,23 +476,23 @@ func TestLastHandResult_NormalHand(t *testing.T) {
 	require.NotNil(t, result.LastHandResult, "LastHandResult must be populated after hand scoring")
 	hr := result.LastHandResult
 
-	// Blue (seat 3) wins trick 8 with 7H trump
-	// Card points before bonus: Red=70, Blue=61+21=82
-	assert.Equal(t, 70, hr.RedCardPoints, "Red card points before bonus")
-	assert.Equal(t, 82, hr.BlueCardPoints, "Blue card points before bonus")
-	assert.Equal(t, 0, hr.RedDeclPoints, "Red declaration points")
-	assert.Equal(t, 0, hr.BlueDeclPoints, "Blue declaration points")
-	assert.Equal(t, game.TeamBlue, hr.LastTrickTeam, "Blue won last trick")
+	// Team B (seat 3) wins trick 8 with 7H trump
+	// Card points before bonus: team A=70, team B=61+21=82
+	assert.Equal(t, 70, hr.TeamACardPoints, "Team A card points before bonus")
+	assert.Equal(t, 82, hr.TeamBCardPoints, "Team B card points before bonus")
+	assert.Equal(t, 0, hr.TeamADeclPoints, "Team A declaration points")
+	assert.Equal(t, 0, hr.TeamBDeclPoints, "Team B declaration points")
+	assert.Equal(t, game.TeamB, hr.LastTrickTeam, "Team B won last trick")
 	assert.Equal(t, 10, hr.LastTrickBonus, "last-trick bonus is +10")
 	assert.False(t, hr.Capot, "not a capot")
 	assert.Nil(t, hr.CapotTeam, "no capot team")
 	assert.Equal(t, 0, hr.CapotBonus, "no capot bonus")
 	assert.False(t, hr.FailedContract, "not a failed contract")
-	assert.Equal(t, game.TeamBlue, hr.ContractingTeam, "Blue (seat 1) called trump")
+	assert.Equal(t, game.TeamB, hr.ContractingTeam, "Team B (seat 1) called trump")
 
 	// Verify totals match TeamScores delta
-	assert.Equal(t, hr.RedHandTotal+hr.BlueHandTotal,
-		result.TeamScores[game.TeamRed]+result.TeamScores[game.TeamBlue],
+	assert.Equal(t, hr.TeamAHandTotal+hr.TeamBHandTotal,
+		result.TeamScores[game.TeamA]+result.TeamScores[game.TeamB],
 		"hand totals should equal team scores (starting from 0)")
 }
 
@@ -506,12 +506,12 @@ func TestLastHandResult_Capot(t *testing.T) {
 
 	assert.True(t, hr.Capot, "should be capot")
 	require.NotNil(t, hr.CapotTeam, "capot team must be set")
-	assert.Equal(t, game.TeamRed, *hr.CapotTeam, "Red team got capot")
+	assert.Equal(t, game.TeamA, *hr.CapotTeam, "Team A got capot")
 	assert.Equal(t, 100, hr.CapotBonus, "capot bonus is 100")
 	assert.Equal(t, 0, hr.LastTrickBonus, "last-trick bonus is 0 when capot")
 	assert.False(t, hr.FailedContract, "capot team is also contracting, so not a failed contract")
-	assert.Equal(t, 252, hr.RedHandTotal, "Red gets all 152 card points + 100 capot bonus")
-	assert.Equal(t, 0, hr.BlueHandTotal, "Blue gets nothing")
+	assert.Equal(t, 252, hr.TeamAHandTotal, "Team A gets all 152 card points + 100 capot bonus")
+	assert.Equal(t, 0, hr.TeamBHandTotal, "Team B gets nothing")
 }
 
 func TestLastHandResult_FailedContract(t *testing.T) {
@@ -524,9 +524,9 @@ func TestLastHandResult_FailedContract(t *testing.T) {
 	hr := result.LastHandResult
 
 	assert.True(t, hr.FailedContract, "should be a failed contract")
-	assert.Equal(t, game.TeamBlue, hr.ContractingTeam, "Blue (seat 1) called trump")
-	assert.Equal(t, 0, hr.BlueHandTotal, "contracting team gets 0 on failed contract")
-	assert.Equal(t, 151, hr.RedHandTotal, "opposing team gets all points")
+	assert.Equal(t, game.TeamB, hr.ContractingTeam, "Team B (seat 1) called trump")
+	assert.Equal(t, 0, hr.TeamBHandTotal, "contracting team gets 0 on failed contract")
+	assert.Equal(t, 151, hr.TeamAHandTotal, "opposing team gets all points")
 }
 
 func TestLastHandResult_WithDeclarations(t *testing.T) {
@@ -539,8 +539,8 @@ func TestLastHandResult_WithDeclarations(t *testing.T) {
 	require.NotNil(t, result.LastHandResult)
 	hr := result.LastHandResult
 
-	assert.Equal(t, 50, hr.RedDeclPoints, "Red declaration points")
-	assert.Equal(t, 20, hr.BlueDeclPoints, "Blue declaration points")
+	assert.Equal(t, 50, hr.TeamADeclPoints, "Team A declaration points")
+	assert.Equal(t, 20, hr.TeamBDeclPoints, "Team B declaration points")
 }
 
 func TestLastHandResult_MatchEnd(t *testing.T) {
@@ -550,8 +550,8 @@ func TestLastHandResult_MatchEnd(t *testing.T) {
 
 	assert.Equal(t, game.PhaseMatchEnd, result.Phase)
 	require.NotNil(t, result.LastHandResult, "LastHandResult must persist on match end (no startNewHand)")
-	assert.Equal(t, result.LastHandResult.RedHandTotal,
-		result.TeamScores[game.TeamRed]-950,
+	assert.Equal(t, result.LastHandResult.TeamAHandTotal,
+		result.TeamScores[game.TeamA]-950,
 		"hand total should equal the score delta from match start")
 }
 
@@ -564,10 +564,10 @@ func TestLastHandResult_TotalsMatchTeamScoreDelta(t *testing.T) {
 	require.NotNil(t, result.LastHandResult)
 	hr := result.LastHandResult
 
-	redDelta := result.TeamScores[game.TeamRed] - 200
-	blueDelta := result.TeamScores[game.TeamBlue] - 300
-	assert.Equal(t, hr.RedHandTotal, redDelta, "RedHandTotal matches actual Red score increase")
-	assert.Equal(t, hr.BlueHandTotal, blueDelta, "BlueHandTotal matches actual Blue score increase")
+	teamADelta := result.TeamScores[game.TeamA] - 200
+	teamBDelta := result.TeamScores[game.TeamB] - 300
+	assert.Equal(t, hr.TeamAHandTotal, teamADelta, "TeamAHandTotal matches actual team A score increase")
+	assert.Equal(t, hr.TeamBHandTotal, teamBDelta, "TeamBHandTotal matches actual team B score increase")
 }
 
 func TestInstantWin_FirstHand(t *testing.T) {

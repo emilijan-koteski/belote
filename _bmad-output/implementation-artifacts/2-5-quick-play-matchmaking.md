@@ -50,6 +50,7 @@ So that I can start playing as fast as possible.
     FindQuickPlayRoom() (*Room, error)
     ```
   - [x] Implement in `server/internal/room/gorm_repo.go`:
+
     ```go
     func (r *GormRepository) FindQuickPlayRoom() (*Room, error) {
         var room Room
@@ -65,6 +66,7 @@ So that I can start playing as fast as possible.
         return &room, nil
     }
     ```
+
     - Orders by `created_at ASC` to fill oldest rooms first
     - Returns `(nil, nil)` when no room is available (same pattern as `FindByID`)
 
@@ -80,21 +82,21 @@ So that I can start playing as fast as possible.
     3. Run in transaction:
        a. `repo.FindQuickPlayRoom()` to find available room
        b. **If room found:** Join the room (same as JoinRoom logic):
-          - `tx.AddPlayer(&RoomPlayer{RoomID: room.ID, UserID: userID})`
-          - `tx.IncrementPlayerCount(room.ID)`
-          - Re-fetch room via `tx.FindByID(room.ID)` to get updated state
-       c. **If no room found:** Create a new Quick Play room:
-          - Generate room code via `generateRoomCode()` (existing function)
-          - Create room with: `Name: "Quick Play " + code`, `Variant: "bitola"`, `MatchMode: "1001"`, `TimerStyle: "relaxed"`, `IsQuickPlay: true`, `Status: "waiting"`, `PlayerCount: 1`
-          - `tx.Create(room)` + `tx.AddPlayer(&RoomPlayer{RoomID: room.ID, UserID: userID})`
-          - Handle code collision with retry (same pattern as CreateRoom)
+       - `tx.AddPlayer(&RoomPlayer{RoomID: room.ID, UserID: userID})`
+       - `tx.IncrementPlayerCount(room.ID)`
+       - Re-fetch room via `tx.FindByID(room.ID)` to get updated state
+         c. **If no room found:** Create a new Quick Play room:
+       - Generate room code via `generateRoomCode()` (existing function)
+       - Create room with: `Name: "Quick Play " + code`, `Variant: "bitola"`, `MatchMode: "1001"`, `TimerStyle: "relaxed"`, `IsQuickPlay: true`, `Status: "waiting"`, `PlayerCount: 1`
+       - `tx.Create(room)` + `tx.AddPlayer(&RoomPlayer{RoomID: room.ID, UserID: userID})`
+       - Handle code collision with retry (same pattern as CreateRoom)
     4. Return HTTP 200 with `{ "data": room }`
   - [x] **Important:** The response returns the full Room object (including `isQuickPlay: true`). The frontend uses this to navigate to `/rooms/${room.id}`
   - [x] **No auto-seat assignment in QuickPlay handler** — players pick seats manually in the RoomLobby, same as manual rooms. The difference is auto-start when all 4 are seated
 
 - [x] **Task 4: Backend — Modify `SelectSeat` for Quick Play auto-start** (AC: #5)
   - [x] In `server/internal/room/handler.go`, modify the `SelectSeat` handler:
-    After the successful seat update transaction, add auto-start logic:
+        After the successful seat update transaction, add auto-start logic:
     ```go
     // After re-fetching players via repo.FindPlayersByRoomID(roomID):
     // Check if Quick Play room should auto-start
@@ -136,8 +138,8 @@ So that I can start playing as fast as possible.
   - [x] Add to `client/src/shared/api/rooms.ts`:
     ```typescript
     export function quickPlay(signal?: AbortSignal): Promise<Room> {
-      return fetchClient<Room>('/rooms/quick-play', {
-        method: 'POST',
+      return fetchClient<Room>("/rooms/quick-play", {
+        method: "POST",
         signal,
       });
     }
@@ -160,9 +162,12 @@ So that I can start playing as fast as possible.
     ```
   - [x] Update `selectSeat` return type in `client/src/shared/api/rooms.ts`:
     ```typescript
-    export function selectSeat(roomId: number, seat: number): Promise<SelectSeatResponse> {
+    export function selectSeat(
+      roomId: number,
+      seat: number,
+    ): Promise<SelectSeatResponse> {
       return fetchClient<SelectSeatResponse>(`/rooms/${roomId}/seat`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({ seat }),
       });
     }
@@ -189,6 +194,7 @@ So that I can start playing as fast as possible.
     2. `setIsMatchmaking = false`
   - [x] Wire `onClick={handleQuickPlay}` on the Quick Play card button
   - [x] **Matchmaking overlay:** When `isMatchmaking` is true, render an overlay on the play options column:
+
     ```
     ┌─────────────────────┐
     │                     │
@@ -198,23 +204,25 @@ So that I can start playing as fast as possible.
     │                     │
     └─────────────────────┘
     ```
+
     - Pulsing animation: use `animate-pulse` Tailwind class on the indicator
     - Cancel button: ghost variant, calls `handleCancelMatchmaking`
     - Overlay replaces the options cards (not a modal/dialog)
     - `data-testid="matchmaking-overlay"` on container
     - `data-testid="matchmaking-cancel"` on cancel button
+
   - [x] Cleanup on unmount: abort any pending request in a `useEffect` return
 
 - [x] **Task 9: Frontend — Update RoomLobby for Quick Play rooms** (AC: #5, #6)
   - [x] Modify `client/src/features/lobby/RoomLobby.tsx`:
   - [x] **Start Game section changes for Quick Play rooms:**
-    When `room.isQuickPlay === true`:
+        When `room.isQuickPlay === true`:
     - Do NOT show Start Game button (for anyone, including owner)
     - Do NOT show "Waiting for [owner] to start..." message
     - Instead show: "Game starts automatically when all players are seated" (`data-testid="auto-start-message"`)
     - When all 4 seats are filled, show: "Starting game..." with a brief loading state
   - [x] **Handle `gameStarted` response from seat selection:**
-    In the existing seat selection click handler, after calling `selectSeat()`:
+        In the existing seat selection click handler, after calling `selectSeat()`:
     ```typescript
     const result = await selectSeat(roomId, seatIndex);
     setPlayers(result.players);
@@ -324,6 +332,7 @@ So that I can start playing as fast as possible.
 **Server-authoritative auto-start:** The auto-start trigger lives in the `SelectSeat` handler, not on the frontend. The frontend just reads the `gameStarted` flag from the response. This aligns with the server-authoritative architecture — the client never decides when a game starts.
 
 **Room status lifecycle for Quick Play:**
+
 - `waiting` -> `in_progress` (via auto-start in SelectSeat when all 4 seated)
 - Same lifecycle as manual rooms, just triggered differently
 - Once `in_progress`, the room no longer appears in browse list or Quick Play search (existing `status = 'waiting'` filter handles this)
@@ -365,6 +374,7 @@ client/src/shared/i18n/
 ### Previous Story (2.4) Intelligence
 
 **Key patterns established:**
+
 - `SelectSeat` returns `{ data: { players: [...] } }` — this story extends the response to `{ data: { players: [...], gameStarted: bool } }`. Update the frontend type accordingly
 - `StartGame` handler sets `room.Status = "in_progress"` — Quick Play auto-start does the same thing, just triggered from SelectSeat
 - Transaction pattern: `h.repo.RunInTransaction(func(tx RoomRepository) error { ... })` — use for the QuickPlay find-or-create logic
@@ -374,6 +384,7 @@ client/src/shared/i18n/
 - `useRoomLobbyUpdates.ts` already handles `system:game_started` event with navigation to `/game/${roomId}` — this will work for Quick Play auto-start once WS is wired
 
 **Things NOT to break:**
+
 - Manual room creation flow (Create Room modal)
 - Manual room joining flow (Browse Rooms -> Join)
 - Manual Start Game flow (owner clicks Start when all 4 seated)

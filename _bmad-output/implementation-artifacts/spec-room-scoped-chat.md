@@ -21,6 +21,7 @@ context:
 ## Boundaries & Constraints
 
 **Always:**
+
 - WS contract stays in sync: any field added to [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) is added to [server/internal/ws/events.go](server/internal/ws/events.go) in the same commit.
 - Recipient list is server-authoritative: look up members via the room repository; never trust a client-supplied member list.
 - Server stamps `timestamp` as `RFC3339Nano` UTC. Silent drop on every failure path — no `error:` events. (Mirrors 6.1 AC #7 and 6.2 AC #3.)
@@ -31,10 +32,12 @@ context:
 - Run `npx prettier --write .` in `client/` before committing (standing feedback in auto-memory).
 
 **Ask First:**
+
 - If adding the room chat panel forces a fundamental layout rewrite of `RoomLobby.tsx` beyond a wrapper 2-col grid (e.g. rewriting the seat grid itself), HALT and confirm.
 - If server membership gating turns out to require new room-repository methods beyond what `FindPlayersByRoomID` + `FindByID` already provide, HALT and confirm before adding repo surface.
 
 **Never:**
+
 - No DB persistence, no REST endpoint, no history on join — chat is ephemeral by design (consistent with 6.1 / 6.2).
 - No unread-badge / collapsible-sidebar mechanism (the panel is always visible on the room page).
 - No rate-limiting, moderation, or sanitisation (deferred with 6.1 D72 / 6.2 D78 — Phase 1 is intentionally unmoderated).
@@ -43,18 +46,18 @@ context:
 
 ## I/O & Edge-Case Matrix
 
-| Scenario | Input / State | Expected Output / Behavior | Error Handling |
-|----------|--------------|---------------------------|----------------|
-| Seated player sends message | `{ channel: "room", roomId: 42, text: "hi" }`, sender in `room_players(42)`, room status `"waiting"` | Server broadcasts `system:chat_message` with `scope: "room"` to all userIDs in `room_players(42)`, including sender (own-echo) | N/A |
-| Unseated (joined-but-no-seat) player sends | Same as above, sender has `seat == nil` | Same broadcast — seat membership does not gate chat | N/A |
-| Non-member sends to room chat | Sender userID is NOT in `room_players(roomId)` | Silent drop, INFO log, no broadcast | Silent |
-| Room status is not `"waiting"` | Room exists but `status != "waiting"` (game in progress / finished) | Silent drop, INFO log | Silent |
-| Unknown roomId | `roomId` does not resolve to any row in `rooms` | Silent drop, INFO log | Silent |
-| Missing roomId | `channel: "room"` but `roomId == nil` | Silent drop, INFO log | Silent |
-| Empty / whitespace / >500 runes text | Any channel, invalid text | No broadcast (reuses existing prologue) | Silent |
-| Recipient in match | Recipient userID appears in both `room_players(X)` AND is currently in-game | Recipient still receives room chat — the in-game exclusion applies to `global` only, not `room` | N/A |
-| Player leaves room | Route unmounts (leave / game-start navigation / close tab) | `chatStore.roomMessages` reset to `[]` via `clearRoom()` | N/A |
-| Game-start transition | `gameStarted` flag flips, client navigates to `/game/:id` | RoomLobby unmounts → `clearRoom()` fires; GamePage mounts with empty `matchMessages` | N/A |
+| Scenario                                   | Input / State                                                                                        | Expected Output / Behavior                                                                                                     | Error Handling |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| Seated player sends message                | `{ channel: "room", roomId: 42, text: "hi" }`, sender in `room_players(42)`, room status `"waiting"` | Server broadcasts `system:chat_message` with `scope: "room"` to all userIDs in `room_players(42)`, including sender (own-echo) | N/A            |
+| Unseated (joined-but-no-seat) player sends | Same as above, sender has `seat == nil`                                                              | Same broadcast — seat membership does not gate chat                                                                            | N/A            |
+| Non-member sends to room chat              | Sender userID is NOT in `room_players(roomId)`                                                       | Silent drop, INFO log, no broadcast                                                                                            | Silent         |
+| Room status is not `"waiting"`             | Room exists but `status != "waiting"` (game in progress / finished)                                  | Silent drop, INFO log                                                                                                          | Silent         |
+| Unknown roomId                             | `roomId` does not resolve to any row in `rooms`                                                      | Silent drop, INFO log                                                                                                          | Silent         |
+| Missing roomId                             | `channel: "room"` but `roomId == nil`                                                                | Silent drop, INFO log                                                                                                          | Silent         |
+| Empty / whitespace / >500 runes text       | Any channel, invalid text                                                                            | No broadcast (reuses existing prologue)                                                                                        | Silent         |
+| Recipient in match                         | Recipient userID appears in both `room_players(X)` AND is currently in-game                          | Recipient still receives room chat — the in-game exclusion applies to `global` only, not `room`                                | N/A            |
+| Player leaves room                         | Route unmounts (leave / game-start navigation / close tab)                                           | `chatStore.roomMessages` reset to `[]` via `clearRoom()`                                                                       | N/A            |
+| Game-start transition                      | `gameStarted` flag flips, client navigates to `/game/:id`                                            | RoomLobby unmounts → `clearRoom()` fires; GamePage mounts with empty `matchMessages`                                           | N/A            |
 
 </frozen-after-approval>
 
@@ -79,6 +82,7 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
+
 - [x] `server/internal/ws/events.go` -- add `RoomID *uint` to `ChatMessageRequest`; update `Scope` doc to `"global" | "match" | "room"`.
 - [x] `client/src/shared/types/wsEvents.ts` -- same-commit mirror: widen `channel` union, add `roomId?: number`, widen `scope`.
 - [x] `server/internal/chat/handler.go` -- add `ChannelRoom = "room"`, new `RoomMembership` dependency (method `RoomMembers(roomID uint) ([]uint, waiting bool)` — returns non-nil userIDs iff room exists AND status is `"waiting"`), new `handleRoom` + dispatch branch.
@@ -95,6 +99,7 @@ context:
 - [x] `client/src/shared/i18n/en.json` + `client/src/shared/i18n/sr.json` -- add `room.chat.{title,placeholder}` in parity.
 
 **Acceptance Criteria:**
+
 - Given two players are in the same room on `/rooms/:id` (one seated, one unseated) and the room status is `"waiting"`, when either sends a chat message, then both see it in their `ChatPanel` with server-stamped timestamp — including the sender's own echo.
 - Given a third player is in a DIFFERENT room's `/rooms/:id`, when any player in the first room sends chat, then the third player's `chatStore.roomMessages` does not receive the event.
 - Given a player leaves the room (button click, browser back, or navigating to `/game/:id` on match start), when `RoomLobby` unmounts, then `chatStore.roomMessages` is `[]`.
@@ -124,11 +129,13 @@ context:
 ## Verification
 
 **Commands:**
+
 - `make lint` from repo root -- expected: clean (Go + TypeScript + Prettier all pass; run `npx prettier --write .` in `client/` first).
 - `make test` from repo root -- expected: all Go packages pass and all vitest files pass with the new chat + room-lobby tests added.
 - `go vet ./...` in `server/` -- expected: clean.
 
 **Manual checks:**
+
 - Open three browser tabs with three different users: A and B join Room X (`/rooms/X`), C joins Room Y. A sends "hi" → B sees it in the room chat panel, C does NOT. B takes a seat, A stays unseated → B can still receive and send.
 - Click "Start game" as the owner when all 4 seated → all seated players navigate to `/game/X`; room chat panel disappears; `chatStore.roomMessages` is `[]` on every client; match chat continues on `MatchChatSidebar`.
 - Send a room message from A while C tries the same `roomId: X` from outside → C's send must be silently dropped server-side (grep `slog` output for "room send dropped").

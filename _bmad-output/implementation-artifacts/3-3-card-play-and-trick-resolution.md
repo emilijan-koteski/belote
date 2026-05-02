@@ -147,7 +147,7 @@ so that every trick resolves fairly according to Bitola rules.
   - [x] 9.14: Test ErrNotYourTurn -- wrong player
   - [x] 9.15: Test ErrWrongPhase -- play_card in non-playing phase
   - [x] 9.16: Test state immutability -- original state unchanged after ApplyAction
-  - [x] 9.17: Test full 8-trick hand -- play all 32 cards through 8 tricks, verify total card points (HandPoints[0] + HandPoints[1]) sum to 152 (62 trump + 30*3 non-trump = 152 total card points in a hand, before last-trick bonus)
+  - [x] 9.17: Test full 8-trick hand -- play all 32 cards through 8 tricks, verify total card points (HandPoints[0] + HandPoints[1]) sum to 152 (62 trump + 30\*3 non-trump = 152 total card points in a hand, before last-trick bonus)
 
 - [x] Task 10: Write validation-focused tests in `validation_test.go` (AC: #2-4)
   - [x] 10.1: Create `server/internal/game/validation_test.go` with `package game_test`
@@ -181,6 +181,7 @@ so that every trick resolves fairly according to Bitola rules.
 **State Cloning:** Clone the `GameState` before any mutation. Use `cloneGameState()` from `bidding.go` (same package, directly callable). After fixing D34, this function properly deep-copies pointer fields and slices.
 
 **Phase-Based Dispatch in ApplyAction:** Extend the existing dispatcher (from Story 3.2):
+
 ```go
 func ApplyAction(state *GameState, action Action) (*GameState, error) {
     switch state.Phase {
@@ -209,6 +210,7 @@ func ApplyAction(state *GameState, action Action) (*GameState, error) {
 3. **Partner Exemption:** If you cannot follow suit AND your team (partner or yourself from an earlier play) currently holds the winning card in the trick, play ANY card from your hand. No trump obligation, no over-trump obligation.
 
 **Over-Trump Rule (applies when playing a trump card under obligation):**
+
 - Find the highest-ranked trump card already played in the current trick (using `TrumpRankOrder`: J > 9 > A > T > K > Q > 8 > 7)
 - If the player holds a trump that outranks it, they MUST play one of those higher trumps
 - If the player's only trump cards are lower-ranked, they may play any of their trump cards
@@ -217,6 +219,7 @@ func ApplyAction(state *GameState, action Action) (*GameState, error) {
 **Leading a Trick:** Any card in hand is legal when leading (first card of a trick).
 
 **Determining Current Trick Winner (for obligation checks):**
+
 - Among cards played so far (1-3 cards):
   - If any trump card(s) were played: the highest trump wins (using `TrumpRankOrder`)
   - Otherwise: the highest card of the led suit wins (using `NonTrumpRankOrder`)
@@ -225,6 +228,7 @@ func ApplyAction(state *GameState, action Action) (*GameState, error) {
 ### Trick Winner Determination
 
 After 4 cards are played:
+
 - If any trump card(s) were played: the highest trump (by `TrumpRankOrder`) wins
 - If no trump played: the highest card of the led suit (by `NonTrumpRankOrder`) wins
 - Cards of non-led, non-trump suits NEVER win a trick
@@ -232,7 +236,7 @@ After 4 cards are played:
 **Card Ranking (higher value = stronger):**
 
 | Rank | Trump Order | Non-Trump Order |
-|------|-------------|-----------------|
+| ---- | ----------- | --------------- |
 | J    | 7 (highest) | 3               |
 | 9    | 6           | 2               |
 | A    | 5           | 7 (highest)     |
@@ -245,23 +249,24 @@ After 4 cards are played:
 ### Card Point Values (already defined in `types.go`)
 
 | Rank | Trump Points | Non-Trump Points |
-|------|-------------|-----------------|
-| J    | 20          | 2               |
-| 9    | 14          | 0               |
-| A    | 11          | 11              |
-| T    | 10          | 10              |
-| K    | 4           | 4               |
-| Q    | 3           | 3               |
-| 8    | 0           | 0               |
-| 7    | 0           | 0               |
+| ---- | ------------ | ---------------- |
+| J    | 20           | 2                |
+| 9    | 14           | 0                |
+| A    | 11           | 11               |
+| T    | 10           | 10               |
+| K    | 4            | 4                |
+| Q    | 3            | 3                |
+| 8    | 0            | 0                |
+| 7    | 0            | 0                |
 
 **Total card points in a hand: always 152** (trump suit: J(20)+9(14)+A(11)+T(10)+K(4)+Q(3)+8(0)+7(0) = 62 points; each non-trump suit: A(11)+T(10)+K(4)+Q(3)+J(2)+9(0)+8(0)+7(0) = 30 points; total = 62 + 30 + 30 + 30 = 152). This is BEFORE last-trick bonus (+10) or Capot (+100) -- those are added in Story 3.5.
 
 ### Existing Code to Reuse
 
 **DO NOT DUPLICATE -- reuse these existing functions and types:**
+
 - `cloneGameState(state *GameState) *GameState` in `bidding.go` -- clone before mutation
-- `TeamForSeat(seat int) int` in `state.go` -- returns team index (0=Red for seats 0,2; 1=Blue for seats 1,3)
+- `TeamForSeat(seat int) int` in `state.go` -- returns team index (0=Team A for seats 0,2; 1=Team B for seats 1,3)
 - `TrumpCardPoints` map in `types.go` -- point values for trump suit cards
 - `NonTrumpCardPoints` map in `types.go` -- point values for non-trump suit cards
 - All existing type definitions: `Card`, `Suit`, `Rank`, `Phase`, `Action`, `TrickCard`, `PlayerState`, `GameState`
@@ -297,12 +302,14 @@ server/internal/game/
 ```
 
 **New files:**
+
 - `server/internal/game/validation.go`
 - `server/internal/game/playing.go`
 - `server/internal/game/playing_test.go`
 - `server/internal/game/validation_test.go`
 
 **Modified files:**
+
 - `server/internal/game/types.go` (add rank order maps)
 - `server/internal/game/bidding.go` (fix cloneGameState D34)
 - `server/internal/game/rules_engine.go` (add PhasePlaying dispatch)
@@ -328,17 +335,20 @@ server/internal/game/
 ### NewGameMidPlay Fixture Design Notes
 
 The fixture must provide **mixed-suit hands** (unlike `NewGameJustDealt` which gives each player all one suit). For card play validation testing, players need:
+
 - Cards of the led suit (to test follow-suit)
 - Trump cards (to test trump obligation and over-trump)
 - Non-trump, non-led-suit cards (to test free play)
 
 Suggested deterministic hand distribution for `NewGameMidPlay(1)` with trump=Hearts:
+
 - Seat 0: `AS, TS, KS, QS, AH, TH, KD, 7C` (4 spades, 2 trump hearts, 1 diamond, 1 club)
 - Seat 1: `JS, 9S, 8S, 7S, JH, 9H, QD, 8C` (4 spades, 2 trump hearts, 1 diamond, 1 club)
 - Seat 2: `AD, TD, KH, QH, 8H, 7H, AC, TC` (2 diamonds, 4 trump hearts, 2 clubs)
 - Seat 3: `JD, 9D, 8D, 7D, KC, QC, JC, 9C` (4 diamonds, 0 trump hearts, 4 clubs)
 
 This allows testing:
+
 - Seat 0 or 1 leading spades → both can follow suit
 - Seat 2 or 3 facing spade lead → void in spades, must check trump obligation
 - Seat 3 has NO trump → tests "no trump available" branch
@@ -349,14 +359,14 @@ For `trickNum > 1`, remove cards proportionally from hands (1 card per player pe
 
 ### Game Phase State Machine Reference
 
-| Phase            | Valid Actions                           | Transitions To                              |
-|------------------|-----------------------------------------|---------------------------------------------|
-| `dealing`        | (automatic)                             | `bidding`                                   |
-| `bidding`        | `pick_trump`, `pass_trump`              | `playing` or `dealing` (Bitola reshuffle)   |
-| `playing`        | `play_card` (Story 3.3), `declare`/`skip_declare` (Story 3.4) | next trick (stays `playing`) or `hand_scoring` (8th trick) |
-| `trick_resolving`| (session manager concern, Epic 4)       | `playing` or `hand_scoring`                 |
-| `hand_scoring`   | (automatic -- Story 3.5)                | `dealing` or `match_end`                    |
-| `match_end`      | (none -- Story 3.6)                     | --                                          |
+| Phase             | Valid Actions                                                 | Transitions To                                             |
+| ----------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| `dealing`         | (automatic)                                                   | `bidding`                                                  |
+| `bidding`         | `pick_trump`, `pass_trump`                                    | `playing` or `dealing` (Bitola reshuffle)                  |
+| `playing`         | `play_card` (Story 3.3), `declare`/`skip_declare` (Story 3.4) | next trick (stays `playing`) or `hand_scoring` (8th trick) |
+| `trick_resolving` | (session manager concern, Epic 4)                             | `playing` or `hand_scoring`                                |
+| `hand_scoring`    | (automatic -- Story 3.5)                                      | `dealing` or `match_end`                                   |
+| `match_end`       | (none -- Story 3.6)                                           | --                                                         |
 
 ### Previous Story Intelligence (from 3-2)
 
@@ -388,6 +398,7 @@ Files changed in previous story (3.2): `bidding.go`, `bidding_test.go`, `rules_e
 ### UX Context (for dev awareness -- no frontend changes in this story)
 
 The session manager (Epic 4) and frontend (Epic 4, Story 4-3) will use the state returned by the rules engine to drive these interactions:
+
 - **Playable cards glow** -- determined by `legalCards()` result sent to client
 - **Single click plays immediately** -- 150ms animation to trick area
 - **Trick resolution pause** -- ~1 second after 4th card, all 4 cards visible, winning card highlights, then cards sweep to winner's pile
@@ -437,12 +448,14 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - `server/internal/game/validation.go`
 - `server/internal/game/playing.go`
 - `server/internal/game/playing_test.go`
 - `server/internal/game/validation_test.go`
 
 **Modified files:**
+
 - `server/internal/game/types.go` (added TrumpRankOrder, NonTrumpRankOrder)
 - `server/internal/game/bidding.go` (fixed cloneGameState D34 — deep-copy pointer fields)
 - `server/internal/game/rules_engine.go` (added PhasePlaying dispatch)

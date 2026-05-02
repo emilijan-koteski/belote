@@ -3,6 +3,12 @@
     "appName": "Belote",
     "close": "Close"
   },
+  "team": {
+    "us": "Us",
+    "them": "Them",
+    "a": "Team A",
+    "b": "Team B"
+  },
   "nav": {
     "play": "Play",
     "leaderboard": "Leaderboard",
@@ -54,9 +60,7 @@
         "lastTrickBonus": "Last trick",
         "capot": "Capot",
         "failedContract": "Failed",
-        "handTotal": "Hand Total",
-        "failedContractTeamRed": "Red",
-        "failedContractTeamBlue": "Blue"
+        "handTotal": "Hand Total"
       }
     }
   },
@@ -141,9 +145,7 @@
     },
     "roomDetail": {
       "emptySlot": "Empty",
-      "notSeated": "Not seated",
-      "teamRed": "Red",
-      "teamBlue": "Blue"
+      "notSeated": "Not seated"
     },
     "roomList": {
       "searchPlaceholder": "Search rooms by name or code...",
@@ -182,13 +184,12 @@
       "seatEmpty": "Waiting...",
       "seatYou": "You",
       "seatOwner": "Owner",
+      "yourSeat": "Your seat",
       "loading": "Loading room...",
       "notFound": "Room not found",
       "notFoundAction": "Back to Lobby",
       "playerJoined": "{{username}} joined the room",
       "playerLeft": "{{username}} left the room",
-      "teamRed": "Red Team",
-      "teamBlue": "Blue Team",
       "startGame": "Start Game",
       "startGameDisabled": "All 4 players must be seated",
       "waitingForOwner": "Waiting for {{owner}} to start the game...",
@@ -279,9 +280,7 @@
       "sequenceShort": "Sequence of {{count}}",
       "fourOfAKindShort": "Four of a Kind",
       "resolved": "Declarations",
-      "teamDeclared": "{{team}} declared",
-      "teamRed": "Red Team",
-      "teamBlue": "Blue Team"
+      "teamDeclared": "{{team}} declared"
     },
     "belot": {
       "titleBelot": "Announce Belot?",
@@ -309,8 +308,6 @@
       "autoPlayed": "Auto-played: {{card}}"
     },
     "score": {
-      "red": "Red",
-      "blue": "Blue",
       "tricks": "Tricks",
       "lastTrickBonus": "+{{amount}}",
       "thisHand": "this hand"
@@ -395,7 +392,7 @@
       "reconnected": "You have reconnected",
       "reconnectFailed": "Reconnection failed \u2014 the match may have ended",
       "matchAbandoned": "{{player}} disconnected \u2014 match ended",
-      "matchAbandonedScores": "Final: Red {{red}} : Blue {{blue}}",
+      "matchAbandonedScores": "Final: Us {{us}} : Them {{them}}",
       "returningToLobby": "Returning to lobby..."
     }
   },

@@ -34,7 +34,7 @@ So that match outcomes are resolved accurately.
 
 6. **Given** test fixtures
    **When** I inspect `testfixtures/`
-   **Then** `NewGameNearEnd(redScore, blueScore int)` exists for testing match completion thresholds
+   **Then** `NewGameNearEnd(teamAScore, teamBScore int)` exists for testing match completion thresholds
    **And** all 7 minimum fixture factory functions from the Architecture spec are present
 
 ## Tasks / Subtasks
@@ -63,9 +63,9 @@ So that match outcomes are resolved accurately.
   - [x] Add `case PhasePaused` to the switch in `rules_engine.go` — return `nil, apperr.ErrGamePaused`
 
 - [x] Task 5: Create `NewGameNearEnd` test fixture (AC: 6)
-  - [x] Add `NewGameNearEnd(redScore, blueScore int)` to `testfixtures/fixtures.go`
+  - [x] Add `NewGameNearEnd(teamAScore, teamBScore int)` to `testfixtures/fixtures.go`
   - [x] Returns a `GameState` in `PhasePlaying` at trick 8 (like `NewGameLastTrick`)
-  - [x] Sets `TeamScores[TeamRed] = redScore`, `TeamScores[TeamBlue] = blueScore`
+  - [x] Sets `TeamScores[TeamA] = teamAScore`, `TeamScores[TeamB] = teamBScore`
   - [x] Use deterministic card distribution matching existing fixture patterns
   - [x] Validate in `fixtures_test.go`
 
@@ -80,7 +80,7 @@ So that match outcomes are resolved accurately.
     - TestCheckInstantWin_AllTrumpCards (internal)
     - TestCheckInstantWin_NoInstantWin (internal)
     - TestCheckInstantWin_NilTrumpCandidate (internal)
-    - TestCheckInstantWin_Seat0RedTeam (internal)
+    - TestCheckInstantWin_Seat0TeamA (internal)
     - TestInstantWin_NotTriggered_PartialTrump
     - TestInstantWin_FirstHand (through `NewGame`)
   - [x] `rules_engine_test.go` — phase error tests:
@@ -110,22 +110,24 @@ So that match outcomes are resolved accurately.
 ### Key Integration Point — scoreHand Step 6 Modification
 
 The current match-end check in `scoring.go:48-52` is:
+
 ```go
 target := matchTarget(state.MatchMode)
-if state.TeamScores[TeamRed] >= target || state.TeamScores[TeamBlue] >= target {
+if state.TeamScores[TeamA] >= target || state.TeamScores[TeamB] >= target {
     state.Phase = PhaseMatchEnd
     return
 }
 ```
 
 Replace this with tiebreaker-aware logic:
+
 ```go
 target := matchTarget(state.MatchMode)
-redOver := state.TeamScores[TeamRed] >= target
-blueOver := state.TeamScores[TeamBlue] >= target
+teamAOver := state.TeamScores[TeamA] >= target
+teamBOver := state.TeamScores[TeamB] >= target
 
-if redOver || blueOver {
-    winner := determineMatchWinner(state, redOver, blueOver)
+if teamAOver || teamBOver {
+    winner := determineMatchWinner(state, teamAOver, teamBOver)
     state.WinnerTeam = &winner
     state.Phase = PhaseMatchEnd
     return
@@ -133,6 +135,7 @@ if redOver || blueOver {
 ```
 
 Where `determineMatchWinner` implements:
+
 1. If only one team crossed → that team
 2. If both crossed → team with higher `TeamScores`
 3. If both crossed AND tied → `TeamForSeat(*state.TrumpCallerSeat)` (contracting team)
@@ -140,6 +143,7 @@ Where `determineMatchWinner` implements:
 ### Key Integration Point — Instant-Win in startNewHand
 
 After `dealCards(state, deck)` in `startNewHand()`, before setting `Phase = PhaseBidding`:
+
 ```go
 if winnerTeam := checkInstantWin(state); winnerTeam != nil {
     state.WinnerTeam = winnerTeam
@@ -149,6 +153,7 @@ if winnerTeam := checkInstantWin(state); winnerTeam != nil {
 ```
 
 Also add the same check at the end of `NewGame()` in `state.go`, after `dealCards(gs, deck)`:
+
 ```go
 if winnerTeam := checkInstantWin(gs); winnerTeam != nil {
     gs.WinnerTeam = winnerTeam
@@ -159,6 +164,7 @@ if winnerTeam := checkInstantWin(gs); winnerTeam != nil {
 ### Instant-Win Detection Logic
 
 `checkInstantWin` checks if any player holds all 8 cards of the trump suit. The trump suit is determined by `TrumpCandidate.Suit` (set during dealing):
+
 ```go
 func checkInstantWin(state *GameState) *int {
     if state.TrumpCandidate == nil {
@@ -185,35 +191,35 @@ Note: Since the standard deck has exactly 8 cards per suit, holding 8 cards of t
 
 ### Existing Code to Reuse — DO NOT Reinvent
 
-| Function / Constant | Location | Purpose |
-|---|---|---|
-| `TeamForSeat(seat int) int` | `state.go` | Maps seat to team index (seat % 2) |
-| `TeamRed = 0`, `TeamBlue = 1` | `state.go` | Team index constants |
-| `matchTarget(mode string) int` | `scoring.go` | Returns 1001 or 501 based on MatchMode |
-| `cloneGameState(state)` | `bidding.go` | Deep clones GameState including pointer fields |
-| `PhaseMatchEnd`, `PhasePaused` | `types.go` | Phase constants (already defined) |
-| `apperr.ErrWrongPhase` | `apperr/errors.go` | Error for invalid phase actions |
-| `apperr.ErrGamePaused` | `apperr/errors.go` | Error for paused game actions |
-| All error sentinels | `apperr/errors.go` | `ErrWrongPhase`, `ErrNotYourTurn`, etc. |
+| Function / Constant            | Location           | Purpose                                        |
+| ------------------------------ | ------------------ | ---------------------------------------------- |
+| `TeamForSeat(seat int) int`    | `state.go`         | Maps seat to team index (seat % 2)             |
+| `TeamA = 0`, `TeamB = 1`       | `state.go`         | Team index constants                           |
+| `matchTarget(mode string) int` | `scoring.go`       | Returns 1001 or 501 based on MatchMode         |
+| `cloneGameState(state)`        | `bidding.go`       | Deep clones GameState including pointer fields |
+| `PhaseMatchEnd`, `PhasePaused` | `types.go`         | Phase constants (already defined)              |
+| `apperr.ErrWrongPhase`         | `apperr/errors.go` | Error for invalid phase actions                |
+| `apperr.ErrGamePaused`         | `apperr/errors.go` | Error for paused game actions                  |
+| All error sentinels            | `apperr/errors.go` | `ErrWrongPhase`, `ErrNotYourTurn`, etc.        |
 
 ### Files to Create
 
-| File | Purpose |
-|---|---|
+| File | Purpose                            |
+| ---- | ---------------------------------- |
 | None | All logic goes into existing files |
 
 ### Files to Modify
 
-| File | Changes |
-|---|---|
-| `server/internal/game/state.go` | Add `WinnerTeam *int` field to `GameState` struct (Scoring section). Add instant-win check after `dealCards` in `NewGame()` |
-| `server/internal/game/scoring.go` | Replace match-end check with tiebreaker logic. Add `determineMatchWinner` helper. Add `checkInstantWin` function. Add instant-win check in `startNewHand()`. Reset `WinnerTeam` in `startNewHand()` |
-| `server/internal/game/rules_engine.go` | Add `case PhaseMatchEnd` → `ErrWrongPhase` and `case PhasePaused` → `ErrGamePaused` to switch |
-| `server/internal/game/bidding.go` | Add `WinnerTeam` deep-copy to `cloneGameState` |
-| `server/internal/game/scoring_test.go` | Add tiebreaker tests, instant-win tests, WinnerTeam field tests |
-| `server/internal/game/rules_engine_test.go` | Add PhaseMatchEnd and PhasePaused error tests |
-| `server/internal/game/testfixtures/fixtures.go` | Add `NewGameNearEnd(redScore, blueScore int)` |
-| `server/internal/game/testfixtures/fixtures_test.go` | Add validation test for `NewGameNearEnd` |
+| File                                                 | Changes                                                                                                                                                                                             |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server/internal/game/state.go`                      | Add `WinnerTeam *int` field to `GameState` struct (Scoring section). Add instant-win check after `dealCards` in `NewGame()`                                                                         |
+| `server/internal/game/scoring.go`                    | Replace match-end check with tiebreaker logic. Add `determineMatchWinner` helper. Add `checkInstantWin` function. Add instant-win check in `startNewHand()`. Reset `WinnerTeam` in `startNewHand()` |
+| `server/internal/game/rules_engine.go`               | Add `case PhaseMatchEnd` → `ErrWrongPhase` and `case PhasePaused` → `ErrGamePaused` to switch                                                                                                       |
+| `server/internal/game/bidding.go`                    | Add `WinnerTeam` deep-copy to `cloneGameState`                                                                                                                                                      |
+| `server/internal/game/scoring_test.go`               | Add tiebreaker tests, instant-win tests, WinnerTeam field tests                                                                                                                                     |
+| `server/internal/game/rules_engine_test.go`          | Add PhaseMatchEnd and PhasePaused error tests                                                                                                                                                       |
+| `server/internal/game/testfixtures/fixtures.go`      | Add `NewGameNearEnd(teamAScore, teamBScore int)`                                                                                                                                                    |
+| `server/internal/game/testfixtures/fixtures_test.go` | Add validation test for `NewGameNearEnd`                                                                                                                                                            |
 
 ### Testing Patterns — MANDATORY
 
@@ -237,12 +243,14 @@ Since `startNewHand` and `NewGame` use random shuffles, you cannot deterministic
 ### Previous Story Intelligence (from 3.5)
 
 **Critical learnings to apply:**
+
 - `TurnExpiresAt` must be reset in `startNewHand` — already done in 3.5, but verify `WinnerTeam` follows the same nil-reset pattern
 - Test edge cases with multiple point sources (declarations + card points + bonuses)
 - When changing phase transitions, update dependent tests — check if any existing tests assert `Phase == PhaseMatchEnd` without checking `WinnerTeam`
 - Existing `TestHandScoring_MatchEndTriggered` in `scoring_test.go` already tests basic match-end — update it to verify `WinnerTeam` is set
 
 **Deferred items from 3.5 — DO NOT address in 3.6:**
+
 - D35: `legalCards` nil-guard dereferences (pre-existing, session manager validates)
 - D36: Negative seat modulo (pre-existing)
 - D37: `action.PlayerSeat` bounds check (Epic 4)
@@ -251,6 +259,7 @@ Since `startNewHand` and `NewGame` use random shuffles, you cannot deterministic
 ### Git Intelligence (from recent commits)
 
 Recent commit pattern: `feat(game): implement <feature> with code review fixes`
+
 - Each story ships as a single commit with code review fixes included
 - All game engine stories (3.1-3.5) follow this pattern
 - Backend tests run via `go test ./server/internal/game/...`
@@ -295,8 +304,8 @@ None — all tests passed on first run after implementation.
 - Implemented `checkInstantWin()` — detects player holding all 8 trump cards, returns winning team
 - Integrated instant-win check into both `startNewHand()` and `NewGame()` after dealing
 - Added `PhaseMatchEnd` → `ErrWrongPhase` and `PhasePaused` → `ErrGamePaused` cases to `ApplyAction`
-- Created `NewGameNearEnd(redScore, blueScore int)` fixture delegating to `NewGameLastTrick` with configurable scores
-- Added `TestMatchEnd_BlueTeamWins` as additional coverage for Blue team winning scenario
+- Created `NewGameNearEnd(teamAScore, teamBScore int)` fixture delegating to `NewGameLastTrick` with configurable scores
+- Added `TestMatchEnd_TeamBWins` as additional coverage for Team B winning scenario
 - Updated 3 existing tests to verify `WinnerTeam` field: `TestHandScoring_MatchEndTriggered`, `TestHandScoring_NewHandStateReset`, `TestHandScoring_501MatchMode`
 - Total new tests: 18 (6 tiebreaker + 6 instant-win + 3 phase error + 2 fixture validation + 1 additional)
 - Test coverage: 94.6% on `internal/game/` (threshold: >90%)
@@ -315,5 +324,5 @@ None — all tests passed on first run after implementation.
 - `server/internal/game/scoring_test.go` — Added 8 tiebreaker/match-end tests, 2 instant-win tests, updated 3 existing tests
 - `server/internal/game/scoring_internal_test.go` — NEW: 4 internal tests for `checkInstantWin` with deterministic fixtures
 - `server/internal/game/rules_engine_test.go` — Added `TestApplyAction_MatchEndPhase_ReturnsErrWrongPhase`, `TestApplyAction_PausedPhase_ReturnsErrGamePaused`, updated existing test
-- `server/internal/game/testfixtures/fixtures.go` — Added `NewGameNearEnd(redScore, blueScore int)`
+- `server/internal/game/testfixtures/fixtures.go` — Added `NewGameNearEnd(teamAScore, teamBScore int)`
 - `server/internal/game/testfixtures/fixtures_test.go` — Added `TestNewGameNearEnd` validation

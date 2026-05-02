@@ -4,12 +4,11 @@ import { Link } from "react-router";
 
 import type { MatchHandView, MatchListItem, MatchOutcome } from "@/shared/api/matches";
 import { useUserMatchesInfiniteQuery } from "@/shared/hooks/queries/useMatches";
+import type { TeamString } from "@/shared/types/gameTypes";
 
 interface MatchHistoryProps {
   userId: number | undefined;
 }
-
-const TEAM_RED = 0;
 
 function formatDuration(
   startedAt: string,
@@ -76,21 +75,49 @@ function OutcomeBadge({ outcome }: { outcome: MatchOutcome }) {
   );
 }
 
-function HandResultsTable({ hands }: { hands: MatchHandView[] }) {
+interface HandResultsTableProps {
+  hands: MatchHandView[];
+  viewerTeam: TeamString;
+  viewerTeamIndex: 0 | 1;
+}
+
+function HandResultsTable({ hands, viewerTeam, viewerTeamIndex }: HandResultsTableProps) {
   const { t } = useTranslation();
   if (hands.length === 0) {
     return null;
   }
+
+  // Order columns viewer-first: Us is always first, Them second.
+  const usTeamString: TeamString = viewerTeam;
+  const themTeamString: TeamString = viewerTeam === "teamA" ? "teamB" : "teamA";
+  const usColorClass = viewerTeam === "teamA" ? "text-team-a" : "text-team-b";
+  const themColorClass = viewerTeam === "teamA" ? "text-team-b" : "text-team-a";
+
+  const usValue = (h: MatchHandView) => ({
+    handTotal: viewerTeamIndex === 0 ? h.teamAHandTotal : h.teamBHandTotal,
+    cardPoints: viewerTeamIndex === 0 ? h.teamACardPoints : h.teamBCardPoints,
+    declPoints: viewerTeamIndex === 0 ? h.teamADeclPoints : h.teamBDeclPoints,
+  });
+  const themValue = (h: MatchHandView) => ({
+    handTotal: viewerTeamIndex === 0 ? h.teamBHandTotal : h.teamAHandTotal,
+    cardPoints: viewerTeamIndex === 0 ? h.teamBCardPoints : h.teamACardPoints,
+    declPoints: viewerTeamIndex === 0 ? h.teamBDeclPoints : h.teamADeclPoints,
+  });
+
   return (
     <table className="mt-3 w-full text-left text-sm" data-testid="match-history-hands-table">
       <thead className="text-xs text-text-secondary">
         <tr>
           <th className="py-1 pr-4 font-medium">#</th>
           <th className="py-1 pr-4 font-medium">
-            <span className="text-team-red">R</span>
+            <span className={usColorClass} data-team={usTeamString}>
+              {t("team.us")}
+            </span>
           </th>
           <th className="py-1 pr-4 font-medium">
-            <span className="text-team-blue">B</span>
+            <span className={themColorClass} data-team={themTeamString}>
+              {t("team.them")}
+            </span>
           </th>
           <th className="py-1 pr-4 font-medium">{t("profile.matchHistory.hand.cardPoints")}</th>
           <th className="py-1 pr-4 font-medium">
@@ -102,10 +129,19 @@ function HandResultsTable({ hands }: { hands: MatchHandView[] }) {
       </thead>
       <tbody className="text-text-primary">
         {hands.map((h) => {
-          const failedKey =
-            h.contractingTeam === TEAM_RED
-              ? "profile.matchHistory.hand.failedContractTeamRed"
-              : "profile.matchHistory.hand.failedContractTeamBlue";
+          const us = usValue(h);
+          const them = themValue(h);
+          // Failed-contract chip: contractingTeam compared to the viewer's
+          // team index. If the viewer's team contracted (and failed), label
+          // "Us"; otherwise "Them".
+          const contractingIsUs = h.contractingTeam === viewerTeamIndex;
+          const failedTeamLabel = contractingIsUs ? t("team.us") : t("team.them");
+          const failedTeamString: TeamString = contractingIsUs ? usTeamString : themTeamString;
+          const failedTeamColor = contractingIsUs ? usColorClass : themColorClass;
+          // Last-trick chip color follows last-trick team viewer-relative.
+          const lastTrickIsUs = h.lastTrickTeam === viewerTeamIndex;
+          const lastTrickTeamString: TeamString = lastTrickIsUs ? usTeamString : themTeamString;
+          const lastTrickColor = lastTrickIsUs ? usColorClass : themColorClass;
           return (
             <tr
               key={h.handNumber}
@@ -116,16 +152,20 @@ function HandResultsTable({ hands }: { hands: MatchHandView[] }) {
               <td className="py-1.5 pr-4 text-text-secondary">
                 {t("profile.matchHistory.hand.number", { number: h.handNumber })}
               </td>
-              <td className="py-1.5 pr-4 text-team-red">{h.redHandTotal}</td>
-              <td className="py-1.5 pr-4 text-team-blue">{h.blueHandTotal}</td>
-              <td className="py-1.5 pr-4 text-text-secondary">
-                {h.redCardPoints} / {h.blueCardPoints}
+              <td className={`py-1.5 pr-4 ${usColorClass}`} data-team={usTeamString}>
+                {us.handTotal}
+              </td>
+              <td className={`py-1.5 pr-4 ${themColorClass}`} data-team={themTeamString}>
+                {them.handTotal}
               </td>
               <td className="py-1.5 pr-4 text-text-secondary">
-                {h.redDeclPoints} / {h.blueDeclPoints}
+                {us.cardPoints} / {them.cardPoints}
+              </td>
+              <td className="py-1.5 pr-4 text-text-secondary">
+                {us.declPoints} / {them.declPoints}
               </td>
               <td className="py-1.5 pr-4 font-medium">
-                {h.redHandTotal} – {h.blueHandTotal}
+                {us.handTotal} – {them.handTotal}
               </td>
               <td className="py-1.5">
                 <div className="flex flex-wrap gap-1.5">
@@ -139,10 +179,9 @@ function HandResultsTable({ hands }: { hands: MatchHandView[] }) {
                   )}
                   {!h.capot && h.lastTrickBonus > 0 && (
                     <span
-                      className={`inline-flex items-center rounded bg-surface-elevated px-1.5 py-0.5 text-xs ${
-                        h.lastTrickTeam === TEAM_RED ? "text-team-red" : "text-team-blue"
-                      }`}
+                      className={`inline-flex items-center rounded bg-surface-elevated px-1.5 py-0.5 text-xs ${lastTrickColor}`}
                       data-testid="match-history-hand-last-trick"
+                      data-team={lastTrickTeamString}
                     >
                       +{h.lastTrickBonus} {t("profile.matchHistory.hand.lastTrickBonus")}
                     </span>
@@ -154,12 +193,11 @@ function HandResultsTable({ hands }: { hands: MatchHandView[] }) {
                     >
                       <span>{t("profile.matchHistory.hand.failedContract")}</span>
                       <span
-                        className={
-                          h.contractingTeam === TEAM_RED ? "text-team-red" : "text-team-blue"
-                        }
+                        className={failedTeamColor}
                         data-testid="match-history-hand-failed-team"
+                        data-team={failedTeamString}
                       >
-                        {t(failedKey)}
+                        {failedTeamLabel}
                       </span>
                     </span>
                   )}
@@ -188,6 +226,16 @@ function MatchRow({ match, isOpen, onToggle }: MatchRowProps) {
   const teammate = match.players.find((p) => p.seat === teammateSeat)?.username ?? "";
   const opponent1 = match.players.find((p) => p.seat === opp1Seat)?.username ?? "";
   const opponent2 = match.players.find((p) => p.seat === opp2Seat)?.username ?? "";
+
+  // Viewer team — viewer always participated in their own match-history rows.
+  const viewerTeamIndex: 0 | 1 = match.viewerSeat % 2 === 0 ? 0 : 1;
+  const viewerTeam: TeamString = viewerTeamIndex === 0 ? "teamA" : "teamB";
+  const usTeamString: TeamString = viewerTeam;
+  const themTeamString: TeamString = viewerTeam === "teamA" ? "teamB" : "teamA";
+  const usColorClass = viewerTeam === "teamA" ? "text-team-a" : "text-team-b";
+  const themColorClass = viewerTeam === "teamA" ? "text-team-b" : "text-team-a";
+  const usScore = viewerTeamIndex === 0 ? match.teamAScore : match.teamBScore;
+  const themScore = viewerTeamIndex === 0 ? match.teamBScore : match.teamAScore;
 
   const variantKey = `profile.matchHistory.variant.${match.variant}`;
   const modeKey = `profile.matchHistory.mode.${match.matchMode}`;
@@ -241,9 +289,13 @@ function MatchRow({ match, isOpen, onToggle }: MatchRowProps) {
             </span>
           </div>
           <div className="ml-auto font-display text-lg font-semibold">
-            <span className="text-team-red">{match.teamRedScore}</span>
+            <span className={usColorClass} data-team={usTeamString}>
+              {usScore}
+            </span>
             <span className="mx-2 text-text-secondary">{"–"}</span>
-            <span className="text-team-blue">{match.teamBlueScore}</span>
+            <span className={themColorClass} data-team={themTeamString}>
+              {themScore}
+            </span>
           </div>
         </div>
       </button>
@@ -255,7 +307,11 @@ function MatchRow({ match, isOpen, onToggle }: MatchRowProps) {
           data-match-id={match.id}
           className="mt-3 border-t border-border pt-3"
         >
-          <HandResultsTable hands={match.hands} />
+          <HandResultsTable
+            hands={match.hands}
+            viewerTeam={viewerTeam}
+            viewerTeamIndex={viewerTeamIndex}
+          />
         </div>
       )}
     </li>

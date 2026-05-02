@@ -1,11 +1,11 @@
 ---
-title: 'Trump-take reveal dialog'
-type: 'feature'
-created: '2026-04-26'
-status: 'done'
-baseline_commit: '4b17cc7e59e76a590beb9510fb9ad32f3b708506'
+title: "Trump-take reveal dialog"
+type: "feature"
+created: "2026-04-26"
+status: "done"
+baseline_commit: "4b17cc7e59e76a590beb9510fb9ad32f3b708506"
 context:
-  - '{project-root}/_bmad-output/project-context.md'
+  - "{project-root}/_bmad-output/project-context.md"
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -19,7 +19,8 @@ context:
 ## Boundaries & Constraints
 
 **Always:**
-- Send the `trumpCandidate` card on the `event:trump_selected` payload itself (read it from `oldState.TrumpCandidate.String()` in `manager.go` *before* the candidate is cleared by `ApplyAction`). The follow-up `event:game_state` no longer carries the candidate — clients cannot derive it after the fact.
+
+- Send the `trumpCandidate` card on the `event:trump_selected` payload itself (read it from `oldState.TrumpCandidate.String()` in `manager.go` _before_ the candidate is cleared by `ApplyAction`). The follow-up `event:game_state` no longer carries the candidate — clients cannot derive it after the fact.
 - Update **both** WS contract files in the same change: `server/internal/ws/events.go` (introduce `TrumpSelectedPayload` typed struct) and `client/src/shared/types/wsEvents.ts` (extend `TrumpSelectedPayload` with `cardId: string`).
 - The dialog is informational and non-blocking: `pointer-events-none`, no full-screen backdrop, must not interfere with the immediately-following `playing`-phase UI (active player can play their card while the reveal is on screen).
 - Auto-dismiss timing matches existing reveal components in spirit: ~3.5 s normal, 1.5 s `prefers-reduced-motion`. State is held in `gameStore` (`trumpReveal: TrumpSelectedPayload | null`) and cleared by the component's `onComplete` — same pattern as `declarationReveal` / `belotReveal`.
@@ -28,9 +29,11 @@ context:
 - Add i18n keys to **both** `en.json` and `sr.json` (Serbian Latin); `i18n.test.ts` parity is enforced.
 
 **Ask First:**
+
 - None — payload extension is additive (existing `playerSeat` + `trumpSuit` keys preserved), so no breaking changes for any consumer.
 
 **Never:**
+
 - Do not extend `GameState` or persist the candidate after pick — the candidate is intentionally cleared by `handlePickTrump` so it can't leak into post-pick logic. Carry it on the event only.
 - Do not use the seat-anchored `PANEL_POSITIONS` map from `BelotReveal`/`DeclarationReveal`. The dialog is centered on the table, not pinned to the picker's seat.
 - Do not block the underlying game with a modal backdrop or `disabled` overlay — the next player must be able to play immediately.
@@ -39,16 +42,16 @@ context:
 
 ## I/O & Edge-Case Matrix
 
-| Scenario | Input / State | Expected Output / Behavior | Error Handling |
-|----------|--------------|---------------------------|----------------|
-| Round-1 pick (candidate suit becomes trump) | `oldState.TrumpCandidate = {7,S}`, `action.PlayerSeat=2` ("Ana") | `event:trump_selected` payload `{playerSeat:2, trumpSuit:"S", cardId:"7S"}`; all 4 clients show centered dialog "Ana took trump" + the `7♠` card | N/A |
-| Round-2 pick (free-suit; candidate suit ≠ trump) | `oldState.TrumpCandidate = {9,D}`, picker chooses `H` | Payload `{playerSeat, trumpSuit:"H", cardId:"9D"}`; dialog shows the `9♦` card, persistent `TrumpIndicator` afterward shows `♥` | N/A |
-| Reveal dismiss timing | Normal motion | Dialog visible ~3500 ms, then unmounts; `gameStore.trumpReveal` set back to `null` | N/A |
-| Reduced-motion user | `prefers-reduced-motion: reduce` | Dialog visible 1500 ms (mirrors `BelotReveal` / `DeclarationReveal`) | N/A |
-| Malformed payload | `cardId` empty or length < 2 | Dispatch drops the reveal; persistent indicator still updates from follow-up `event:game_state` | Silent ignore + `console.warn` |
-| Pass action | `action:pass_trump` | No `event:trump_selected` emitted (existing behavior); no reveal | N/A |
-| Reconnect after reveal window | Reconnecting client receives only the next `event:game_state` snapshot, not the historic `trump_selected` | No reveal shown for the reconnecter; persistent `TrumpIndicator` already shows correct suit + caller | Acceptable miss |
-| Locale = Serbian Latin | `sr` active | Dialog renders Serbian translations | N/A |
+| Scenario                                         | Input / State                                                                                             | Expected Output / Behavior                                                                                                                       | Error Handling                 |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| Round-1 pick (candidate suit becomes trump)      | `oldState.TrumpCandidate = {7,S}`, `action.PlayerSeat=2` ("Ana")                                          | `event:trump_selected` payload `{playerSeat:2, trumpSuit:"S", cardId:"7S"}`; all 4 clients show centered dialog "Ana took trump" + the `7♠` card | N/A                            |
+| Round-2 pick (free-suit; candidate suit ≠ trump) | `oldState.TrumpCandidate = {9,D}`, picker chooses `H`                                                     | Payload `{playerSeat, trumpSuit:"H", cardId:"9D"}`; dialog shows the `9♦` card, persistent `TrumpIndicator` afterward shows `♥`                  | N/A                            |
+| Reveal dismiss timing                            | Normal motion                                                                                             | Dialog visible ~3500 ms, then unmounts; `gameStore.trumpReveal` set back to `null`                                                               | N/A                            |
+| Reduced-motion user                              | `prefers-reduced-motion: reduce`                                                                          | Dialog visible 1500 ms (mirrors `BelotReveal` / `DeclarationReveal`)                                                                             | N/A                            |
+| Malformed payload                                | `cardId` empty or length < 2                                                                              | Dispatch drops the reveal; persistent indicator still updates from follow-up `event:game_state`                                                  | Silent ignore + `console.warn` |
+| Pass action                                      | `action:pass_trump`                                                                                       | No `event:trump_selected` emitted (existing behavior); no reveal                                                                                 | N/A                            |
+| Reconnect after reveal window                    | Reconnecting client receives only the next `event:game_state` snapshot, not the historic `trump_selected` | No reveal shown for the reconnecter; persistent `TrumpIndicator` already shows correct suit + caller                                             | Acceptable miss                |
+| Locale = Serbian Latin                           | `sr` active                                                                                               | Dialog renders Serbian translations                                                                                                              | N/A                            |
 
 </frozen-after-approval>
 
@@ -70,6 +73,7 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
+
 - [x] `server/internal/ws/events.go` -- introduce typed `TrumpSelectedPayload{ PlayerSeat int, TrumpSuit string, CardID string }` with camelCase JSON tags.
 - [x] `server/internal/session/manager.go` -- in the `ActionPickTrump` branch, build `ws.TrumpSelectedPayload{...}` with `CardID: oldState.TrumpCandidate.String()` (only if non-nil; otherwise leave empty and continue). Keep the follow-up `EventGameState` broadcast unchanged.
 - [x] `server/internal/ws/events_test.go` -- NEW; JSON-contract test for `TrumpSelectedPayload` locking the `playerSeat` / `trumpSuit` / `cardId` camelCase field names. (Originally planned in `manager_test.go`, but the session-test layer has no broadcast-capture infra; the wire-contract assertion delivers the same regression value with far less surface.)
@@ -84,6 +88,7 @@ context:
 - [x] `client/src/shared/i18n/sr.json` -- add `game.trumpReveal.title` = "{{name}} je uzeo aduta" and `game.trumpReveal.unknownPlayer` = "Adut uzet".
 
 **Acceptance Criteria:**
+
 - Given a Bitola hand in `bidding` round 1 with `trumpCandidate = 7♠` and seat 2 ("Ana") picks, when `event:trump_selected` is broadcast, then all four clients render `[data-testid="trump-reveal"]` containing "Ana" and a `7♠` card.
 - Given the dialog is shown, when ~3500 ms elapse (or 1500 ms under `prefers-reduced-motion`), then the dialog unmounts and `gameStore.trumpReveal === null`.
 - Given the dialog is dismissed, when the player inspects the top-right corner, then `[data-testid="trump-indicator"]` shows the suit (and caller team/name) but no card image — the existing `TrumpIndicator` is unchanged.
@@ -102,6 +107,7 @@ Three review findings classified as **patch** (auto-fix without re-deriving the 
 3. **z-index reduced from `z-30` to `z-20`** — `TrumpReveal.tsx`: `ScoreReveal` is `fixed inset-0 z-30`; if a user is slow to dismiss the score-reveal and the next hand's trump pick lands while it is still up, both reveals would compete at the same z-level. Lowering matches `BelotReveal`/`DeclarationReveal` and keeps `ScoreReveal` on top.
 
 KEEP instructions for any future re-derivation:
+
 - Auto-dismiss durations 3500 ms / 1500 ms (reduced motion) — do not change.
 - `key={playerSeat}-{cardId}` on `<TrumpReveal>` — required for back-to-back-pick remount.
 - `cardId` sourcing from `oldState.TrumpCandidate.String()` (pre-`ApplyAction`) is correct — `newState` clears it.
@@ -115,10 +121,20 @@ Reading the `cardId` off the **event payload** (not store) is deliberate: `handl
 Sketch of the centered panel (analogous to `BelotReveal`'s container, but center-stage):
 
 ```tsx
-<div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none" data-testid="trump-reveal">
+<div
+  className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none"
+  data-testid="trump-reveal"
+>
   <div className="bg-surface-elevated/95 border border-border rounded-lg shadow-lg px-4 py-3 flex flex-col items-center gap-2">
-    <p className="text-text-primary font-display text-base font-semibold">{title}</p>
-    <PlayingCard card={parseCardId(cardId)} state="default" size="md" withTransition={false} />
+    <p className="text-text-primary font-display text-base font-semibold">
+      {title}
+    </p>
+    <PlayingCard
+      card={parseCardId(cardId)}
+      state="default"
+      size="md"
+      withTransition={false}
+    />
   </div>
 </div>
 ```
@@ -126,6 +142,7 @@ Sketch of the centered panel (analogous to `BelotReveal`'s container, but center
 ## Verification
 
 **Commands:**
+
 - `cd client && npx prettier --write .` -- expected: formats touched files.
 - `cd client && npx vitest run` -- expected: existing suites + new `TrumpReveal.test.tsx`, updated `useWsDispatch.test.ts`, `i18n.test.ts` parity all pass.
 - `cd server && go test ./...` -- expected: rules + session tests pass; new manager assertion green.
@@ -133,6 +150,7 @@ Sketch of the centered panel (analogous to `BelotReveal`'s container, but center
 - `make test` -- expected: full Go + frontend suite green.
 
 **Manual checks:**
+
 - `make dev`, open four clients in a Bitola room, deal a hand: when one player picks trump (round 1), confirm a centered dialog with the picker's username and the face-up card appears on every client and auto-dismisses after a few seconds.
 - Force a round-2 pass-pass-pass-pick path with a free-suit choice that differs from the candidate's suit; confirm the reveal still shows the originally face-up card (not the chosen suit).
 - Toggle `prefers-reduced-motion` (DevTools → Rendering → Emulate CSS media feature); confirm the dismiss is faster.
@@ -142,7 +160,7 @@ Sketch of the centered panel (analogous to `BelotReveal`'s container, but center
 
 **Wire-protocol contract (server → client)**
 
-- The originally face-up `TrumpCandidate` is read off `oldState` *before* `ApplyAction` clears it, then carried on the event with a defensive `slog.Warn` if the candidate is unexpectedly nil.
+- The originally face-up `TrumpCandidate` is read off `oldState` _before_ `ApplyAction` clears it, then carried on the event with a defensive `slog.Warn` if the candidate is unexpectedly nil.
   [`manager.go:467`](../../server/internal/session/manager.go#L467)
 
 - New typed broadcast payload replaces the previous inline `map[string]interface{}` and locks `playerSeat` / `trumpSuit` / `cardId` camelCase tags.

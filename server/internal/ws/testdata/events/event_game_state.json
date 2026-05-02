@@ -1,0 +1,126 @@
+{
+  "id": 42,
+  "roomId": 7,
+  "variant": "bitola",
+  "matchMode": "1001",
+  "phase": "playing",
+  "ownerSeat": 0,
+  "handNumber": 3,
+  "dealerSeat": 2,
+  "trumpSuit": "S",
+  "trumpCallerSeat": 1,
+  "trumpCandidate": null,
+  "biddingRound": 2,
+  "biddingPassCount": 0,
+  "deck": [],
+  "trickNumber": 4,
+  "currentTrick": [],
+  "leadSuit": null,
+  "trickWinnerSeat": null,
+  "awaitingDeclaration": false,
+  "declarationsResolved": true,
+  "players": [
+    {
+      "hand": [
+        {
+          "rank": "7",
+          "suit": "C"
+        }
+      ],
+      "seat": 0,
+      "userId": 10,
+      "username": "alice",
+      "team": "teamA",
+      "declarations": [],
+      "connected": true
+    },
+    {
+      "hand": [
+        {
+          "rank": "8",
+          "suit": "H"
+        }
+      ],
+      "seat": 1,
+      "userId": 20,
+      "username": "bob",
+      "team": "teamB",
+      "declarations": [],
+      "connected": true
+    },
+    {
+      "hand": [
+        {
+          "rank": "9",
+          "suit": "D"
+        }
+      ],
+      "seat": 2,
+      "userId": 30,
+      "username": "carol",
+      "team": "teamA",
+      "declarations": [],
+      "connected": true
+    },
+    {
+      "hand": [
+        {
+          "rank": "A",
+          "suit": "S"
+        }
+      ],
+      "seat": 3,
+      "userId": 40,
+      "username": "dave",
+      "team": "teamB",
+      "declarations": [],
+      "connected": true
+    }
+  ],
+  "teamScores": [
+    210,
+    180
+  ],
+  "handPoints": [
+    60,
+    80
+  ],
+  "declarationPoints": [
+    20,
+    0
+  ],
+  "tricksWon": [
+    2,
+    2
+  ],
+  "pendingBelotSeat": null,
+  "belotAnnounced": false,
+  "winnerTeam": null,
+  "lastHandResult": null,
+  "activePlayerSeat": 1,
+  "turnExpiresAt": null,
+  "timerDurationSec": 0,
+  "previousPhase": "",
+  "pausedPlayers": [
+    false,
+    false,
+    false,
+    false
+  ],
+  "pauseUsed": [
+    false,
+    false,
+    false,
+    false
+  ],
+  "turnTimeRemaining": 0,
+  "surrenderProposerSeat": null,
+  "surrenderUsed": [
+    false,
+    false,
+    false,
+    false
+  ],
+  "disconnectedSeat": -1,
+  "reconnectExpiresAt": null
+}

@@ -551,9 +551,9 @@ type PlayersResponse struct {
 
 func teamForSeat(seat int) string {
 	if seat%2 == 0 {
-		return "red"
+		return "teamA"
 	}
-	return "blue"
+	return "teamB"
 }
 
 func (h *RoomHandler) SelectSeat(c echo.Context) error {

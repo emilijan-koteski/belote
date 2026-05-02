@@ -12,10 +12,10 @@ type HandResult struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`
 	MatchID         uint      `gorm:"not null;index;uniqueIndex:idx_hand_results_match_hand" json:"matchId"`
 	HandNumber      int       `gorm:"not null;uniqueIndex:idx_hand_results_match_hand" json:"handNumber"`
-	RedCardPoints   int       `gorm:"not null" json:"redCardPoints"`
-	BlueCardPoints  int       `gorm:"not null" json:"blueCardPoints"`
-	RedDeclPoints   int       `gorm:"not null" json:"redDeclPoints"`
-	BlueDeclPoints  int       `gorm:"not null" json:"blueDeclPoints"`
+	TeamACardPoints int       `gorm:"column:team_a_card_points;not null" json:"teamACardPoints"`
+	TeamBCardPoints int       `gorm:"column:team_b_card_points;not null" json:"teamBCardPoints"`
+	TeamADeclPoints int       `gorm:"column:team_a_decl_points;not null" json:"teamADeclPoints"`
+	TeamBDeclPoints int       `gorm:"column:team_b_decl_points;not null" json:"teamBDeclPoints"`
 	LastTrickTeam   int       `gorm:"not null" json:"lastTrickTeam"`
 	LastTrickBonus  int       `gorm:"not null" json:"lastTrickBonus"`
 	Capot           bool      `gorm:"not null" json:"capot"`
@@ -23,7 +23,7 @@ type HandResult struct {
 	CapotBonus      int       `gorm:"not null" json:"capotBonus"`
 	FailedContract  bool      `gorm:"not null" json:"failedContract"`
 	ContractingTeam int       `gorm:"not null" json:"contractingTeam"`
-	RedHandTotal    int       `gorm:"not null" json:"redHandTotal"`
-	BlueHandTotal   int       `gorm:"not null" json:"blueHandTotal"`
+	TeamAHandTotal  int       `gorm:"column:team_a_hand_total;not null" json:"teamAHandTotal"`
+	TeamBHandTotal  int       `gorm:"column:team_b_hand_total;not null" json:"teamBHandTotal"`
 	CreatedAt       time.Time `json:"createdAt"`
 }

@@ -45,7 +45,7 @@ func TestCheckInstantWin_AllTrumpCards(t *testing.T) {
 	result := checkInstantWin(gs)
 
 	require.NotNil(t, result, "should detect instant-win")
-	assert.Equal(t, TeamBlue, *result, "seat 1 (Blue) has all 8 Hearts (trump)")
+	assert.Equal(t, TeamB, *result, "seat 1 (team B) has all 8 Hearts (trump)")
 }
 
 func TestCheckInstantWin_NoInstantWin(t *testing.T) {
@@ -95,8 +95,8 @@ func TestCheckInstantWin_NilTrumpCandidate(t *testing.T) {
 	assert.Nil(t, result, "should return nil when TrumpCandidate is nil")
 }
 
-func TestCheckInstantWin_Seat0RedTeam(t *testing.T) {
-	// Verify correct team is returned when seat 0 (Red) has all trump
+func TestCheckInstantWin_Seat0TeamA(t *testing.T) {
+	// Verify correct team is returned when seat 0 (team A) has all trump
 	trumpCandidate := Card{Rank: Rank7, Suit: SuitSpades}
 	gs := &GameState{
 		TrumpCandidate: &trumpCandidate,
@@ -116,5 +116,5 @@ func TestCheckInstantWin_Seat0RedTeam(t *testing.T) {
 	result := checkInstantWin(gs)
 
 	require.NotNil(t, result)
-	assert.Equal(t, TeamRed, *result, "seat 0 (Red) has all 8 Spades (trump)")
+	assert.Equal(t, TeamA, *result, "seat 0 (team A) has all 8 Spades (trump)")
 }

@@ -29,7 +29,7 @@ so that I can begin building features on a solid, consistent development environ
 
 5. **Given** the Tailwind config is set up
    **When** I inspect `client/src/index.css` and Tailwind configuration
-   **Then** the Balatro design tokens are defined: `background` (#0a0a0f), `surface` (#13131a), `surface-elevated` (#1c1c26), `border` (#2a2a38), `accent` (#00e5a0), `accent-glow`, `team-red` (#ff4d4d), `team-blue` (#4d9fff), `text-primary` (#f0f0f8), `text-secondary` (#8888a0), `text-disabled` (#44445a), `success`, `warning`, `destructive`
+   **Then** the Balatro design tokens are defined: `background` (#0a0a0f), `surface` (#13131a), `surface-elevated` (#1c1c26), `border` (#2a2a38), `accent` (#00e5a0), `accent-glow`, `team-a` (#ff4d4d), `team-b` (#4d9fff), `text-primary` (#f0f0f8), `text-secondary` (#8888a0), `text-disabled` (#44445a), `success`, `warning`, `destructive`
    **And** Space Grotesk and Inter fonts are loaded from Google Fonts
 
 6. **Given** i18n is configured
@@ -78,8 +78,8 @@ so that I can begin building features on a solid, consistent development environ
     - `--color-border: #2a2a38`
     - `--color-accent: #00e5a0`
     - `--color-accent-glow: #00e5a040` (40% opacity for glow effects)
-    - `--color-team-red: #ff4d4d`
-    - `--color-team-blue: #4d9fff`
+    - `--color-team-a: #ff4d4d`
+    - `--color-team-b: #4d9fff`
     - `--color-text-primary: #f0f0f8`
     - `--color-text-secondary: #8888a0`
     - `--color-text-disabled: #44445a`
@@ -160,6 +160,7 @@ so that I can begin building features on a solid, consistent development environ
 ### Technical Stack Versions (Verified April 2026)
 
 **Frontend:**
+
 - **Vite 8** — uses Rolldown (Rust bundler), 10-30x faster builds. Template: `npm create vite@latest client -- --template react-swc-ts`. Note: `@vitejs/plugin-react` v6 uses Oxc for React Refresh (Babel no longer a dependency)
 - **React 19** + TypeScript strict mode, compiled via SWC
 - **Tailwind CSS v4** — CSS-first config via `@theme` directive in `index.css`. **No `tailwind.config.js` file.** All tokens defined in CSS. Use `@tailwindcss/vite` plugin
@@ -171,6 +172,7 @@ so that I can begin building features on a solid, consistent development environ
 - **Node 18+** required
 
 **Backend:**
+
 - **Go** latest stable — pin exact version in `go.mod`
 - **Echo v4** — Do NOT use v5. Pin to latest v4.x
 - **GORM** + PostgreSQL driver (`gorm.io/gorm` + `gorm.io/driver/postgres`)
@@ -181,6 +183,7 @@ so that I can begin building features on a solid, consistent development environ
 - **bcrypt** — `golang.org/x/crypto/bcrypt` for password hashing (placeholder in this story, used in Story 1.2)
 
 **Infrastructure:**
+
 - **Docker Compose** — PostgreSQL 16+ container for dev
 - **GitHub Actions** — CI with `make test` + `make lint`
 
@@ -194,8 +197,8 @@ Tailwind v4 has NO `tailwind.config.js`. Configuration is entirely in CSS:
 @theme {
   --color-background: #0a0a0f;
   --color-surface: #13131a;
-  --font-display: 'Space Grotesk', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
   /* ...all tokens here */
 }
 ```
@@ -213,6 +216,7 @@ Use `@theme` for design tokens that should generate utility classes (e.g., `bg-b
 ### Backend Domain Package Shape
 
 Every domain package follows:
+
 ```
 internal/{domain}/
   model.go          # GORM model + domain struct
@@ -231,18 +235,18 @@ Registration order in `main.go` is critical: **CORS -> Logging -> Error Handler 
 
 ### Naming Conventions Summary
 
-| Context | Convention | Examples |
-|---------|-----------|----------|
-| Database tables | `snake_case`, plural | `users`, `matches`, `rooms` |
-| JSON wire format | `camelCase` | `createdAt`, `playerId` |
-| REST endpoints | plural, kebab-case | `/api/v1/rooms` |
-| WS events | prefixed `snake_case` | `action:play_card`, `event:game_state` |
-| Frontend components | `PascalCase.tsx` | `PlayingCard.tsx` |
-| Frontend hooks/stores | `camelCase.ts` | `useAuth.ts`, `gameStore.ts` |
-| Backend files | `snake_case.go` | `rules_engine.go` |
-| i18n keys | `{feature}.{component}.{element}` | `auth.login.emailLabel` |
-| Branch naming | `{type}/{epic-id}-{description}` | `chore/E1-S1-project-scaffold` |
-| Commits | `{type}({scope}): {desc}` | `feat(scaffold): initialize monorepo` |
+| Context               | Convention                        | Examples                               |
+| --------------------- | --------------------------------- | -------------------------------------- |
+| Database tables       | `snake_case`, plural              | `users`, `matches`, `rooms`            |
+| JSON wire format      | `camelCase`                       | `createdAt`, `playerId`                |
+| REST endpoints        | plural, kebab-case                | `/api/v1/rooms`                        |
+| WS events             | prefixed `snake_case`             | `action:play_card`, `event:game_state` |
+| Frontend components   | `PascalCase.tsx`                  | `PlayingCard.tsx`                      |
+| Frontend hooks/stores | `camelCase.ts`                    | `useAuth.ts`, `gameStore.ts`           |
+| Backend files         | `snake_case.go`                   | `rules_engine.go`                      |
+| i18n keys             | `{feature}.{component}.{element}` | `auth.login.emailLabel`                |
+| Branch naming         | `{type}/{epic-id}-{description}`  | `chore/E1-S1-project-scaffold`         |
+| Commits               | `{type}({scope}): {desc}`         | `feat(scaffold): initialize monorepo`  |
 
 ### Critical Don'ts for This Story
 
@@ -395,6 +399,7 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **Root:**
+
 - Makefile (new)
 - .env.example (new)
 - .gitignore (new)
@@ -406,6 +411,7 @@ Claude Opus 4.6 (1M context)
 - .github/workflows/ci.yml (new)
 
 **Frontend (client/):**
+
 - client/package.json (new)
 - client/vite.config.ts (new)
 - client/tsconfig.json (new)
@@ -446,6 +452,7 @@ Claude Opus 4.6 (1M context)
 - client/src/shared/i18n/sr.json (new)
 
 **Backend (server/):**
+
 - server/go.mod (new)
 - server/go.sum (new)
 - server/.golangci.yml (new)

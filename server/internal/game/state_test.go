@@ -38,10 +38,10 @@ func TestGameStateJSONRoundTrip(t *testing.T) {
 		LeadSuit:        &leadSuit,
 		TrickWinnerSeat: &winnerSeat,
 		Players: [4]game.PlayerState{
-			{Hand: []game.Card{{Rank: game.RankKing, Suit: game.SuitSpades}}, Seat: 0, UserID: 10, Team: "red", Declarations: []game.Declaration{}, Connected: true},
-			{Hand: []game.Card{{Rank: game.RankAce, Suit: game.SuitHearts}}, Seat: 1, UserID: 20, Team: "blue", Declarations: []game.Declaration{}, Connected: true},
-			{Hand: []game.Card{{Rank: game.Rank9, Suit: game.SuitDiamonds}}, Seat: 2, UserID: 30, Team: "red", Declarations: []game.Declaration{}, Connected: false},
-			{Hand: []game.Card{{Rank: game.RankJack, Suit: game.SuitClubs}}, Seat: 3, UserID: 40, Team: "blue", Declarations: []game.Declaration{}, Connected: true},
+			{Hand: []game.Card{{Rank: game.RankKing, Suit: game.SuitSpades}}, Seat: 0, UserID: 10, Team: "teamA", Declarations: []game.Declaration{}, Connected: true},
+			{Hand: []game.Card{{Rank: game.RankAce, Suit: game.SuitHearts}}, Seat: 1, UserID: 20, Team: "teamB", Declarations: []game.Declaration{}, Connected: true},
+			{Hand: []game.Card{{Rank: game.Rank9, Suit: game.SuitDiamonds}}, Seat: 2, UserID: 30, Team: "teamA", Declarations: []game.Declaration{}, Connected: false},
+			{Hand: []game.Card{{Rank: game.RankJack, Suit: game.SuitClubs}}, Seat: 3, UserID: 40, Team: "teamB", Declarations: []game.Declaration{}, Connected: true},
 		},
 		TeamScores:        [2]int{450, 380},
 		HandPoints:        [2]int{82, 70},
@@ -218,10 +218,10 @@ func TestNewGame(t *testing.T) {
 	})
 
 	t.Run("teams are assigned correctly", func(t *testing.T) {
-		assert.Equal(t, "red", gs.Players[0].Team)
-		assert.Equal(t, "blue", gs.Players[1].Team)
-		assert.Equal(t, "red", gs.Players[2].Team)
-		assert.Equal(t, "blue", gs.Players[3].Team)
+		assert.Equal(t, "teamA", gs.Players[0].Team)
+		assert.Equal(t, "teamB", gs.Players[1].Team)
+		assert.Equal(t, "teamA", gs.Players[2].Team)
+		assert.Equal(t, "teamB", gs.Players[3].Team)
 	})
 
 	t.Run("player IDs assigned to correct seats", func(t *testing.T) {
@@ -250,10 +250,10 @@ func TestTeamForSeat(t *testing.T) {
 		seat     int
 		expected int
 	}{
-		{0, game.TeamRed},
-		{1, game.TeamBlue},
-		{2, game.TeamRed},
-		{3, game.TeamBlue},
+		{0, game.TeamA},
+		{1, game.TeamB},
+		{2, game.TeamA},
+		{3, game.TeamB},
 	}
 
 	for _, tc := range tests {

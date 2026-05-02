@@ -34,7 +34,7 @@ func (r *GormMatchRepository) CreateWithHands(match *Match, hands []HandResult) 
 func (r *GormMatchRepository) GetStatsForUser(userID uint) (wins, losses, abandoned int, err error) {
 	// Single round-trip: FILTER aggregation over matches the user participates
 	// in. The viewer's team per row is derived from their seat via a CASE
-	// (seat 0/2 → 0 Red; 1/3 → 1 Blue) matching game.TeamForSeat. A user with
+	// (seat 0/2 → 0 team A; 1/3 → 1 team B) matching game.TeamForSeat. A user with
 	// zero matches yields (0, 0, 0, nil) — GORM's Scan into zero-valued struct.
 	var row struct {
 		Wins      int

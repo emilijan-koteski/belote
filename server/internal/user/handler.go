@@ -37,10 +37,10 @@ type MatchPlayer struct {
 // MatchHandView is the per-hand scoring breakdown embedded in a match list item.
 type MatchHandView struct {
 	HandNumber      int  `json:"handNumber"`
-	RedCardPoints   int  `json:"redCardPoints"`
-	BlueCardPoints  int  `json:"blueCardPoints"`
-	RedDeclPoints   int  `json:"redDeclPoints"`
-	BlueDeclPoints  int  `json:"blueDeclPoints"`
+	TeamACardPoints int  `json:"teamACardPoints"`
+	TeamBCardPoints int  `json:"teamBCardPoints"`
+	TeamADeclPoints int  `json:"teamADeclPoints"`
+	TeamBDeclPoints int  `json:"teamBDeclPoints"`
 	LastTrickTeam   int  `json:"lastTrickTeam"`
 	LastTrickBonus  int  `json:"lastTrickBonus"`
 	Capot           bool `json:"capot"`
@@ -48,26 +48,26 @@ type MatchHandView struct {
 	CapotBonus      int  `json:"capotBonus"`
 	FailedContract  bool `json:"failedContract"`
 	ContractingTeam int  `json:"contractingTeam"`
-	RedHandTotal    int  `json:"redHandTotal"`
-	BlueHandTotal   int  `json:"blueHandTotal"`
+	TeamAHandTotal  int  `json:"teamAHandTotal"`
+	TeamBHandTotal  int  `json:"teamBHandTotal"`
 }
 
 // MatchListItem is the per-match DTO returned by GET /users/:id/matches.
 type MatchListItem struct {
-	ID            uint            `json:"id"`
-	Variant       string          `json:"variant"`
-	MatchMode     string          `json:"matchMode"`
-	StartedAt     time.Time       `json:"startedAt"`
-	CompletedAt   time.Time       `json:"completedAt"`
-	Status        string          `json:"status"`
-	WinnerTeam    int             `json:"winnerTeam"`
-	TeamRedScore  int             `json:"teamRedScore"`
-	TeamBlueScore int             `json:"teamBlueScore"`
-	AbandonedBy   *uint           `json:"abandonedBy,omitempty"`
-	ViewerSeat    int             `json:"viewerSeat"`
-	Outcome       string          `json:"outcome"`
-	Players       []MatchPlayer   `json:"players"`
-	Hands         []MatchHandView `json:"hands"`
+	ID          uint            `json:"id"`
+	Variant     string          `json:"variant"`
+	MatchMode   string          `json:"matchMode"`
+	StartedAt   time.Time       `json:"startedAt"`
+	CompletedAt time.Time       `json:"completedAt"`
+	Status      string          `json:"status"`
+	WinnerTeam  int             `json:"winnerTeam"`
+	TeamAScore  int             `json:"teamAScore"`
+	TeamBScore  int             `json:"teamBScore"`
+	AbandonedBy *uint           `json:"abandonedBy,omitempty"`
+	ViewerSeat  int             `json:"viewerSeat"`
+	Outcome     string          `json:"outcome"`
+	Players     []MatchPlayer   `json:"players"`
+	Hands       []MatchHandView `json:"hands"`
 }
 
 // MatchesListResponse is the envelope returned by GET /users/:id/matches.
@@ -285,7 +285,7 @@ func (h *UserHandler) loadUsernamesForMatches(matches []match.Match) (map[uint]s
 	return result, nil
 }
 
-// teamForSeat returns 0 for Red, 1 for Blue — seats 0/2 are Red, 1/3 are Blue.
+// teamForSeat returns 0 for team A, 1 for team B — seats 0/2 are team A, 1/3 are team B.
 // Duplicated locally instead of importing the game package to keep the user
 // package free of game-engine coupling.
 func teamForSeat(seat int) int { return seat % 2 }
@@ -327,10 +327,10 @@ func buildMatchListItem(m match.Match, viewerID uint, usernames map[uint]string)
 		}
 		hands = append(hands, MatchHandView{
 			HandNumber:      h.HandNumber,
-			RedCardPoints:   h.RedCardPoints,
-			BlueCardPoints:  h.BlueCardPoints,
-			RedDeclPoints:   h.RedDeclPoints,
-			BlueDeclPoints:  h.BlueDeclPoints,
+			TeamACardPoints: h.TeamACardPoints,
+			TeamBCardPoints: h.TeamBCardPoints,
+			TeamADeclPoints: h.TeamADeclPoints,
+			TeamBDeclPoints: h.TeamBDeclPoints,
 			LastTrickTeam:   h.LastTrickTeam,
 			LastTrickBonus:  h.LastTrickBonus,
 			Capot:           h.Capot,
@@ -338,25 +338,25 @@ func buildMatchListItem(m match.Match, viewerID uint, usernames map[uint]string)
 			CapotBonus:      h.CapotBonus,
 			FailedContract:  h.FailedContract,
 			ContractingTeam: h.ContractingTeam,
-			RedHandTotal:    h.RedHandTotal,
-			BlueHandTotal:   h.BlueHandTotal,
+			TeamAHandTotal:  h.TeamAHandTotal,
+			TeamBHandTotal:  h.TeamBHandTotal,
 		})
 	}
 
 	return MatchListItem{
-		ID:            m.ID,
-		Variant:       m.Variant,
-		MatchMode:     m.MatchMode,
-		StartedAt:     m.StartedAt,
-		CompletedAt:   m.CompletedAt,
-		Status:        m.Status,
-		WinnerTeam:    m.WinnerTeam,
-		TeamRedScore:  m.TeamRedScore,
-		TeamBlueScore: m.TeamBlueScore,
-		AbandonedBy:   m.AbandonedBy,
-		ViewerSeat:    viewerSeat,
-		Outcome:       outcome,
-		Players:       players,
-		Hands:         hands,
+		ID:          m.ID,
+		Variant:     m.Variant,
+		MatchMode:   m.MatchMode,
+		StartedAt:   m.StartedAt,
+		CompletedAt: m.CompletedAt,
+		Status:      m.Status,
+		WinnerTeam:  m.WinnerTeam,
+		TeamAScore:  m.TeamAScore,
+		TeamBScore:  m.TeamBScore,
+		AbandonedBy: m.AbandonedBy,
+		ViewerSeat:  viewerSeat,
+		Outcome:     outcome,
+		Players:     players,
+		Hands:       hands,
 	}
 }

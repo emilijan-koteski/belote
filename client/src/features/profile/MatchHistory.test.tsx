@@ -27,10 +27,10 @@ function renderMatchHistory(userId: number | undefined = 1) {
 function makeHand(overrides: Partial<MatchHandView> = {}): MatchHandView {
   return {
     handNumber: 1,
-    redCardPoints: 60,
-    blueCardPoints: 102,
-    redDeclPoints: 20,
-    blueDeclPoints: 0,
+    teamACardPoints: 60,
+    teamBCardPoints: 102,
+    teamADeclPoints: 20,
+    teamBDeclPoints: 0,
     lastTrickTeam: 1,
     lastTrickBonus: 10,
     capot: false,
@@ -38,8 +38,8 @@ function makeHand(overrides: Partial<MatchHandView> = {}): MatchHandView {
     capotBonus: 0,
     failedContract: false,
     contractingTeam: 0,
-    redHandTotal: 80,
-    blueHandTotal: 112,
+    teamAHandTotal: 80,
+    teamBHandTotal: 112,
     ...overrides,
   };
 }
@@ -53,8 +53,8 @@ function makeMatch(overrides: Partial<MatchListItem> = {}): MatchListItem {
     completedAt: "2026-04-10T12:25:00Z",
     status: "completed",
     winnerTeam: 0,
-    teamRedScore: 1010,
-    teamBlueScore: 640,
+    teamAScore: 1010,
+    teamBScore: 640,
     abandonedBy: undefined,
     viewerSeat: 0,
     outcome: "win",
@@ -101,16 +101,32 @@ describe("MatchHistory", () => {
     expect(cta).toHaveAttribute("href", "/lobby");
   });
 
-  it("renders rows with teammate, opponents, outcome and score", async () => {
+  it("renders rows with teammate, opponents, outcome and viewer-first score", async () => {
     mockGetUserMatches.mockResolvedValueOnce(makeResponse([makeMatch()], 1));
     renderMatchHistory();
     const row = await screen.findByTestId("match-history-row");
     expect(within(row).getByText("mate")).toBeInTheDocument();
     expect(within(row).getByText(/opp1/)).toBeInTheDocument();
     expect(within(row).getByText(/opp2/)).toBeInTheDocument();
+    // Viewer is on teamA → "Us" first (1010), "Them" second (640)
     expect(within(row).getByText("1010")).toBeInTheDocument();
     expect(within(row).getByText("640")).toBeInTheDocument();
     expect(within(row).getByTestId("match-history-outcome")).toHaveAttribute("data-outcome", "win");
+  });
+
+  it("flips score order when viewer was on teamB (viewerSeat=1)", async () => {
+    mockGetUserMatches.mockResolvedValueOnce(
+      makeResponse([makeMatch({ viewerSeat: 1, teamAScore: 200, teamBScore: 800 })], 1),
+    );
+    renderMatchHistory();
+    const row = await screen.findByTestId("match-history-row");
+    // Viewer on teamB → Us=800 (teamB score) appears first as data-team="teamB"
+    const scoreSpans = within(row)
+      .getAllByText(/^(800|200)$/)
+      .map((el) => ({ text: el.textContent, team: el.getAttribute("data-team") }));
+    // First score span should be the viewer's team
+    expect(scoreSpans[0]).toEqual({ text: "800", team: "teamB" });
+    expect(scoreSpans[1]).toEqual({ text: "200", team: "teamA" });
   });
 
   it("shows all three outcome variants", async () => {
@@ -153,27 +169,27 @@ describe("MatchHistory", () => {
     expect(screen.queryByTestId("match-history-detail")).not.toBeInTheDocument();
   });
 
-  it("renders Capot badge on hand 2 and failed-contract pill when present", async () => {
+  it("renders Capot badge and failed-contract pill — viewer was on the contracting team → 'Us'", async () => {
     const match = makeMatch({
       hands: [
         makeHand({
           handNumber: 1,
           failedContract: true,
           contractingTeam: 0,
-          redCardPoints: 0,
-          redHandTotal: 0,
-          blueCardPoints: 162,
-          blueHandTotal: 182,
+          teamACardPoints: 0,
+          teamAHandTotal: 0,
+          teamBCardPoints: 162,
+          teamBHandTotal: 182,
         }),
         makeHand({
           handNumber: 2,
           capot: true,
           capotTeam: 1,
           capotBonus: 100,
-          blueCardPoints: 162,
-          blueHandTotal: 312,
-          redCardPoints: 0,
-          redHandTotal: 0,
+          teamBCardPoints: 162,
+          teamBHandTotal: 312,
+          teamACardPoints: 0,
+          teamAHandTotal: 0,
         }),
       ],
     });
@@ -184,7 +200,35 @@ describe("MatchHistory", () => {
 
     expect(screen.getByTestId("match-history-hand-capot")).toBeInTheDocument();
     expect(screen.getByTestId("match-history-hand-failed")).toBeInTheDocument();
-    expect(screen.getByTestId("match-history-hand-failed-team")).toHaveTextContent("Red");
+    // Viewer is at seat 0 (teamA, index 0); contractingTeam is 0 → "Us"
+    const failed = screen.getByTestId("match-history-hand-failed-team");
+    expect(failed).toHaveTextContent("Us");
+    expect(failed).toHaveAttribute("data-team", "teamA");
+  });
+
+  it("renders failed-contract pill as 'Them' when viewer was NOT on the contracting team", async () => {
+    const match = makeMatch({
+      viewerSeat: 1, // teamB
+      hands: [
+        makeHand({
+          handNumber: 1,
+          failedContract: true,
+          contractingTeam: 0, // teamA contracted; viewer is teamB → Them
+          teamACardPoints: 0,
+          teamAHandTotal: 0,
+          teamBCardPoints: 162,
+          teamBHandTotal: 182,
+        }),
+      ],
+    });
+    mockGetUserMatches.mockResolvedValueOnce(makeResponse([match], 1));
+    renderMatchHistory();
+    const row = await screen.findByTestId("match-history-row");
+    fireEvent.click(within(row).getByRole("button"));
+
+    const failed = screen.getByTestId("match-history-hand-failed-team");
+    expect(failed).toHaveTextContent("Them");
+    expect(failed).toHaveAttribute("data-team", "teamA");
   });
 
   it("shows Load more when total > loaded and appends rows on click", async () => {

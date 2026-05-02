@@ -1,10 +1,10 @@
 ---
-title: 'Declaration prompt: show all groups with personal sum, Bitola single-use dedup'
-type: 'feature'
-created: '2026-04-17'
-status: 'done'
+title: "Declaration prompt: show all groups with personal sum, Bitola single-use dedup"
+type: "feature"
+created: "2026-04-17"
+status: "done"
 context: []
-baseline_commit: '8f05a5d6f127acbe39ef5eab829e7ea38d631d43'
+baseline_commit: "8f05a5d6f127acbe39ef5eab829e7ea38d631d43"
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -24,6 +24,7 @@ baseline_commit: '8f05a5d6f127acbe39ef5eab829e7ea38d631d43'
 ## Boundaries & Constraints
 
 **Always:**
+
 - Keep the server as the source of truth for stored declarations. `handleDeclare` must persist the **de-duplicated** set.
 - The client-side `detectDeclarations` (added for the prompt preview) must apply the same dedup pass — the modal must not show a group the server will discard.
 - Dedup rule: among groups that share at least one card, keep the one with the highest `value`. Remove the rest. If multiple max-value groups share a card, keep the first encountered (stable).
@@ -31,9 +32,10 @@ baseline_commit: '8f05a5d6f127acbe39ef5eab829e7ea38d631d43'
 - Total row must match the sum of values shown in the modal (no hidden rounding, no rule deviation).
 
 **Ask First:**
+
 - Any change to how tiebreaks resolve between teams (existing `declarationBeats` chain in [server/internal/game/declarations.go:167](server/internal/game/declarations.go#L167) is out of scope here).
 - Any change to the four-of-a-kind point values or sequence point values.
-- Any rendering change in the *reveal* flow (that's a separate spec — goal 2).
+- Any rendering change in the _reveal_ flow (that's a separate spec — goal 2).
 
 ## Rule Reference
 
@@ -44,6 +46,7 @@ baseline_commit: '8f05a5d6f127acbe39ef5eab829e7ea38d631d43'
 ## Implementation Outline
 
 **Server — [server/internal/game/declarations.go](server/internal/game/declarations.go):**
+
 - Add `dedupBitola(decls []Declaration) []Declaration` below `detectDeclarations`. Pure function. Algorithm:
   1. Sort declarations by value descending (stable).
   2. Iterate in order, track a set of already-used card identities (rank+suit).
@@ -51,9 +54,11 @@ baseline_commit: '8f05a5d6f127acbe39ef5eab829e7ea38d631d43'
 - In `detectDeclarations`, after building the raw list, return `dedupBitola(raw)`. No variant switch yet — the function is unconditionally Bitola because the server only supports Bitola today. Add a TODO comment pointing to the Croatian variant work.
 
 **Client — [client/src/features/game/lib/declarations.ts](client/src/features/game/lib/declarations.ts):**
+
 - Add the same `dedupBitola` pass after building the raw list. Same algorithm. No variant switch.
 
 **Client — [client/src/features/game/components/DeclarationPrompt.tsx](client/src/features/game/components/DeclarationPrompt.tsx):**
+
 - Compute `total = declarations.reduce((s, d) => s + d.value, 0)`.
 - Render a new footer row between the declarations list and the button row. Structure:
   ```
@@ -69,6 +74,7 @@ baseline_commit: '8f05a5d6f127acbe39ef5eab829e7ea38d631d43'
 **New:** none.
 
 **Modified:**
+
 - `server/internal/game/declarations.go` — add `dedupBitola`, call it from `detectDeclarations`.
 - `server/internal/game/declarations_test.go` — add tests: (a) tierce + FoaK sharing a J — FoaK kept, tierce dropped; (b) tierce + quarte where tierce ⊂ quarte — quarte kept (already held by current logic, verify); (c) two FoaK of different ranks — both kept (no card overlap); (d) a sequence with no shared card vs a FoaK — both kept.
 - `client/src/features/game/lib/declarations.ts` — add `dedupBitola`.

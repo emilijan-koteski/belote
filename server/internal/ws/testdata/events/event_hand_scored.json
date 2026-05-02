@@ -1,0 +1,17 @@
+{
+  "capot": false,
+  "capotBonus": 0,
+  "capotTeam": null,
+  "contractingTeam": 0,
+  "failedContract": false,
+  "lastTrickBonus": 10,
+  "lastTrickTeam": 0,
+  "teamACardPoints": 82,
+  "teamADeclPoints": 20,
+  "teamAHandTotal": 112,
+  "teamAMatchScore": 312,
+  "teamBCardPoints": 80,
+  "teamBDeclPoints": 0,
+  "teamBHandTotal": 80,
+  "teamBMatchScore": 280
+}

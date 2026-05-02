@@ -101,8 +101,8 @@ type PlayerReconnectedPayload struct {
 // MatchAbandonedPayload is the typed payload for EventMatchAbandoned events.
 type MatchAbandonedPayload struct {
 	AbandonedByPlayer int `json:"abandonedByPlayer"`
-	RedFinalScore     int `json:"redFinalScore"`
-	BlueFinalScore    int `json:"blueFinalScore"`
+	TeamAFinalScore   int `json:"teamAFinalScore"`
+	TeamBFinalScore   int `json:"teamBFinalScore"`
 	MatchDurationSec  int `json:"matchDurationSec"`
 }
 
@@ -115,8 +115,8 @@ type MatchAbandonedPayload struct {
 // userID (uint).
 type MatchEndPayload struct {
 	WinnerTeam        int    `json:"winnerTeam"`
-	RedFinalScore     int    `json:"redFinalScore"`
-	BlueFinalScore    int    `json:"blueFinalScore"`
+	TeamAFinalScore   int    `json:"teamAFinalScore"`
+	TeamBFinalScore   int    `json:"teamBFinalScore"`
 	MatchDurationSec  int    `json:"matchDurationSec"`
 	OutcomeReason     string `json:"outcomeReason,omitempty"`     // "" (natural) | "surrender"
 	SurrenderedBySeat *int   `json:"surrenderedBySeat,omitempty"` // seat index, only when outcomeReason == "surrender"

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import type { Suit } from "@/shared/types/gameTypes";
+import type { Suit, TeamString } from "@/shared/types/gameTypes";
 
 interface TrumpIndicatorProps {
   trumpSuit: Suit;
@@ -8,13 +8,11 @@ interface TrumpIndicatorProps {
   trumpCallerName?: string | null;
 }
 
-type Team = "red" | "blue";
-
 const SUIT_SYMBOL: Record<Suit, string> = {
-  S: "\u2660",
-  H: "\u2665",
-  D: "\u2666",
-  C: "\u2663",
+  S: "♠",
+  H: "♥",
+  D: "♦",
+  C: "♣",
 };
 
 const SUIT_NAME_KEY: Record<Suit, string> = {
@@ -31,28 +29,28 @@ const SUIT_COLOR: Record<Suit, string> = {
   C: "text-text-primary",
 };
 
-const TEAM_BORDER: Record<Team, string> = {
-  red: "border-team-red",
-  blue: "border-team-blue",
+const TEAM_BORDER: Record<TeamString, string> = {
+  teamA: "border-team-a",
+  teamB: "border-team-b",
 };
 
-const TEAM_TEXT: Record<Team, string> = {
-  red: "text-team-red",
-  blue: "text-team-blue",
+const TEAM_TEXT: Record<TeamString, string> = {
+  teamA: "text-team-a",
+  teamB: "text-team-b",
 };
 
-const TEAM_BG: Record<Team, string> = {
-  red: "bg-team-red/10",
-  blue: "bg-team-blue/10",
+const TEAM_BG: Record<TeamString, string> = {
+  teamA: "bg-team-a/10",
+  teamB: "bg-team-b/10",
 };
 
-const TEAM_NAME_KEY: Record<Team, string> = {
-  red: "game.score.red",
-  blue: "game.score.blue",
+const TEAM_NAME_KEY: Record<TeamString, string> = {
+  teamA: "team.a",
+  teamB: "team.b",
 };
 
-function callerTeam(seat: number): Team {
-  return seat % 2 === 0 ? "red" : "blue";
+function callerTeam(seat: number): TeamString {
+  return seat % 2 === 0 ? "teamA" : "teamB";
 }
 
 export function TrumpIndicator({
@@ -62,7 +60,7 @@ export function TrumpIndicator({
 }: TrumpIndicatorProps) {
   const { t } = useTranslation();
 
-  const team: Team | null =
+  const team: TeamString | null =
     typeof trumpCallerSeat === "number" ? callerTeam(trumpCallerSeat) : null;
 
   const callerName = trumpCallerName?.trim() || null;
@@ -90,6 +88,7 @@ export function TrumpIndicator({
       aria-live="polite"
       aria-label={ariaLabel}
       data-testid="trump-indicator"
+      data-team={team ?? undefined}
     >
       <span className="text-text-secondary font-body text-sm">
         {t("game.trumpIndicator.trump")}

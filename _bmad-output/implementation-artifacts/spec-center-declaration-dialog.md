@@ -1,9 +1,9 @@
 ---
-title: 'Center the declaration reveal dialog'
-type: 'bugfix'
-created: '2026-04-29'
-status: 'done'
-route: 'one-shot'
+title: "Center the declaration reveal dialog"
+type: "bugfix"
+created: "2026-04-29"
+status: "done"
+route: "one-shot"
 ---
 
 # Center the declaration reveal dialog

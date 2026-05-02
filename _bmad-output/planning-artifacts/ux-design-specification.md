@@ -88,18 +88,18 @@ The core action is playing a hand of Belot at a real-time table with three other
 
 ### Emotional Journey Mapping
 
-| Stage | Target Feeling |
-| --- | --- |
-| First arrival / registration | Intrigue — this looks different from anything they've seen for this game |
-| Lobby | Anticipation — the game is close, the room is alive with activity |
-| Waiting for players to join | Low-level excitement — the table is being set |
-| Mid-hand, in flow | Social and alive — absorbed in the game, aware of the other players |
-| Rules-critical moment (trump bid, declaration) | Confident — the prompt is clear, the right action is obvious |
+| Stage                                           | Target Feeling                                                                        |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| First arrival / registration                    | Intrigue — this looks different from anything they've seen for this game              |
+| Lobby                                           | Anticipation — the game is close, the room is alive with activity                     |
+| Waiting for players to join                     | Low-level excitement — the table is being set                                         |
+| Mid-hand, in flow                               | Social and alive — absorbed in the game, aware of the other players                   |
+| Rules-critical moment (trump bid, declaration)  | Confident — the prompt is clear, the right action is obvious                          |
 | Something goes wrong (disconnect, timer expiry) | Calm and informed — the platform explains what happened and what comes next, no panic |
-| Winning a hand | Satisfaction — the score lands with weight |
-| Capot / big win moment | Theatrical delight — the moment is celebrated, it feels earned |
-| Ranked promotion / season milestone | Pride — a rank next to your name that means something |
-| Returning to play again | Familiarity and belonging — the platform knows you, the game is waiting |
+| Winning a hand                                  | Satisfaction — the score lands with weight                                            |
+| Capot / big win moment                          | Theatrical delight — the moment is celebrated, it feels earned                        |
+| Ranked promotion / season milestone             | Pride — a rank next to your name that means something                                 |
+| Returning to play again                         | Familiarity and belonging — the platform knows you, the game is waiting               |
 
 ### Micro-Emotions
 
@@ -111,7 +111,7 @@ The core action is playing a hand of Belot at a real-time table with three other
 
 ### Design Implications
 
-- **Social and alive** → Active player indicators with clear personality; match chat always visible and accessible at the table; team colours (Red/Blue) as strong identity anchors throughout the game view
+- **Social and alive** → Active player indicators with clear personality; match chat always visible and accessible at the table; team colours (Team A/Team B) as strong identity anchors throughout the game view
 - **Balatro excitement register** → Dark background, neon/vivid accent colours, dramatic card reveal animations, glowing rank badges; the visual language should feel like the stakes are real
 - **Calm and informative on errors** → Disconnection overlays, timer expiry notifications, and pause states use a composed, legible design — no red alerts, no panic typography; a clear explanation and a clear next step
 - **Theatrical on wins** → Score reveal animations, Capot special treatment, rank promotion screens — these are cinematics, not modals; they deserve their own moment
@@ -190,7 +190,7 @@ The core action is playing a hand of Belot at a real-time table with three other
 - **Component ownership:** shadcn/ui components are copied directly into the codebase rather than imported as a package dependency. They are fully owned and customizable — not a black box. Every component can be restyled to the exact Balatro aesthetic.
 - **Solo developer efficiency:** Tailwind's utility system eliminates the need to write and maintain custom CSS files for layout, spacing, and states. shadcn/ui provides pre-built accessible component primitives (modals, dropdowns, tooltips) that would otherwise require significant custom implementation time.
 - **React-native fit:** shadcn/ui is built specifically for React. No ports or workarounds required.
-- **Realistic scope:** The game table itself (card layout, trick area, seat positions) will be fully custom HTML/CSS — no design system covers game UI. Tailwind + shadcn/ui handles everything *around* the table (lobby, modals, menus, chat, profile, leaderboard) cleanly, so custom engineering effort concentrates where it matters most.
+- **Realistic scope:** The game table itself (card layout, trick area, seat positions) will be fully custom HTML/CSS — no design system covers game UI. Tailwind + shadcn/ui handles everything _around_ the table (lobby, modals, menus, chat, profile, leaderboard) cleanly, so custom engineering effort concentrates where it matters most.
 
 ### Implementation Approach
 
@@ -201,7 +201,7 @@ The core action is playing a hand of Belot at a real-time table with three other
 
 ### Customization Strategy
 
-- **Colour system:** One dark base (near-black), one mid-tone surface, neon primary accent (for active player / interactive elements), team colour pair (Red/Blue), neutral text hierarchy
+- **Colour system:** One dark base (near-black), one mid-tone surface, neon primary accent (for active player / interactive elements), team colour pair (Team A/Team B), neutral text hierarchy
 - **Typography:** Bold, high-contrast — Balatro uses strong typographic presence; headings and score numbers should have visual weight
 - **Glow/shadow system:** Neon glow on active cards, highlighted seats, and rank badges — achieved via Tailwind box-shadow tokens, not images
 - **Component variants:** Each shadcn/ui component gets a themed variant set — e.g., Button has `primary` (neon accent), `ghost` (receded), `destructive` (for leave/forfeit actions)
@@ -225,13 +225,13 @@ Players arrive knowing Belot. They expect:
 - Declarations announced at the first trick, scored once
 - A score that accumulates across hands until one team reaches the target
 
-What they do *not* expect to manage manually:
+What they do _not_ expect to manage manually:
 
 - Tracking which cards are legally playable (suit-following rules, trump obligations)
 - Remembering to declare — the system prompts them
 - Calculating scores — the system shows them
 
-The mental model is: *I focus on strategy; the platform handles the bookkeeping.*
+The mental model is: _I focus on strategy; the platform handles the bookkeeping._
 
 ### Success Criteria
 
@@ -300,27 +300,27 @@ The core card-play interaction uses **established patterns** adapted for Belot's
 
 ### Colour System
 
-**Design philosophy:** Near-black environment with a single high-saturation neon accent — the Balatro register. The darkness makes the game feel serious and cinematic; the neon makes interactive elements unmissable. Team colours (Red/Blue) are game-defined and non-negotiable; the primary accent (teal-green) is chosen specifically to not conflict with either.
+**Design philosophy:** Near-black environment with a single high-saturation neon accent — the Balatro register. The darkness makes the game feel serious and cinematic; the neon makes interactive elements unmissable. Team colours (Team A/Team B) are game-defined and non-negotiable; the primary accent (teal-green) is chosen specifically to not conflict with either.
 
 **Palette:**
 
-| Token | Value | Usage |
-| --- | --- | --- |
-| `background` | `#0a0a0f` | Page/app background — near-black with faint blue-purple tint |
-| `surface` | `#13131a` | Cards, panels, sidebars |
-| `surface-elevated` | `#1c1c26` | Modals, dropdowns, overlays |
-| `border` | `#2a2a38` | Subtle structural borders |
-| `accent` | `#00e5a0` | Primary interactive — active cards, buttons, highlights |
-| `accent-glow` | `#00e5a040` | Neon glow layer (box-shadow/filter) |
-| `accent-dim` | `#00804a` | Pressed/hover state of accent |
-| `team-red` | `#ff4d4d` | Red team identity |
-| `team-blue` | `#4d9fff` | Blue team identity |
-| `text-primary` | `#f0f0f8` | Main readable text — near-white, slight cool tint |
-| `text-secondary` | `#8888a0` | Labels, metadata, muted context |
-| `text-disabled` | `#44445a` | Inactive/unavailable elements |
-| `success` | `#22c55e` | Positive outcomes, declarations won |
-| `warning` | `#f59e0b` | Timer warnings, reconnect countdowns |
-| `destructive` | `#ef4444` | Leave, forfeit, error states |
+| Token              | Value       | Usage                                                        |
+| ------------------ | ----------- | ------------------------------------------------------------ |
+| `background`       | `#0a0a0f`   | Page/app background — near-black with faint blue-purple tint |
+| `surface`          | `#13131a`   | Cards, panels, sidebars                                      |
+| `surface-elevated` | `#1c1c26`   | Modals, dropdowns, overlays                                  |
+| `border`           | `#2a2a38`   | Subtle structural borders                                    |
+| `accent`           | `#00e5a0`   | Primary interactive — active cards, buttons, highlights      |
+| `accent-glow`      | `#00e5a040` | Neon glow layer (box-shadow/filter)                          |
+| `accent-dim`       | `#00804a`   | Pressed/hover state of accent                                |
+| `team-a`           | `#ff4d4d`   | Team A identity                                              |
+| `team-b`           | `#4d9fff`   | Team B identity                                              |
+| `text-primary`     | `#f0f0f8`   | Main readable text — near-white, slight cool tint            |
+| `text-secondary`   | `#8888a0`   | Labels, metadata, muted context                              |
+| `text-disabled`    | `#44445a`   | Inactive/unavailable elements                                |
+| `success`          | `#22c55e`   | Positive outcomes, declarations won                          |
+| `warning`          | `#f59e0b`   | Timer warnings, reconnect countdowns                         |
+| `destructive`      | `#ef4444`   | Leave, forfeit, error states                                 |
 
 **Semantic mappings:**
 
@@ -341,16 +341,16 @@ The core card-play interaction uses **established patterns** adapted for Belot's
 
 **Type scale:**
 
-| Role | Font | Size | Weight | Usage |
-| --- | --- | --- | --- | --- |
-| `display-xl` | Space Grotesk | 48px | 700 | Score totals, match result |
-| `display-lg` | Space Grotesk | 36px | 700 | Rank name, season header |
-| `heading-lg` | Space Grotesk | 24px | 600 | Section headings, room name |
-| `heading-md` | Space Grotesk | 18px | 600 | Panel titles, player name |
-| `body-lg` | Inter | 16px | 400 | Primary readable content |
-| `body-md` | Inter | 14px | 400 | Labels, secondary text, chat |
-| `body-sm` | Inter | 12px | 400 | Metadata, timestamps, hints |
-| `mono` | Inter | 14px | 500 | Room codes, trick counts |
+| Role         | Font          | Size | Weight | Usage                        |
+| ------------ | ------------- | ---- | ------ | ---------------------------- |
+| `display-xl` | Space Grotesk | 48px | 700    | Score totals, match result   |
+| `display-lg` | Space Grotesk | 36px | 700    | Rank name, season header     |
+| `heading-lg` | Space Grotesk | 24px | 600    | Section headings, room name  |
+| `heading-md` | Space Grotesk | 18px | 600    | Panel titles, player name    |
+| `body-lg`    | Inter         | 16px | 400    | Primary readable content     |
+| `body-md`    | Inter         | 14px | 400    | Labels, secondary text, chat |
+| `body-sm`    | Inter         | 12px | 400    | Metadata, timestamps, hints  |
+| `mono`       | Inter         | 14px | 500    | Room codes, trick counts     |
 
 **Principles:**
 
@@ -391,7 +391,7 @@ The core card-play interaction uses **established patterns** adapted for Belot's
 - Interactive elements (cards, buttons, prompts) have visible focus states using `accent` outline
 - Timer state communicated via colour (warning amber) AND text (countdown number) — not colour alone
 - Disconnection and pause overlays use high-contrast text on `surface-elevated` background
-- No information conveyed exclusively through colour — team identity uses colour + label ("Red" / "Blue")
+- No information conveyed exclusively through colour — team identity uses colour + label ("Team A" / "Team B")
 - Font sizes: minimum 12px rendered, 14px for primary interactive labels
 
 ## Design Direction Decision
@@ -475,7 +475,7 @@ flowchart TD
     J -- Joining --> K[Room lobby updates — 2/4, 3/4, 4/4]
     K --> L{All 4 seated?}
     L -- No --> K
-    L -- Yes --> M[Team assignment — self-select Red/Blue]
+    L -- Yes --> M[Team assignment — self-select Team A/Team B]
     M --> N[Room owner clicks 'Start Game']
     N --> O([Game begins — deal phase])
 ```
@@ -635,19 +635,19 @@ UX notes:
 
 These components are available from shadcn/ui and will be themed to the Belote visual system — no custom logic required, only visual theming:
 
-| Component | Usage in Belote |
-| --- | --- |
-| `Button` | All CTAs — Quick Play, Join, Create, PICK, PASS, DECLARE, SKIP |
-| `Dialog` / `Modal` | Room config, rank reveal, placement modal, score reveal |
-| `Input` | Registration fields, room name, search bar |
-| `Tabs` | Lobby nav (Quick Play / Browse Rooms / Create Room) |
-| `Toast` | Room full, auto-play notification, copy-link confirmation |
-| `Tooltip` | Ranked locked state, rules reference hints |
-| `Dropdown` | Variant selector, mode selector in room config |
-| `Progress` | Rank LP progress bar in rank banner, XP level bar |
-| `Badge` | Player level display, rank tier label |
-| `Avatar` | Player seat representation in lobby and table |
-| `Separator` | Section dividers in score panel, room list |
+| Component          | Usage in Belote                                                |
+| ------------------ | -------------------------------------------------------------- |
+| `Button`           | All CTAs — Quick Play, Join, Create, PICK, PASS, DECLARE, SKIP |
+| `Dialog` / `Modal` | Room config, rank reveal, placement modal, score reveal        |
+| `Input`            | Registration fields, room name, search bar                     |
+| `Tabs`             | Lobby nav (Quick Play / Browse Rooms / Create Room)            |
+| `Toast`            | Room full, auto-play notification, copy-link confirmation      |
+| `Tooltip`          | Ranked locked state, rules reference hints                     |
+| `Dropdown`         | Variant selector, mode selector in room config                 |
+| `Progress`         | Rank LP progress bar in rank banner, XP level bar              |
+| `Badge`            | Player level display, rank tier label                          |
+| `Avatar`           | Player seat representation in lobby and table                  |
+| `Separator`        | Section dividers in score panel, room list                     |
 
 All shadcn/ui components will be customised with Belote's token set: `background` surface, `accent` interactive states, `text-primary`/`text-secondary` hierarchy.
 
@@ -732,7 +732,7 @@ These are game-specific components with no shadcn/ui equivalent. All built with 
 
 **Purpose:** Persistent HUD element showing current match score for both teams.
 
-**Anatomy:** Two rows (Red / Blue), team colour label, current score in Space Grotesk bold, trick count indicator.
+**Anatomy:** Two rows (Team A / Team B), team colour label, current score in Space Grotesk bold, trick count indicator.
 
 **States:** `updating` — score number briefly animates on change.
 
@@ -811,11 +811,11 @@ These are game-specific components with no shadcn/ui equivalent. All built with 
 
 Three tiers — used consistently across all screens:
 
-| Tier | Style | Usage |
-| --- | --- | --- |
-| **Primary** | `accent` fill, black text, 12px/24px padding | One per view — the single most important action (Quick Play, Join, Start Game, PICK, DECLARE) |
-| **Ghost** | Transparent, `text-primary`, `border` border | Secondary actions alongside primary (Browse, Create, PASS, SKIP, Cancel) |
-| **Destructive** | `destructive` fill or border | Irreversible actions (Leave Game, Forfeit) — requires single explicit confirmation |
+| Tier            | Style                                        | Usage                                                                                         |
+| --------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Primary**     | `accent` fill, black text, 12px/24px padding | One per view — the single most important action (Quick Play, Join, Start Game, PICK, DECLARE) |
+| **Ghost**       | Transparent, `text-primary`, `border` border | Secondary actions alongside primary (Browse, Create, PASS, SKIP, Cancel)                      |
+| **Destructive** | `destructive` fill or border                 | Irreversible actions (Leave Game, Forfeit) — requires single explicit confirmation            |
 
 Rules:
 
@@ -906,12 +906,12 @@ Rules:
 
 **Phase 3 breakpoints (planned, not implemented in MVP):**
 
-| Breakpoint | Width | Target |
-| --- | --- | --- |
-| `sm` | 640px+ | Large phones (landscape) |
-| `md` | 768px+ | Tablets |
-| `lg` | 1024px+ | Desktop (MVP baseline) |
-| `xl` | 1280px+ | Widescreen |
+| Breakpoint | Width   | Target                   |
+| ---------- | ------- | ------------------------ |
+| `sm`       | 640px+  | Large phones (landscape) |
+| `md`       | 768px+  | Tablets                  |
+| `lg`       | 1024px+ | Desktop (MVP baseline)   |
+| `xl`       | 1280px+ | Widescreen               |
 
 Tailwind's breakpoint system is already in place — Phase 3 adds `sm`/`md` overrides to existing `lg` styles. No architectural change required.
 
@@ -943,7 +943,7 @@ Target compliance: WCAG 2.1 Level AA
 
 **Colour-independence:**
 
-- Team identity: colour + text label ("Red" / "Blue") — never colour alone
+- Team identity: colour + text label ("Team A" / "Team B") — never colour alone
 - Timer warning: colour + number countdown — never colour alone
 - Card playability: colour/glow + positional lift — lift alone communicates playability
 

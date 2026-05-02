@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { PlayerState, Rank, Suit } from "@/shared/types/gameTypes";
+import { type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
 import type { DeclarationsResolvedPayload } from "@/shared/types/wsEvents";
 
 import { PlayingCard } from "./PlayingCard";
@@ -9,6 +10,7 @@ import { PlayingCard } from "./PlayingCard";
 interface DeclarationRevealProps {
   payload: DeclarationsResolvedPayload;
   players: readonly PlayerState[];
+  viewerTeam: TeamString;
   onComplete: () => void;
 }
 
@@ -20,7 +22,12 @@ function declarationLabelKey(type: string): "sequenceShort" | "fourOfAKindShort"
   return type === "four_of_a_kind" ? "fourOfAKindShort" : "sequenceShort";
 }
 
-export function DeclarationReveal({ payload, players, onComplete }: DeclarationRevealProps) {
+export function DeclarationReveal({
+  payload,
+  players,
+  viewerTeam,
+  onComplete,
+}: DeclarationRevealProps) {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
 
@@ -43,8 +50,11 @@ export function DeclarationReveal({ payload, players, onComplete }: DeclarationR
     return null;
   }
 
-  const teamName =
-    payload.winnerTeam === 0 ? t("game.declaration.teamRed") : t("game.declaration.teamBlue");
+  // Both partners see "Us": key off team match, not seat equality. Convert
+  // payload.winnerTeam (numeric, never null at this point because of the
+  // guard above) to TeamString and compare to viewerTeam.
+  const winnerTeamString = teamStringForIndex(payload.winnerTeam === 0 ? 0 : 1);
+  const teamName = winnerTeamString === viewerTeam ? t("team.us") : t("team.them");
 
   return (
     <div
@@ -57,11 +67,12 @@ export function DeclarationReveal({ payload, players, onComplete }: DeclarationR
             ? ""
             : "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300"
         }`}
+        data-team={winnerTeamString}
       >
         <p
           className="text-text-secondary font-body text-xs mb-2 text-center"
           data-testid="declaration-reveal-team"
-          data-team={payload.winnerTeam}
+          data-team={winnerTeamString}
         >
           {t("game.declaration.teamDeclared", { team: teamName })}
         </p>

@@ -1,9 +1,9 @@
 ---
-title: 'Phase 3 trump-suit dialog displays the originally face-up candidate card'
-type: 'feature'
-created: '2026-04-26'
-status: 'done'
-baseline_commit: 'fb89d64'
+title: "Phase 3 trump-suit dialog displays the originally face-up candidate card"
+type: "feature"
+created: "2026-04-26"
+status: "done"
+baseline_commit: "fb89d64"
 context:
   - _bmad-output/implementation-artifacts/spec-bitola-deal-flip-bid-flow.md
   - _bmad-output/project-context.md
@@ -20,6 +20,7 @@ context:
 ## Boundaries & Constraints
 
 **Always:**
+
 - In round 2, when the active bidder views the prompt and `trumpCandidate` is non-null, render it as a `PlayingCard` above the suit-button grid using the same size and layout as the round-1 candidate render.
 - Card stays visible for the entire round-2 active-bidder view; it is not hidden, dimmed, or replaced as the player hovers or pre-selects a suit.
 - The four suit buttons remain unchanged in look, position, and `data-testid`s — the candidate is added above them, not woven into them.
@@ -27,9 +28,11 @@ context:
 - Backend `TrumpCandidate` lifecycle is already correct (cleared only inside `handlePickTrump` after stage-2). No server change.
 
 **Ask First:**
+
 - If the round-2 candidate would visually break the existing `max-w-[480px]` dialog frame on small viewports, flag before tweaking the dialog's max-width or padding.
 
 **Never:**
+
 - Don't change the suit-button layout, colors, symbols, or test IDs.
 - Don't alter the `TrumpCandidate` lifecycle in `bidding.go` / `state.go` — round 2 already gets the candidate via the unconditional append in stage-2.
 - Don't add a separate "what card will I receive?" tooltip or secondary affordance — the inline candidate card itself is the affordance.
@@ -38,13 +41,13 @@ context:
 
 ## I/O & Edge-Case Matrix
 
-| Scenario | Input / State | Expected Output / Behavior | Error Handling |
-|----------|--------------|----------------------------|----------------|
-| Round 2 active bidder, candidate present | `biddingRound=2`, `isActiveBidder=true`, `trumpCandidate={rank:"A",suit:"H"}` | Dialog renders the candidate `PlayingCard` above the four suit buttons; PASS button visible; PICK button absent (round 2 has no PICK button) | n/a |
-| Round 2 active bidder picks a suit | user clicks `trump-prompt-suit-S` | `onPick("S")` fires; candidate render is unaffected by the click | n/a |
-| Round 2 non-active bidder | `biddingRound=2`, `isActiveBidder=false` | Existing waiting indicator unchanged; candidate not shown | n/a |
-| Round 1 active bidder | `biddingRound=1`, `isActiveBidder=true`, candidate present | Existing round-1 layout unchanged: candidate + PICK + PASS | n/a |
-| Round 2 active bidder, candidate null (defensive) | `trumpCandidate=null` | Suit buttons render; candidate slot is omitted gracefully (no error, no broken layout) | n/a |
+| Scenario                                          | Input / State                                                                 | Expected Output / Behavior                                                                                                                   | Error Handling |
+| ------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Round 2 active bidder, candidate present          | `biddingRound=2`, `isActiveBidder=true`, `trumpCandidate={rank:"A",suit:"H"}` | Dialog renders the candidate `PlayingCard` above the four suit buttons; PASS button visible; PICK button absent (round 2 has no PICK button) | n/a            |
+| Round 2 active bidder picks a suit                | user clicks `trump-prompt-suit-S`                                             | `onPick("S")` fires; candidate render is unaffected by the click                                                                             | n/a            |
+| Round 2 non-active bidder                         | `biddingRound=2`, `isActiveBidder=false`                                      | Existing waiting indicator unchanged; candidate not shown                                                                                    | n/a            |
+| Round 1 active bidder                             | `biddingRound=1`, `isActiveBidder=true`, candidate present                    | Existing round-1 layout unchanged: candidate + PICK + PASS                                                                                   | n/a            |
+| Round 2 active bidder, candidate null (defensive) | `trumpCandidate=null`                                                         | Suit buttons render; candidate slot is omitted gracefully (no error, no broken layout)                                                       | n/a            |
 
 </frozen-after-approval>
 
@@ -64,6 +67,7 @@ context:
 - [x] `server/internal/game/bidding_test.go` — In `TestPickTrumpStage2Rotation`, captured `originalCandidate := *gs.TrumpCandidate` before the action and added `assert.Contains(t, result.Players[tc.picker].Hand, originalCandidate, ...)` after the result assertions. Covers all 7 sub-cases (round-1 every seat + round-2 spades/clubs/hearts).
 
 **Acceptance Criteria:**
+
 - Given a Bitola game in bidding round 2 and the local player is the active bidder, when the `TrumpPrompt` renders, then the originally face-up trump candidate card is visible above the four suit buttons using the same `PlayingCard` rendering as round 1.
 - Given the same state, when the active bidder clicks any suit button, then `onPick(suit)` fires with that suit and the candidate render does not flicker, disappear, or change before the dialog unmounts.
 - Given bidding round 1 (regression guard), when the prompt renders for the active bidder, then the existing round-1 layout (candidate + PICK + PASS) is unchanged.
@@ -82,6 +86,7 @@ context:
 ## Verification
 
 **Commands:**
+
 - `cd client && npx vitest run src/features/game/components/TrumpPrompt.test.tsx` — expected: all tests pass, including the new round-2 candidate-render test.
 - `cd client && npx vitest run` — expected: full frontend suite green.
 - `cd client && npx prettier --write .` — expected: formatting normalized (per memory rule before any client commit).
@@ -123,4 +128,3 @@ context:
 
 - Locks the non-active early-return boundary against future refactors that move the candidate render above it.
   [`TrumpPrompt.test.tsx:159-173`](../../client/src/features/game/components/TrumpPrompt.test.tsx#L159-L173)
-

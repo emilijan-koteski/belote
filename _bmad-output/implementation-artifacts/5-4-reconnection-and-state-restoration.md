@@ -117,18 +117,20 @@ so that the game continues without any lost state or unfair disadvantage.
     - Hub replaces the old (dead) client entry with the new one (hub.go:77-83)
     - Currently, no callback fires on registration — the `ConnectHandler` below is the mechanism to notify the session manager
   - [x] 2.2 Add a `ConnectHandler func(userID uint)` to Hub (symmetric to `DisconnectHandler`):
+
     ```go
     // In Hub struct:
     connectHandler ConnectHandler
-    
+
     // Type alias:
     type ConnectHandler func(userID uint)
-    
+
     // Setter:
     func (h *Hub) SetConnectHandler(handler ConnectHandler) {
         h.connectHandler = handler
     }
     ```
+
   - [x] 2.3 Fire `connectHandler` in the hub's `register` case, AFTER the client is stored in the map:
     ```go
     case client := <-h.register:
@@ -195,6 +197,7 @@ so that the game continues without any lost state or unfair disadvantage.
     - When `event:game_state` arrives and the user is NOT on the game page, navigate to `/game/:roomId`
     - This handles the case where a disconnected player reloads the page and lands on the lobby
   - [x] 6.4 Create `client/src/shared/hooks/useReconnectionRedirect.ts`:
+
     ```ts
     // Hook that listens for game state updates and redirects to game page if needed.
     // Placed in AppLayout or WebSocketProvider to be always active.
@@ -208,12 +211,17 @@ so that the game continues without any lost state or unfair disadvantage.
       const gameState = useGameStore((s) => s.gameState);
 
       useEffect(() => {
-        if (gameState && gameState.roomId && !location.pathname.startsWith("/game/")) {
+        if (
+          gameState &&
+          gameState.roomId &&
+          !location.pathname.startsWith("/game/")
+        ) {
           navigate(`/game/${gameState.roomId}`, { replace: true });
         }
       }, [gameState, location.pathname, navigate]);
     }
     ```
+
   - [x] 6.5 Wire `useReconnectionRedirect` in `AppLayout.tsx` (or wherever the WebSocket provider wraps the app). This ensures that if a player refreshes the page during a game, and the server sends them the game state on WS reconnect, they get redirected back to the game.
   - [x] 6.6 Verify `GameState` includes `roomId` field — check `gameTypes.ts` and `state.go`. If `roomId` is not in the GameState struct, it can be derived from the URL param or from `userToRoom` mapping server-side. The server's `event:game_state` payload is the full `GameState` struct which includes `roomId` (state.go has `RoomID uint`).
 
@@ -261,39 +269,39 @@ so that the game continues without any lost state or unfair disadvantage.
 
 Critical: The following are already implemented. They MUST NOT be duplicated:
 
-| Item | Location | Status |
-|------|----------|--------|
-| `PhaseDisconnected = "disconnected"` | `server/internal/game/types.go:91` | Exists |
-| `"disconnected"` in Phase type | `client/src/shared/types/gameTypes.ts:20` | Exists |
-| `PlayerState.Connected bool` | `server/internal/game/state.go:16` | Exists |
-| `DisconnectedSeat int` | `server/internal/game/state.go:102` | Exists (init -1) |
-| `ReconnectExpiresAt *time.Time` | `server/internal/game/state.go:103` | Exists |
-| `PreviousPhase` | `server/internal/game/state.go` | Exists — stores pre-disconnect phase |
-| `TurnTimeRemaining int64` | `server/internal/game/state.go` | Exists — captured on disconnect |
-| `ErrPlayerDisconnected` | `server/internal/apperr/errors.go:84` | Exists |
-| `HandleDisconnect(userID uint)` | `server/internal/session/reconnect.go:14-154` | Exists — full disconnect detection |
-| `handleReconnectTimeout(session, gen)` | `server/internal/session/reconnect.go:156-172` | Exists — placeholder for Story 5.5 |
-| `cancelReconnectTimer()` | `server/internal/session/timer.go:12-19` | Exists |
-| `reconnectTimer *time.Timer` on Session | `server/internal/session/manager.go:27` | Exists |
-| `reconnectGeneration uint64` on Session | `server/internal/session/manager.go:28` | Exists |
-| `reconnectWindowSec int` on Session | `server/internal/session/manager.go:26` | Exists (default 120) |
-| `GetStateSnapshot(roomID)` | `server/internal/session/manager.go:231-242` | Exists — but use under lock instead (D46) |
-| `EventPlayerReconnected` constant | `server/internal/ws/events.go:63` | Exists |
-| `PlayerReconnectedPayload` struct | `server/internal/ws/events.go:72-74` | Exists |
-| `EVENT_PLAYER_RECONNECTED` | `client/src/shared/types/wsEvents.ts:157` | Exists |
-| `PlayerReconnectedPayload` interface | `client/src/shared/types/wsEvents.ts:166-168` | Exists |
-| `useWsDispatch` reconnect handler | `client/src/shared/hooks/useWsDispatch.ts:205-211` | Exists — shows success toast |
-| Auto-reconnect with exponential backoff | `client/src/shared/hooks/useWebSocket.ts:133-147` | Exists (1s base, 30s max) |
-| Auth refresh on WS auth failure | `client/src/shared/hooks/useWebSocket.ts:120-131` | Exists — calls `/auth/refresh`, retries |
-| `ReconnectOverlay` component | `client/src/features/game/components/ReconnectOverlay.tsx` | Exists — auto-dismisses via conditional render |
-| Reconnect overlay rendering | `client/src/features/game/GamePage.tsx:381-386` | Exists — renders when `phase === "disconnected"` |
-| Hub `DisconnectHandler` callback | `server/internal/ws/hub.go:21-22, 61-65` | Exists |
-| Hub connection replacement | `server/internal/ws/hub.go:77-83` | Exists — replaces old client, fires disconnect only for true disconnect |
-| Hub `SetDisconnectHandler` wired in main | `server/cmd/api/main.go:99` | Exists |
-| Timer resume pattern (unpause) | `server/internal/session/manager.go:184-209` | Exists — exact pattern to follow |
-| `buildMessage` helper | `server/internal/session/manager.go` | Exists |
-| `setTurnExpiry` and `startTimerLocked` | `server/internal/session/manager.go` | Exists |
-| `hub.BroadcastToUsers` | `server/internal/ws/hub.go:159-167` | Exists |
+| Item                                     | Location                                                   | Status                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `PhaseDisconnected = "disconnected"`     | `server/internal/game/types.go:91`                         | Exists                                                                  |
+| `"disconnected"` in Phase type           | `client/src/shared/types/gameTypes.ts:20`                  | Exists                                                                  |
+| `PlayerState.Connected bool`             | `server/internal/game/state.go:16`                         | Exists                                                                  |
+| `DisconnectedSeat int`                   | `server/internal/game/state.go:102`                        | Exists (init -1)                                                        |
+| `ReconnectExpiresAt *time.Time`          | `server/internal/game/state.go:103`                        | Exists                                                                  |
+| `PreviousPhase`                          | `server/internal/game/state.go`                            | Exists — stores pre-disconnect phase                                    |
+| `TurnTimeRemaining int64`                | `server/internal/game/state.go`                            | Exists — captured on disconnect                                         |
+| `ErrPlayerDisconnected`                  | `server/internal/apperr/errors.go:84`                      | Exists                                                                  |
+| `HandleDisconnect(userID uint)`          | `server/internal/session/reconnect.go:14-154`              | Exists — full disconnect detection                                      |
+| `handleReconnectTimeout(session, gen)`   | `server/internal/session/reconnect.go:156-172`             | Exists — placeholder for Story 5.5                                      |
+| `cancelReconnectTimer()`                 | `server/internal/session/timer.go:12-19`                   | Exists                                                                  |
+| `reconnectTimer *time.Timer` on Session  | `server/internal/session/manager.go:27`                    | Exists                                                                  |
+| `reconnectGeneration uint64` on Session  | `server/internal/session/manager.go:28`                    | Exists                                                                  |
+| `reconnectWindowSec int` on Session      | `server/internal/session/manager.go:26`                    | Exists (default 120)                                                    |
+| `GetStateSnapshot(roomID)`               | `server/internal/session/manager.go:231-242`               | Exists — but use under lock instead (D46)                               |
+| `EventPlayerReconnected` constant        | `server/internal/ws/events.go:63`                          | Exists                                                                  |
+| `PlayerReconnectedPayload` struct        | `server/internal/ws/events.go:72-74`                       | Exists                                                                  |
+| `EVENT_PLAYER_RECONNECTED`               | `client/src/shared/types/wsEvents.ts:157`                  | Exists                                                                  |
+| `PlayerReconnectedPayload` interface     | `client/src/shared/types/wsEvents.ts:166-168`              | Exists                                                                  |
+| `useWsDispatch` reconnect handler        | `client/src/shared/hooks/useWsDispatch.ts:205-211`         | Exists — shows success toast                                            |
+| Auto-reconnect with exponential backoff  | `client/src/shared/hooks/useWebSocket.ts:133-147`          | Exists (1s base, 30s max)                                               |
+| Auth refresh on WS auth failure          | `client/src/shared/hooks/useWebSocket.ts:120-131`          | Exists — calls `/auth/refresh`, retries                                 |
+| `ReconnectOverlay` component             | `client/src/features/game/components/ReconnectOverlay.tsx` | Exists — auto-dismisses via conditional render                          |
+| Reconnect overlay rendering              | `client/src/features/game/GamePage.tsx:381-386`            | Exists — renders when `phase === "disconnected"`                        |
+| Hub `DisconnectHandler` callback         | `server/internal/ws/hub.go:21-22, 61-65`                   | Exists                                                                  |
+| Hub connection replacement               | `server/internal/ws/hub.go:77-83`                          | Exists — replaces old client, fires disconnect only for true disconnect |
+| Hub `SetDisconnectHandler` wired in main | `server/cmd/api/main.go:99`                                | Exists                                                                  |
+| Timer resume pattern (unpause)           | `server/internal/session/manager.go:184-209`               | Exists — exact pattern to follow                                        |
+| `buildMessage` helper                    | `server/internal/session/manager.go`                       | Exists                                                                  |
+| `setTurnExpiry` and `startTimerLocked`   | `server/internal/session/manager.go`                       | Exists                                                                  |
+| `hub.BroadcastToUsers`                   | `server/internal/ws/hub.go:159-167`                        | Exists                                                                  |
 
 ### What Must Be Created
 
@@ -331,6 +339,7 @@ Critical: The following are already implemented. They MUST NOT be duplicated:
 The reconnection trigger uses a `ConnectHandler` on the Hub (symmetric to `DisconnectHandler`). When any client registers (including first-time lobby connections), the handler fires. `HandleReconnect` immediately checks `userToRoom` — if the user is not in a game session, it returns (no-op). If the user IS in a session and the game is in `PhaseDisconnected` with a matching seat, it proceeds with reconnection.
 
 This is cleaner than adding a new `system:request_reconnection` message because:
+
 - No new WS event type needed (avoids contract changes)
 - No client-side code changes to send reconnection requests
 - The hub already knows when a client connects — natural extension
@@ -340,6 +349,7 @@ This is cleaner than adding a new `system:request_reconnection` message because:
 ### Timer Management on Reconnect
 
 Follow the exact same pattern as unpause timer resume (manager.go:184-209):
+
 1. Read `TurnTimeRemaining` (captured during disconnect)
 2. Enforce 3s minimum floor
 3. Set `TurnExpiresAt = time.Now().Add(remaining)`
@@ -348,6 +358,7 @@ Follow the exact same pattern as unpause timer resume (manager.go:184-209):
 6. Increment `timerGeneration` to invalidate stale callbacks
 
 Only restart the timer if:
+
 - `session.timerStyle == "per-move"` (not "relaxed")
 - Game is in `PhasePlaying` or `PhaseBidding` (active turn phase)
 - If the reconnected player is NOT the active player, the timer was already cancelled during disconnect — it should still be restarted because the active player's timer was paused for everyone.
@@ -355,6 +366,7 @@ Only restart the timer if:
 ### Reconnection Redirect — Page Refresh Edge Case
 
 If a player disconnects and refreshes their browser:
+
 1. Browser reloads → lands on login/lobby (no game state in memory)
 2. Auth persists via refresh token cookie → auto-login
 3. WebSocket reconnects → server sends `event:game_state` (because `HandleReconnect` fires)
@@ -382,6 +394,7 @@ Without this hook, the player would see the lobby while their game is still acti
 ### Previous Story Intelligence (Story 5.3)
 
 Key learnings to carry forward:
+
 - Data race on broadcast after unlock — build messages BEFORE unlocking session mutex (F1 fix in HandleDisconnect)
 - `PreviousPhase` corruption during `PhasePaused` — when current phase is `PhasePaused`, keep the existing `PreviousPhase` (which holds the pre-pause phase) instead of overwriting with `PhasePaused`
 - Phase allowlist guard — only handle reconnect during `PhaseDisconnected` (don't process if game is in a transient phase)
@@ -392,10 +405,12 @@ Key learnings to carry forward:
 ### Project Structure Notes
 
 **New files (expected):**
+
 - `client/src/shared/hooks/useReconnectionRedirect.ts` — reconnection redirect hook
 - `client/src/shared/hooks/useReconnectionRedirect.test.ts` — tests for above
 
 **Modified files (expected):**
+
 - `server/internal/session/reconnect.go` — add `HandleReconnect` method
 - `server/internal/ws/hub.go` — add `ConnectHandler` type, field, setter, fire in register
 - `server/cmd/api/main.go` — wire `hub.SetConnectHandler`
@@ -447,11 +462,13 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - server/internal/session/reconnect_test.go
 - client/src/shared/hooks/useReconnectionRedirect.ts
 - client/src/shared/hooks/useReconnectionRedirect.test.tsx
 
 **Modified files:**
+
 - server/internal/session/reconnect.go (added HandleReconnect method)
 - server/internal/ws/hub.go (added ConnectHandler type, field, setter, fire in register)
 - server/cmd/api/main.go (wired hub.SetConnectHandler)

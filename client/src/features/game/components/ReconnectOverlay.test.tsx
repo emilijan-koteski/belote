@@ -19,7 +19,7 @@ vi.mock("react-i18next", () => ({
         return `${opts.player} disconnected — match ended`;
       }
       if (key === "game.disconnect.matchAbandonedScores" && opts) {
-        return `Final: Red ${opts.red} : Blue ${opts.blue}`;
+        return `Final: Us ${opts.us} : Them ${opts.them}`;
       }
       return translations[key] ?? key;
     },
@@ -75,12 +75,12 @@ describe("ReconnectOverlay", () => {
     expect(overlay).toHaveAttribute("aria-live", "assertive");
   });
 
-  it("renders abandonment message when abandonedData is provided", () => {
+  it("renders abandonment message viewer-relative when abandonedData is provided (viewer teamA)", () => {
     const expiresAt = new Date(Date.now() - 5000).toISOString();
     const abandonedData = {
       abandonedByPlayer: 2,
-      redFinalScore: 450,
-      blueFinalScore: 380,
+      teamAFinalScore: 450,
+      teamBFinalScore: 380,
       matchDurationSec: 600,
     };
 
@@ -89,15 +89,40 @@ describe("ReconnectOverlay", () => {
         disconnectedPlayerName="Eve"
         reconnectExpiresAt={expiresAt}
         abandonedData={abandonedData}
+        viewerTeam="teamA"
         onReturnToLobby={vi.fn()}
       />,
     );
 
     expect(screen.getByTestId("abandon-title")).toHaveTextContent("Eve disconnected — match ended");
-    expect(screen.getByTestId("abandon-scores")).toHaveTextContent("Final: Red 450 : Blue 380");
+    // Viewer on teamA → Us=450 (a), Them=380 (b)
+    expect(screen.getByTestId("abandon-scores")).toHaveTextContent("Final: Us 450 : Them 380");
     expect(screen.getByText("Returning to lobby...")).toBeInTheDocument();
     // Countdown should NOT be visible
     expect(screen.queryByTestId("reconnect-countdown")).not.toBeInTheDocument();
+  });
+
+  it("flips abandonment scores when viewer is on teamB", () => {
+    const expiresAt = new Date(Date.now() - 5000).toISOString();
+    const abandonedData = {
+      abandonedByPlayer: 2,
+      teamAFinalScore: 450,
+      teamBFinalScore: 380,
+      matchDurationSec: 600,
+    };
+
+    render(
+      <ReconnectOverlay
+        disconnectedPlayerName="Eve"
+        reconnectExpiresAt={expiresAt}
+        abandonedData={abandonedData}
+        viewerTeam="teamB"
+        onReturnToLobby={vi.fn()}
+      />,
+    );
+
+    // Viewer on teamB → Us=380 (b), Them=450 (a)
+    expect(screen.getByTestId("abandon-scores")).toHaveTextContent("Final: Us 380 : Them 450");
   });
 
   it("auto-redirects to lobby after 3 seconds when abandoned", () => {
@@ -105,8 +130,8 @@ describe("ReconnectOverlay", () => {
     const expiresAt = new Date(Date.now() - 5000).toISOString();
     const abandonedData = {
       abandonedByPlayer: 0,
-      redFinalScore: 200,
-      blueFinalScore: 300,
+      teamAFinalScore: 200,
+      teamBFinalScore: 300,
       matchDurationSec: 120,
     };
 

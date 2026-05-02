@@ -216,6 +216,7 @@ The WS auth handshake is a **custom first-message pattern**, NOT HTTP header aut
 **Token expiry mid-session**: Client detects close, calls `/auth/refresh` (httpOnly cookie auto-sent), gets new access token in authStore, reconnects WS, sends new token in auth message.
 
 **Reuse existing code**:
+
 - `auth.ValidateToken(tokenString, jwtSecret)` — already validates JWT, returns `*jwt.RegisteredClaims`
 - `auth.GenerateAccessToken(userID, secret)` — use in tests to create valid tokens
 - Access token lifetime is 15 minutes, refresh token is 7 days
@@ -223,6 +224,7 @@ The WS auth handshake is a **custom first-message pattern**, NOT HTTP header aut
 ### Wire Format
 
 All WebSocket messages use this JSON structure:
+
 ```json
 { "type": "prefix:event_name", "payload": { ... } }
 ```
@@ -234,16 +236,17 @@ All WebSocket messages use this JSON structure:
 
 ### Event Naming Convention
 
-| Prefix | Direction | Format | Examples |
-|--------|-----------|--------|----------|
-| `action:` | Client -> Server | `action:snake_case` | `action:play_card`, `action:authenticate` |
-| `event:` | Server -> Client | `event:snake_case` | `event:card_played`, `event:game_state` |
-| `error:` | Server -> Client | `error:snake_case` | `error:auth_failed`, `error:not_your_turn` |
+| Prefix    | Direction        | Format              | Examples                                      |
+| --------- | ---------------- | ------------------- | --------------------------------------------- |
+| `action:` | Client -> Server | `action:snake_case` | `action:play_card`, `action:authenticate`     |
+| `event:`  | Server -> Client | `event:snake_case`  | `event:card_played`, `event:game_state`       |
+| `error:`  | Server -> Client | `error:snake_case`  | `error:auth_failed`, `error:not_your_turn`    |
 | `system:` | Server -> Client | `system:snake_case` | `system:authenticated`, `system:room_created` |
 
 ### Hub Design — Concurrency Safety
 
 The hub's `clients` map is accessed from multiple goroutines (register/unregister from client goroutines, broadcast from session manager). Use `sync.RWMutex`:
+
 - `RLock` for reads (SendToUser, BroadcastToUsers)
 - `Lock` for writes (register, unregister)
 
@@ -302,49 +305,50 @@ Component mounts
 
 ### Existing Code to Reuse — DO NOT Reinvent
 
-| Function / File | Location | Purpose |
-|---|---|---|
-| `auth.ValidateToken()` | `internal/auth/service.go` | JWT validation — reuse for WS auth |
-| `auth.GenerateAccessToken()` | `internal/auth/service.go` | Use in WS tests to create valid tokens |
-| `config.Load()` | `internal/config/config.go` | Config struct — add WS ping interval if needed |
-| `apperr.AppError` | `internal/apperr/errors.go` | Error type — add WS-specific errors here |
-| `wsEvents.ts` (existing) | `client/src/shared/types/wsEvents.ts` | Already has room/player/seat event contracts — EXTEND, do not replace |
-| `events.go` (existing) | `server/internal/ws/events.go` | Already has room/player/seat event constants — EXTEND, do not replace |
-| `useRoomUpdates.ts` | `client/src/features/lobby/useRoomUpdates.ts` | Has `handleWsMessage` ready for WS integration — wire into dispatch |
-| `useRoomLobbyUpdates.ts` | `client/src/features/lobby/useRoomLobbyUpdates.ts` | Has `handleWsMessage` with callbacks — wire into dispatch |
-| `useAuthStore` | `client/src/shared/stores/authStore.ts` | Access token in `token` field — use for WS auth message |
-| `useLobbyStore` | `client/src/shared/stores/lobbyStore.ts` | Has `addRoom`, `updateRoom`, `removeRoom` — updated by dispatch |
-| `useGameStore` | `client/src/shared/stores/gameStore.ts` | Minimal stub — Story 4.2 expands it |
-| `useChatStore` | `client/src/shared/stores/chatStore.ts` | Minimal stub — Epic 6 expands it |
-| `fetchClient.ts` | `client/src/shared/api/fetchClient.ts` | Has 401 -> refresh -> retry logic — reference for WS auth refresh pattern |
+| Function / File              | Location                                           | Purpose                                                                   |
+| ---------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------- |
+| `auth.ValidateToken()`       | `internal/auth/service.go`                         | JWT validation — reuse for WS auth                                        |
+| `auth.GenerateAccessToken()` | `internal/auth/service.go`                         | Use in WS tests to create valid tokens                                    |
+| `config.Load()`              | `internal/config/config.go`                        | Config struct — add WS ping interval if needed                            |
+| `apperr.AppError`            | `internal/apperr/errors.go`                        | Error type — add WS-specific errors here                                  |
+| `wsEvents.ts` (existing)     | `client/src/shared/types/wsEvents.ts`              | Already has room/player/seat event contracts — EXTEND, do not replace     |
+| `events.go` (existing)       | `server/internal/ws/events.go`                     | Already has room/player/seat event constants — EXTEND, do not replace     |
+| `useRoomUpdates.ts`          | `client/src/features/lobby/useRoomUpdates.ts`      | Has `handleWsMessage` ready for WS integration — wire into dispatch       |
+| `useRoomLobbyUpdates.ts`     | `client/src/features/lobby/useRoomLobbyUpdates.ts` | Has `handleWsMessage` with callbacks — wire into dispatch                 |
+| `useAuthStore`               | `client/src/shared/stores/authStore.ts`            | Access token in `token` field — use for WS auth message                   |
+| `useLobbyStore`              | `client/src/shared/stores/lobbyStore.ts`           | Has `addRoom`, `updateRoom`, `removeRoom` — updated by dispatch           |
+| `useGameStore`               | `client/src/shared/stores/gameStore.ts`            | Minimal stub — Story 4.2 expands it                                       |
+| `useChatStore`               | `client/src/shared/stores/chatStore.ts`            | Minimal stub — Epic 6 expands it                                          |
+| `fetchClient.ts`             | `client/src/shared/api/fetchClient.ts`             | Has 401 -> refresh -> retry logic — reference for WS auth refresh pattern |
 
 ### Files to Create
 
-| File | Purpose |
-|---|---|
-| `server/internal/ws/message.go` | WSMessage wire format struct |
-| `server/internal/ws/client.go` | Per-client WS connection with read/write pumps |
-| `server/internal/ws/hub.go` | Connection manager — tracks clients by userID |
-| `server/internal/ws/router.go` | Type-based message dispatch |
-| `server/internal/ws/handler.go` | WS upgrade endpoint with JWT auth handshake |
-| `server/internal/ws/ws_test.go` | Backend WS tests with httptest.Server + real WS client |
-| `client/src/shared/hooks/useWebSocket.ts` | WS connection lifecycle + reconnection |
-| `client/src/shared/hooks/useWsDispatch.ts` | Event type -> Zustand store routing |
+| File                                       | Purpose                                                |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `server/internal/ws/message.go`            | WSMessage wire format struct                           |
+| `server/internal/ws/client.go`             | Per-client WS connection with read/write pumps         |
+| `server/internal/ws/hub.go`                | Connection manager — tracks clients by userID          |
+| `server/internal/ws/router.go`             | Type-based message dispatch                            |
+| `server/internal/ws/handler.go`            | WS upgrade endpoint with JWT auth handshake            |
+| `server/internal/ws/ws_test.go`            | Backend WS tests with httptest.Server + real WS client |
+| `client/src/shared/hooks/useWebSocket.ts`  | WS connection lifecycle + reconnection                 |
+| `client/src/shared/hooks/useWsDispatch.ts` | Event type -> Zustand store routing                    |
 
 ### Files to Modify
 
-| File | Changes |
-|---|---|
-| `server/internal/ws/events.go` | Add auth, game action, game event, and error event constants (keep existing room/player/seat constants) |
-| `server/cmd/api/main.go` | Import `ws` package, create Hub, start `Run()`, register `GET /ws` route, add hub to graceful shutdown |
-| `server/internal/apperr/errors.go` | Add `ErrWSAuthTimeout`, `ErrWSAuthFailed`, `ErrWSInvalidMessage` |
-| `client/src/shared/types/wsEvents.ts` | Add auth, game, and error event constants + payload interfaces (keep existing) |
-| `client/src/shared/i18n/en.json` | Add `ws.*` i18n keys for connection states |
-| `client/src/shared/i18n/sr.json` | Add `ws.*` i18n keys for connection states |
+| File                                  | Changes                                                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `server/internal/ws/events.go`        | Add auth, game action, game event, and error event constants (keep existing room/player/seat constants) |
+| `server/cmd/api/main.go`              | Import `ws` package, create Hub, start `Run()`, register `GET /ws` route, add hub to graceful shutdown  |
+| `server/internal/apperr/errors.go`    | Add `ErrWSAuthTimeout`, `ErrWSAuthFailed`, `ErrWSInvalidMessage`                                        |
+| `client/src/shared/types/wsEvents.ts` | Add auth, game, and error event constants + payload interfaces (keep existing)                          |
+| `client/src/shared/i18n/en.json`      | Add `ws.*` i18n keys for connection states                                                              |
+| `client/src/shared/i18n/sr.json`      | Add `ws.*` i18n keys for connection states                                                              |
 
 ### Testing Patterns — MANDATORY
 
 **Backend (Go):**
+
 - Tests in `internal/ws/ws_test.go` using `package ws_test`
 - Use `httptest.Server` with a real coder/websocket client connection — NOT mocked read/write interfaces
 - Generate test JWTs using `auth.GenerateAccessToken(testUserID, testSecret)` with a known test secret
@@ -353,6 +357,7 @@ Component mounts
 - Use `testify/assert` for assertions
 
 **Frontend (Vitest):**
+
 - Tests co-located: `useWebSocket.test.ts` next to `useWebSocket.ts`
 - Mock the WebSocket class for unit testing (no real server needed)
 - Test state transitions and message handling
@@ -380,6 +385,7 @@ Component mounts
 ### Previous Story Intelligence (from 3.6)
 
 **Critical learnings to apply:**
+
 - `coder/websocket` is already in `go.mod` as `github.com/coder/websocket v1.8.14` — anchored by the import in `events.go`. Remove the anchor import when real WS code is added
 - The game engine is complete (Stories 3.1-3.6) with 94.6% test coverage. The WS layer calls into it via `ApplyAction(state, action)` through the session manager — never directly from `ws/` package
 - All game phases are handled: `PhaseBidding`, `PhasePlaying`, `PhaseHandScoring`, `PhaseMatchEnd`, `PhasePaused`
@@ -389,6 +395,7 @@ Component mounts
 ### Git Intelligence (from recent commits)
 
 Recent commit pattern: `feat(game): implement <feature> with code review fixes`
+
 - Each story ships as a single commit with code review fixes included
 - Commit scope for this story should be `feat(ws): implement WebSocket gateway and event contract`
 - Backend tests: `go test ./server/internal/ws/...`
@@ -458,5 +465,5 @@ None — all tests passed on first run after implementation.
 - `client/src/shared/hooks/useWebSocket.test.ts` — NEW: 8 frontend tests for connection states, auth, reconnection
 - `client/src/shared/hooks/useWsDispatch.ts` — NEW: Event type -> Zustand store routing
 - `client/src/shared/hooks/useWsDispatch.test.ts` — NEW: 6 frontend tests for dispatch routing
-- `client/src/shared/i18n/en.json` — MODIFIED: Added ws.* i18n keys
-- `client/src/shared/i18n/sr.json` — MODIFIED: Added ws.* i18n keys
+- `client/src/shared/i18n/en.json` — MODIFIED: Added ws.\* i18n keys
+- `client/src/shared/i18n/sr.json` — MODIFIED: Added ws.\* i18n keys

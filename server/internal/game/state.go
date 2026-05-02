@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"slices"
 	"time"
@@ -27,19 +28,19 @@ type TrickCard struct {
 // Populated by scoreHand() before startNewHand() or PhaseMatchEnd,
 // so the session manager can broadcast the full breakdown to clients.
 type HandResult struct {
-	RedCardPoints   int  `json:"redCardPoints"`   // Trick-taking card points (Red) before bonus
-	BlueCardPoints  int  `json:"blueCardPoints"`  // Trick-taking card points (Blue) before bonus
-	RedDeclPoints   int  `json:"redDeclPoints"`   // Declaration points (Red)
-	BlueDeclPoints  int  `json:"blueDeclPoints"`  // Declaration points (Blue)
-	LastTrickTeam   int  `json:"lastTrickTeam"`   // Team that won last trick (0=Red, 1=Blue)
+	TeamACardPoints int  `json:"teamACardPoints"` // Trick-taking card points (Team A) before bonus
+	TeamBCardPoints int  `json:"teamBCardPoints"` // Trick-taking card points (Team B) before bonus
+	TeamADeclPoints int  `json:"teamADeclPoints"` // Declaration points (Team A)
+	TeamBDeclPoints int  `json:"teamBDeclPoints"` // Declaration points (Team B)
+	LastTrickTeam   int  `json:"lastTrickTeam"`   // Team that won last trick (0=Team A, 1=Team B)
 	LastTrickBonus  int  `json:"lastTrickBonus"`  // 10 (normal) or 0 (capot replaces it)
 	Capot           bool `json:"capot"`           // One team took all 8 tricks
 	CapotTeam       *int `json:"capotTeam"`       // Team with capot (nil if no capot)
 	CapotBonus      int  `json:"capotBonus"`      // 100 or 0
 	FailedContract  bool `json:"failedContract"`  // Contracting team lost the hand
-	ContractingTeam int  `json:"contractingTeam"` // Team that called trump (0=Red, 1=Blue)
-	RedHandTotal    int  `json:"redHandTotal"`    // Points actually awarded to Red this hand
-	BlueHandTotal   int  `json:"blueHandTotal"`   // Points actually awarded to Blue this hand
+	ContractingTeam int  `json:"contractingTeam"` // Team that called trump (0=Team A, 1=Team B)
+	TeamAHandTotal  int  `json:"teamAHandTotal"`  // Points actually awarded to Team A this hand
+	TeamBHandTotal  int  `json:"teamBHandTotal"`  // Points actually awarded to Team B this hand
 }
 
 // GameState is the complete, serializable game state.
@@ -80,7 +81,7 @@ type GameState struct {
 	// Player states
 	Players [4]PlayerState `json:"players"`
 
-	// Scoring (index 0=Red team, 1=Blue team)
+	// Scoring (index 0=Team A, 1=Team B)
 	TeamScores        [2]int      `json:"teamScores"`
 	HandPoints        [2]int      `json:"handPoints"`
 	DeclarationPoints [2]int      `json:"declarationPoints"`
@@ -110,15 +111,37 @@ type GameState struct {
 	ReconnectExpiresAt *time.Time `json:"reconnectExpiresAt"` // Absolute timestamp when reconnect window closes
 }
 
-// TeamRed is the index for the Red team (seats 0, 2) in score arrays.
-const TeamRed = 0
+// TeamA is the index for Team A (seats 0, 2) in score arrays.
+const TeamA = 0
 
-// TeamBlue is the index for the Blue team (seats 1, 3) in score arrays.
-const TeamBlue = 1
+// TeamB is the index for Team B (seats 1, 3) in score arrays.
+const TeamB = 1
 
-// TeamForSeat returns the team index (0=Red, 1=Blue) for a given seat number.
+// TeamForSeat returns the team index (0=Team A, 1=Team B) for a given seat number.
 func TeamForSeat(seat int) int {
 	return seat % 2
+}
+
+// TeamStringForIndex returns "teamA" for 0, "teamB" for 1. Panics on other values.
+func TeamStringForIndex(i int) string {
+	switch i {
+	case TeamA:
+		return "teamA"
+	case TeamB:
+		return "teamB"
+	}
+	panic(fmt.Sprintf("TeamStringForIndex: invalid team index %d", i))
+}
+
+// TeamIndexForString returns 0 for "teamA", 1 for "teamB". Returns -1 for unknown.
+func TeamIndexForString(s string) int {
+	switch s {
+	case "teamA":
+		return TeamA
+	case "teamB":
+		return TeamB
+	}
+	return -1
 }
 
 // ShuffleDeck randomly shuffles a deck of cards in-place.
@@ -149,9 +172,9 @@ func NewGame(playerIDs [4]uint, usernames [4]string, variant Variant, matchMode 
 
 	// Assign players to seats and teams
 	for i, userID := range playerIDs {
-		team := "red"
+		team := "teamA"
 		if i%2 == 1 {
-			team = "blue"
+			team = "teamB"
 		}
 		gs.Players[i] = PlayerState{
 			Hand:         []Card{},

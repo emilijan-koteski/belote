@@ -3,6 +3,12 @@
     "appName": "Belote",
     "close": "Zatvori"
   },
+  "team": {
+    "us": "Mi",
+    "them": "Oni",
+    "a": "Tim A",
+    "b": "Tim B"
+  },
   "nav": {
     "play": "Igraj",
     "leaderboard": "Rang lista",
@@ -54,9 +60,7 @@
         "lastTrickBonus": "Poslednji štih",
         "capot": "Kapot",
         "failedContract": "Pao",
-        "handTotal": "Ukupno ruka",
-        "failedContractTeamRed": "Crveni",
-        "failedContractTeamBlue": "Plavi"
+        "handTotal": "Ukupno ruka"
       }
     }
   },
@@ -141,9 +145,7 @@
     },
     "roomDetail": {
       "emptySlot": "Prazno",
-      "notSeated": "Nije seo",
-      "teamRed": "Crveni",
-      "teamBlue": "Plavi"
+      "notSeated": "Nije seo"
     },
     "roomList": {
       "searchPlaceholder": "Pretraži sobe po imenu ili kodu...",
@@ -182,13 +184,12 @@
       "seatEmpty": "Čekanje...",
       "seatYou": "Ti",
       "seatOwner": "Vlasnik",
+      "yourSeat": "Tvoje mesto",
       "loading": "Učitavanje sobe...",
       "notFound": "Soba nije pronađena",
       "notFoundAction": "Nazad u lobi",
       "playerJoined": "{{username}} se pridružio sobi",
       "playerLeft": "{{username}} je napustio sobu",
-      "teamRed": "Crveni tim",
-      "teamBlue": "Plavi tim",
       "startGame": "Započni igru",
       "startGameDisabled": "Sva 4 igrača moraju da sednu",
       "waitingForOwner": "Čekanje da {{owner}} započne igru...",
@@ -279,9 +280,7 @@
       "sequenceShort": "Niz od {{count}}",
       "fourOfAKindShort": "Četvorka",
       "resolved": "Zvanja",
-      "teamDeclared": "Zvanje — {{team}}",
-      "teamRed": "Crveni tim",
-      "teamBlue": "Plavi tim"
+      "teamDeclared": "Zvanje — {{team}}"
     },
     "belot": {
       "titleBelot": "Objavi belot?",
@@ -309,8 +308,6 @@
       "autoPlayed": "Automatski odigrano: {{card}}"
     },
     "score": {
-      "red": "Crveni",
-      "blue": "Plavi",
       "tricks": "Ruke",
       "lastTrickBonus": "+{{amount}}",
       "thisHand": "ovo deljenje"
@@ -395,7 +392,7 @@
       "reconnected": "Ponovo ste povezani",
       "reconnectFailed": "Ponovno povezivanje nije uspelo — meč je možda završen",
       "matchAbandoned": "{{player}} je prekinuo vezu — meč završen",
-      "matchAbandonedScores": "Rezultat: Crveni {{red}} : Plavi {{blue}}",
+      "matchAbandonedScores": "Rezultat: Mi {{us}} : Oni {{them}}",
       "returningToLobby": "Povratak u lobi..."
     }
   },

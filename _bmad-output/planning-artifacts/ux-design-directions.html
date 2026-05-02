@@ -15,8 +15,8 @@
     --accent: #00e5a0;
     --accent-glow: #00e5a040;
     --accent-dim: #00804a;
-    --team-red: #ff4d4d;
-    --team-blue: #4d9fff;
+    --team-a: #ff4d4d;
+    --team-b: #4d9fff;
     --text: #f0f0f8;
     --text-sec: #8888a0;
     --text-dis: #44445a;
@@ -216,8 +216,8 @@
     display: flex; align-items: center; justify-content: center; font-size: 10px;
   }
   .d3 .seat.active .seat-avatar { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
-  .d3 .seat.red .seat-avatar { border-color: var(--team-red); }
-  .d3 .seat.blue .seat-avatar { border-color: var(--team-blue); }
+  .d3 .seat.team-a .seat-avatar { border-color: var(--team-a); }
+  .d3 .seat.team-b .seat-avatar { border-color: var(--team-b); }
   .d3 .seat-top { top: 20px; left: 50%; transform: translateX(-50%); flex-direction: column-reverse; }
   .d3 .seat-bottom { bottom: 60px; left: 50%; transform: translateX(-50%); }
   .d3 .seat-left { left: 20px; top: 50%; transform: translateY(-50%); }
@@ -455,21 +455,21 @@
   .d8 .hand-result { font-size: 10px; color: var(--text-sec); text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
   .d8 .teams { display: flex; gap: 0; margin-bottom: 16px; }
   .d8 .team-col { flex: 1; text-align: center; padding: 12px; }
-  .d8 .team-col.red { border-right: 1px solid var(--border); }
+  .d8 .team-col.team-a { border-right: 1px solid var(--border); }
   .d8 .team-name { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  .d8 .team-name.red { color: var(--team-red); }
-  .d8 .team-name.blue { color: var(--team-blue); }
+  .d8 .team-name.team-a { color: var(--team-a); }
+  .d8 .team-name.team-b { color: var(--team-b); }
   .d8 .team-score { font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 700; }
-  .d8 .team-score.red { color: var(--team-red); }
-  .d8 .team-score.blue { color: var(--team-blue); }
+  .d8 .team-score.team-a { color: var(--team-a); }
+  .d8 .team-score.team-b { color: var(--team-b); }
   .d8 .score-breakdown { font-size: 10px; color: var(--text-sec); margin-top: 4px; }
   .d8 .divider { height: 1px; background: var(--border); margin: 0 0 12px; }
   .d8 .totals { display: flex; }
   .d8 .total-col { flex: 1; text-align: center; }
   .d8 .total-label { font-size: 9px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; }
   .d8 .total-val { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; margin-top: 2px; }
-  .d8 .total-val.red { color: var(--team-red); }
-  .d8 .total-val.blue { color: var(--team-blue); }
+  .d8 .total-val.team-a { color: var(--team-a); }
+  .d8 .total-val.team-b { color: var(--team-b); }
   .d8 .continue-btn {
     width: 100%; margin-top: 14px; padding: 10px;
     background: var(--accent); color: #000; border: none; border-radius: 8px;
@@ -762,15 +762,15 @@
             <div class="card-sm black">J♣</div>
           </div>
           <!-- Seats -->
-          <div class="seat seat-top blue"><div class="seat-avatar">I</div><div class="seat-name">Ivan</div></div>
-          <div class="seat seat-left red"><div class="seat-avatar">A</div><div class="seat-name">Ana</div></div>
-          <div class="seat seat-right blue"><div class="seat-avatar">D</div><div class="seat-name">Darko</div></div>
-          <div class="seat seat-bottom active red"><div class="seat-avatar" style="border-color:var(--accent)">M</div><div class="seat-name" style="color:var(--accent)">Marko</div></div>
+          <div class="seat seat-top team-b"><div class="seat-avatar">I</div><div class="seat-name">Ivan</div></div>
+          <div class="seat seat-left team-a"><div class="seat-avatar">A</div><div class="seat-name">Ana</div></div>
+          <div class="seat seat-right team-b"><div class="seat-avatar">D</div><div class="seat-name">Darko</div></div>
+          <div class="seat seat-bottom active team-a"><div class="seat-avatar" style="border-color:var(--accent)">M</div><div class="seat-name" style="color:var(--accent)">Marko</div></div>
           <!-- HUD -->
           <div class="hud-top">
             <div class="score-panel">
-              <div class="score-row"><span class="score-team" style="color:var(--team-red)">RED</span><span class="score-val" style="color:var(--team-red)">480</span></div>
-              <div class="score-row"><span class="score-team" style="color:var(--team-blue)">BLU</span><span class="score-val" style="color:var(--team-blue)">320</span></div>
+              <div class="score-row"><span class="score-team" style="color:var(--team-a)">A</span><span class="score-val" style="color:var(--team-a)">480</span></div>
+              <div class="score-row"><span class="score-team" style="color:var(--team-b)">B</span><span class="score-val" style="color:var(--team-b)">320</span></div>
             </div>
             <div class="trump-indicator">
               <div class="trump-suit">♠</div>
@@ -882,17 +882,17 @@
             <div class="card-sm" style="width:28px;height:42px;font-size:10px">K♥</div>
             <div class="card-sm black" style="width:28px;height:42px;font-size:10px">J♣</div>
           </div>
-          <div class="seat seat-top blue"><div class="seat-avatar" style="width:36px;height:36px">I</div><div class="seat-name">Ivan</div></div>
-          <div class="seat seat-left red"><div class="seat-avatar" style="width:36px;height:36px">A</div><div class="seat-name">Ana</div></div>
-          <div class="seat seat-right blue"><div class="seat-avatar" style="width:36px;height:36px">D</div><div class="seat-name">Darko</div></div>
-          <div class="seat seat-bottom active red" style="bottom:90px">
+          <div class="seat seat-top team-b"><div class="seat-avatar" style="width:36px;height:36px">I</div><div class="seat-name">Ivan</div></div>
+          <div class="seat seat-left team-a"><div class="seat-avatar" style="width:36px;height:36px">A</div><div class="seat-name">Ana</div></div>
+          <div class="seat seat-right team-b"><div class="seat-avatar" style="width:36px;height:36px">D</div><div class="seat-name">Darko</div></div>
+          <div class="seat seat-bottom active team-a" style="bottom:90px">
             <div class="seat-avatar" style="width:36px;height:36px;border-color:var(--accent);box-shadow:0 0 12px var(--accent-glow)">M</div>
             <div class="seat-name" style="color:var(--accent)">Marko · YOUR TURN</div>
           </div>
           <div class="hud-top">
             <div class="score-panel">
-              <div class="score-row" style="margin-bottom:4px"><span class="score-team" style="color:var(--team-red);min-width:28px">RED</span><span class="score-val" style="color:var(--team-red)">480</span></div>
-              <div class="score-row"><span class="score-team" style="color:var(--team-blue);min-width:28px">BLU</span><span class="score-val" style="color:var(--team-blue)">320</span></div>
+              <div class="score-row" style="margin-bottom:4px"><span class="score-team" style="color:var(--team-a);min-width:28px">A</span><span class="score-val" style="color:var(--team-a)">480</span></div>
+              <div class="score-row"><span class="score-team" style="color:var(--team-b);min-width:28px">B</span><span class="score-val" style="color:var(--team-b)">320</span></div>
             </div>
             <div class="trump-indicator"><div class="trump-suit" style="font-size:20px">♠</div><div class="trump-label">TRUMP</div></div>
             <div class="timer-ring"><div class="timer-val" style="font-size:20px">18</div><div class="timer-label">seconds</div></div>
@@ -948,26 +948,26 @@
             <div class="score-modal">
               <div class="hand-result">Hand 4 Complete</div>
               <div class="teams">
-                <div class="team-col red">
-                  <div class="team-name red">Red Team</div>
-                  <div class="team-score red">82</div>
+                <div class="team-col team-a">
+                  <div class="team-name team-a">Team A</div>
+                  <div class="team-score team-a">82</div>
                   <div class="score-breakdown">72 cards + 10 last trick</div>
                 </div>
                 <div class="team-col">
-                  <div class="team-name blue">Blue Team</div>
-                  <div class="team-score blue">80</div>
+                  <div class="team-name team-b">Team B</div>
+                  <div class="team-score team-b">80</div>
                   <div class="score-breakdown">80 cards + declaration</div>
                 </div>
               </div>
               <div class="divider"></div>
               <div class="totals">
                 <div class="total-col">
-                  <div class="total-label">Red Total</div>
-                  <div class="total-val red">562</div>
+                  <div class="total-label">Team A Total</div>
+                  <div class="total-val team-a">562</div>
                 </div>
                 <div class="total-col">
-                  <div class="total-label">Blue Total</div>
-                  <div class="total-val blue">400</div>
+                  <div class="total-label">Team B Total</div>
+                  <div class="total-val team-b">400</div>
                 </div>
               </div>
               <button class="continue-btn">Continue →</button>

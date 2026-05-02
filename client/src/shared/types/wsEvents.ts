@@ -98,10 +98,10 @@ export interface TrickResolvedPayload {
 }
 
 export interface HandScoredPayload {
-  redCardPoints: number;
-  blueCardPoints: number;
-  redDeclPoints: number;
-  blueDeclPoints: number;
+  teamACardPoints: number;
+  teamBCardPoints: number;
+  teamADeclPoints: number;
+  teamBDeclPoints: number;
   lastTrickTeam: number;
   lastTrickBonus: number;
   capot: boolean;
@@ -109,16 +109,16 @@ export interface HandScoredPayload {
   capotBonus: number;
   failedContract: boolean;
   contractingTeam: number;
-  redHandTotal: number;
-  blueHandTotal: number;
-  redMatchScore: number;
-  blueMatchScore: number;
+  teamAHandTotal: number;
+  teamBHandTotal: number;
+  teamAMatchScore: number;
+  teamBMatchScore: number;
 }
 
 export interface MatchEndPayload {
   winnerTeam: number;
-  redFinalScore: number;
-  blueFinalScore: number;
+  teamAFinalScore: number;
+  teamBFinalScore: number;
   matchDurationSec: number;
   // Optional fields added by Story 8.2 — natural-end matches omit both via
   // server-side omitempty so existing readers continue to work.
@@ -179,8 +179,8 @@ export interface PlayerReconnectedPayload {
 
 export interface MatchAbandonedPayload {
   abandonedByPlayer: number;
-  redFinalScore: number;
-  blueFinalScore: number;
+  teamAFinalScore: number;
+  teamBFinalScore: number;
   matchDurationSec: number;
 }
 

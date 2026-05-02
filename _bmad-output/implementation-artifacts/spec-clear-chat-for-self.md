@@ -1,9 +1,9 @@
 ---
-title: 'Per-user clear chat (icon + /cc command)'
-type: 'feature'
-created: '2026-04-29'
-status: 'done'
-route: 'one-shot'
+title: "Per-user clear chat (icon + /cc command)"
+type: "feature"
+created: "2026-04-29"
+status: "done"
+route: "one-shot"
 ---
 
 # Per-user clear chat (icon + /cc command)

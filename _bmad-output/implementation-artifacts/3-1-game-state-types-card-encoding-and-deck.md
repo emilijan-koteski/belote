@@ -53,7 +53,7 @@ so that the rules engine has a solid, testable foundation for all game operation
   - [x] 1.12: Write table-driven tests for `types.go`: card parsing, card string representation, deck generation (32 unique cards, correct suits/ranks)
 
 - [x] Task 2: Define `GameState` struct in `state.go` (AC: #2)
-  - [x] 2.1: Define `PlayerState` struct: `Hand []Card`, `Seat int`, `UserID uint`, `Team string` (red/blue), `Declarations []Declaration`, `Connected bool`
+  - [x] 2.1: Define `PlayerState` struct: `Hand []Card`, `Seat int`, `UserID uint`, `Team string` (teamA/teamB), `Declarations []Declaration`, `Connected bool`
   - [x] 2.2: Define `TrickCard` struct: `Card Card`, `PlayerSeat int`
   - [x] 2.3: Define `GameState` struct with ordered field sections
   - [x] 2.4: Add JSON tags (camelCase) to all exported fields
@@ -64,7 +64,7 @@ so that the rules engine has a solid, testable foundation for all game operation
   - [x] 3.2: Implement `ShuffleDeck(deck []Card)` using `math/rand/v2` (Go 1.22+ automatically seeded)
   - [x] 3.3: Implement 3+2+3 dealing sequence: deal 3 cards, then 2 cards, then 3 cards to each player counter-clockwise from dealer
   - [x] 3.4: Set trump candidate from deck (card at position 12, revealed after round 1)
-  - [x] 3.5: Set initial state: Phase=bidding, DealerSeat=0, HandNumber=1, ActivePlayerSeat=1 (player after dealer, counter-clockwise), teams assigned (seats 0,2=Red, seats 1,3=Blue)
+  - [x] 3.5: Set initial state: Phase=bidding, DealerSeat=0, HandNumber=1, ActivePlayerSeat=1 (player after dealer, counter-clockwise), teams assigned (seats 0,2=Team A, seats 1,3=Team B)
   - [x] 3.6: Write table-driven tests: each player gets 8 cards, no duplicate cards across hands, all 32 cards accounted for, phase is bidding, dealer is seat 0, active player is seat 1, trump candidate is set, teams correct
 
 - [x] Task 4: Define `ApplyAction` signature in `rules_engine.go` (AC: #5)
@@ -96,6 +96,7 @@ so that the rules engine has a solid, testable foundation for all game operation
 **Pure Function Design:** The rules engine is `ApplyAction(state, action) -> (state, error)` with ZERO side effects. The session manager (Epic 4) handles broadcasting, persistence, timers. This story establishes the signature only -- actual game logic comes in Stories 3.2-3.6.
 
 **GameState Struct Field Ordering:** Fields MUST be ordered in these sections:
+
 1. Match metadata (ID, variant, mode, room, players)
 2. Current hand state (hand number, dealer, trump suit)
 3. Current trick state (trick number, cards played, leading suit)
@@ -105,7 +106,7 @@ so that the rules engine has a solid, testable foundation for all game operation
 
 **In-Memory State:** Game state lives in memory as serializable Go structs (not in DB). Phase 1 accepts state loss on crash. The serializable struct design enables Redis-backed persistence as a Phase 2 drop-in upgrade.
 
-**Counter-Clockwise Turn Order:** ALL game operations (dealing, bidding, playing) are counter-clockwise. Turn advancement formula: `(currentPlayer + 1) % 4` where seats go 0->1->2->3->0 counter-clockwise. Seat mapping: 0+2 = Red team (partners), 1+3 = Blue team (partners).
+**Counter-Clockwise Turn Order:** ALL game operations (dealing, bidding, playing) are counter-clockwise. Turn advancement formula: `(currentPlayer + 1) % 4` where seats go 0->1->2->3->0 counter-clockwise. Seat mapping: 0+2 = Team A (partners), 1+3 = Team B (partners).
 
 **Card ID Format:** Two-character strings `{Rank}{Suit}`. Rank: `7 8 9 T J Q K A`. Suit: `S H D C`. Used everywhere: GameState, WebSocket payloads, frontend rendering. Defined once in `game/types.go` and `gameTypes.ts`.
 
@@ -136,10 +137,12 @@ server/internal/game/
 ```
 
 **Existing files to modify:**
+
 - `server/internal/apperr/errors.go` -- Add game domain errors
 - `client/src/shared/types/gameTypes.ts` -- Extend with Phase, Variant, GameState types
 
 **Existing scaffolding (empty files):**
+
 - `server/internal/game/game.go` -- Contains only `package game`. Can be deleted or left; new files use the same package.
 - `server/internal/game/testfixtures/fixtures.go` -- Contains only `package testfixtures`. Will be replaced with implementation.
 
@@ -155,30 +158,30 @@ server/internal/game/
 ### Card Point Values Reference
 
 | Card | Trump Points | Non-Trump Points |
-|------|-------------|-----------------|
-| J    | 20          | 2               |
-| 9    | 14          | 0               |
-| A    | 11          | 11              |
-| T    | 10          | 10              |
-| K    | 4           | 4               |
-| Q    | 3           | 3               |
-| 8    | 0           | 0               |
-| 7    | 0           | 0               |
+| ---- | ------------ | ---------------- |
+| J    | 20           | 2                |
+| 9    | 14           | 0                |
+| A    | 11           | 11               |
+| T    | 10           | 10               |
+| K    | 4            | 4                |
+| Q    | 3            | 3                |
+| 8    | 0            | 0                |
+| 7    | 0            | 0                |
 
-Trump total: 62 points per suit. Non-trump total: 30 points per suit. Game total: 62 + 30*3 = 152 card points per hand.
+Trump total: 62 points per suit. Non-trump total: 30 points per suit. Game total: 62 + 30\*3 = 152 card points per hand.
 
 ### Game Phase State Machine Reference
 
-| Phase            | Valid Actions                           | Transitions To                              |
-|------------------|-----------------------------------------|---------------------------------------------|
-| `dealing`        | (automatic)                             | `bidding`                                   |
-| `bidding`        | `pick_trump`, `pass_trump`              | `playing` or `dealing` (Bitola reshuffle)   |
-| `playing`        | `play_card`, `declare`, `skip_declare`  | `trick_resolving`                           |
-| `trick_resolving`| (automatic)                             | `playing` or `hand_scoring`                 |
-| `hand_scoring`   | (automatic)                             | `dealing` or `match_end`                    |
-| `match_end`      | (none)                                  | --                                          |
-| `paused`         | `unpause`, `owner_unpause`              | (previous phase)                            |
-| `disconnected`   | `reconnect`                             | (previous phase)                            |
+| Phase             | Valid Actions                          | Transitions To                            |
+| ----------------- | -------------------------------------- | ----------------------------------------- |
+| `dealing`         | (automatic)                            | `bidding`                                 |
+| `bidding`         | `pick_trump`, `pass_trump`             | `playing` or `dealing` (Bitola reshuffle) |
+| `playing`         | `play_card`, `declare`, `skip_declare` | `trick_resolving`                         |
+| `trick_resolving` | (automatic)                            | `playing` or `hand_scoring`               |
+| `hand_scoring`    | (automatic)                            | `dealing` or `match_end`                  |
+| `match_end`       | (none)                                 | --                                        |
+| `paused`          | `unpause`, `owner_unpause`             | (previous phase)                          |
+| `disconnected`    | `reconnect`                            | (previous phase)                          |
 
 ### Previous Story Intelligence (from 2-5)
 
@@ -210,7 +213,7 @@ Claude Opus 4.6 (1M context)
 
 - Implemented all core game types in `types.go`: Suit, Rank, Card (with String/ParseCard), Variant, Phase (8 phases), Action, Declaration, DeclarationType, card point value maps, NewDeck()
 - Implemented `GameState` struct in `state.go` with architecture-ordered field sections (metadata, hand state, trick state, player states, scoring, timer) and camelCase JSON tags
-- Implemented `NewGame()` with 3+2+3 dealing sequence, ShuffleDeck using math/rand/v2, counter-clockwise dealing from dealer, team assignment (0,2=Red, 1,3=Blue)
+- Implemented `NewGame()` with 3+2+3 dealing sequence, ShuffleDeck using math/rand/v2, counter-clockwise dealing from dealer, team assignment (0,2=Team A, 1,3=Team B)
 - Implemented `ApplyAction` stub in `rules_engine.go` returning ErrWrongPhase (actual logic deferred to Stories 3.2-3.6)
 - Added 6 game domain errors to `apperr/errors.go`: ErrWrongPhase, ErrNotYourTurn, ErrInvalidCard, ErrIllegalPlay, ErrGamePaused, ErrPlayerDisconnected
 - Created `NewGameJustDealt()` test fixture with deterministic hands (each player gets one full suit) for reproducible tests
@@ -223,6 +226,7 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - `server/internal/game/types.go`
 - `server/internal/game/types_test.go`
 - `server/internal/game/state.go`
@@ -234,6 +238,7 @@ Claude Opus 4.6 (1M context)
 - `client/src/shared/types/gameTypes.test.ts`
 
 **Modified files:**
+
 - `server/internal/apperr/errors.go` (added 6 game domain errors)
 - `client/src/shared/types/gameTypes.ts` (extended with Phase, Variant, GameState types)
 

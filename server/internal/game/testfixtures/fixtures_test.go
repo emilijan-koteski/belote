@@ -207,10 +207,10 @@ func TestNewGameJustDealt(t *testing.T) {
 	})
 
 	t.Run("teams assigned correctly", func(t *testing.T) {
-		assert.Equal(t, "red", gs.Players[0].Team)
-		assert.Equal(t, "blue", gs.Players[1].Team)
-		assert.Equal(t, "red", gs.Players[2].Team)
-		assert.Equal(t, "blue", gs.Players[3].Team)
+		assert.Equal(t, "teamA", gs.Players[0].Team)
+		assert.Equal(t, "teamB", gs.Players[1].Team)
+		assert.Equal(t, "teamA", gs.Players[2].Team)
+		assert.Equal(t, "teamB", gs.Players[3].Team)
 	})
 
 	t.Run("dealer is seat 0", func(t *testing.T) {
@@ -322,7 +322,7 @@ func TestNewGameLastTrick(t *testing.T) {
 
 	t.Run("trump caller is set", func(t *testing.T) {
 		require.NotNil(t, gs.TrumpCallerSeat)
-		assert.Equal(t, 1, *gs.TrumpCallerSeat, "Blue team (seat 1) called trump")
+		assert.Equal(t, 1, *gs.TrumpCallerSeat, "Team B (seat 1) called trump")
 	})
 
 	t.Run("declarations resolved", func(t *testing.T) {
@@ -353,22 +353,22 @@ func TestNewGameCapotInProgress(t *testing.T) {
 		}
 	})
 
-	t.Run("red team won all 7 tricks", func(t *testing.T) {
-		assert.Equal(t, 7, gs.TricksWon[0], "Red should have 7 tricks")
-		assert.Equal(t, 0, gs.TricksWon[1], "Blue should have 0 tricks")
+	t.Run("team A won all 7 tricks", func(t *testing.T) {
+		assert.Equal(t, 7, gs.TricksWon[0], "Team A should have 7 tricks")
+		assert.Equal(t, 0, gs.TricksWon[1], "Team B should have 0 tricks")
 	})
 
-	t.Run("all hand points with red", func(t *testing.T) {
-		assert.Equal(t, 121, gs.HandPoints[0], "Red should have 121 card points from 7 tricks")
-		assert.Equal(t, 0, gs.HandPoints[1], "Blue should have 0 card points")
+	t.Run("all hand points with team A", func(t *testing.T) {
+		assert.Equal(t, 121, gs.HandPoints[0], "Team A should have 121 card points from 7 tricks")
+		assert.Equal(t, 0, gs.HandPoints[1], "Team B should have 0 card points")
 	})
 
-	t.Run("trump caller is red team", func(t *testing.T) {
+	t.Run("trump caller is team A", func(t *testing.T) {
 		require.NotNil(t, gs.TrumpCallerSeat)
-		assert.Equal(t, 0, *gs.TrumpCallerSeat, "Red team (seat 0) called trump")
+		assert.Equal(t, 0, *gs.TrumpCallerSeat, "Team A (seat 0) called trump")
 	})
 
-	t.Run("red has strongest cards to complete capot", func(t *testing.T) {
+	t.Run("team A has strongest cards to complete capot", func(t *testing.T) {
 		// Seat 0 has JH (strongest trump), seat 2 has AH (strong trump)
 		assert.Equal(t, game.RankJack, gs.Players[0].Hand[0].Rank)
 		assert.Equal(t, game.SuitHearts, gs.Players[0].Hand[0].Suit)
@@ -384,8 +384,8 @@ func TestNewGameNearEnd(t *testing.T) {
 	})
 
 	t.Run("team scores are set to provided values", func(t *testing.T) {
-		assert.Equal(t, 900, gs.TeamScores[0], "Red team score")
-		assert.Equal(t, 850, gs.TeamScores[1], "Blue team score")
+		assert.Equal(t, 900, gs.TeamScores[0], "Team A score")
+		assert.Equal(t, 850, gs.TeamScores[1], "Team B score")
 	})
 
 	t.Run("inherits NewGameLastTrick structure", func(t *testing.T) {
@@ -406,9 +406,9 @@ func TestNewGameNearEnd(t *testing.T) {
 		}
 	})
 
-	t.Run("trump caller is blue team", func(t *testing.T) {
+	t.Run("trump caller is team B", func(t *testing.T) {
 		require.NotNil(t, gs.TrumpCallerSeat)
-		assert.Equal(t, 1, *gs.TrumpCallerSeat, "Blue team (seat 1) called trump")
+		assert.Equal(t, 1, *gs.TrumpCallerSeat, "Team B (seat 1) called trump")
 	})
 
 	t.Run("zero scores work", func(t *testing.T) {

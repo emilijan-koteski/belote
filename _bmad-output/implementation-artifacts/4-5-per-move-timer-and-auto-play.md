@@ -206,15 +206,17 @@ so that the game maintains pace and stalling is prevented.
 **Both files updated in the same commit — no exceptions.**
 
 In `wsEvents.ts` — `CardPlayedPayload` already has `autoPlayed: boolean`. Verify it matches:
+
 ```typescript
 export interface CardPlayedPayload {
-  playerSeat: number;     // EXISTING — do NOT rename to "seat"
-  cardId: string;          // EXISTING — use this for auto-play toast display
-  autoPlayed: boolean;     // EXISTING — true if timer-triggered
+  playerSeat: number; // EXISTING — do NOT rename to "seat"
+  cardId: string; // EXISTING — use this for auto-play toast display
+  autoPlayed: boolean; // EXISTING — true if timer-triggered
 }
 ```
 
 In `events.go` — create `CardPlayedPayload` Go struct (does not exist yet):
+
 ```go
 type CardPlayedPayload struct {
     PlayerSeat int    `json:"playerSeat"`
@@ -239,7 +241,7 @@ No new event types needed — timer state is conveyed via `TurnExpiresAt` in the
   }
 }
 
-// sr.json  
+// sr.json
 {
   "game": {
     "timer": {

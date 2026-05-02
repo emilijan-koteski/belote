@@ -160,7 +160,7 @@ func hasDeclarableCombinations(hand []Card) bool {
 }
 
 // resolveDeclarations compares all players' declarations after trick 1.
-// Returns winning team index (0=Red, 1=Blue) and total declaration points
+// Returns winning team index (0=team A, 1=team B) and total declaration points
 // for the winning team. Returns -1 and 0 if no declarations exist.
 //
 // The winner is the team holding the SINGLE strongest declaration on the

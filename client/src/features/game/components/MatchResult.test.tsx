@@ -9,8 +9,8 @@ vi.mock("react-i18next", () => ({
         "game.matchResult.title": "Match Complete",
         "game.matchResult.duration": "Match Duration",
         "game.matchResult.returnToLobby": "Return to Lobby",
-        "game.score.red": "Red",
-        "game.score.blue": "Blue",
+        "team.us": "Us",
+        "team.them": "Them",
         "game.surrender.unknownProposer": "your opponent",
       };
       if (key === "game.matchResult.winner" && opts) {
@@ -30,51 +30,79 @@ import { MatchResult } from "./MatchResult";
 
 const matchData: MatchEndPayload = {
   winnerTeam: 0,
-  redFinalScore: 1020,
-  blueFinalScore: 850,
+  teamAFinalScore: 1020,
+  teamBFinalScore: 850,
   matchDurationSec: 725,
 };
 
 describe("MatchResult", () => {
-  it("renders match result with winner", () => {
-    render(<MatchResult data={matchData} onReturnToLobby={vi.fn()} />);
+  it("renders winner banner with 'Us Wins!' when viewer is on the winning team", () => {
+    render(<MatchResult data={matchData} viewerTeam="teamA" onReturnToLobby={vi.fn()} />);
 
     expect(screen.getByTestId("match-result")).toBeInTheDocument();
     expect(screen.getByTestId("match-result-title")).toHaveTextContent("Match Complete");
-    expect(screen.getByTestId("match-result-winner")).toHaveTextContent("Red Wins!");
+    const winner = screen.getByTestId("match-result-winner");
+    expect(winner).toHaveTextContent("Us Wins!");
+    expect(winner).toHaveAttribute("data-team", "teamA");
   });
 
-  it("renders final scores", () => {
-    render(<MatchResult data={matchData} onReturnToLobby={vi.fn()} />);
+  it("renders winner banner with 'Them Wins!' when viewer is NOT on the winning team", () => {
+    render(<MatchResult data={matchData} viewerTeam="teamB" onReturnToLobby={vi.fn()} />);
 
-    expect(screen.getByTestId("match-result-red-score")).toHaveTextContent("1020");
-    expect(screen.getByTestId("match-result-blue-score")).toHaveTextContent("850");
+    const winner = screen.getByTestId("match-result-winner");
+    expect(winner).toHaveTextContent("Them Wins!");
+    expect(winner).toHaveAttribute("data-team", "teamA");
+  });
+
+  it("renders final scores and column data-team attributes", () => {
+    render(<MatchResult data={matchData} viewerTeam="teamA" onReturnToLobby={vi.fn()} />);
+
+    expect(screen.getByTestId("match-result-team-a-score")).toHaveTextContent("1020");
+    expect(screen.getByTestId("match-result-team-b-score")).toHaveTextContent("850");
+    expect(screen.getByTestId("match-result-team-a-column")).toHaveAttribute("data-team", "teamA");
+    expect(screen.getByTestId("match-result-team-b-column")).toHaveAttribute("data-team", "teamB");
+  });
+
+  it("renders score column labels viewer-relative — viewer on teamA sees Us / Them", () => {
+    render(<MatchResult data={matchData} viewerTeam="teamA" onReturnToLobby={vi.fn()} />);
+
+    expect(screen.getByTestId("match-result-team-a-column")).toHaveTextContent("Us");
+    expect(screen.getByTestId("match-result-team-b-column")).toHaveTextContent("Them");
+  });
+
+  it("renders score column labels viewer-relative — viewer on teamB sees Them / Us", () => {
+    render(<MatchResult data={matchData} viewerTeam="teamB" onReturnToLobby={vi.fn()} />);
+
+    expect(screen.getByTestId("match-result-team-a-column")).toHaveTextContent("Them");
+    expect(screen.getByTestId("match-result-team-b-column")).toHaveTextContent("Us");
   });
 
   it("formats match duration correctly", () => {
-    render(<MatchResult data={matchData} onReturnToLobby={vi.fn()} />);
+    render(<MatchResult data={matchData} viewerTeam="teamA" onReturnToLobby={vi.fn()} />);
 
     // 725 seconds = 12m 5s
     expect(screen.getByTestId("match-result-duration")).toHaveTextContent("12m 5s");
   });
 
-  it("renders blue team winner correctly", () => {
-    const blueWin = { ...matchData, winnerTeam: 1 };
-    render(<MatchResult data={blueWin} onReturnToLobby={vi.fn()} />);
+  it("renders teamB winner correctly", () => {
+    const bWin = { ...matchData, winnerTeam: 1 };
+    render(<MatchResult data={bWin} viewerTeam="teamB" onReturnToLobby={vi.fn()} />);
 
-    expect(screen.getByTestId("match-result-winner")).toHaveTextContent("Blue Wins!");
+    const winner = screen.getByTestId("match-result-winner");
+    expect(winner).toHaveTextContent("Us Wins!");
+    expect(winner).toHaveAttribute("data-team", "teamB");
   });
 
   it("calls onReturnToLobby when button is clicked", async () => {
     const onReturn = vi.fn();
-    render(<MatchResult data={matchData} onReturnToLobby={onReturn} />);
+    render(<MatchResult data={matchData} viewerTeam="teamA" onReturnToLobby={onReturn} />);
 
     await userEvent.click(screen.getByTestId("match-result-lobby-btn"));
     expect(onReturn).toHaveBeenCalledOnce();
   });
 
   it("does NOT render surrender note for natural match-end", () => {
-    render(<MatchResult data={matchData} onReturnToLobby={vi.fn()} />);
+    render(<MatchResult data={matchData} viewerTeam="teamA" onReturnToLobby={vi.fn()} />);
     expect(screen.queryByTestId("match-result-surrender-note")).toBeNull();
   });
 
@@ -85,7 +113,12 @@ describe("MatchResult", () => {
       surrenderedBySeat: 1,
     };
     render(
-      <MatchResult data={surrenderData} onReturnToLobby={vi.fn()} surrenderedByUsername="alice" />,
+      <MatchResult
+        data={surrenderData}
+        viewerTeam="teamA"
+        onReturnToLobby={vi.fn()}
+        surrenderedByUsername="alice"
+      />,
     );
     const note = screen.getByTestId("match-result-surrender-note");
     expect(note).toBeInTheDocument();
@@ -98,7 +131,7 @@ describe("MatchResult", () => {
       outcomeReason: "surrender",
       surrenderedBySeat: 1,
     };
-    render(<MatchResult data={surrenderData} onReturnToLobby={vi.fn()} />);
+    render(<MatchResult data={surrenderData} viewerTeam="teamA" onReturnToLobby={vi.fn()} />);
     const note = screen.getByTestId("match-result-surrender-note");
     expect(note).toHaveTextContent(/your opponent/);
   });

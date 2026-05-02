@@ -1,9 +1,9 @@
 ---
-validationTarget: '_bmad-output/planning-artifacts/prd.md'
-validationDate: '2026-02-21'
+validationTarget: "_bmad-output/planning-artifacts/prd.md"
+validationDate: "2026-02-21"
 inputDocuments:
-  - '_bmad-output/planning-artifacts/prd.md'
-  - '_bmad-output/planning-artifacts/product-brief-belote-2026-02-21.md'
+  - "_bmad-output/planning-artifacts/prd.md"
+  - "_bmad-output/planning-artifacts/product-brief-belote-2026-02-21.md"
 validationStepsCompleted:
   - step-v-01-discovery
   - step-v-02-format-detection
@@ -18,7 +18,7 @@ validationStepsCompleted:
   - step-v-11-holistic-quality-validation
   - step-v-12-completeness-validation
 validationStatus: COMPLETE
-holisticQualityRating: '4/5 - Good'
+holisticQualityRating: "4/5 - Good"
 overallStatus: Warning
 ---
 
@@ -48,6 +48,7 @@ overallStatus: Warning
 - `## Non-Functional Requirements`
 
 **BMAD Core Sections Present:**
+
 - Executive Summary: Present ✓
 - Success Criteria: Present ✓
 - Product Scope: Present ✓
@@ -216,14 +217,14 @@ overallStatus: Warning
 
 #### Traceability Matrix
 
-| Journey | Key Capabilities | Supporting FRs | Status |
-| --- | --- | --- | --- |
-| Ana (Casual) | Registration, lobby, Bitola rules, pause, scoring, chat | FR1, FR2, FR7, FR9–FR12, FR14/15, FR16–18, FR20, FR22, FR24, FR31 | Intact |
-| Marko (Competitive) | XP, levels, ranked, ELO, placement, leaderboard | FR33–FR40 | Intact |
-| Ivan (Diaspora) | Room search, Bitola reshuffle, match history, stats | FR7, FR17, FR18, FR41, FR42 | Intact |
-| Darko (Room Owner) | Create room, config, lobby mgmt, game start, pause override | FR16, FR17, FR20, FR21, FR22 | Intact |
-| Edge Cases | Disconnect, reconnect, ELO penalty, partial XP, auto-play | FR25–FR28, FR38, FR43 | Intact |
-| Future Roadmap | Social login, friends, emotes, spectator, achievements, etc. | FR3, FR5, FR6, FR32, FR45, FR47–FR52 | Orphaned (no journey) |
+| Journey             | Key Capabilities                                             | Supporting FRs                                                    | Status                |
+| ------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------- | --------------------- |
+| Ana (Casual)        | Registration, lobby, Bitola rules, pause, scoring, chat      | FR1, FR2, FR7, FR9–FR12, FR14/15, FR16–18, FR20, FR22, FR24, FR31 | Intact                |
+| Marko (Competitive) | XP, levels, ranked, ELO, placement, leaderboard              | FR33–FR40                                                         | Intact                |
+| Ivan (Diaspora)     | Room search, Bitola reshuffle, match history, stats          | FR7, FR17, FR18, FR41, FR42                                       | Intact                |
+| Darko (Room Owner)  | Create room, config, lobby mgmt, game start, pause override  | FR16, FR17, FR20, FR21, FR22                                      | Intact                |
+| Edge Cases          | Disconnect, reconnect, ELO penalty, partial XP, auto-play    | FR25–FR28, FR38, FR43                                             | Intact                |
+| Future Roadmap      | Social login, friends, emotes, spectator, achievements, etc. | FR3, FR5, FR6, FR32, FR45, FR47–FR52                              | Orphaned (no journey) |
 
 **Total Traceability Issues:** 1 structural (Scope → FR phase labeling gap) + 11 orphan FRs (all expected roadmap entries, no MVP-critical orphans)
 
@@ -320,22 +321,22 @@ overallStatus: Warning
 
 #### Flagged FRs (Score < 3 in One or More Categories)
 
-| FR | S | M | A | R | T | Avg | Flag Reason |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| FR3 (Social login) | 4 | 4 | 4 | 3 | 2 | 3.4 | T: no supporting journey (Phase 3 orphan) |
-| FR5 (Player search) | 5 | 5 | 5 | 3 | 2 | 4.0 | T: no supporting journey (Phase 3 orphan) |
-| FR6 (Friend requests) | 5 | 5 | 5 | 3 | 2 | 4.0 | T: no supporting journey (Phase 3 orphan) |
-| FR28 (Abandon outcomes) | 3 | 2 | 5 | 5 | 5 | 4.0 | M: "appropriate outcomes" undefined |
-| FR32 (Emotes) | 3 | 3 | 5 | 3 | 2 | 3.2 | T: no supporting journey (Phase 4 orphan) |
-| FR38 (ELO penalty scale) | 3 | 2 | 5 | 5 | 5 | 4.0 | M: scaling formula absent from FR |
-| FR43 (Partial XP) | 3 | 2 | 5 | 5 | 5 | 4.0 | M: no XP formula or range defined |
-| FR45 (Additional languages) | 4 | 4 | 4 | 4 | 2 | 3.6 | T: no supporting journey (Phase 3 orphan) |
-| FR47 (Public profiles) | 4 | 4 | 5 | 4 | 2 | 3.8 | T: no supporting journey (Phase 3+ orphan) |
-| FR48 (Spectator mode) | 3 | 3 | 5 | 4 | 2 | 3.4 | T: no supporting journey (Phase 4 orphan) |
-| FR49 (Achievements) | 3 | 3 | 5 | 4 | 2 | 3.4 | T: no supporting journey (Phase 4 orphan) |
-| FR50 (Cosmetics) | 4 | 4 | 4 | 4 | 2 | 3.6 | T: no supporting journey (Phase 4 orphan) |
-| FR51 (Tournaments) | 3 | 3 | 4 | 4 | 2 | 3.2 | T: no supporting journey (Phase 4 orphan) |
-| FR52 (Mobile) | 3 | 3 | 4 | 4 | 2 | 3.2 | T: no supporting journey (Phase 3 orphan) |
+| FR                          | S   | M   | A   | R   | T   | Avg | Flag Reason                                |
+| --------------------------- | --- | --- | --- | --- | --- | --- | ------------------------------------------ |
+| FR3 (Social login)          | 4   | 4   | 4   | 3   | 2   | 3.4 | T: no supporting journey (Phase 3 orphan)  |
+| FR5 (Player search)         | 5   | 5   | 5   | 3   | 2   | 4.0 | T: no supporting journey (Phase 3 orphan)  |
+| FR6 (Friend requests)       | 5   | 5   | 5   | 3   | 2   | 4.0 | T: no supporting journey (Phase 3 orphan)  |
+| FR28 (Abandon outcomes)     | 3   | 2   | 5   | 5   | 5   | 4.0 | M: "appropriate outcomes" undefined        |
+| FR32 (Emotes)               | 3   | 3   | 5   | 3   | 2   | 3.2 | T: no supporting journey (Phase 4 orphan)  |
+| FR38 (ELO penalty scale)    | 3   | 2   | 5   | 5   | 5   | 4.0 | M: scaling formula absent from FR          |
+| FR43 (Partial XP)           | 3   | 2   | 5   | 5   | 5   | 4.0 | M: no XP formula or range defined          |
+| FR45 (Additional languages) | 4   | 4   | 4   | 4   | 2   | 3.6 | T: no supporting journey (Phase 3 orphan)  |
+| FR47 (Public profiles)      | 4   | 4   | 5   | 4   | 2   | 3.8 | T: no supporting journey (Phase 3+ orphan) |
+| FR48 (Spectator mode)       | 3   | 3   | 5   | 4   | 2   | 3.4 | T: no supporting journey (Phase 4 orphan)  |
+| FR49 (Achievements)         | 3   | 3   | 5   | 4   | 2   | 3.4 | T: no supporting journey (Phase 4 orphan)  |
+| FR50 (Cosmetics)            | 4   | 4   | 4   | 4   | 2   | 3.6 | T: no supporting journey (Phase 4 orphan)  |
+| FR51 (Tournaments)          | 3   | 3   | 4   | 4   | 2   | 3.2 | T: no supporting journey (Phase 4 orphan)  |
+| FR52 (Mobile)               | 3   | 3   | 4   | 4   | 2   | 3.2 | T: no supporting journey (Phase 3 orphan)  |
 
 **Legend:** S=Specific, M=Measurable, A=Attainable, R=Relevant, T=Traceable. 1=Poor, 3=Acceptable, 5=Excellent. Flag = score < 3 in any category.
 
@@ -396,15 +397,15 @@ overallStatus: Warning
 
 #### BMAD PRD Principles Compliance
 
-| Principle | Status | Notes |
-| --- | --- | --- |
-| Information Density | Met | 0 anti-pattern violations; consistent dense style throughout |
-| Measurability | Partial | 8 violations; 3 FRs and 4 NFRs need metric additions |
-| Traceability | Partial | Core Phase 1 chain intact; 11 orphan roadmap FRs; 2 journey/scope contradictions |
-| Domain Awareness | Met | Gaming domain correctly identified; no compliance requirements applicable |
-| Zero Anti-Patterns | Met | 0 filler phrases, wordy constructions, or redundant language |
-| Dual Audience | Met | Effective for both human stakeholders and LLM downstream consumers |
-| Markdown Format | Met | Consistent structure, proper header hierarchy, tables formatted correctly |
+| Principle           | Status  | Notes                                                                            |
+| ------------------- | ------- | -------------------------------------------------------------------------------- |
+| Information Density | Met     | 0 anti-pattern violations; consistent dense style throughout                     |
+| Measurability       | Partial | 8 violations; 3 FRs and 4 NFRs need metric additions                             |
+| Traceability        | Partial | Core Phase 1 chain intact; 11 orphan roadmap FRs; 2 journey/scope contradictions |
+| Domain Awareness    | Met     | Gaming domain correctly identified; no compliance requirements applicable        |
+| Zero Anti-Patterns  | Met     | 0 filler phrases, wordy constructions, or redundant language                     |
+| Dual Audience       | Met     | Effective for both human stakeholders and LLM downstream consumers               |
+| Markdown Format     | Met     | Consistent structure, proper header hierarchy, tables formatted correctly        |
 
 **Principles Met:** 5/7 (Measurability and Traceability are Partial)
 

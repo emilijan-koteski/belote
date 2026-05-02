@@ -1,6 +1,23 @@
 ---
-stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-01b-continue', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete']
-inputDocuments: ['product-brief-belote-2026-02-21.md']
+stepsCompleted:
+  [
+    "step-01-init",
+    "step-02-discovery",
+    "step-02b-vision",
+    "step-02c-executive-summary",
+    "step-03-success",
+    "step-04-journeys",
+    "step-05-domain",
+    "step-06-innovation",
+    "step-07-project-type",
+    "step-08-scoping",
+    "step-01b-continue",
+    "step-09-functional",
+    "step-10-nonfunctional",
+    "step-11-polish",
+    "step-12-complete",
+  ]
+inputDocuments: ["product-brief-belote-2026-02-21.md"]
 documentCounts:
   briefs: 1
   research: 0
@@ -11,7 +28,7 @@ classification:
   domain: gaming_entertainment
   complexity: medium
   projectContext: greenfield
-workflowType: 'prd'
+workflowType: "prd"
 ---
 
 # Product Requirements Document - belote
@@ -61,16 +78,16 @@ Belote is the only platform built specifically for the Balkan Belot community �
 
 ### Measurable Outcomes
 
-| Metric | Target | Category |
-| --- | --- | --- |
-| Match completion rate | >85% | Quality |
-| D7 new player retention | >70% | Retention |
-| Session return rate (D14) | >60% | Retention |
-| Time to first game | <5 minutes | Onboarding |
-| Ranked participation | >30% of Level 5+ players | Engagement |
-| Season completion rate | >50% of ranked players | Engagement |
-| Disconnection rate | <5% | Technical |
-| Server uptime | >99.5% | Technical |
+| Metric                    | Target                   | Category   |
+| ------------------------- | ------------------------ | ---------- |
+| Match completion rate     | >85%                     | Quality    |
+| D7 new player retention   | >70%                     | Retention  |
+| Session return rate (D14) | >60%                     | Retention  |
+| Time to first game        | <5 minutes               | Onboarding |
+| Ranked participation      | >30% of Level 5+ players | Engagement |
+| Season completion rate    | >50% of ranked players   | Engagement |
+| Disconnection rate        | <5%                      | Technical  |
+| Server uptime             | >99.5%                   | Technical  |
 
 ## Product Scope
 
@@ -99,7 +116,7 @@ Belote is the only platform built specifically for the Balkan Belot community �
 - 1001-point match mode only
 - Lobby: Create Room, Browse/Search Rooms, Quick Play (random matchmaking)
 - Room configuration: per-move timer or relaxed (reconnect window is server-defined, not configurable per room — default 2 minutes)
-- Team assignment (Red/Blue) in lobby
+- Team assignment (Team A/Team B) in lobby
 - Global lobby chat and per-match chat (no teammate whisper)
 - Pause system: 1 pause per player per game, stackable, room owner can unpause all
 - Auto-play on timer expiry: first eligible card sorted by suit then rank
@@ -165,18 +182,18 @@ Belote is the only platform built specifically for the Balkan Belot community �
 
 **Technical Risks:**
 
-- *Real-time multiplayer complexity* — Mitigated by server-authoritative architecture; client is a thin renderer.
-- *Rules engine correctness* — Mitigated by shipping one variant first (Bitola). Validates the engine with real players before adding Croatian variant branching.
-- *Single variant first* — Reduces rules engine complexity by ~10-15% and eliminates variant-switching UI. Croatian variant shares 90%+ of logic and layers on cleanly in Phase 3.
+- _Real-time multiplayer complexity_ — Mitigated by server-authoritative architecture; client is a thin renderer.
+- _Rules engine correctness_ — Mitigated by shipping one variant first (Bitola). Validates the engine with real players before adding Croatian variant branching.
+- _Single variant first_ — Reduces rules engine complexity by ~10-15% and eliminates variant-switching UI. Croatian variant shares 90%+ of logic and layers on cleanly in Phase 3.
 
 **Market Risks:**
 
-- *Will players adopt an online platform?* — Mitigated by starting with a known, motivated closed circle (~20 players). Word-of-mouth validates demand.
-- *Bitola-only may exclude Croatian-variant players initially* — Acceptable risk for Phase 1 closed circle if the founding group plays Bitola.
+- _Will players adopt an online platform?_ — Mitigated by starting with a known, motivated closed circle (~20 players). Word-of-mouth validates demand.
+- _Bitola-only may exclude Croatian-variant players initially_ — Acceptable risk for Phase 1 closed circle if the founding group plays Bitola.
 
 **Resource Risks:**
 
-- *Solo developer bottleneck* — Mitigated by aggressive MVP scoping. The MVP is now: auth + Bitola rules engine + lobby + chat + disconnect handling. Minimal surface area.
+- _Solo developer bottleneck_ — Mitigated by aggressive MVP scoping. The MVP is now: auth + Bitola rules engine + lobby + chat + disconnect handling. Minimal surface area.
 
 ## User Journeys
 
@@ -186,9 +203,9 @@ Belote is the only platform built specifically for the Balkan Belot community �
 
 **Opening Scene:** Ana gets a WhatsApp message from her sister: "I found a website where we can play Belot online — real Belot, not that French nonsense." Ana clicks the link, sees a clean registration page. Email, password, username — done in 30 seconds.
 
-**Rising Action:** She lands in the lobby. Her sister has already created a room: "Nedelen Belot" (Sunday Belot), Bitola variant, relaxed timer, 501 mode. Ana sees it in the room list, clicks to join. Her brother-in-law and neighbor are already there. She picks the Red team alongside her sister — just like at home. The room owner starts the game.
+**Rising Action:** She lands in the lobby. Her sister has already created a room: "Nedelen Belot" (Sunday Belot), Bitola variant, relaxed timer, 501 mode. Ana sees it in the room list, clicks to join. Her brother-in-law and neighbor are already there. She picks Team A alongside her sister — just like at home. The room owner starts the game.
 
-**Climax:** Cards are dealt. 3 cards, then 2, then the trump candidate appears. It looks right. It *feels* right. Ana announces her declaration at the first trick, sees it scored correctly. Her sister plays the King and Queen of trump — "Bela!" — 20 points, just like they've always called it. Mid-hand, her neighbor's doorbell rings — he hits pause. The game freezes for everyone. He comes back a minute later, unpauses, play resumes. The hand plays out, points tallied correctly, last trick bonus applied. They're laughing in the match chat.
+**Climax:** Cards are dealt. 3 cards, then 2, then the trump candidate appears. It looks right. It _feels_ right. Ana announces her declaration at the first trick, sees it scored correctly. Her sister plays the King and Queen of trump — "Bela!" — 20 points, just like they've always called it. Mid-hand, her neighbor's doorbell rings — he hits pause. The game freezes for everyone. He comes back a minute later, unpauses, play resumes. The hand plays out, points tallied correctly, last trick bonus applied. They're laughing in the match chat.
 
 **Resolution:** The game finishes at 501. Ana checks the score summary — every point accounted for. She messages her sister: "Same time next Sunday?" The Sunday game is back. It never needed to be complicated. It just needed to exist.
 
@@ -218,7 +235,7 @@ Belote is the only platform built specifically for the Balkan Belot community �
 
 **Opening Scene:** Ivan's cousin sends him a room code via Viber: "SUBOTA-BELOT". Ivan registers (he's new to the platform), enters the lobby, searches by room code.
 
-**Rising Action:** He finds the room — Bitola variant, relaxed timer, 1001 mode. His two cousins are already in, waiting for a fourth. Ivan joins, picks Blue team with his regular partner. The fourth slot fills — another cousin who was also waiting for an invite. The room owner starts the game.
+**Rising Action:** He finds the room — Bitola variant, relaxed timer, 1001 mode. His two cousins are already in, waiting for a fourth. Ivan joins, picks Team B with his regular partner. The fourth slot fills — another cousin who was also waiting for an invite. The room owner starts the game.
 
 **Climax:** The dealing feels right — 3-2 split, trump candidate revealed. Second round of bidding, nobody picks — in Bitola variant, the deck reshuffles and the dealer rotates. Exactly how they play at home. Ivan announces a sequence declaration, it's validated correctly against the others. The hand plays out counter-clockwise, scoring is precise. They're bantering in the match chat between hands, half in Macedonian, half giving each other grief.
 
@@ -236,7 +253,7 @@ Belote is the only platform built specifically for the Balkan Belot community �
 
 **Rising Action:** He sets the room up: names it "Zagreb Ekipa", picks Croatian variant (his group's preference), 1001 mode, per-move timer at 30 seconds, reconnect window at 3 minutes (one of them has spotty wifi). The room is created and appears in the room list. He copies the room name and sends it to his group chat.
 
-**Climax:** Players join one by one. Darko sees them arrive in the lobby. Two friends want to be on the same team — they self-assign to Red. The fourth arrives, takes the open Blue slot. All four seats filled. Darko reviews the setup: Croatian variant, 1001, 30s timer, 3min reconnect. Everything's right. He starts the game. Mid-game, one friend needs a quick break and uses his pause. A minute passes — Darko decides the break has been long enough and uses his room owner override to unpause all active pauses. Play resumes.
+**Climax:** Players join one by one. Darko sees them arrive in the lobby. Two friends want to be on the same team — they self-assign to Team A. The fourth arrives, takes the open Team B slot. All four seats filled. Darko reviews the setup: Croatian variant, 1001, 30s timer, 3min reconnect. Everything's right. He starts the game. Mid-game, one friend needs a quick break and uses his pause. A minute passes — Darko decides the break has been long enough and uses his room owner override to unpause all active pauses. Play resumes.
 
 **Resolution:** The game launches with his exact configuration. Timer ticks on each move — keeps the pace up, just like when they play for real. Mid-game, his friend's wifi drops. The reconnect window activates — "Player reconnecting..." — and 90 seconds later he's back, game state intact. The room owner role did its job: Darko set the table, his way.
 
@@ -246,7 +263,7 @@ Belote is the only platform built specifically for the Balkan Belot community �
 
 ### Journey 5: Edge Case — Disconnection and Timer Expiry
 
-**Scenario A — Disconnection Mid-Game:** Competitive ranked match, 1001 mode, Croatian variant. Four players, mid-game — the score is close (Red 620, Blue 580). Player 3 (Blue team) loses internet connection during trick 4 of a hand.
+**Scenario A — Disconnection Mid-Game:** Competitive ranked match, 1001 mode, Croatian variant. Four players, mid-game — the score is close (Team A 620, Team B 580). Player 3 (Team B) loses internet connection during trick 4 of a hand.
 
 Player 3's client goes offline. The server detects the disconnection. The other three players see a notification: "Player 3 disconnecting — reconnect window: 2:00." The game pauses. A countdown begins.
 
@@ -264,13 +281,13 @@ Player 3's client goes offline. The server detects the disconnection. The other 
 
 ### Journey Requirements Summary
 
-| Journey | Key Capabilities Revealed |
-| --- | --- |
-| Ana (Casual) | Registration, room browse/join, team assignment, Bitola variant, relaxed timer, 501 mode, match chat, declarations, scoring, pause/unpause |
+| Journey             | Key Capabilities Revealed                                                                                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ana (Casual)        | Registration, room browse/join, team assignment, Bitola variant, relaxed timer, 501 mode, match chat, declarations, scoring, pause/unpause                             |
 | Marko (Competitive) | XP/level progression, Level 5 gate, Quick Play, Croatian variant, 1001 mode, per-move timer, auto-play on expiry, ELO matchmaking, placement, rank system, leaderboard |
-| Ivan (Diaspora) | Room search by code, Bitola reshuffle/rotate, match history, player stats, cross-region real-time play |
-| Darko (Room Owner) | Create Room config, variant/mode/timer/reconnect settings, room sharing, lobby management, game start, pause override |
-| Edge Cases | Disconnect detection, reconnect window, game state preservation, pause/resume, ELO penalty scaling, partial XP, match voiding, auto-play (suit/rank order) |
+| Ivan (Diaspora)     | Room search by code, Bitola reshuffle/rotate, match history, player stats, cross-region real-time play                                                                 |
+| Darko (Room Owner)  | Create Room config, variant/mode/timer/reconnect settings, room sharing, lobby management, game start, pause override                                                  |
+| Edge Cases          | Disconnect detection, reconnect window, game state preservation, pause/resume, ELO penalty scaling, partial XP, match voiding, auto-play (suit/rank order)             |
 
 **Cross-cutting capabilities:** Authentication, real-time game state sync, rules engine (both variants), scoring engine, lobby system, chat system, pause system (1 per player per game, stackable, owner override), auto-play on timer expiry (first legal card by suit/rank sort).
 
@@ -327,7 +344,7 @@ Single Page Application (SPA) for desktop browsers. Real-time multiplayer with p
 - FR17: Players can browse a searchable list of open rooms by room name or code
 - FR18: Players can join a room via the browse list or by entering a room name/code directly
 - FR19: Players can queue for Quick Play to be matched into a random available game
-- FR20: Players can self-assign to Red or Blue team within a room lobby before a game starts
+- FR20: Players can self-assign to Team A or Team B within a room lobby before a game starts
 - FR21: Room owners can start the game once all four player slots are filled
 - FR22: Room owners can override and clear all active player pauses during a match
 

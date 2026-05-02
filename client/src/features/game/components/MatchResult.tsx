@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
 import type { MatchEndPayload } from "@/shared/types/wsEvents";
 
 interface MatchResultProps {
   data: MatchEndPayload;
+  viewerTeam: TeamString;
   onReturnToLobby: () => void;
   // Resolved username for data.surrenderedBySeat. Optional — falls back to
   // game.surrender.unknownProposer when undefined and outcomeReason is
@@ -13,11 +15,20 @@ interface MatchResultProps {
   surrenderedByUsername?: string;
 }
 
-export function MatchResult({ data, onReturnToLobby, surrenderedByUsername }: MatchResultProps) {
+export function MatchResult({
+  data,
+  viewerTeam,
+  onReturnToLobby,
+  surrenderedByUsername,
+}: MatchResultProps) {
   const { t } = useTranslation();
 
-  const teamName = data.winnerTeam === 0 ? t("game.score.red") : t("game.score.blue");
-  const teamColorClass = data.winnerTeam === 0 ? "text-team-red" : "text-team-blue";
+  const winnerTeamString = teamStringForIndex(data.winnerTeam === 0 ? 0 : 1);
+  const winnerLabel = winnerTeamString === viewerTeam ? t("team.us") : t("team.them");
+  const teamColorClass = data.winnerTeam === 0 ? "text-team-a" : "text-team-b";
+
+  const teamAColumnLabel = viewerTeam === "teamA" ? t("team.us") : t("team.them");
+  const teamBColumnLabel = viewerTeam === "teamB" ? t("team.us") : t("team.them");
 
   const formattedDuration = useMemo(() => {
     const totalSec = data.matchDurationSec;
@@ -42,8 +53,9 @@ export function MatchResult({ data, onReturnToLobby, surrenderedByUsername }: Ma
         <p
           className={`font-display text-3xl font-bold ${teamColorClass} mb-2`}
           data-testid="match-result-winner"
+          data-team={winnerTeamString}
         >
-          {t("game.matchResult.winner", { team: teamName })}
+          {t("game.matchResult.winner", { team: winnerLabel })}
         </p>
 
         {data.outcomeReason === "surrender" && (
@@ -59,23 +71,23 @@ export function MatchResult({ data, onReturnToLobby, surrenderedByUsername }: Ma
 
         {/* Final Scores */}
         <div className="flex items-center justify-center gap-4 mb-6">
-          <div className="text-center">
-            <p className="text-team-red font-body text-sm font-semibold">{t("game.score.red")}</p>
+          <div className="text-center" data-testid="match-result-team-a-column" data-team="teamA">
+            <p className="text-team-a font-body text-sm font-semibold">{teamAColumnLabel}</p>
             <p
-              className="text-team-red font-display text-5xl font-bold tabular-nums"
-              data-testid="match-result-red-score"
+              className="text-team-a font-display text-5xl font-bold tabular-nums"
+              data-testid="match-result-team-a-score"
             >
-              {data.redFinalScore}
+              {data.teamAFinalScore}
             </p>
           </div>
           <span className="text-text-secondary font-display text-3xl">:</span>
-          <div className="text-center">
-            <p className="text-team-blue font-body text-sm font-semibold">{t("game.score.blue")}</p>
+          <div className="text-center" data-testid="match-result-team-b-column" data-team="teamB">
+            <p className="text-team-b font-body text-sm font-semibold">{teamBColumnLabel}</p>
             <p
-              className="text-team-blue font-display text-5xl font-bold tabular-nums"
-              data-testid="match-result-blue-score"
+              className="text-team-b font-display text-5xl font-bold tabular-nums"
+              data-testid="match-result-team-b-score"
             >
-              {data.blueFinalScore}
+              {data.teamBFinalScore}
             </p>
           </div>
         </div>

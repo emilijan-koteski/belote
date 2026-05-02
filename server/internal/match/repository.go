@@ -23,7 +23,7 @@ type MatchRepository interface {
 
 	// GetStatsForUser counts matches where userID appears in any of
 	// player1..player4 seats. wins = completed AND winnerTeam matches the
-	// viewer's team (seats 0/2 → Red team index 0; seats 1/3 → Blue team
+	// viewer's team (seats 0/2 → team A index 0; seats 1/3 → team B
 	// index 1, mirroring game.TeamForSeat). losses = completed AND mismatched.
 	// abandoned = any abandoned match regardless of winnerTeam. Executed in a
 	// single round-trip via PostgreSQL FILTER aggregation so wins + losses +

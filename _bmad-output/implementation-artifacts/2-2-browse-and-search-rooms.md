@@ -123,6 +123,7 @@ So that I can find a game to join.
 **Backend domain stays in `room/` package** — the `GET /api/v1/rooms` endpoint belongs in the same domain package as `POST /api/v1/rooms` (Story 2.1). Do NOT create a separate `lobby/` backend package for this. The `lobby/` package is reserved for future matchmaking logic (Story 2.5).
 
 **File organization:**
+
 ```
 server/internal/room/
 ├── model.go          # Room GORM struct (existing, no changes)
@@ -147,6 +148,7 @@ client/src/features/lobby/
 ### Backend Implementation Details
 
 **Repository method — `FindByStatus`:**
+
 ```go
 func (r *GormRepository) FindByStatus(status string) ([]Room, error) {
     var rooms []Room
@@ -156,11 +158,13 @@ func (r *GormRepository) FindByStatus(status string) ([]Room, error) {
     return rooms, nil
 }
 ```
+
 - GORM `Find` returns an empty slice (not nil) when no records match — this is correct behavior
 - GORM soft-delete scope automatically excludes `deleted_at IS NOT NULL` rows
 - Order by `created_at DESC` so newest rooms appear first
 
 **Handler — `ListRooms`:**
+
 ```go
 func (h *RoomHandler) ListRooms(c echo.Context) error {
     status := c.QueryParam("status")
@@ -176,12 +180,14 @@ func (h *RoomHandler) ListRooms(c echo.Context) error {
     return c.JSON(http.StatusOK, map[string]interface{}{"data": rooms})
 }
 ```
+
 - Requires authentication (route is under the `api` group which has auth middleware)
 - Default filter is `waiting` — only shows rooms that are open for joining
 - Response wraps in `{ "data": [...] }` per project API convention
 - Returns empty array `[]` not `null` when no rooms exist
 
 **Route wiring in `main.go`** (add after line 85):
+
 ```go
 api.GET("/rooms", roomHandler.ListRooms)
 ```
@@ -189,6 +195,7 @@ api.GET("/rooms", roomHandler.ListRooms)
 ### Frontend Implementation Details
 
 **API client — `getRooms`:**
+
 ```typescript
 export function getRooms(status: string = "waiting"): Promise<Room[]> {
   return fetchClient<Room[]>(`/rooms?status=${encodeURIComponent(status)}`);
@@ -199,12 +206,14 @@ export function getRooms(status: string = "waiting"): Promise<Room[]> {
 - Default param `"waiting"` matches backend default
 
 **RoomCard component:**
+
 ```
 ┌─────────────────────────────────────────┐
 │  Room Name                    Join  →   │
 │  Bitola · 1001 · 2/4 · Relaxed         │
 └─────────────────────────────────────────┘
 ```
+
 - Room name as primary text (`text-text-primary`, `font-semibold`)
 - Meta info row: variant, mode, player count, timer style — `text-sm text-text-secondary`
 - Player count format: `"2/4"` (current/max)
@@ -213,6 +222,7 @@ export function getRooms(status: string = "waiting"): Promise<Room[]> {
 - Card gap: `8px` between cards per UX spec
 
 **RoomList component:**
+
 ```
 ┌──────────────────────────────────────────┐
 │  🔍 Search rooms by name or code...     │
@@ -222,12 +232,14 @@ export function getRooms(status: string = "waiting"): Promise<Room[]> {
 │  [RoomCard]                              │
 └──────────────────────────────────────────┘
 ```
+
 - Search input: shadcn `Input`, no submit button, filters as user types
 - Filtering is **client-side** on the already-fetched room list — no additional API calls per keystroke
 - Filter logic: case-insensitive match on `room.name` OR `room.code` containing the search query
 - Use `useMemo` to derive filtered list from `rooms` and `searchQuery` for performance
 
 **LobbyPage state management:**
+
 - Add `activeView` local state: `'options' | 'browse'`
 - Default: `'options'` (current behavior)
 - Browse Rooms card click: set `activeView = 'browse'`, fetch rooms
@@ -235,6 +247,7 @@ export function getRooms(status: string = "waiting"): Promise<Room[]> {
 - Do NOT use React Router for this — it's a single-page view toggle within the lobby, not a route change
 
 **Loading state:**
+
 - Use `lobbyStore.isLoading` for skeleton display
 - Show 3 skeleton rows using a pulsing `animate-pulse` placeholder matching RoomCard dimensions
 - Each store manages its own `isLoading` boolean — per project convention
@@ -242,13 +255,15 @@ export function getRooms(status: string = "waiting"): Promise<Room[]> {
 ### WebSocket Event Contract
 
 **Add to `server/internal/ws/events.go`:**
+
 ```go
 const SystemRoomUpdated = "system:room_updated"
 ```
 
 **Add to `client/src/shared/types/wsEvents.ts`:**
+
 ```typescript
-export const SYSTEM_ROOM_UPDATED = 'system:room_updated' as const;
+export const SYSTEM_ROOM_UPDATED = "system:room_updated" as const;
 
 export interface RoomUpdatedPayload {
   id: number;
@@ -271,11 +286,12 @@ export interface RoomUpdatedPayload {
 ### i18n Keys
 
 **Add to `en.json` under `lobby`:**
+
 ```json
 {
   "lobby": {
-    "browseRooms": "Browse Rooms",  // already exists
-    "browseRoomsDesc": "Find an open game to join",  // already exists
+    "browseRooms": "Browse Rooms", // already exists
+    "browseRoomsDesc": "Find an open game to join", // already exists
     "roomList": {
       "searchPlaceholder": "Search rooms by name or code...",
       "backToOptions": "Back",
@@ -295,6 +311,7 @@ export interface RoomUpdatedPayload {
 ```
 
 **Add matching keys to `sr.json`:**
+
 ```json
 {
   "lobby": {
@@ -319,6 +336,7 @@ export interface RoomUpdatedPayload {
 ### Testing Strategy
 
 **Backend (Go):**
+
 - External test package: `package room_test`
 - Use mock repository from existing `handler_test.go` pattern — add `FindByStatus(status string) ([]Room, error)` to mock
 - Test cases for ListRooms:
@@ -329,6 +347,7 @@ export interface RoomUpdatedPayload {
   - Returns correct response envelope `{ "data": [...] }`
 
 **Frontend (Vitest):**
+
 - Co-locate all test files with their components
 - Use `@testing-library/react` with `BrowserRouter` wrapper
 - Use `data-testid` attributes for element selection — never CSS classes
@@ -341,6 +360,7 @@ export interface RoomUpdatedPayload {
 ### Previous Story Intelligence (from Story 2.1)
 
 **Critical learnings to apply:**
+
 - `fetchClient<T>()` auto-unwraps `{ data: T }` — do NOT add a second unwrap layer in `getRooms()`
 - Use `auth.GetUserID(c)` from `auth/middleware.go` for user ID extraction (canonical public helper)
 - Use external test packages (`room_test` not `room`) to prevent import cycles
@@ -351,6 +371,7 @@ export interface RoomUpdatedPayload {
 - Stale closure prevention: use `useLobbyStore.getState()` in event handlers, not dependency closures
 
 **Patterns from Story 2.1 to reuse:**
+
 - Card component styling: `rounded-xl border border-border bg-surface p-6 text-left transition-colors hover:bg-surface/80`
 - Primary CTA: `bg-accent-glow` for the prominent action
 - i18n key convention: `lobby.{section}.{element}`
@@ -358,6 +379,7 @@ export interface RoomUpdatedPayload {
 - Use `useNavigate()` from React Router for navigation
 
 **Deferred items from Story 2.1 review:**
+
 - D1: `FindByID` returns `(nil, nil)` for missing rooms — this is the established pattern, follow it for `FindByStatus` returning empty slice
 - D2: No rate limiting on room endpoints — still deferred, infrastructure concern
 - D3: No per-user active room count cap — not in scope
@@ -365,11 +387,13 @@ export interface RoomUpdatedPayload {
 ### Git Intelligence
 
 **Recent commit pattern:**
+
 ```
 eead853 feat(room): implement room creation and configuration with code review fixes
 6f3e1af feat(profile): implement player profile, navigation shell, and language selector with code review fixes
 46a5949 feat(auth): implement user login and session persistence with code review fixes
 ```
+
 - Format: `{type}({scope}): {description}`
 - Scope for this story: `room` (same domain as 2.1)
 - Expected commit: `feat(room): implement room browsing and search`
@@ -436,6 +460,7 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - client/src/features/lobby/RoomCard.tsx
 - client/src/features/lobby/RoomCard.test.tsx
 - client/src/features/lobby/RoomList.tsx
@@ -443,6 +468,7 @@ Claude Opus 4.6 (1M context)
 - client/src/features/lobby/useRoomUpdates.ts
 
 **Modified files:**
+
 - server/internal/room/repository.go (added FindByStatus to interface)
 - server/internal/room/gorm_repo.go (added FindByStatus implementation)
 - server/internal/room/handler.go (added ListRooms handler)
@@ -454,5 +480,5 @@ Claude Opus 4.6 (1M context)
 - client/src/shared/stores/lobbyStore.ts (added searchQuery + setSearchQuery)
 - client/src/features/lobby/LobbyPage.tsx (added browse view with state toggle)
 - client/src/features/lobby/LobbyPage.test.tsx (added browse view tests)
-- client/src/shared/i18n/en.json (added lobby.roomList.* keys)
-- client/src/shared/i18n/sr.json (added lobby.roomList.* keys)
+- client/src/shared/i18n/en.json (added lobby.roomList.\* keys)
+- client/src/shared/i18n/sr.json (added lobby.roomList.\* keys)

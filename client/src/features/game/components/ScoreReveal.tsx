@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
 import type { HandScoredPayload } from "@/shared/types/wsEvents";
 
 interface ScoreRevealProps {
   data: HandScoredPayload;
+  viewerTeam: TeamString;
   onContinue: () => void;
 }
 
-export function ScoreReveal({ data, onContinue }: ScoreRevealProps) {
+export function ScoreReveal({ data, viewerTeam, onContinue }: ScoreRevealProps) {
   const { t } = useTranslation();
   const [continueEnabled, setContinueEnabled] = useState(false);
 
@@ -23,9 +25,15 @@ export function ScoreReveal({ data, onContinue }: ScoreRevealProps) {
     return () => clearTimeout(timer);
   }, [prefersReducedMotion]);
 
-  const teamName = (team: number) => (team === 0 ? t("game.score.red") : t("game.score.blue"));
+  // teamName: viewer-relative — Us when this team is the viewer's team, else
+  // Them. Caller passes the team-index integer (0/1) and we convert via
+  // the canonical helper to compare against viewerTeam.
+  const teamName = (team: number) => {
+    const teamString = teamStringForIndex(team === 0 ? 0 : 1);
+    return teamString === viewerTeam ? t("team.us") : t("team.them");
+  };
 
-  const hasDeclarations = data.redDeclPoints > 0 || data.blueDeclPoints > 0;
+  const hasDeclarations = data.teamADeclPoints > 0 || data.teamBDeclPoints > 0;
   const stagger = prefersReducedMotion ? 0 : 200;
 
   return (
@@ -51,8 +59,8 @@ export function ScoreReveal({ data, onContinue }: ScoreRevealProps) {
           {/* Card Points */}
           <ScoreRow
             label={t("game.scoreReveal.cardPoints")}
-            red={data.redCardPoints}
-            blue={data.blueCardPoints}
+            teamAValue={data.teamACardPoints}
+            teamBValue={data.teamBCardPoints}
             delay={stagger * 0}
             testId="row-card-points"
           />
@@ -61,8 +69,8 @@ export function ScoreReveal({ data, onContinue }: ScoreRevealProps) {
           {hasDeclarations && (
             <ScoreRow
               label={t("game.scoreReveal.declarationPoints")}
-              red={data.redDeclPoints}
-              blue={data.blueDeclPoints}
+              teamAValue={data.teamADeclPoints}
+              teamBValue={data.teamBDeclPoints}
               delay={stagger * 1}
               testId="row-decl-points"
             />
@@ -76,20 +84,26 @@ export function ScoreReveal({ data, onContinue }: ScoreRevealProps) {
               data-testid="row-last-trick"
             >
               <span>{t("game.scoreReveal.lastTrickBonus")}</span>
-              <span className={data.lastTrickTeam === 0 ? "text-team-red" : "text-team-blue"}>
+              <span
+                className={data.lastTrickTeam === 0 ? "text-team-a" : "text-team-b"}
+                data-team={teamStringForIndex(data.lastTrickTeam === 0 ? 0 : 1)}
+              >
                 +{data.lastTrickBonus}
               </span>
             </div>
           )}
 
           {/* Capot Bonus */}
-          {data.capot && (
+          {data.capot && data.capotTeam !== null && (
             <div
               className="flex justify-between text-text-secondary font-body text-sm"
               data-testid="row-capot-bonus"
             >
               <span>{t("game.scoreReveal.capotBonus")}</span>
-              <span className={data.capotTeam === 0 ? "text-team-red" : "text-team-blue"}>
+              <span
+                className={data.capotTeam === 0 ? "text-team-a" : "text-team-b"}
+                data-team={teamStringForIndex(data.capotTeam === 0 ? 0 : 1)}
+              >
                 +{data.capotBonus}
               </span>
             </div>
@@ -114,8 +128,8 @@ export function ScoreReveal({ data, onContinue }: ScoreRevealProps) {
           {/* Hand Totals */}
           <ScoreRow
             label={t("game.scoreReveal.handTotal")}
-            red={data.redHandTotal}
-            blue={data.blueHandTotal}
+            teamAValue={data.teamAHandTotal}
+            teamBValue={data.teamBHandTotal}
             bold
             testId="row-hand-total"
           />
@@ -124,8 +138,8 @@ export function ScoreReveal({ data, onContinue }: ScoreRevealProps) {
           <div className="border-t border-border pt-2">
             <ScoreRow
               label={t("game.scoreReveal.matchTotal")}
-              red={data.redMatchScore}
-              blue={data.blueMatchScore}
+              teamAValue={data.teamAMatchScore}
+              teamBValue={data.teamBMatchScore}
               bold
               large
               testId="row-match-total"
@@ -151,15 +165,15 @@ export function ScoreReveal({ data, onContinue }: ScoreRevealProps) {
 
 interface ScoreRowProps {
   label: string;
-  red: number;
-  blue: number;
+  teamAValue: number;
+  teamBValue: number;
   bold?: boolean;
   large?: boolean;
   delay?: number;
   testId: string;
 }
 
-function ScoreRow({ label, red, blue, bold, large, delay, testId }: ScoreRowProps) {
+function ScoreRow({ label, teamAValue, teamBValue, bold, large, delay, testId }: ScoreRowProps) {
   const sizeClass = large ? "text-2xl" : "text-base";
   const weightClass = bold ? "font-bold" : "font-normal";
 
@@ -171,15 +185,17 @@ function ScoreRow({ label, red, blue, bold, large, delay, testId }: ScoreRowProp
     >
       <span className="text-text-secondary font-body text-sm flex-1">{label}</span>
       <span
-        className={`text-team-red font-display ${sizeClass} ${weightClass} tabular-nums w-16 text-right`}
+        className={`text-team-a font-display ${sizeClass} ${weightClass} tabular-nums w-16 text-right`}
+        data-team="teamA"
       >
-        {red}
+        {teamAValue}
       </span>
       <span className="text-text-secondary mx-2">-</span>
       <span
-        className={`text-team-blue font-display ${sizeClass} ${weightClass} tabular-nums w-16 text-left`}
+        className={`text-team-b font-display ${sizeClass} ${weightClass} tabular-nums w-16 text-left`}
+        data-team="teamB"
       >
-        {blue}
+        {teamBValue}
       </span>
     </div>
   );

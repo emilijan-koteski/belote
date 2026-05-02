@@ -15,8 +15,8 @@ vi.mock("react-i18next", () => ({
         "game.scoreReveal.handTotal": "Hand Total",
         "game.scoreReveal.matchTotal": "Match Total",
         "game.scoreReveal.continue": "Continue",
-        "game.score.red": "Red",
-        "game.score.blue": "Blue",
+        "team.us": "Us",
+        "team.them": "Them",
       };
       if (key === "game.scoreReveal.failedContractDesc" && opts) {
         return `${opts.team} failed — all points to ${opts.otherTeam}`;
@@ -31,10 +31,10 @@ import type { HandScoredPayload } from "@/shared/types/wsEvents";
 import { ScoreReveal } from "./ScoreReveal";
 
 const normalData: HandScoredPayload = {
-  redCardPoints: 70,
-  blueCardPoints: 82,
-  redDeclPoints: 0,
-  blueDeclPoints: 0,
+  teamACardPoints: 70,
+  teamBCardPoints: 82,
+  teamADeclPoints: 0,
+  teamBDeclPoints: 0,
   lastTrickTeam: 1,
   lastTrickBonus: 10,
   capot: false,
@@ -42,10 +42,10 @@ const normalData: HandScoredPayload = {
   capotBonus: 0,
   failedContract: false,
   contractingTeam: 1,
-  redHandTotal: 70,
-  blueHandTotal: 92,
-  redMatchScore: 70,
-  blueMatchScore: 92,
+  teamAHandTotal: 70,
+  teamBHandTotal: 92,
+  teamAMatchScore: 70,
+  teamBMatchScore: 92,
 };
 
 describe("ScoreReveal", () => {
@@ -72,7 +72,7 @@ describe("ScoreReveal", () => {
   });
 
   it("renders score breakdown", () => {
-    render(<ScoreReveal data={normalData} onContinue={vi.fn()} />);
+    render(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={vi.fn()} />);
 
     expect(screen.getByTestId("score-reveal")).toBeInTheDocument();
     expect(screen.getByTestId("score-reveal-title")).toHaveTextContent("Hand Score");
@@ -81,22 +81,32 @@ describe("ScoreReveal", () => {
     expect(screen.getByTestId("row-match-total")).toBeInTheDocument();
   });
 
+  it("attaches data-team attributes on each numeric column", () => {
+    render(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={vi.fn()} />);
+
+    const handTotalRow = screen.getByTestId("row-hand-total");
+    const teamAValue = handTotalRow.querySelector("[data-team='teamA']");
+    const teamBValue = handTotalRow.querySelector("[data-team='teamB']");
+    expect(teamAValue).not.toBeNull();
+    expect(teamBValue).not.toBeNull();
+  });
+
   it("shows last trick bonus when applicable", () => {
-    render(<ScoreReveal data={normalData} onContinue={vi.fn()} />);
+    render(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={vi.fn()} />);
 
     expect(screen.getByTestId("row-last-trick")).toBeInTheDocument();
     expect(screen.getByTestId("row-last-trick")).toHaveTextContent("+10");
   });
 
   it("hides declaration row when points are zero", () => {
-    render(<ScoreReveal data={normalData} onContinue={vi.fn()} />);
+    render(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={vi.fn()} />);
 
     expect(screen.queryByTestId("row-decl-points")).not.toBeInTheDocument();
   });
 
   it("shows declaration row when points are present", () => {
-    const withDecls = { ...normalData, redDeclPoints: 50, blueDeclPoints: 20 };
-    render(<ScoreReveal data={withDecls} onContinue={vi.fn()} />);
+    const withDecls = { ...normalData, teamADeclPoints: 50, teamBDeclPoints: 20 };
+    render(<ScoreReveal data={withDecls} viewerTeam="teamA" onContinue={vi.fn()} />);
 
     expect(screen.getByTestId("row-decl-points")).toBeInTheDocument();
   });
@@ -109,22 +119,31 @@ describe("ScoreReveal", () => {
       capotBonus: 100,
       lastTrickBonus: 0,
     };
-    render(<ScoreReveal data={capotData} onContinue={vi.fn()} />);
+    render(<ScoreReveal data={capotData} viewerTeam="teamA" onContinue={vi.fn()} />);
 
     expect(screen.getByTestId("row-capot-bonus")).toBeInTheDocument();
     expect(screen.getByTestId("row-capot-bonus")).toHaveTextContent("+100");
   });
 
-  it("shows failed contract message", () => {
+  it("shows failed-contract message — viewer on contracting team renders 'Us failed'", () => {
     const failedData = { ...normalData, failedContract: true, contractingTeam: 1 };
-    render(<ScoreReveal data={failedData} onContinue={vi.fn()} />);
+    // Viewer on teamB → contracting team (index 1) is "Us"
+    render(<ScoreReveal data={failedData} viewerTeam="teamB" onContinue={vi.fn()} />);
 
     expect(screen.getByTestId("row-failed-contract")).toBeInTheDocument();
-    expect(screen.getByTestId("row-failed-contract")).toHaveTextContent("Blue failed");
+    expect(screen.getByTestId("row-failed-contract")).toHaveTextContent("Us failed");
+  });
+
+  it("shows failed-contract message — viewer NOT on contracting team renders 'Them failed'", () => {
+    const failedData = { ...normalData, failedContract: true, contractingTeam: 1 };
+    // Viewer on teamA → contracting team (index 1) is "Them"
+    render(<ScoreReveal data={failedData} viewerTeam="teamA" onContinue={vi.fn()} />);
+
+    expect(screen.getByTestId("row-failed-contract")).toHaveTextContent("Them failed");
   });
 
   it("Continue button is disabled initially and enabled after 2 seconds", () => {
-    render(<ScoreReveal data={normalData} onContinue={vi.fn()} />);
+    render(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={vi.fn()} />);
 
     const btn = screen.getByTestId("score-reveal-continue");
     expect(btn).toBeDisabled();
@@ -137,7 +156,7 @@ describe("ScoreReveal", () => {
 
   it("calls onContinue when Continue button is clicked", async () => {
     const onContinue = vi.fn();
-    render(<ScoreReveal data={normalData} onContinue={onContinue} />);
+    render(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={onContinue} />);
 
     act(() => {
       vi.advanceTimersByTime(2000);
@@ -163,7 +182,7 @@ describe("ScoreReveal", () => {
       })),
     });
 
-    render(<ScoreReveal data={normalData} onContinue={vi.fn()} />);
+    render(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={vi.fn()} />);
 
     const btn = screen.getByTestId("score-reveal-continue");
     expect(btn).toBeDisabled();

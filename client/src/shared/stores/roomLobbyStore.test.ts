@@ -128,11 +128,11 @@ describe("roomLobbyStore", () => {
     };
     useRoomLobbyStore.getState().addPlayer(player, 1);
 
-    useRoomLobbyStore.getState().updatePlayerSeat(42, 2, "red", null);
+    useRoomLobbyStore.getState().updatePlayerSeat(42, 2, "teamA", null);
 
     const updated = useRoomLobbyStore.getState().players[0]!;
     expect(updated.seat).toBe(2);
-    expect(updated.team).toBe("red");
+    expect(updated.team).toBe("teamA");
   });
 
   it("setGameStarted sets the gameStarted flag", () => {

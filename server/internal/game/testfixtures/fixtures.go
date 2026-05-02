@@ -18,10 +18,10 @@ import (
 // allowing tests to mutate hand[0] for partial-trump scenarios.
 //
 //	Initial hands (5 cards each):
-//	  Seat 0 (Red):  7S 8S 9S TS JS   (5 Spades, low ranks)
-//	  Seat 1 (Blue): 7H 8H 9H TH JH   (5 Hearts, low ranks)
-//	  Seat 2 (Red):  7D 8D 9D TD JD   (5 Diamonds, low ranks)
-//	  Seat 3 (Blue): 7C 8C 9C TC JC   (5 Clubs, low ranks)
+//	  Seat 0 (team A):  7S 8S 9S TS JS   (5 Spades, low ranks)
+//	  Seat 1 (team B): 7H 8H 9H TH JH   (5 Hearts, low ranks)
+//	  Seat 2 (team A):  7D 8D 9D TD JD   (5 Diamonds, low ranks)
+//	  Seat 3 (team B): 7C 8C 9C TC JC   (5 Clubs, low ranks)
 //
 //	TrumpCandidate (public, on table): AH
 //
@@ -50,7 +50,7 @@ func NewGameJustDealt() *game.GameState {
 				Hand:         lowRanksOfSuit(game.SuitSpades),
 				Seat:         0,
 				UserID:       10,
-				Team:         "red",
+				Team:         "teamA",
 				Declarations: []game.Declaration{},
 				Connected:    true,
 			},
@@ -58,7 +58,7 @@ func NewGameJustDealt() *game.GameState {
 				Hand:         lowRanksOfSuit(game.SuitHearts),
 				Seat:         1,
 				UserID:       20,
-				Team:         "blue",
+				Team:         "teamB",
 				Declarations: []game.Declaration{},
 				Connected:    true,
 			},
@@ -66,7 +66,7 @@ func NewGameJustDealt() *game.GameState {
 				Hand:         lowRanksOfSuit(game.SuitDiamonds),
 				Seat:         2,
 				UserID:       30,
-				Team:         "red",
+				Team:         "teamA",
 				Declarations: []game.Declaration{},
 				Connected:    true,
 			},
@@ -74,7 +74,7 @@ func NewGameJustDealt() *game.GameState {
 				Hand:         lowRanksOfSuit(game.SuitClubs),
 				Seat:         3,
 				UserID:       40,
-				Team:         "blue",
+				Team:         "teamB",
 				Declarations: []game.Declaration{},
 				Connected:    true,
 			},
@@ -123,10 +123,10 @@ func biddingDeck() []game.Card {
 //
 // Hand distribution for trickNum=1 (trump=Hearts):
 //
-//	Seat 0 (Red):  AS TS KS QS AH TH KD 7C  (4S, 2H-trump, 1D, 1C)
-//	Seat 1 (Blue): JS 9S 8S 7S JH 9H QD 8C  (4S, 2H-trump, 1D, 1C)
-//	Seat 2 (Red):  AD TD KH QH 8H 7H AC TC  (2D, 4H-trump, 2C)
-//	Seat 3 (Blue): JD 9D 8D 7D KC QC JC 9C  (4D, 0H-trump, 4C)
+//	Seat 0 (team A):  AS TS KS QS AH TH KD 7C  (4S, 2H-trump, 1D, 1C)
+//	Seat 1 (team B): JS 9S 8S 7S JH 9H QD 8C  (4S, 2H-trump, 1D, 1C)
+//	Seat 2 (team A):  AD TD KH QH 8H 7H AC TC  (2D, 4H-trump, 2C)
+//	Seat 3 (team B): JD 9D 8D 7D KC QC JC 9C  (4D, 0H-trump, 4C)
 //
 // Active player: seat 0, dealer: seat 0.
 func NewGameMidPlay(trickNum int) *game.GameState {
@@ -155,10 +155,10 @@ func NewGameMidPlay(trickNum int) *game.GameState {
 		DeclarationsResolved: true, // declarations already handled (for card play testing)
 		BelotAnnounced:       true, // Belot already handled (for card play testing)
 		Players: [4]game.PlayerState{
-			{Seat: 0, UserID: 10, Team: "red", Declarations: []game.Declaration{}, Connected: true},
-			{Seat: 1, UserID: 20, Team: "blue", Declarations: []game.Declaration{}, Connected: true},
-			{Seat: 2, UserID: 30, Team: "red", Declarations: []game.Declaration{}, Connected: true},
-			{Seat: 3, UserID: 40, Team: "blue", Declarations: []game.Declaration{}, Connected: true},
+			{Seat: 0, UserID: 10, Team: "teamA", Declarations: []game.Declaration{}, Connected: true},
+			{Seat: 1, UserID: 20, Team: "teamB", Declarations: []game.Declaration{}, Connected: true},
+			{Seat: 2, UserID: 30, Team: "teamA", Declarations: []game.Declaration{}, Connected: true},
+			{Seat: 3, UserID: 40, Team: "teamB", Declarations: []game.Declaration{}, Connected: true},
 		},
 		ActivePlayerSeat: 0,
 	}
@@ -234,10 +234,10 @@ func NewGameMidPlay(trickNum int) *game.GameState {
 //
 // Hand distribution (trump = Hearts always, parameter reserved for future use):
 //
-//	Seat 0 (Red):  KH QH 7S 8S 9S 7C 8C 9C   → Belot (KH+QH), tierce 7S-8S-9S (20pts), tierce 7C-8C-9C (20pts)
-//	Seat 1 (Blue): JD QD KD AD QS 8D 9D TC    → quarte JD-QD-KD-AD (50pts)
-//	Seat 2 (Red):  JH 9H AH TH KS AS QC JC   → tierce 9H-TH-JH in trump (20pts)
-//	Seat 3 (Blue): 7H 8H TD 7D TS AC KC       → no declarations (max 2 consecutive per suit, no four-of-a-kind)
+//	Seat 0 (team A):  KH QH 7S 8S 9S 7C 8C 9C   → Belot (KH+QH), tierce 7S-8S-9S (20pts), tierce 7C-8C-9C (20pts)
+//	Seat 1 (team B): JD QD KD AD QS 8D 9D TC    → quarte JD-QD-KD-AD (50pts)
+//	Seat 2 (team A):  JH 9H AH TH KS AS QC JC   → tierce 9H-TH-JH in trump (20pts)
+//	Seat 3 (team B): 7H 8H TD 7D TS AC KC       → no declarations (max 2 consecutive per suit, no four-of-a-kind)
 //
 // Wait - seat 3 has 7 cards above. Let me add JS... no that's at seat 2.
 // Corrected seat 3: 7H 8H TD 7D TS JS AC KC = 8 cards. JS(4),TS(3) = 2 consecutive spades.
@@ -247,10 +247,10 @@ func NewGameMidPlay(trickNum int) *game.GameState {
 //
 // FINAL verified distribution (all 32 unique cards, 8 per player):
 //
-//	Seat 0 (Red):  KH QH 7S 8S 9S 7C 8C 9C   → Belot, tierce 7S-8S-9S, tierce 7C-8C-9C
-//	Seat 1 (Blue): JD QD KD AD QS 8D 9D TC    → quarte JD-QD-KD-AD
-//	Seat 2 (Red):  JH 9H AH TH KS AS JC QC   → tierce 9H-TH-JH (trump, 20pts)
-//	Seat 3 (Blue): 7H 8H TD 7D TS JS AC KC   → no declarations
+//	Seat 0 (team A):  KH QH 7S 8S 9S 7C 8C 9C   → Belot, tierce 7S-8S-9S, tierce 7C-8C-9C
+//	Seat 1 (team B): JD QD KD AD QS 8D 9D TC    → quarte JD-QD-KD-AD
+//	Seat 2 (team A):  JH 9H AH TH KS AS JC QC   → tierce 9H-TH-JH (trump, 20pts)
+//	Seat 3 (team B): 7H 8H TD 7D TS JS AC KC   → no declarations
 //
 // Active player: seat 1 (player after dealer). Dealer: seat 0.
 func NewGameFirstTrick(trump game.Suit) *game.GameState {
@@ -271,7 +271,7 @@ func NewGameFirstTrick(trump game.Suit) *game.GameState {
 		CurrentTrick:     []game.TrickCard{},
 		ActivePlayerSeat: 1, // player after dealer
 		Players: [4]game.PlayerState{
-			{ // Seat 0 (Red): KH QH 7S 8S 9S 7C 8C 9C → Belot + 2 tierces
+			{ // Seat 0 (team A): KH QH 7S 8S 9S 7C 8C 9C → Belot + 2 tierces
 				Hand: []game.Card{
 					{Rank: game.RankKing, Suit: game.SuitHearts},
 					{Rank: game.RankQueen, Suit: game.SuitHearts},
@@ -282,9 +282,9 @@ func NewGameFirstTrick(trump game.Suit) *game.GameState {
 					{Rank: game.Rank8, Suit: game.SuitClubs},
 					{Rank: game.Rank9, Suit: game.SuitClubs},
 				},
-				Seat: 0, UserID: 10, Team: "red", Declarations: []game.Declaration{}, Connected: true,
+				Seat: 0, UserID: 10, Team: "teamA", Declarations: []game.Declaration{}, Connected: true,
 			},
-			{ // Seat 1 (Blue): JD QD KD AD QS 8D 9D TC → quarte JD-QD-KD-AD
+			{ // Seat 1 (team B): JD QD KD AD QS 8D 9D TC → quarte JD-QD-KD-AD
 				Hand: []game.Card{
 					{Rank: game.RankJack, Suit: game.SuitDiamonds},
 					{Rank: game.RankQueen, Suit: game.SuitDiamonds},
@@ -295,9 +295,9 @@ func NewGameFirstTrick(trump game.Suit) *game.GameState {
 					{Rank: game.Rank9, Suit: game.SuitDiamonds},
 					{Rank: game.RankTen, Suit: game.SuitClubs},
 				},
-				Seat: 1, UserID: 20, Team: "blue", Declarations: []game.Declaration{}, Connected: true,
+				Seat: 1, UserID: 20, Team: "teamB", Declarations: []game.Declaration{}, Connected: true,
 			},
-			{ // Seat 2 (Red): JH 9H AH TH KS AS QC JC → tierce 9H-TH-JH (trump)
+			{ // Seat 2 (team A): JH 9H AH TH KS AS QC JC → tierce 9H-TH-JH (trump)
 				Hand: []game.Card{
 					{Rank: game.RankJack, Suit: game.SuitHearts},
 					{Rank: game.Rank9, Suit: game.SuitHearts},
@@ -308,9 +308,9 @@ func NewGameFirstTrick(trump game.Suit) *game.GameState {
 					{Rank: game.RankQueen, Suit: game.SuitClubs},
 					{Rank: game.RankJack, Suit: game.SuitClubs},
 				},
-				Seat: 2, UserID: 30, Team: "red", Declarations: []game.Declaration{}, Connected: true,
+				Seat: 2, UserID: 30, Team: "teamA", Declarations: []game.Declaration{}, Connected: true,
 			},
-			{ // Seat 3 (Blue): 7H 8H TD 7D TS JS AC KC → no declarations
+			{ // Seat 3 (team B): 7H 8H TD 7D TS JS AC KC → no declarations
 				Hand: []game.Card{
 					{Rank: game.Rank7, Suit: game.SuitHearts},
 					{Rank: game.Rank8, Suit: game.SuitHearts},
@@ -321,7 +321,7 @@ func NewGameFirstTrick(trump game.Suit) *game.GameState {
 					{Rank: game.RankAce, Suit: game.SuitClubs},
 					{Rank: game.RankKing, Suit: game.SuitClubs},
 				},
-				Seat: 3, UserID: 40, Team: "blue", Declarations: []game.Declaration{}, Connected: true,
+				Seat: 3, UserID: 40, Team: "teamB", Declarations: []game.Declaration{}, Connected: true,
 			},
 		},
 	}
@@ -349,25 +349,25 @@ func NewGameWithDeclarations(decls []game.Declaration) *game.GameState {
 // hand-end scoring: last-trick bonus, Capot detection, failed contracts, and
 // match score updates.
 //
-// Trump = Hearts, TrumpCallerSeat = seat 1 (Blue team).
-// TricksWon = [4, 3] — Red won 4 tricks, Blue won 3 (7 total, 8th pending).
+// Trump = Hearts, TrumpCallerSeat = seat 1 (team B).
+// TricksWon = [4, 3] — team A won 4 tricks, team B won 3 (7 total, 8th pending).
 // HandPoints = [70, 61] — realistic card point distribution from 7 tricks.
 // DeclarationPoints = [0, 0] — no declarations (simplifies scoring tests).
 //
 // Remaining cards (1 per player):
 //
-//	Seat 0 (Red):  AS — Ace of Spades (11 pts non-trump)
-//	Seat 1 (Blue): 8D — 8 of Diamonds (0 pts)
-//	Seat 2 (Red):  TD — Ten of Diamonds (10 pts non-trump)
-//	Seat 3 (Blue): 7H — 7 of Hearts (0 pts trump — can win if Hearts led)
+//	Seat 0 (team A):  AS — Ace of Spades (11 pts non-trump)
+//	Seat 1 (team B): 8D — 8 of Diamonds (0 pts)
+//	Seat 2 (team A):  TD — Ten of Diamonds (10 pts non-trump)
+//	Seat 3 (team B): 7H — 7 of Hearts (0 pts trump — can win if Hearts led)
 //
 // Remaining card points: 11 + 0 + 10 + 0 = 21. Total from 7 tricks: 152 - 21 = 131.
 // HandPoints 70 + 61 = 131 ✓
 //
-// ActivePlayerSeat = 0 (Red, winner of trick 7 — leads trick 8).
+// ActivePlayerSeat = 0 (team A, winner of trick 7 — leads trick 8).
 func NewGameLastTrick() *game.GameState {
 	trumpSuit := game.SuitHearts
-	callerSeat := 1  // Blue team called trump
+	callerSeat := 1  // Team B called trump
 	trickWinner := 0 // Seat 0 won trick 7
 
 	return &game.GameState{
@@ -386,35 +386,35 @@ func NewGameLastTrick() *game.GameState {
 		BelotAnnounced:       true,
 		ActivePlayerSeat:     0,
 		Players: [4]game.PlayerState{
-			{ // Seat 0 (Red): AS — strong non-trump
+			{ // Seat 0 (team A): AS — strong non-trump
 				Hand:         []game.Card{{Rank: game.RankAce, Suit: game.SuitSpades}},
 				Seat:         0,
 				UserID:       10,
-				Team:         "red",
+				Team:         "teamA",
 				Declarations: nil,
 				Connected:    true,
 			},
-			{ // Seat 1 (Blue): 8D — weak non-trump
+			{ // Seat 1 (team B): 8D — weak non-trump
 				Hand:         []game.Card{{Rank: game.Rank8, Suit: game.SuitDiamonds}},
 				Seat:         1,
 				UserID:       20,
-				Team:         "blue",
+				Team:         "teamB",
 				Declarations: nil,
 				Connected:    true,
 			},
-			{ // Seat 2 (Red): TD — medium non-trump (10 pts)
+			{ // Seat 2 (team A): TD — medium non-trump (10 pts)
 				Hand:         []game.Card{{Rank: game.RankTen, Suit: game.SuitDiamonds}},
 				Seat:         2,
 				UserID:       30,
-				Team:         "red",
+				Team:         "teamA",
 				Declarations: nil,
 				Connected:    true,
 			},
-			{ // Seat 3 (Blue): 7H — low trump (can win if led suit is hearts)
+			{ // Seat 3 (team B): 7H — low trump (can win if led suit is hearts)
 				Hand:         []game.Card{{Rank: game.Rank7, Suit: game.SuitHearts}},
 				Seat:         3,
 				UserID:       40,
-				Team:         "blue",
+				Team:         "teamB",
 				Declarations: nil,
 				Connected:    true,
 			},
@@ -426,27 +426,27 @@ func NewGameLastTrick() *game.GameState {
 	}
 }
 
-// NewGameCapotInProgress returns a GameState at trick 8 where one team (Red)
+// NewGameCapotInProgress returns a GameState at trick 8 where one team (team A)
 // has won all 7 previous tricks. Used for testing Capot detection and scoring.
 //
-// Trump = Hearts, TrumpCallerSeat = seat 0 (Red team — the Capot team).
-// TricksWon = [7, 0] — Red has won every trick so far.
-// HandPoints = [121, 0] — all card points from 7 tricks go to Red.
+// Trump = Hearts, TrumpCallerSeat = seat 0 (team A — the Capot team).
+// TricksWon = [7, 0] — team A has won every trick so far.
+// HandPoints = [121, 0] — all card points from 7 tricks go to team A.
 //
 // Remaining cards (1 per player):
 //
-//	Seat 0 (Red):  JH — Jack of Hearts (20 pts trump, strongest card)
-//	Seat 1 (Blue): 7D — 7 of Diamonds (0 pts)
-//	Seat 2 (Red):  AH — Ace of Hearts (11 pts trump)
-//	Seat 3 (Blue): 7C — 7 of Clubs (0 pts)
+//	Seat 0 (team A):  JH — Jack of Hearts (20 pts trump, strongest card)
+//	Seat 1 (team B): 7D — 7 of Diamonds (0 pts)
+//	Seat 2 (team A):  AH — Ace of Hearts (11 pts trump)
+//	Seat 3 (team B): 7C — 7 of Clubs (0 pts)
 //
 // Remaining card points: 20 + 0 + 11 + 0 = 31. Total from 7 tricks: 152 - 31 = 121 ✓
 //
-// ActivePlayerSeat = 0 (Red, winner of trick 7).
-// Red team is guaranteed to win trick 8 (JH is strongest possible trump).
+// ActivePlayerSeat = 0 (team A, winner of trick 7).
+// Team A is guaranteed to win trick 8 (JH is strongest possible trump).
 func NewGameCapotInProgress() *game.GameState {
 	trumpSuit := game.SuitHearts
-	callerSeat := 0  // Red team called trump
+	callerSeat := 0  // Team A called trump
 	trickWinner := 0 // Seat 0 won trick 7
 
 	return &game.GameState{
@@ -465,35 +465,35 @@ func NewGameCapotInProgress() *game.GameState {
 		BelotAnnounced:       true,
 		ActivePlayerSeat:     0,
 		Players: [4]game.PlayerState{
-			{ // Seat 0 (Red): JH — Jack of Hearts (trump, strongest)
+			{ // Seat 0 (team A): JH — Jack of Hearts (trump, strongest)
 				Hand:         []game.Card{{Rank: game.RankJack, Suit: game.SuitHearts}},
 				Seat:         0,
 				UserID:       10,
-				Team:         "red",
+				Team:         "teamA",
 				Declarations: nil,
 				Connected:    true,
 			},
-			{ // Seat 1 (Blue): 7D — weakest
+			{ // Seat 1 (team B): 7D — weakest
 				Hand:         []game.Card{{Rank: game.Rank7, Suit: game.SuitDiamonds}},
 				Seat:         1,
 				UserID:       20,
-				Team:         "blue",
+				Team:         "teamB",
 				Declarations: nil,
 				Connected:    true,
 			},
-			{ // Seat 2 (Red): AH — Ace of Hearts (trump)
+			{ // Seat 2 (team A): AH — Ace of Hearts (trump)
 				Hand:         []game.Card{{Rank: game.RankAce, Suit: game.SuitHearts}},
 				Seat:         2,
 				UserID:       30,
-				Team:         "red",
+				Team:         "teamA",
 				Declarations: nil,
 				Connected:    true,
 			},
-			{ // Seat 3 (Blue): 7C — weakest
+			{ // Seat 3 (team B): 7C — weakest
 				Hand:         []game.Card{{Rank: game.Rank7, Suit: game.SuitClubs}},
 				Seat:         3,
 				UserID:       40,
-				Team:         "blue",
+				Team:         "teamB",
 				Declarations: nil,
 				Connected:    true,
 			},
@@ -508,26 +508,26 @@ func NewGameCapotInProgress() *game.GameState {
 // NewGameNearEnd returns a GameState at trick 8 (like NewGameLastTrick) but with
 // configurable team scores, for testing match completion thresholds and tiebreakers.
 //
-// Trump = Hearts, TrumpCallerSeat = seat 1 (Blue team).
-// TricksWon = [4, 3] — Red won 4 tricks, Blue won 3 (7 total, 8th pending).
+// Trump = Hearts, TrumpCallerSeat = seat 1 (team B).
+// TricksWon = [4, 3] — team A won 4 tricks, team B won 3 (7 total, 8th pending).
 // HandPoints = [70, 61] — realistic card point distribution from 7 tricks.
 //
 // Remaining cards are identical to NewGameLastTrick:
 //
-//	Seat 0 (Red):  AS — Ace of Spades (11 pts non-trump)
-//	Seat 1 (Blue): 8D — 8 of Diamonds (0 pts)
-//	Seat 2 (Red):  TD — Ten of Diamonds (10 pts non-trump)
-//	Seat 3 (Blue): 7H — 7 of Hearts (0 pts trump)
+//	Seat 0 (team A):  AS — Ace of Spades (11 pts non-trump)
+//	Seat 1 (team B): 8D — 8 of Diamonds (0 pts)
+//	Seat 2 (team A):  TD — Ten of Diamonds (10 pts non-trump)
+//	Seat 3 (team B): 7H — 7 of Hearts (0 pts trump)
 //
 // After trick 8 resolves (Seat 0 leads AS, wins trick):
-//   - Red gets: 70 + 21(trick) + 10(last-trick) = 101 hand points
-//   - Blue gets: 61 hand points
-//   - Blue called trump so if 61 < 101 → failed contract → Red gets 162 total
+//   - Team A gets: 70 + 21(trick) + 10(last-trick) = 101 hand points
+//   - Team B gets: 61 hand points
+//   - Team B called trump so if 61 < 101 → failed contract → team A gets 162 total
 //
-// Use redScore/blueScore to position teams near the 1001 threshold.
-func NewGameNearEnd(redScore, blueScore int) *game.GameState {
+// Use teamAScore/teamBScore to position teams near the 1001 threshold.
+func NewGameNearEnd(teamAScore, teamBScore int) *game.GameState {
 	gs := NewGameLastTrick()
-	gs.TeamScores = [2]int{redScore, blueScore}
+	gs.TeamScores = [2]int{teamAScore, teamBScore}
 	return gs
 }
 

@@ -78,6 +78,7 @@ so that I know the game is paused and how long we're waiting.
 
 - [x] Task 3: Backend — Add WS events and payload types for disconnect (AC: #2)
   - [x] 3.1 In `server/internal/ws/events.go`, add:
+
     ```go
     // --- Disconnect/reconnect events ---
     const EventPlayerDisconnected = "event:player_disconnected"
@@ -96,12 +97,16 @@ so that I know the game is paused and how long we're waiting.
         PlayerSeat int `json:"playerSeat"`
     }
     ```
+
   - [x] 3.2 In `client/src/shared/types/wsEvents.ts`, add matching constants and types:
+
     ```ts
     // --- Disconnect/reconnect events ---
-    export const EVENT_PLAYER_DISCONNECTED = "event:player_disconnected" as const;
+    export const EVENT_PLAYER_DISCONNECTED =
+      "event:player_disconnected" as const;
     export const EVENT_PLAYER_RECONNECTED = "event:player_reconnected" as const;
-    export const ERROR_PLAYER_DISCONNECTED = "error:player_disconnected" as const;
+    export const ERROR_PLAYER_DISCONNECTED =
+      "error:player_disconnected" as const;
 
     export interface PlayerDisconnectedPayload {
       playerSeat: number;
@@ -210,12 +215,17 @@ so that I know the game is paused and how long we're waiting.
   - [x] 9.1 Import `ReconnectOverlay`
   - [x] 9.2 Render `ReconnectOverlay` when `gameState.phase === "disconnected"` and `gameState.disconnectedSeat !== -1`:
     ```tsx
-    {gameState.phase === "disconnected" && gameState.disconnectedSeat !== -1 && (
-      <ReconnectOverlay
-        disconnectedPlayerName={gameState.players[gameState.disconnectedSeat].username}
-        reconnectExpiresAt={gameState.reconnectExpiresAt!}
-      />
-    )}
+    {
+      gameState.phase === "disconnected" &&
+        gameState.disconnectedSeat !== -1 && (
+          <ReconnectOverlay
+            disconnectedPlayerName={
+              gameState.players[gameState.disconnectedSeat].username
+            }
+            reconnectExpiresAt={gameState.reconnectExpiresAt!}
+          />
+        );
+    }
     ```
   - [x] 9.3 Disable all game interactions (card clicks, pause button, etc.) when phase is `disconnected` — the existing phase-based interaction guards should handle most of this, but verify
 
@@ -270,21 +280,21 @@ so that I know the game is paused and how long we're waiting.
 
 Critical: The following are already implemented. They MUST NOT be duplicated:
 
-| Item | Location | Status |
-|------|----------|--------|
-| `PhaseDisconnected = "disconnected"` | `server/internal/game/types.go:91` | Exists |
-| `"disconnected"` in Phase type | `client/src/shared/types/gameTypes.ts:20` | Exists |
-| `PlayerState.Connected bool` | `server/internal/game/state.go:16` | Exists (initialized `true`, never set to `false` in current code) |
-| `PlayerState.connected: boolean` | `client/src/shared/types/gameTypes.ts:60` | Exists |
-| `ErrPlayerDisconnected` | `server/internal/apperr/errors.go:84` | Exists |
-| Ping/pong mechanism (30s ping, 45s timeout) | `server/internal/ws/client.go:12-14, 107-125` | Exists |
-| Hub auto-unregisters on disconnect | `server/internal/ws/hub.go:76-83` | Exists — unregister channel fires when `readPump` returns |
-| Hub.IsConnected(userID) | `server/internal/ws/hub.go:172-177` | Exists |
-| Client auto-reconnect (exponential backoff) | `client/src/shared/hooks/useWebSocket.ts:133-147` | Exists (1s base, 30s max) |
-| `GetStateSnapshot(roomID)` | `server/internal/session/manager.go:228-238` | Exists (for reconnection use in Story 5.4) |
-| Timer preservation pattern (capture remaining on pause) | `server/internal/session/manager.go:170-178` | Exists — reuse same pattern for disconnect |
-| `PauseOverlay` component | `client/src/features/game/components/PauseOverlay.tsx` | Exists — use as UI pattern reference |
-| Seat `disconnected` state (greyed avatar) | UX spec lines 680-687 | Specified, not yet implemented |
+| Item                                                    | Location                                               | Status                                                            |
+| ------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------- |
+| `PhaseDisconnected = "disconnected"`                    | `server/internal/game/types.go:91`                     | Exists                                                            |
+| `"disconnected"` in Phase type                          | `client/src/shared/types/gameTypes.ts:20`              | Exists                                                            |
+| `PlayerState.Connected bool`                            | `server/internal/game/state.go:16`                     | Exists (initialized `true`, never set to `false` in current code) |
+| `PlayerState.connected: boolean`                        | `client/src/shared/types/gameTypes.ts:60`              | Exists                                                            |
+| `ErrPlayerDisconnected`                                 | `server/internal/apperr/errors.go:84`                  | Exists                                                            |
+| Ping/pong mechanism (30s ping, 45s timeout)             | `server/internal/ws/client.go:12-14, 107-125`          | Exists                                                            |
+| Hub auto-unregisters on disconnect                      | `server/internal/ws/hub.go:76-83`                      | Exists — unregister channel fires when `readPump` returns         |
+| Hub.IsConnected(userID)                                 | `server/internal/ws/hub.go:172-177`                    | Exists                                                            |
+| Client auto-reconnect (exponential backoff)             | `client/src/shared/hooks/useWebSocket.ts:133-147`      | Exists (1s base, 30s max)                                         |
+| `GetStateSnapshot(roomID)`                              | `server/internal/session/manager.go:228-238`           | Exists (for reconnection use in Story 5.4)                        |
+| Timer preservation pattern (capture remaining on pause) | `server/internal/session/manager.go:170-178`           | Exists — reuse same pattern for disconnect                        |
+| `PauseOverlay` component                                | `client/src/features/game/components/PauseOverlay.tsx` | Exists — use as UI pattern reference                              |
+| Seat `disconnected` state (greyed avatar)               | UX spec lines 680-687                                  | Specified, not yet implemented                                    |
 
 ### What Must Be Created
 
@@ -328,6 +338,7 @@ Critical: The following are already implemented. They MUST NOT be duplicated:
 The hub's `unregister` channel fires when a client's `readPump` returns (connection drop or normal close). The session manager needs to know about this to trigger game disconnect handling.
 
 **Recommended approach**: Add a `DisconnectHandler` callback to the Hub:
+
 ```go
 type Hub struct {
     // ... existing fields
@@ -340,6 +351,7 @@ func (h *Hub) SetDisconnectHandler(handler func(userID uint)) {
 ```
 
 In the `Run()` unregister case, AFTER deleting the client from the map, call:
+
 ```go
 if h.disconnectHandler != nil {
     go h.disconnectHandler(client.UserID)
@@ -347,6 +359,7 @@ if h.disconnectHandler != nil {
 ```
 
 **CRITICAL**: The disconnect handler must check `hub.IsConnected(userID)` to distinguish true disconnects from connection replacements. When a user reconnects, the hub replaces the old client (line 67-70) and then unregisters the old one (line 76-83). The handler should verify the user is truly gone:
+
 ```go
 func (m *Manager) HandleDisconnect(userID uint) {
     // Small delay to let replacement registration complete
@@ -363,12 +376,14 @@ Alternatively, check inside the hub's unregister case: only fire disconnect if `
 ### Disconnect While Paused — D54 Fix
 
 This is the critical deferred item from Story 5.1/5.2 reviews. Currently, if a paused player closes their browser:
+
 1. Their `PausedPlayers[seat]` remains `true`
 2. The game stays in `PhasePaused` forever
 3. Other players cannot resume (they can't unpause someone else's pause)
 4. Even the room owner's override is useless if the owner is the one who disconnected
 
 **Fix in HandleDisconnect:**
+
 ```go
 // Auto-clear disconnected player's active pause
 if session.gameState.PausedPlayers[seat] {
@@ -391,6 +406,7 @@ session.gameState.Phase = game.PhaseDisconnected
 ### Timer Management During Disconnect
 
 Follow the exact same pattern as pause timer preservation:
+
 1. **On disconnect**: Capture `TurnTimeRemaining` from `time.Until(*TurnExpiresAt)`, nil out `TurnExpiresAt`, cancel turn timer
 2. **On reconnect** (Story 5.4): Restore timer with `min(TurnTimeRemaining, 3000ms)` floor, same as unpause resume
 3. **No auto-play during disconnect**: Timer is paused — the disconnected player gets their remaining time back on reconnect
@@ -402,6 +418,7 @@ Follow the exact same pattern as pause timer preservation:
 ### Room Configuration — ReconnectWindowSec
 
 FR16 specifies "reconnect window duration" as a room config option. The PRD says default is 2 minutes. The field is nullable with a default:
+
 - `nil` → use server default (120 seconds)
 - Explicit value → 30-300 second range
 
@@ -418,6 +435,7 @@ This story implements the **detection** and **notification** side. The countdown
 ### Previous Story Intelligence (Stories 5.1 & 5.2)
 
 Key learnings from previous Epic 5 stories:
+
 - `OwnerSeat` defaults to `-1` sentinel — use same pattern for `DisconnectedSeat`
 - Timer remaining floor of 3 seconds is enforced in session manager on resume — apply same floor on reconnect resume (Story 5.4)
 - `PauseOverlay` uses `data-testid` attributes for testing — follow same pattern for `ReconnectOverlay`
@@ -435,6 +453,7 @@ Key learnings from previous Epic 5 stories:
 ### Project Structure Notes
 
 **New files (expected):**
+
 - `server/internal/session/reconnect.go` — Disconnect detection, reconnect countdown management
 - `server/db/migrations/NNNNNN_add_reconnect_window_sec.up.sql` — DB migration
 - `server/db/migrations/NNNNNN_add_reconnect_window_sec.down.sql` — DB migration rollback
@@ -442,6 +461,7 @@ Key learnings from previous Epic 5 stories:
 - `client/src/features/game/components/ReconnectOverlay.test.tsx` — Overlay tests
 
 **Modified files (expected):**
+
 - `server/internal/room/model.go` — Add `ReconnectWindowSec` field
 - `server/internal/room/handler.go` — Accept/validate reconnect window, update `GameStarter` interface
 - `server/internal/session/manager.go` — Update `StartGame` signature, add reconnect timer fields to Session
@@ -521,6 +541,7 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - `server/internal/session/reconnect.go` — HandleDisconnect, handleReconnectTimeout
 - `server/internal/game/disconnect_test.go` — PhaseDisconnected rejection tests
 - `server/migrations/000007_add_reconnect_window_sec.up.sql` — DB migration
@@ -529,6 +550,7 @@ Claude Opus 4.6 (1M context)
 - `client/src/features/game/components/ReconnectOverlay.test.tsx` — Overlay tests
 
 **Modified files:**
+
 - `server/internal/room/model.go` — Added `ReconnectWindowSec *int` field
 - `server/internal/room/handler.go` — Added reconnect window validation, updated GameStarter interface + both StartGame call sites, added `resolveReconnectWindow` helper
 - `server/internal/session/manager.go` — Updated StartGame signature (added reconnectWindowSec), added reconnect fields to Session, cancelReconnectTimer in RemoveSession

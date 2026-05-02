@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { teamStringForIndex } from "@/shared/types/gameTypes";
+
 interface CapotAnimationProps {
   capotTeam: number;
   onComplete: () => void;
@@ -20,7 +22,8 @@ export function CapotAnimation({ capotTeam, onComplete }: CapotAnimationProps) {
     return () => clearTimeout(timer);
   }, [onComplete, prefersReducedMotion]);
 
-  const teamColorClass = capotTeam === 0 ? "text-team-red" : "text-team-blue";
+  const teamColorClass = capotTeam === 0 ? "text-team-a" : "text-team-b";
+  const teamString = teamStringForIndex(capotTeam === 0 ? 0 : 1);
 
   return (
     <div
@@ -31,6 +34,7 @@ export function CapotAnimation({ capotTeam, onComplete }: CapotAnimationProps) {
         <h1
           className={`font-display text-7xl font-bold ${teamColorClass} drop-shadow-[0_0_40px_currentColor]`}
           data-testid="capot-text"
+          data-team={teamString}
         >
           {t("game.capot.title")}
         </h1>

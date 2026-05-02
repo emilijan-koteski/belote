@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 
 import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
 import type { RoomPlayer } from "@/shared/types/apiTypes";
+import type { TeamString } from "@/shared/types/gameTypes";
 
 interface RoomDetailPreviewProps {
   roomId: number;
@@ -12,8 +13,8 @@ const SEAT_LAYOUT = [
   [2, 3],
 ] as const;
 
-function getTeamForSeat(seat: number): "red" | "blue" {
-  return seat % 2 === 0 ? "red" : "blue";
+function getTeamForSeat(seat: number): TeamString {
+  return seat % 2 === 0 ? "teamA" : "teamB";
 }
 
 function getPlayerAtSeat(players: RoomPlayer[], seatIndex: number): RoomPlayer | undefined {
@@ -41,14 +42,10 @@ export function RoomDetailPreview({ roomId }: RoomDetailPreviewProps) {
 
   return (
     <div data-testid="room-detail-preview">
-      {/* Team labels */}
+      {/* Team labels — neutral view (no participation context). */}
       <div className="grid grid-cols-2 gap-2 px-3 pt-3">
-        <p className="text-center text-xs font-semibold text-team-red">
-          {t("lobby.roomDetail.teamRed")}
-        </p>
-        <p className="text-center text-xs font-semibold text-team-blue">
-          {t("lobby.roomDetail.teamBlue")}
-        </p>
+        <p className="text-center text-xs font-semibold text-team-a">{t("team.a")}</p>
+        <p className="text-center text-xs font-semibold text-team-b">{t("team.b")}</p>
       </div>
 
       {/* Compact 2x2 seat grid */}
@@ -57,8 +54,8 @@ export function RoomDetailPreview({ roomId }: RoomDetailPreviewProps) {
           row.map((seatIndex) => {
             const player = getPlayerAtSeat(players, seatIndex);
             const team = getTeamForSeat(seatIndex);
-            const teamBorderClass = team === "red" ? "border-team-red" : "border-team-blue";
-            const teamTextClass = team === "red" ? "text-team-red" : "text-team-blue";
+            const teamBorderClass = team === "teamA" ? "border-team-a" : "border-team-b";
+            const teamTextClass = team === "teamA" ? "text-team-a" : "text-team-b";
 
             return (
               <div
@@ -69,6 +66,7 @@ export function RoomDetailPreview({ roomId }: RoomDetailPreviewProps) {
                     : `border-dashed ${teamBorderClass} bg-surface/50`
                 }`}
                 data-testid={`room-detail-seat-${seatIndex}`}
+                data-team={team}
               >
                 {player !== undefined ? (
                   <span className={`text-sm font-medium ${teamTextClass}`}>{player.username}</span>

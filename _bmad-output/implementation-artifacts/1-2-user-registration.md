@@ -313,7 +313,7 @@ Note: the existing `server/internal/auth/auth.go` and `server/internal/user/user
 - [Source: architecture.md#Authentication-Security] — JWT strategy, bcrypt, token storage, CORS
 - [Source: architecture.md#API-Communication-Patterns] — REST JSON, structured errors, HTTP status codes
 - [Source: architecture.md#Backend-Domain-Package-Shape] — model/repository/handler/service/test pattern
-- [Source: architecture.md#Database-Naming-Conventions] — snake_case tables, idx_ indexes, camelCase JSON
+- [Source: architecture.md#Database-Naming-Conventions] — snake*case tables, idx* indexes, camelCase JSON
 - [Source: architecture.md#Project-Structure] — auth/ and user/ package locations, migration numbering
 - [Source: prd.md#FR1] — email/password registration requirement
 - [Source: prd.md#Security] — hashed passwords, server-side validation, time-limited tokens
@@ -394,6 +394,7 @@ _Code review performed 2026-04-10 — 3 layers (Blind Hunter, Edge Case Hunter, 
 ### File List
 
 **New files:**
+
 - server/migrations/000002_create_users.up.sql
 - server/migrations/000002_create_users.down.sql
 - server/internal/user/model.go
@@ -408,6 +409,7 @@ _Code review performed 2026-04-10 — 3 layers (Blind Hunter, Edge Case Hunter, 
 - client/src/features/auth/RegisterPage.test.tsx
 
 **Modified files:**
+
 - server/internal/apperr/errors.go (added auth domain errors)
 - server/cmd/api/main.go (wired auth routes, DI)
 - server/go.mod (added jwt/v5, promoted x/crypto)
@@ -420,5 +422,6 @@ _Code review performed 2026-04-10 — 3 layers (Blind Hunter, Edge Case Hunter, 
 - client/package.json (added @testing-library/user-event)
 
 **Deleted files:**
+
 - server/internal/auth/auth.go (placeholder)
 - server/internal/user/user.go (placeholder)

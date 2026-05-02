@@ -1,9 +1,18 @@
 ---
-project_name: 'belote'
-user_name: 'Emilijan'
-date: '2026-04-06'
-sections_completed: ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'code_quality', 'workflow_rules', 'critical_rules']
-status: 'complete'
+project_name: "belote"
+user_name: "Emilijan"
+date: "2026-04-06"
+sections_completed:
+  [
+    "technology_stack",
+    "language_rules",
+    "framework_rules",
+    "testing_rules",
+    "code_quality",
+    "workflow_rules",
+    "critical_rules",
+  ]
+status: "complete"
 rule_count: 95
 optimized_for_llm: true
 ---
@@ -56,6 +65,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ### Language-Specific Rules
 
 **TypeScript:**
+
 - Strict mode enforced — no `any` types, no implicit `any`
 - JSON wire format is always `camelCase` (matches Go struct JSON tags)
 - No shared type generation between frontend/backend — manual sync via the WebSocket event contract files (`wsEvents.ts` + `events.go`)
@@ -65,6 +75,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - All incoming WebSocket messages must be parsed and validated through a typed dispatch function — never use raw `JSON.parse` results (`any`) directly in component or store code
 
 **Go:**
+
 - All JSON struct tags use `camelCase` (e.g., `json:"createdAt"`)
 - All struct fields intended for JSON must be exported (PascalCase) with explicit `json:"camelCase"` tags — unexported fields silently vanish from JSON output
 - Game rules engine is a **pure function**: `ApplyAction(state, action) -> (state, error)` — zero side effects inside the engine
@@ -77,6 +88,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - GORM soft deletes (`DeletedAt`) are automatic — all GORM queries exclude soft-deleted rows. If raw SQL is unavoidable, always filter on `deleted_at IS NULL`
 
 **Cross-Language:**
+
 - WebSocket event contract defined in both `wsEvents.ts` and `events.go` — both files updated in the same commit, no exceptions
 - Date/time: ISO 8601 strings in JSON, `timestamptz` in PostgreSQL, locale-formatted for display via i18n
 - IDs: integer auto-increment (GORM default) — no UUIDs in Phase 1
@@ -148,22 +160,22 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 **Naming Conventions:**
 
-| Context | Convention | Examples |
-|---------|-----------|----------|
-| Database tables | `snake_case`, plural | `users`, `matches`, `rooms` |
-| Database columns | `snake_case` | `player_id`, `created_at` |
-| Foreign keys | `{table_singular}_id` | `user_id`, `match_id` |
-| Indexes | `idx_{table}_{column}` | `idx_users_email` |
-| JSON wire format | `camelCase` | `createdAt`, `playerId` |
-| REST endpoints | plural, kebab-case | `/api/v1/match-history`, `/api/v1/rooms` |
-| WS events | prefixed `snake_case` | `action:play_card`, `event:trick_resolved` |
-| Frontend components | `PascalCase.tsx` | `PlayingCard.tsx`, `ScorePanel.tsx` |
-| Frontend hooks | `camelCase.ts` | `useWebSocket.ts`, `useAuth.ts` |
-| Frontend stores | `camelCase.ts` | `gameStore.ts`, `authStore.ts` |
-| Frontend types | `camelCase.ts` | `gameTypes.ts`, `wsEvents.ts` |
-| Backend files | `snake_case.go` | `rules_engine.go`, `ws_handler.go` |
-| Backend tests | `_test.go` suffix | `rules_engine_test.go` |
-| i18n keys | `{feature}.{component}.{element}` | `auth.login.emailLabel`, `game.trumpPrompt.pickButton` |
+| Context             | Convention                        | Examples                                               |
+| ------------------- | --------------------------------- | ------------------------------------------------------ |
+| Database tables     | `snake_case`, plural              | `users`, `matches`, `rooms`                            |
+| Database columns    | `snake_case`                      | `player_id`, `created_at`                              |
+| Foreign keys        | `{table_singular}_id`             | `user_id`, `match_id`                                  |
+| Indexes             | `idx_{table}_{column}`            | `idx_users_email`                                      |
+| JSON wire format    | `camelCase`                       | `createdAt`, `playerId`                                |
+| REST endpoints      | plural, kebab-case                | `/api/v1/match-history`, `/api/v1/rooms`               |
+| WS events           | prefixed `snake_case`             | `action:play_card`, `event:trick_resolved`             |
+| Frontend components | `PascalCase.tsx`                  | `PlayingCard.tsx`, `ScorePanel.tsx`                    |
+| Frontend hooks      | `camelCase.ts`                    | `useWebSocket.ts`, `useAuth.ts`                        |
+| Frontend stores     | `camelCase.ts`                    | `gameStore.ts`, `authStore.ts`                         |
+| Frontend types      | `camelCase.ts`                    | `gameTypes.ts`, `wsEvents.ts`                          |
+| Backend files       | `snake_case.go`                   | `rules_engine.go`, `ws_handler.go`                     |
+| Backend tests       | `_test.go` suffix                 | `rules_engine_test.go`                                 |
+| i18n keys           | `{feature}.{component}.{element}` | `auth.login.emailLabel`, `game.trumpPrompt.pickButton` |
 
 **GORM Struct Tag Bridge (three conventions in one field):**
 
@@ -276,20 +288,20 @@ Every feature must pass all items before it is considered complete — this is a
 
 **Anti-Patterns:**
 
-| Do NOT | Do Instead |
-| ------ | ---------- |
-| Call `fetch()` directly in components | Use `shared/api/` client functions |
-| Define errors inline in handlers | Add to `internal/apperr/errors.go` |
-| Put game logic in handlers or WebSocket layer | Keep in `internal/game/` as pure functions |
-| Store JWT in localStorage | Keep access token in memory (Zustand) |
-| Build game state with raw struct literals in tests | Use `testfixtures/` factory functions |
-| Add WS events to only one contract file | Update both `wsEvents.ts` and `events.go` together |
-| Use `PascalCase` or `snake_case` in JSON | Always `camelCase` in wire format |
-| Send relative timer durations ("30 seconds") | Send absolute timestamps ("expires at X") |
-| Assume clockwise turn order | Counter-clockwise: `(currentPlayer + 1) % 4` — seats are numbered CCW |
-| Continue rotation after trick resolves | Trick winner leads the next trick — rotation resets |
-| Implement generic trump bidding | Branch by variant from the start — separate code paths |
-| Auto-award Belot bonus (K+Q of trump) | Require player announcement — prompt on trump K/Q play |
+| Do NOT                                             | Do Instead                                                            |
+| -------------------------------------------------- | --------------------------------------------------------------------- |
+| Call `fetch()` directly in components              | Use `shared/api/` client functions                                    |
+| Define errors inline in handlers                   | Add to `internal/apperr/errors.go`                                    |
+| Put game logic in handlers or WebSocket layer      | Keep in `internal/game/` as pure functions                            |
+| Store JWT in localStorage                          | Keep access token in memory (Zustand)                                 |
+| Build game state with raw struct literals in tests | Use `testfixtures/` factory functions                                 |
+| Add WS events to only one contract file            | Update both `wsEvents.ts` and `events.go` together                    |
+| Use `PascalCase` or `snake_case` in JSON           | Always `camelCase` in wire format                                     |
+| Send relative timer durations ("30 seconds")       | Send absolute timestamps ("expires at X")                             |
+| Assume clockwise turn order                        | Counter-clockwise: `(currentPlayer + 1) % 4` — seats are numbered CCW |
+| Continue rotation after trick resolves             | Trick winner leads the next trick — rotation resets                   |
+| Implement generic trump bidding                    | Branch by variant from the start — separate code paths                |
+| Auto-award Belot bonus (K+Q of trump)              | Require player announcement — prompt on trump K/Q play                |
 
 **Security Rules:**
 

@@ -318,8 +318,8 @@ func (m *Manager) handleReconnectTimeout(session *Session, generation uint64) {
 	playerIDs := session.playerIDs
 	roomID := session.roomID
 	startedAt := session.startedAt
-	redScore := gs.TeamScores[game.TeamRed]
-	blueScore := gs.TeamScores[game.TeamBlue]
+	teamAScore := gs.TeamScores[game.TeamA]
+	teamBScore := gs.TeamScores[game.TeamB]
 	variant := string(gs.Variant)
 	matchMode := gs.MatchMode
 	// Snapshot any hands scored before the abandonment so they persist alongside
@@ -329,8 +329,8 @@ func (m *Manager) handleReconnectTimeout(session *Session, generation uint64) {
 
 	abandonedPayload := ws.MatchAbandonedPayload{
 		AbandonedByPlayer: abandonedSeat,
-		RedFinalScore:     redScore,
-		BlueFinalScore:    blueScore,
+		TeamAFinalScore:   teamAScore,
+		TeamBFinalScore:   teamBScore,
 		MatchDurationSec:  int(time.Since(startedAt).Seconds()),
 	}
 	abandonedMsg := buildMessage(ws.EventMatchAbandoned, abandonedPayload)
@@ -351,20 +351,20 @@ func (m *Manager) handleReconnectTimeout(session *Session, generation uint64) {
 
 	// Persist match record with abandoned status
 	matchRecord := &match.Match{
-		RoomID:        roomID,
-		Player1ID:     playerIDs[0],
-		Player2ID:     playerIDs[1],
-		Player3ID:     playerIDs[2],
-		Player4ID:     playerIDs[3],
-		TeamRedScore:  redScore,
-		TeamBlueScore: blueScore,
-		WinnerTeam:    0,
-		Variant:       variant,
-		MatchMode:     matchMode,
-		StartedAt:     startedAt,
-		CompletedAt:   time.Now(),
-		Status:        "abandoned",
-		AbandonedBy:   &abandonedPlayerID,
+		RoomID:      roomID,
+		Player1ID:   playerIDs[0],
+		Player2ID:   playerIDs[1],
+		Player3ID:   playerIDs[2],
+		Player4ID:   playerIDs[3],
+		TeamAScore:  teamAScore,
+		TeamBScore:  teamBScore,
+		WinnerTeam:  0,
+		Variant:     variant,
+		MatchMode:   matchMode,
+		StartedAt:   startedAt,
+		CompletedAt: time.Now(),
+		Status:      "abandoned",
+		AbandonedBy: &abandonedPlayerID,
 	}
 
 	if err := m.matchRepo.CreateWithHands(matchRecord, handsCopy); err != nil {

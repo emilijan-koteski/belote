@@ -87,8 +87,9 @@ func (c *Client) readPump() {
 		// (pingLoop calls CloseNow on pong failure, defer cancels ctx).
 		_, data, err := c.conn.Read(ctx)
 		if err != nil {
-			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
-				slog.Info("ws: client closed normally", "userID", c.UserID)
+			status := websocket.CloseStatus(err)
+			if status == websocket.StatusNormalClosure || status == websocket.StatusGoingAway {
+				slog.Info("ws: client closed", "userID", c.UserID, "status", status)
 			} else {
 				slog.Info("ws: read error", "userID", c.UserID, "error", err)
 			}

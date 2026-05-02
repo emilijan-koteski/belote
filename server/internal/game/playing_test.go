@@ -167,14 +167,14 @@ func TestPlayCardTrumpLed(t *testing.T) {
 func TestPlayCardTrumpObligation(t *testing.T) {
 	t.Run("void in led suit opponent winning - non-trump rejected", func(t *testing.T) {
 		gs := testfixtures.NewGameMidPlay(1)
-		// Seat 1 (Blue) leads JS — opponent to seat 2 (Red)
+		// Seat 1 (team B) leads JS — opponent to seat 2 (team A)
 		gs.ActivePlayerSeat = 1
 		leadAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
 			Card: &game.Card{Rank: game.RankJack, Suit: game.SuitSpades}}
 		gs, err := game.ApplyAction(gs, leadAction)
 		require.NoError(t, err)
 
-		// Seat 2 (Red) is void in spades, opponent Blue (seat 1) is winning.
+		// Seat 2 (team A) is void in spades, opponent team B (seat 1) is winning.
 		// Seat 2 has trump hearts (KH, QH, 8H, 7H) — must play trump.
 		// Playing a non-trump card should be illegal.
 		illegalAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
@@ -188,14 +188,14 @@ func TestPlayCardTrumpObligation(t *testing.T) {
 
 	t.Run("void in led suit opponent winning - trump accepted", func(t *testing.T) {
 		gs := testfixtures.NewGameMidPlay(1)
-		// Seat 1 (Blue) leads JS
+		// Seat 1 (team B) leads JS
 		gs.ActivePlayerSeat = 1
 		leadAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
 			Card: &game.Card{Rank: game.RankJack, Suit: game.SuitSpades}}
 		gs, err := game.ApplyAction(gs, leadAction)
 		require.NoError(t, err)
 
-		// Seat 2 (Red) is void in spades, opponent winning — plays trump
+		// Seat 2 (team A) is void in spades, opponent winning — plays trump
 		trumpAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
 			Card: &game.Card{Rank: game.RankKing, Suit: game.SuitHearts}}
 		result, err := game.ApplyAction(gs, trumpAction)
@@ -226,7 +226,7 @@ func TestPlayCardOverTrump(t *testing.T) {
 		gs, err = game.ApplyAction(gs, followAction)
 		require.NoError(t, err)
 
-		// Seat 2 (Red) is void in spades, opponent (seat 1 Blue) winning with 9H.
+		// Seat 2 (team A) is void in spades, opponent (seat 1 team B) winning with 9H.
 		// Seat 2 has KH (order 3), QH (order 2), 8H (order 1), 7H (order 0)
 		// None can over-trump 9H (order 6), so any trump is legal.
 		lowerTrumpAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
@@ -270,13 +270,13 @@ func TestPlayCardOverTrump(t *testing.T) {
 		gs, err := game.ApplyAction(gs, leadAction)
 		require.NoError(t, err)
 
-		// Seat 1 (Blue) void in spades, opponent (seat 0 Red) winning → must trump
+		// Seat 1 (team B) void in spades, opponent (seat 0 team A) winning → must trump
 		trumpAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
 			Card: &game.Card{Rank: game.Rank8, Suit: game.SuitHearts}}
 		gs, err = game.ApplyAction(gs, trumpAction)
 		require.NoError(t, err)
 
-		// Seat 2 (Red) void in spades, opponent Blue (seat 1) winning with 8H (order 1).
+		// Seat 2 (team A) void in spades, opponent team B (seat 1) winning with 8H (order 1).
 		// Seat 2 has KH(3) and QH(2) which beat 8H, plus 7H(0) which can't.
 		// Playing 7H should be illegal since higher over-trumps are available.
 		illegalLowerTrump := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
@@ -295,19 +295,19 @@ func TestPlayCardOverTrump(t *testing.T) {
 func TestPlayCardVoidPartnerWinning(t *testing.T) {
 	t.Run("partner winning - void with trump must cut, non-trump rejected", func(t *testing.T) {
 		gs := testfixtures.NewGameMidPlay(1)
-		// Seat 0 (Red) leads with AS (highest non-trump spade)
+		// Seat 0 (team A) leads with AS (highest non-trump spade)
 		leadAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 0,
 			Card: &game.Card{Rank: game.RankAce, Suit: game.SuitSpades}}
 		gs, err := game.ApplyAction(gs, leadAction)
 		require.NoError(t, err)
 
-		// Seat 1 (Blue) follows
+		// Seat 1 (team B) follows
 		followAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 1,
 			Card: &game.Card{Rank: game.Rank7, Suit: game.SuitSpades}}
 		gs, err = game.ApplyAction(gs, followAction)
 		require.NoError(t, err)
 
-		// Seat 2 (Red) — partner seat 0 is winning with AS.
+		// Seat 2 (team A) — partner seat 0 is winning with AS.
 		// Seat 2 is void in spades and holds trump hearts (KH, QH, 8H, 7H).
 		// Non-trump AD is illegal — must cut.
 		nonTrumpAttempt := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
@@ -342,7 +342,7 @@ func TestPlayCardNoTrumpHeld(t *testing.T) {
 		gs, err = game.ApplyAction(gs, followAction)
 		require.NoError(t, err)
 
-		// Seat 2 plays trump (Red partner winning, but that's fine)
+		// Seat 2 plays trump (team A partner winning, but that's fine)
 		trumpAction := game.Action{Type: game.ActionPlayCard, PlayerSeat: 2,
 			Card: &game.Card{Rank: game.RankKing, Suit: game.SuitHearts}}
 		gs, err = game.ApplyAction(gs, trumpAction)
@@ -395,10 +395,10 @@ func TestTrickResolution(t *testing.T) {
 			state = result
 		}
 
-		// AS wins (highest non-trump of led suit) — seat 0 (Red team)
+		// AS wins (highest non-trump of led suit) — seat 0 (team A)
 		// Points: AS(11) + JS(2) + AD(11) + JD(2) = 26
-		assert.Equal(t, 26, result.HandPoints[0]) // Red team
-		assert.Equal(t, 0, result.HandPoints[1])  // Blue team
+		assert.Equal(t, 26, result.HandPoints[0]) // Team A
+		assert.Equal(t, 0, result.HandPoints[1])  // Team B
 		assert.Equal(t, 1, result.TricksWon[0])
 		assert.Equal(t, 0, result.TricksWon[1])
 		// Winner leads next trick
@@ -435,9 +435,9 @@ func TestTrickResolution(t *testing.T) {
 			state = result
 		}
 
-		// 7H (trump) wins — seat 2 (Red)
+		// 7H (trump) wins — seat 2 (team A)
 		assert.Equal(t, 2, result.ActivePlayerSeat) // winner leads next
-		assert.Equal(t, 1, result.TricksWon[0])     // Red team
+		assert.Equal(t, 1, result.TricksWon[0])     // Team A
 	})
 
 	t.Run("higher trump beats lower trump", func(t *testing.T) {
@@ -493,9 +493,9 @@ func TestTrickPointCalculation(t *testing.T) {
 			state = result
 		}
 
-		// KH (trump) wins — seat 2 (Red)
+		// KH (trump) wins — seat 2 (team A)
 		// Points: AS=11(non-trump), 9S=0(non-trump), KH=4(trump), 7D=0(non-trump) = 15
-		assert.Equal(t, 15, result.HandPoints[0]) // Red team gets all trick points
+		assert.Equal(t, 15, result.HandPoints[0]) // Team A gets all trick points
 	})
 }
 
@@ -641,7 +641,7 @@ func TestFull8TrickHand(t *testing.T) {
 		gs := testfixtures.NewGameMidPlay(1)
 
 		// Trick 1: seat 0 leads AS, seat 2 (void in spades, holds trumps) must
-		// cut with lowest trump 7H — seat 2 wins (Red).
+		// cut with lowest trump 7H — seat 2 wins (team A).
 		trick1 := []struct {
 			seat int
 			card game.Card

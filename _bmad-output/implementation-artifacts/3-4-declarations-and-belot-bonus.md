@@ -65,7 +65,7 @@ So that these important scoring mechanics are authentic.
   - [x] 3.3: Implement `resolveDeclarations(players [4]PlayerState, trumpSuit Suit) (winningTeam int, totalPoints int)` — compares all players' declarations after trick 1:
     - Compare highest individual declaration from each team
     - Higher value wins. On equal value: sequence beats four-of-a-kind if somehow equal (in practice they can't be); for equal sequences, the one with the higher top card wins; for still-equal sequences, the one in the trump suit wins; for still-equal, the team that declared first in counter-clockwise play order from the trick leader wins
-    - Return winning team index (0=Red, 1=Blue) and total declaration points for the winning team (sum of ALL their declarations, not just the highest)
+    - Return winning team index (0=Team A, 1=Team B) and total declaration points for the winning team (sum of ALL their declarations, not just the highest)
     - If no declarations at all, return -1 for winningTeam and 0 points
   - [x] 3.4: Implement `hasDeclarableCombinations(hand []Card, trumpSuit Suit) bool` — quick check returning true if `detectDeclarations` would return any results. Used by `handlePlaying` to decide whether to set `AwaitingDeclaration`
   - [x] 3.5: Implement `handleDeclare(state *GameState, action Action) (*GameState, error)`:
@@ -205,23 +205,24 @@ So that these important scoring mechanics are authentic.
 ### Declaration Rules — Complete Specification
 
 **When Declarations Occur:**
+
 - Only during trick 1 of each hand
 - Before each player plays their card, they get a chance to declare (if they have declarable combos)
 - Players without declarable combos skip directly to play_card (no prompt)
 
 **Declaration Types and Values:**
 
-| Type | Cards | Points |
-|------|-------|--------|
-| Tierce | 3 consecutive ranks, same suit | 20 |
-| Quarte | 4 consecutive ranks, same suit | 50 |
-| Quinte+ | 5+ consecutive ranks, same suit | 100 |
-| Four Jacks | J of all 4 suits | 200 |
-| Four Nines | 9 of all 4 suits | 150 |
-| Four Aces | A of all 4 suits | 100 |
-| Four Tens | T of all 4 suits | 100 |
-| Four Kings | K of all 4 suits | 100 |
-| Four Queens | Q of all 4 suits | 100 |
+| Type        | Cards                           | Points |
+| ----------- | ------------------------------- | ------ |
+| Tierce      | 3 consecutive ranks, same suit  | 20     |
+| Quarte      | 4 consecutive ranks, same suit  | 50     |
+| Quinte+     | 5+ consecutive ranks, same suit | 100    |
+| Four Jacks  | J of all 4 suits                | 200    |
+| Four Nines  | 9 of all 4 suits                | 150    |
+| Four Aces   | A of all 4 suits                | 100    |
+| Four Tens   | T of all 4 suits                | 100    |
+| Four Kings  | K of all 4 suits                | 100    |
+| Four Queens | Q of all 4 suits                | 100    |
 
 **Rank Order for Sequences:** 7 < 8 < 9 < T < J < Q < K < A. Consecutive means adjacent in this order. Example: T-J-Q is a valid tierce; 9-J-Q is NOT (skips T).
 
@@ -230,6 +231,7 @@ So that these important scoring mechanics are authentic.
 **Four-of-a-Kind Exclusions:** 4×8 and 4×7 are NOT valid declarations (they have 0 card points).
 
 **Declaration Resolution (after all 4 trick-1 cards played):**
+
 1. Each team's highest individual declaration is compared
 2. Higher point value wins
 3. On equal point value (e.g., two tierces at 20pts each): the declaration with the higher top card wins (using non-trump rank order: A > T > K > Q > J > 9 > 8 > 7)
@@ -247,6 +249,7 @@ So that these important scoring mechanics are authentic.
 **When:** The player plays either the K or Q of trump during ANY trick (not just trick 1). The other card must still be in their hand at the time of play.
 
 **Flow:**
+
 1. Player plays trump K or Q via `play_card`
 2. Server detects player held both trump K+Q (checking hand BEFORE the card was removed)
 3. `PendingBelotSeat` is set → turn does NOT advance
@@ -254,6 +257,7 @@ So that these important scoring mechanics are authentic.
 5. After Belot resolved → turn advances normally (or trick resolves if 4th card)
 
 **Constraints:**
+
 - At most one Belot per hand (only one player can hold both trump K+Q)
 - Belot points go into `HandPoints[team]`, NOT `DeclarationPoints[team]` — they are a hand bonus, not a declaration
 - Belot can be announced at ANY trick, not just trick 1
@@ -298,8 +302,9 @@ Player's turn begins
 ### Existing Code to Reuse
 
 **DO NOT DUPLICATE — reuse these existing functions and types:**
+
 - `cloneGameState(state *GameState) *GameState` in `bidding.go` — clone before mutation
-- `TeamForSeat(seat int) int` in `state.go` — 0=Red (seats 0,2), 1=Blue (seats 1,3)
+- `TeamForSeat(seat int) int` in `state.go` — 0=Team A (seats 0,2), 1=Team B (seats 1,3)
 - `TrumpCardPoints`, `NonTrumpCardPoints` maps in `types.go`
 - `TrumpRankOrder`, `NonTrumpRankOrder` maps in `types.go`
 - `Declaration` struct in `types.go` — already has Type, Cards, PlayerSeat, Value fields
@@ -319,6 +324,7 @@ Story 3.5 will implement hand scoring after all 8 tricks. It will read `Declarat
 ### State Reset Between Hands
 
 When a new hand begins (dealing phase — Story 3.5/3.6 territory), the following fields set by this story must be reset:
+
 - `AwaitingDeclaration = false`
 - `DeclarationsResolved = false`
 - `PendingBelotSeat = nil`
@@ -331,6 +337,7 @@ This reset logic belongs in Story 3.5/3.6 (hand/match scoring transitions), NOT 
 ### Project Structure Notes
 
 **New files:**
+
 ```
 server/internal/game/
   declarations.go          -- NEW: declaration detection, resolution, Belot bonus logic
@@ -338,6 +345,7 @@ server/internal/game/
 ```
 
 **Modified files:**
+
 ```
 server/internal/game/
   state.go                 -- MODIFIED: Add AwaitingDeclaration, DeclarationsResolved, PendingBelotSeat, BelotAnnounced fields
@@ -350,6 +358,7 @@ server/internal/game/
 ```
 
 **Unchanged files:**
+
 ```
   rules_engine.go          -- UNCHANGED (declarations handled within PhasePlaying, no new phase case needed)
   validation.go            -- UNCHANGED (card legality rules don't change)
@@ -359,6 +368,7 @@ server/internal/game/
 ```
 
 **Error file:**
+
 ```
 server/internal/apperr/
   errors.go                -- MODIFIED: Add ErrDeclarationNotAvailable, ErrBelotNotAvailable, ErrActionRequired
@@ -376,6 +386,7 @@ server/internal/apperr/
 ### Deferred Review Items from Story 3.3
 
 These deferred items from the 3.3 code review are NOT addressed by this story but remain relevant:
+
 - `legalCards` nil-guard on `TrumpSuit`/`LeadSuit` — latent panic on corrupted state, safe through normal call paths
 - `currentTrickWinnerSeat` returns -1 for empty trick — unreachable through current code
 - No bounds check on `action.PlayerSeat` — deferred to session manager (Epic 4)
@@ -425,10 +436,12 @@ Claude Opus 4.6 (1M context)
 ### File List
 
 **New files:**
+
 - `server/internal/game/declarations.go` — Declaration detection, resolution, Belot bonus, handlers
 - `server/internal/game/declarations_test.go` — 26 test cases covering declarations, Belot, integration flow
 
 **Modified files:**
+
 - `server/internal/game/state.go` — Added `AwaitingDeclaration`, `DeclarationsResolved`, `PendingBelotSeat`, `BelotAnnounced` fields
 - `server/internal/game/types.go` — Added `ActionAnnounceBelot`, `ActionSkipBelot` constants
 - `server/internal/game/playing.go` — Routed new action types, added declaration/Belot guards, integrated Belot detection into card play flow

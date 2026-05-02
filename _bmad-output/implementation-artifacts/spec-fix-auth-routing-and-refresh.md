@@ -1,11 +1,11 @@
 ---
-title: 'Fix auth routing: eliminate stale refresh calls and add route guards'
-type: 'bugfix'
-created: '2026-04-16'
-status: 'done'
-baseline_commit: 'ae13e9c'
+title: "Fix auth routing: eliminate stale refresh calls and add route guards"
+type: "bugfix"
+created: "2026-04-16"
+status: "done"
+baseline_commit: "ae13e9c"
 context:
-  - '_bmad-output/project-context.md'
+  - "_bmad-output/project-context.md"
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -26,16 +26,16 @@ context:
 
 ## I/O & Edge-Case Matrix
 
-| Scenario | Input / State | Expected Output / Behavior | Error Handling |
-|----------|--------------|---------------------------|----------------|
-| Unauthenticated lands on `/login` | No token, no refresh cookie | Render login page, zero `/auth/refresh` calls | N/A |
-| Unauthenticated lands on `/register` | No token, no refresh cookie | Render register page, zero refresh calls | N/A |
-| Returning user lands on `/lobby` | No in-memory token, valid refresh cookie | `useAuthInit` calls refresh once, restores session, renders lobby | Refresh fails → clear state, redirect to login |
-| Authenticated navigates to `/login` | Valid token in store | Redirect to `/lobby` immediately | N/A |
-| Authenticated navigates to `/` | Valid token in store | Redirect to `/lobby` (then `useReconnectionRedirect` may push to game) | N/A |
-| Unauthenticated navigates to `/` | No token | Redirect to `/login` | N/A |
-| Authenticated hits unknown path | Valid token | Redirect to `/lobby` | N/A |
-| Unauthenticated hits unknown path | No token | Redirect to `/login` | N/A |
+| Scenario                             | Input / State                            | Expected Output / Behavior                                             | Error Handling                                 |
+| ------------------------------------ | ---------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------- |
+| Unauthenticated lands on `/login`    | No token, no refresh cookie              | Render login page, zero `/auth/refresh` calls                          | N/A                                            |
+| Unauthenticated lands on `/register` | No token, no refresh cookie              | Render register page, zero refresh calls                               | N/A                                            |
+| Returning user lands on `/lobby`     | No in-memory token, valid refresh cookie | `useAuthInit` calls refresh once, restores session, renders lobby      | Refresh fails → clear state, redirect to login |
+| Authenticated navigates to `/login`  | Valid token in store                     | Redirect to `/lobby` immediately                                       | N/A                                            |
+| Authenticated navigates to `/`       | Valid token in store                     | Redirect to `/lobby` (then `useReconnectionRedirect` may push to game) | N/A                                            |
+| Unauthenticated navigates to `/`     | No token                                 | Redirect to `/login`                                                   | N/A                                            |
+| Authenticated hits unknown path      | Valid token                              | Redirect to `/lobby`                                                   | N/A                                            |
+| Unauthenticated hits unknown path    | No token                                 | Redirect to `/login`                                                   | N/A                                            |
 
 </frozen-after-approval>
 
@@ -50,11 +50,13 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
+
 - [x] `client/src/shared/hooks/useAuth.ts` -- Add location check: if pathname is `/login` or `/register`, skip `refresh()` and set `isLoading = false` immediately -- eliminates wasted refresh calls on guest pages
 - [x] `client/src/shared/components/GuestRoute.tsx` -- Create component: if `token` exists, `<Navigate to="/lobby" replace />`; otherwise render `<Outlet />` -- prevents authenticated users from reaching auth pages
 - [x] `client/src/App.tsx` -- Wrap `/login` and `/register` in `<GuestRoute />`; add explicit `<Route path="/" ...>` that redirects based on auth state; update catch-all to also be auth-aware -- fixes root route and unknown path handling
 
 **Acceptance Criteria:**
+
 - Given an unauthenticated user, when they open `/login`, then zero `/auth/refresh` network requests are made
 - Given an authenticated user, when they navigate to `/login` or `/register`, then they are redirected to `/lobby`
 - Given an authenticated user, when they navigate to `/`, then they are redirected to `/lobby` (not logged out)
@@ -66,10 +68,12 @@ context:
 ## Verification
 
 **Commands:**
+
 - `cd client && npx vitest run` -- expected: all existing tests pass
 - `cd client && npx eslint src/` -- expected: no lint errors
 
 **Manual checks:**
+
 - Open browser DevTools Network tab, navigate to `/login` — confirm zero `/auth/refresh` requests
 - Log in, then manually navigate to `/login` — confirm redirect to `/lobby`
 - Log in, navigate to `/` — confirm redirect to `/lobby`, not logout

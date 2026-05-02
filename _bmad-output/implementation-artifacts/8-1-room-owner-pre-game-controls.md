@@ -24,8 +24,8 @@ so that I can curate the roster and team composition without tearing down the ro
 2. **Owner can swap two seated players' seats while `status = 'waiting'`**
    Given the authenticated caller is the room owner,
    When `POST /api/v1/rooms/:id/swap-seats` is called with `{ "seatA": <0..3>, "seatB": <0..3> }` and both seats are currently occupied (and `seatA != seatB`),
-   Then the server swaps the two players' `seat` and recomputes `team` from the new seat (`seat % 2 == 0 → "red"`, else `"blue"`) inside one transaction and returns `200 { "data": { "players": [...] } }` with the post-swap player list.
-   And both swapped users **and** every other room participant receive **two** ordered `system:seat_updated` broadcasts (one per swapped seat) — sent as separate messages, not batched, per architecture rule "Multi-event sequences must be sent as separate ordered messages, not batched into a single payload" ([_bmad-output/project-context.md#L109](_bmad-output/project-context.md)).
+   Then the server swaps the two players' `seat` and recomputes `team` from the new seat (`seat % 2 == 0 → "teamA"`, else `"teamB"`) inside one transaction and returns `200 { "data": { "players": [...] } }` with the post-swap player list.
+   And both swapped users **and** every other room participant receive **two** ordered `system:seat_updated` broadcasts (one per swapped seat) — sent as separate messages, not batched, per architecture rule "Multi-event sequences must be sent as separate ordered messages, not batched into a single payload" ([\_bmad-output/project-context.md#L109](_bmad-output/project-context.md)).
    And `previousSeat` on each `system:seat_updated` is the seat the user moved **from** (mirroring the existing payload contract at [server/internal/room/handler.go:659-668](server/internal/room/handler.go#L659-L668), [client/src/shared/types/wsEvents.ts:246-253](client/src/shared/types/wsEvents.ts#L246-L253)).
    And the lobby browse page does **not** receive `system:room_updated` for a swap (player count and room metadata are unchanged — swapping does not affect lobby cards).
 
@@ -45,11 +45,11 @@ so that I can curate the roster and team composition without tearing down the ro
    Given the request body is malformed,
    When the handler validates input,
    Then the following branches return `400 BAD_REQUEST` with the corresponding code and **make no state change**:
-     - `kick`: missing `userId`, `userId == 0`, or the target is the owner themselves → `400 BAD_REQUEST` (use `apperr.ErrBadRequest` for shape; introduce `apperr.ErrCannotKickSelf` (`CANNOT_KICK_SELF`) for the owner-targeting-self branch).
-     - `kick`: target user is not a member of this room → `404 NOT_IN_ROOM` (reuse existing `apperr.ErrNotInRoom`).
-     - `swap-seats`: missing `seatA`/`seatB`, equal seats, or out-of-range (not in `0..3`) → `400 INVALID_SEAT` (reuse existing `apperr.ErrInvalidSeat`).
-     - `swap-seats`: at least one of the two seats is empty → `409 SEAT_NOT_OCCUPIED` (introduce new `apperr.ErrSeatNotOccupied`).
-   And the handler does NOT reuse `apperr.ErrSeatTaken` for the empty-seat case — semantics are inverted; using a new code prevents UI-text confusion.
+   - `kick`: missing `userId`, `userId == 0`, or the target is the owner themselves → `400 BAD_REQUEST` (use `apperr.ErrBadRequest` for shape; introduce `apperr.ErrCannotKickSelf` (`CANNOT_KICK_SELF`) for the owner-targeting-self branch).
+   - `kick`: target user is not a member of this room → `404 NOT_IN_ROOM` (reuse existing `apperr.ErrNotInRoom`).
+   - `swap-seats`: missing `seatA`/`seatB`, equal seats, or out-of-range (not in `0..3`) → `400 INVALID_SEAT` (reuse existing `apperr.ErrInvalidSeat`).
+   - `swap-seats`: at least one of the two seats is empty → `409 SEAT_NOT_OCCUPIED` (introduce new `apperr.ErrSeatNotOccupied`).
+     And the handler does NOT reuse `apperr.ErrSeatTaken` for the empty-seat case — semantics are inverted; using a new code prevents UI-text confusion.
 
 6. **`RoomLobby` renders kick + swap controls only for the owner, only while waiting**
    Given the authenticated viewer is the owner and `room.status === 'waiting'`,
@@ -79,7 +79,7 @@ so that I can curate the roster and team composition without tearing down the ro
 9. **Confirmation dialog before kick — non-skippable**
    Given the owner clicks the kick icon,
    When the confirmation prompt would render,
-   Then a modal/dialog appears (use the project's existing dialog primitive at [client/src/shared/components/ui/](client/src/shared/components/ui/) — search for `dialog.tsx` / `alert-dialog.tsx`; if neither exists yet, install via `npx shadcn@latest add alert-dialog` per the shadcn workflow at [_bmad-output/project-context.md#L24](_bmad-output/project-context.md)) with body text `t("lobby.roomLobby.kickConfirm.body", { username })` and confirm/cancel buttons.
+   Then a modal/dialog appears (use the project's existing dialog primitive at [client/src/shared/components/ui/](client/src/shared/components/ui/) — search for `dialog.tsx` / `alert-dialog.tsx`; if neither exists yet, install via `npx shadcn@latest add alert-dialog` per the shadcn workflow at [\_bmad-output/project-context.md#L24](_bmad-output/project-context.md)) with body text `t("lobby.roomLobby.kickConfirm.body", { username })` and confirm/cancel buttons.
    And the confirm button has `data-testid="kick-confirm"`, the cancel button has `data-testid="kick-cancel"`. Pressing Escape cancels (default dialog behaviour).
    And the kick mutation is fired ONLY on confirm — no kick-on-mount, no kick-on-icon-click. Cancel closes the dialog with no side effects.
 
@@ -87,27 +87,27 @@ so that I can curate the roster and team composition without tearing down the ro
     Given new copy introduced by this story,
     When the story lands,
     Then the following keys exist under `lobby.roomLobby.*` in **both** [client/src/shared/i18n/en.json](client/src/shared/i18n/en.json) and [client/src/shared/i18n/sr.json](client/src/shared/i18n/sr.json):
-      - `kickIconLabel` — accessible label for the kick icon button (e.g. `"Kick {{username}}"`).
-      - `kickConfirm.title` — confirmation dialog title (e.g. `"Kick player?"`).
-      - `kickConfirm.body` — confirmation body (e.g. `"Kick {{username}} from the room?"`).
-      - `kickConfirm.confirm` — confirm button label (e.g. `"Kick"`).
-      - `kickConfirm.cancel` — cancel button label (e.g. `"Cancel"`).
-      - `kickedToast` — toast shown to the kicked user (e.g. `"You were removed from room {{name}}"`).
-      - `swapMode.enter` — small caption shown on the seat tile when its avatar is selected for swap (e.g. `"Pick a seat to swap with"`).
-      - `swapMode.cancel` — caption / button label to leave swap mode (e.g. `"Cancel swap"`).
-      - `errors.roomStarted` — `"The game has already started — kick/swap is no longer available."`
-      - `errors.seatNotOccupied` — `"That seat is empty — pick two seated players to swap."`
-      - `errors.kickFailed` — generic kick failure copy.
-      - `errors.swapFailed` — generic swap failure copy.
-    And Serbian-Latin translations follow the **Ekavian** register (matching adjacent keys: `"Pobeda"` not `"Pobjeda"`, `"se pridružio"` not `"se priključio"`) — the register decision is locked in by Story 7.2's `Pobede` / `Procenat pobeda` choice.
-    And the `i18n.test.ts` recursive `flattenKeys` parity check at [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) continues to pass.
+    - `kickIconLabel` — accessible label for the kick icon button (e.g. `"Kick {{username}}"`).
+    - `kickConfirm.title` — confirmation dialog title (e.g. `"Kick player?"`).
+    - `kickConfirm.body` — confirmation body (e.g. `"Kick {{username}} from the room?"`).
+    - `kickConfirm.confirm` — confirm button label (e.g. `"Kick"`).
+    - `kickConfirm.cancel` — cancel button label (e.g. `"Cancel"`).
+    - `kickedToast` — toast shown to the kicked user (e.g. `"You were removed from room {{name}}"`).
+    - `swapMode.enter` — small caption shown on the seat tile when its avatar is selected for swap (e.g. `"Pick a seat to swap with"`).
+    - `swapMode.cancel` — caption / button label to leave swap mode (e.g. `"Cancel swap"`).
+    - `errors.roomStarted` — `"The game has already started — kick/swap is no longer available."`
+    - `errors.seatNotOccupied` — `"That seat is empty — pick two seated players to swap."`
+    - `errors.kickFailed` — generic kick failure copy.
+    - `errors.swapFailed` — generic swap failure copy.
+      And Serbian-Latin translations follow the **Ekavian** register (matching adjacent keys: `"Pobeda"` not `"Pobjeda"`, `"se pridružio"` not `"se priključio"`) — the register decision is locked in by Story 7.2's `Pobede` / `Procenat pobeda` choice.
+      And the `i18n.test.ts` recursive `flattenKeys` parity check at [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) continues to pass.
 
 11. **WebSocket event contract sync — both files in the same commit**
     Given a new server→client WS event is introduced,
     When this story lands,
     Then [server/internal/ws/events.go](server/internal/ws/events.go) gains `const SystemRoomKicked = "system:room_kicked"` and a typed `RoomKickedPayload` struct (`RoomID uint json:"roomId"; Reason string json:"reason"`).
     And [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) gains `export const SYSTEM_ROOM_KICKED = "system:room_kicked" as const;` and an `interface RoomKickedPayload { roomId: number; reason: string; }`.
-    And both files are updated in the **same commit** (project rule [_bmad-output/project-context.md#L80](_bmad-output/project-context.md), [#L286](_bmad-output/project-context.md)).
+    And both files are updated in the **same commit** (project rule [\_bmad-output/project-context.md#L80](_bmad-output/project-context.md), [#L286](_bmad-output/project-context.md)).
     And `useWsDispatch` adds a branch for `SYSTEM_ROOM_KICKED` that calls `useRoomLobbyStore.getState().setKickedFromRoom(payload.roomId)` — the dispatch only triggers UI navigation if `currentRoomId === payload.roomId` (defence in depth: ignore stray events for other rooms).
 
 12. **Backward compatibility — existing room flows untouched**
@@ -151,6 +151,7 @@ so that I can curate the roster and team composition without tearing down the ro
     ```
     Do NOT change any existing apperr — `ErrNotRoomOwner`, `ErrNotInRoom`, `ErrInvalidSeat`, `ErrRoomNotFound` are reused as-is. `ErrGameNotStartable` (`GAME_NOT_STARTABLE`) is intentionally NOT reused — its semantics are "room status prevents starting the game", not "room status prevents kick/swap". A distinct code keeps client error handling unambiguous.
   - [x] 3.2 Add to [server/internal/ws/events.go](server/internal/ws/events.go) under "Room events":
+
     ```go
     const SystemRoomKicked = "system:room_kicked"
 
@@ -170,18 +171,21 @@ so that I can curate the roster and team composition without tearing down the ro
     - 404 `NOT_IN_ROOM` when target is not a member of this room.
     - **Owner-leave race:** create a room with owner A, B, C; have A leave (transferring ownership to B); then have A attempt to kick C → 403 (A is no longer the owner). This locks in the TOCTOU behaviour from AC #4.
   - [x] 4.2 Swap-seats scenarios:
-    - Happy path: owner swaps seats 0 ↔ 1 (red ↔ blue) → 200, both players' `seat` and `team` flipped, mock broadcaster received exactly TWO `SystemSeatUpdated` calls in order, each with the correct `previousSeat`.
+    - Happy path: owner swaps seats 0 ↔ 1 (Team A ↔ Team B) → 200, both players' `seat` and `team` flipped, mock broadcaster received exactly TWO `SystemSeatUpdated` calls in order, each with the correct `previousSeat`.
     - 403 non-owner.
     - 409 `ROOM_NOT_WAITING` when game has started.
     - 400 `INVALID_SEAT` for: missing `seatA`/`seatB`, equal seats, out-of-range (e.g. 4, -1).
     - 409 `SEAT_NOT_OCCUPIED` when at least one of the two seats is empty.
-    - **Cross-team swap correctly recomputes team:** seat 0 (red) ↔ seat 3 (blue) → both `team` fields swap accordingly. Asserts the `teamForSeat` recompute (NOT a verbatim copy of the old `team` value).
+    - **Cross-team swap correctly recomputes team:** seat 0 (Team A) ↔ seat 3 (Team B) → both `team` fields swap accordingly. Asserts the `teamForSeat` recompute (NOT a verbatim copy of the old `team` value).
   - [x] 4.3 Add a regression assertion: after a kick, `mockBroadcaster.allCalls` contains the `SystemRoomUpdated` broadcast (lobby-wide); after a swap, `mockBroadcaster.allCalls` is **empty** (swap doesn't change room metadata visible on the lobby browse cards) — locks in AC #2's "no `system:room_updated` for swap" rule.
 
 - [x] **Task 5: Frontend — API client + mutations (AC #1, #2, #8)**
   - [x] 5.1 Extend [client/src/shared/api/rooms.ts](client/src/shared/api/rooms.ts) with two new functions:
     ```ts
-    export function kickPlayer(roomId: number, userId: number): Promise<{ playerCount: number }> {
+    export function kickPlayer(
+      roomId: number,
+      userId: number,
+    ): Promise<{ playerCount: number }> {
       return axiosClient.post(`/rooms/${roomId}/kick`, { userId });
     }
     export function swapSeats(
@@ -199,7 +203,7 @@ so that I can curate the roster and team composition without tearing down the ro
 - [x] **Task 6: Frontend — `RoomLobby.tsx` owner controls UI (AC #6, #8, #9)**
   - [x] 6.1 In [client/src/features/lobby/RoomLobby.tsx](client/src/features/lobby/RoomLobby.tsx), introduce local UI state for swap mode: `const [swapSourceSeat, setSwapSourceSeat] = useState<number | null>(null);`. Reset to `null` whenever `room.status` is no longer `"waiting"` (use a `useEffect` keyed on `room.status`).
   - [x] 6.2 Adjust the seat-tile render path ([RoomLobby.tsx:252-307](client/src/features/lobby/RoomLobby.tsx#L252-L307)):
-    - For each non-owner seated tile, when `isOwner && room.status === 'waiting'`, render a small kick icon (use [lucide-react](https://lucide.dev/) — the project already imports from `lucide-react` at [package.json:13](client/package.json#L13); use the `UserX` icon) at the top-right corner of the tile, with `data-testid={\`kick-player-\${seatIndex}\`}` and `aria-label={t("lobby.roomLobby.kickIconLabel", { username: player.username })}`. Tailwind classes: `absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100`. Wrap the existing `<button>` seat tile in a `<div className="group relative">` so the icon's hover-state is scoped to its tile.
+    - For each non-owner seated tile, when `isOwner && room.status === 'waiting'`, render a small kick icon (use [lucide-react](https://lucide.dev/) — the project already imports from `lucide-react` at [package.json:13](client/package.json#L13); use the `UserX` icon) at the top-right corner of the tile, with `data-testid={\`kick-player-\${seatIndex}\`}`and`aria-label={t("lobby.roomLobby.kickIconLabel", { username: player.username })}`. Tailwind classes: `absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100`. Wrap the existing `<button>`seat tile in a`<div className="group relative">` so the icon's hover-state is scoped to its tile.
     - Stop event propagation on the icon's `onClick` (e.g. `e.stopPropagation()`) so clicking the kick icon does NOT also fire `handleSelectSeat`.
     - Clicking the icon opens the confirmation dialog (Task 6.3) — does NOT immediately call the kick mutation.
   - [x] 6.3 Confirmation dialog: check whether `client/src/shared/components/ui/alert-dialog.tsx` exists; if not, install via `npx shadcn@latest add alert-dialog` (NOT `npm install` — owned-copies pattern from project context). Render the dialog inside `RoomLobby.tsx` (control state via `useState<{ seat: number; userId: number; username: string } | null>`). Use `data-testid="kick-confirm"` on the action button and `data-testid="kick-cancel"` on the cancel button. The action button calls `kickMutation.mutate({ roomId, userId })`; on success, dialog closes (server WS broadcast handles the lobby update). On error, `toast.error` from the AC #8 mapping.
@@ -220,7 +224,11 @@ so that I can curate the roster and team composition without tearing down the ro
     if (type === SYSTEM_ROOM_KICKED) {
       const payload = message.payload as RoomKickedPayload;
       const store = useRoomLobbyStore.getState();
-      if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
+      if (
+        store.currentRoomId !== null &&
+        store.currentRoomId !== payload.roomId
+      )
+        return;
       store.setKickedFromRoom(payload.roomId);
       return;
     }
@@ -232,7 +240,9 @@ so that I can curate the roster and team composition without tearing down the ro
     useEffect(() => {
       if (kickedFromRoomId !== null && id && kickedFromRoomId === Number(id)) {
         hasLeftRef.current = true;
-        toast.error(t("lobby.roomLobby.kickedToast", { name: storeRoom?.name ?? "" }));
+        toast.error(
+          t("lobby.roomLobby.kickedToast", { name: storeRoom?.name ?? "" }),
+        );
         useRoomLobbyStore.getState().setKickedFromRoom(null);
         navigate("/lobby");
       }
@@ -326,26 +336,26 @@ The biggest design call is **REST + WS-broadcast vs raw WS actions**. The epic's
 
 The AC names of `event:room_kicked` and `event:room_state` are interpreted as **wire-shape** intent, not strict event-name strings. We satisfy them via:
 
-- `system:room_kicked` (new — meets the `event:room_kicked` intent; named `system:` to match the project's prefix rule "non-game platform events use `system:` not `event:`" — see [_bmad-output/planning-artifacts/architecture.md:336](_bmad-output/planning-artifacts/architecture.md#L336)).
+- `system:room_kicked` (new — meets the `event:room_kicked` intent; named `system:` to match the project's prefix rule "non-game platform events use `system:` not `event:`" — see [\_bmad-output/planning-artifacts/architecture.md:336](_bmad-output/planning-artifacts/architecture.md#L336)).
 - `system:player_left` + `system:seat_updated` + `system:room_updated` (existing — together carry the full "updated room state" — meets the `event:room_state` intent without inventing a new aggregate event that would duplicate the existing payload graph).
 
 ### What Already Exists — Do NOT Recreate
 
-| Item | Location | Notes |
-|------|----------|-------|
-| `RoomHandler` with `JoinRoom`, `LeaveRoom`, `SelectSeat`, `StartGame` | [server/internal/room/handler.go](server/internal/room/handler.go) | Add `KickPlayer` + `SwapSeats` as additional methods on the same struct. No new handler files needed. |
-| `RoomRepository` interface + `GormRepository` | [server/internal/room/repository.go](server/internal/room/repository.go), [gorm_repo.go](server/internal/room/gorm_repo.go) | All needed methods already exist: `RemovePlayer`, `DecrementPlayerCount`, `UpdatePlayerSeat`, `ClearPlayerSeat`, `FindPlayerBySeat`, `FindByID`, `RunInTransaction`, `FindPlayersByRoomID`. Story 8.1 adds **zero** repository methods. |
-| Broadcast helpers `broadcastToUsers`, `broadcastToAll`, `broadcastToRoom`, `broadcastRoomUpdated` | [room/handler.go:81-149](server/internal/room/handler.go#L81-L149) | Reuse verbatim. The kick handler calls `broadcastToUsers([]uint{kickedUserID}, ...)` for the kick event, then `broadcastToUsers(remainingUserIDs, SystemPlayerLeft, ...)`, then `broadcastRoomUpdated`. |
-| `Broadcaster` interface (`BroadcastToUsers`, `BroadcastAll`) | [room/handler.go:66-69](server/internal/room/handler.go#L66-L69) | Already abstracts the hub for testability. The mock `mockBroadcaster` in [handler_test.go:221-232](server/internal/room/handler_test.go#L221-L232) is reusable for the new tests. |
-| TOCTOU pattern (status check inside tx) | [room/handler.go:587-598](server/internal/room/handler.go#L587-L598) | Copy this pattern verbatim into the kick + swap handlers — re-verify `room.Status == "waiting"` and `room.OwnerID == userID` AFTER `tx.FindByID`. |
-| `teamForSeat(seat int) string` | [room/handler.go:552-557](server/internal/room/handler.go#L552-L557) | Reuse for the swap path's team recompute. (There's a duplicate in `internal/game/state.go` — do NOT add another.) |
-| `RoomLobby.tsx` seat tile render path with `data-testid="player-seat-{seatIndex}"` | [client/src/features/lobby/RoomLobby.tsx:252-307](client/src/features/lobby/RoomLobby.tsx#L252-L307) | Wrap each tile in a `<div className="group relative">` to scope the kick icon's hover-state to its own tile. The existing `<button>` keeps its seat-select onClick. |
-| `useRoomLobbyStore` with `addPlayer`, `removePlayer`, `updatePlayerSeat`, `setGameStarted`, `reset` | [client/src/shared/stores/roomLobbyStore.ts](client/src/shared/stores/roomLobbyStore.ts) | Add only `kickedFromRoomId` + `setKickedFromRoom`. Mirror the `gameStarted` pattern verbatim (boolean-by-id state, navigation effect, `reset()` clearing). |
-| `useWsDispatch` system event branches | [client/src/shared/hooks/useWsDispatch.ts:260-311](client/src/shared/hooks/useWsDispatch.ts#L260-L311) | Add `SYSTEM_ROOM_KICKED` branch alongside `SYSTEM_GAME_STARTED`. Keep the `currentRoomId` guard pattern. |
-| `axiosClient` HTTP client + `FetchError` for 4xx code-based branching | [client/src/shared/api/axiosClient.ts](client/src/shared/api/axiosClient.ts) | Reuse for `instanceof FetchError && err.code === "ROOM_NOT_WAITING"` etc. — same pattern as [RoomLobby.tsx:153-158](client/src/features/lobby/RoomLobby.tsx#L153-L158). |
-| `lobbyDisconnectHandler` (10s pre-game disconnect timer) | [server/internal/room/lobby_disconnect.go](server/internal/room/lobby_disconnect.go) | NOT relevant to kick. The kicked player is intentionally removed by the owner; they remain WS-connected. The lobby disconnect handler only fires on socket disconnect, which a kick does not trigger. |
-| `lucide-react` icons | [client/package.json:13](client/package.json#L13) | Use `UserX` for the kick icon. No new dependency. |
-| shadcn dialog primitive workflow | [_bmad-output/project-context.md#L24](_bmad-output/project-context.md) | Install via `npx shadcn@latest add alert-dialog` ONLY if `client/src/shared/components/ui/alert-dialog.tsx` does not exist. NEVER `npm install` a UI primitive. |
+| Item                                                                                                | Location                                                                                                                    | Notes                                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RoomHandler` with `JoinRoom`, `LeaveRoom`, `SelectSeat`, `StartGame`                               | [server/internal/room/handler.go](server/internal/room/handler.go)                                                          | Add `KickPlayer` + `SwapSeats` as additional methods on the same struct. No new handler files needed.                                                                                                                                   |
+| `RoomRepository` interface + `GormRepository`                                                       | [server/internal/room/repository.go](server/internal/room/repository.go), [gorm_repo.go](server/internal/room/gorm_repo.go) | All needed methods already exist: `RemovePlayer`, `DecrementPlayerCount`, `UpdatePlayerSeat`, `ClearPlayerSeat`, `FindPlayerBySeat`, `FindByID`, `RunInTransaction`, `FindPlayersByRoomID`. Story 8.1 adds **zero** repository methods. |
+| Broadcast helpers `broadcastToUsers`, `broadcastToAll`, `broadcastToRoom`, `broadcastRoomUpdated`   | [room/handler.go:81-149](server/internal/room/handler.go#L81-L149)                                                          | Reuse verbatim. The kick handler calls `broadcastToUsers([]uint{kickedUserID}, ...)` for the kick event, then `broadcastToUsers(remainingUserIDs, SystemPlayerLeft, ...)`, then `broadcastRoomUpdated`.                                 |
+| `Broadcaster` interface (`BroadcastToUsers`, `BroadcastAll`)                                        | [room/handler.go:66-69](server/internal/room/handler.go#L66-L69)                                                            | Already abstracts the hub for testability. The mock `mockBroadcaster` in [handler_test.go:221-232](server/internal/room/handler_test.go#L221-L232) is reusable for the new tests.                                                       |
+| TOCTOU pattern (status check inside tx)                                                             | [room/handler.go:587-598](server/internal/room/handler.go#L587-L598)                                                        | Copy this pattern verbatim into the kick + swap handlers — re-verify `room.Status == "waiting"` and `room.OwnerID == userID` AFTER `tx.FindByID`.                                                                                       |
+| `teamForSeat(seat int) string`                                                                      | [room/handler.go:552-557](server/internal/room/handler.go#L552-L557)                                                        | Reuse for the swap path's team recompute. (There's a duplicate in `internal/game/state.go` — do NOT add another.)                                                                                                                       |
+| `RoomLobby.tsx` seat tile render path with `data-testid="player-seat-{seatIndex}"`                  | [client/src/features/lobby/RoomLobby.tsx:252-307](client/src/features/lobby/RoomLobby.tsx#L252-L307)                        | Wrap each tile in a `<div className="group relative">` to scope the kick icon's hover-state to its own tile. The existing `<button>` keeps its seat-select onClick.                                                                     |
+| `useRoomLobbyStore` with `addPlayer`, `removePlayer`, `updatePlayerSeat`, `setGameStarted`, `reset` | [client/src/shared/stores/roomLobbyStore.ts](client/src/shared/stores/roomLobbyStore.ts)                                    | Add only `kickedFromRoomId` + `setKickedFromRoom`. Mirror the `gameStarted` pattern verbatim (boolean-by-id state, navigation effect, `reset()` clearing).                                                                              |
+| `useWsDispatch` system event branches                                                               | [client/src/shared/hooks/useWsDispatch.ts:260-311](client/src/shared/hooks/useWsDispatch.ts#L260-L311)                      | Add `SYSTEM_ROOM_KICKED` branch alongside `SYSTEM_GAME_STARTED`. Keep the `currentRoomId` guard pattern.                                                                                                                                |
+| `axiosClient` HTTP client + `FetchError` for 4xx code-based branching                               | [client/src/shared/api/axiosClient.ts](client/src/shared/api/axiosClient.ts)                                                | Reuse for `instanceof FetchError && err.code === "ROOM_NOT_WAITING"` etc. — same pattern as [RoomLobby.tsx:153-158](client/src/features/lobby/RoomLobby.tsx#L153-L158).                                                                 |
+| `lobbyDisconnectHandler` (10s pre-game disconnect timer)                                            | [server/internal/room/lobby_disconnect.go](server/internal/room/lobby_disconnect.go)                                        | NOT relevant to kick. The kicked player is intentionally removed by the owner; they remain WS-connected. The lobby disconnect handler only fires on socket disconnect, which a kick does not trigger.                                   |
+| `lucide-react` icons                                                                                | [client/package.json:13](client/package.json#L13)                                                                           | Use `UserX` for the kick icon. No new dependency.                                                                                                                                                                                       |
+| shadcn dialog primitive workflow                                                                    | [\_bmad-output/project-context.md#L24](_bmad-output/project-context.md)                                                     | Install via `npx shadcn@latest add alert-dialog` ONLY if `client/src/shared/components/ui/alert-dialog.tsx` does not exist. NEVER `npm install` a UI primitive.                                                                         |
 
 ### What Must Be Created
 
@@ -374,6 +384,7 @@ The AC names of `event:room_kicked` and `event:room_state` are interpreted as **
 14. [client/src/shared/i18n/en.json](client/src/shared/i18n/en.json) + [sr.json](client/src/shared/i18n/sr.json) — add new keys.
 
 **No changes expected:**
+
 - `server/migrations/*` — zero schema changes.
 - `server/internal/room/repository.go` / `gorm_repo.go` / `model.go` — repository surface unchanged.
 - `server/internal/room/lobby_disconnect.go` — kick is not a disconnect.
@@ -385,9 +396,9 @@ The AC names of `event:room_kicked` and `event:room_state` are interpreted as **
 
 - **REST mutation + WS broadcast pattern.** Every existing room operation follows `RunInTransaction → mutation → commit → broadcast{ToUsers,ToAll}`. Kick + swap match this shape exactly. Do NOT introduce raw `action:` WS handlers (see "Big Picture" above for rationale).
 - **TOCTOU re-checks inside the transaction.** Both `room.Status == "waiting"` AND `room.OwnerID == userID` MUST be verified after `tx.FindByID`. The room status can flip mid-request (auto-start, manual start, leave-induced ownership transfer). Verify once before the broadcast call would commit irreversible side effects.
-- **Multi-event WS broadcasts are sent as separate ordered messages, never batched.** Project rule [_bmad-output/project-context.md#L109](_bmad-output/project-context.md). Two `system:seat_updated` for a swap, three messages (kicked, player_left, room_updated) for a kick.
+- **Multi-event WS broadcasts are sent as separate ordered messages, never batched.** Project rule [\_bmad-output/project-context.md#L109](_bmad-output/project-context.md). Two `system:seat_updated` for a swap, three messages (kicked, player_left, room_updated) for a kick.
 - **WS events use `system:` prefix for non-game platform events**, NOT `event:`. The AC's `event:room_kicked` / `event:room_state` phrasing is interpreted as wire-shape intent — we use `system:room_kicked` to match the existing prefix discipline ([architecture.md:336](_bmad-output/planning-artifacts/architecture.md#L336)).
-- **Same-commit WS contract sync.** [server/internal/ws/events.go](server/internal/ws/events.go) and [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) MUST be updated together. CI will not catch drift; the rule is a project-context invariant ([_bmad-output/project-context.md#L80, #L286](_bmad-output/project-context.md)).
+- **Same-commit WS contract sync.** [server/internal/ws/events.go](server/internal/ws/events.go) and [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) MUST be updated together. CI will not catch drift; the rule is a project-context invariant ([\_bmad-output/project-context.md#L80, #L286](_bmad-output/project-context.md)).
 - **Additive JSON-extension discipline.** New API responses add fields, never rename or repurpose existing ones. The existing `LeaveRoom` `data` shape (`{ "message": "left room" }`) is irrelevant — kick returns its own `{ "playerCount": N }`. Existing clients ignore unknown fields gracefully (Story 7.2 reinforced this rule).
 - **`data-testid` over Tailwind classes** — reinforced by Stories 7.1 and 7.2 Dev Notes; Tailwind class churn breaks class-based test selectors. All new controls expose `data-testid`.
 - **Server is the authority for game/room state; client UI is presentational.** The kick button does not optimistically remove the player from `roomLobbyStore` — it waits for the WS broadcast (which will arrive on every connected client, including the owner who just sent the kick request). Mirrors `handleSelectSeat` ([RoomLobby.tsx:144-146](client/src/features/lobby/RoomLobby.tsx#L144-L146)) which sets players from the response and lets WS converge.
@@ -494,6 +505,7 @@ Carried-forward learnings that shape this story:
 **Modified files (expected): see "What Must Be Modified" — 14 files modified, 0 new files (1 optional shadcn primitive), 0 migrations.**
 
 **Alignment with unified project structure:**
+
 - Backend: kick + swap handlers are methods on the existing `RoomHandler` struct, in [server/internal/room/handler.go](server/internal/room/handler.go) — same package, same file, pattern-consistent with `JoinRoom` / `LeaveRoom` / `SelectSeat` / `StartGame`. No new domain package needed.
 - Frontend: API client + mutations follow the existing `rooms.ts` / `useRooms.ts` shape. UI lives in the same feature folder (`features/lobby/`) — Story 4.7 already established the room-lobby file layout.
 - WS contract: both sides updated in the same commit per project rule.
