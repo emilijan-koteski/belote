@@ -41,6 +41,7 @@ const EventDeclarationsResolved = "event:declarations_resolved"
 const EventBelotAnnounced = "event:belot_announced"
 const EventGamePaused = "event:game_paused"
 const EventGameResumed = "event:game_resumed"
+const EventAutoAction = "event:auto_action"
 
 // --- Game event payload structs ---
 
@@ -79,6 +80,25 @@ type GamePausedPayload struct {
 type GameResumedPayload struct {
 	ResumedBy     int  `json:"resumedBy"`
 	OwnerOverride bool `json:"ownerOverride"`
+}
+
+// AutoActionType enumerates the non-card auto-actions emitted on per-move
+// timer expiry. Card auto-play does NOT produce an EventAutoAction — it
+// continues to use the AutoPlayed flag on EventCardPlayed.
+type AutoActionType string
+
+const (
+	AutoActionPassTrump   AutoActionType = "pass_trump"
+	AutoActionSkipDeclare AutoActionType = "skip_declare"
+	AutoActionSkipBelot   AutoActionType = "skip_belot"
+)
+
+// AutoActionPayload is the typed payload for EventAutoAction events.
+// Informational one-shot — clients use it to surface a toast naming the
+// timed-out player. Authoritative state still rides EventGameState.
+type AutoActionPayload struct {
+	PlayerSeat int            `json:"playerSeat"`
+	Type       AutoActionType `json:"type"`
 }
 
 // --- Disconnect/reconnect events (server -> client) ---

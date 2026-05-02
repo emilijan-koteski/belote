@@ -3,7 +3,15 @@ package session
 import (
 	"github.com/emilijan/belote/server/internal/game"
 	"github.com/emilijan/belote/server/internal/match"
+	"github.com/emilijan/belote/server/internal/ws"
 )
+
+// AutoActionTypeFor exposes autoActionTypeFor for tests in the external
+// session_test package. The wire-format mapping is the contract surface;
+// keep it tested independently so future refactors don't silently drift.
+func AutoActionTypeFor(actionType string) (ws.AutoActionType, bool) {
+	return autoActionTypeFor(actionType)
+}
 
 // BufferHandResultIfScored exposes bufferHandResultIfScored for tests in the
 // external session_test package.

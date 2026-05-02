@@ -5,6 +5,7 @@ import { useFocusTrap } from "@/shared/hooks/useFocusTrap";
 import type { Card, Suit } from "@/shared/types/gameTypes";
 
 import { PlayingCard } from "./PlayingCard";
+import { TimerRing } from "./TimerRing";
 
 interface TrumpPromptProps {
   trumpCandidate: Card | null;
@@ -12,6 +13,8 @@ interface TrumpPromptProps {
   isActiveBidder: boolean;
   onPick: (suit?: Suit) => void;
   onPass: () => void;
+  turnExpiresAt?: string | null;
+  timerDurationSec?: number;
 }
 
 const SUITS: Suit[] = ["S", "H", "D", "C"];
@@ -36,9 +39,12 @@ export function TrumpPrompt({
   isActiveBidder,
   onPick,
   onPass,
+  turnExpiresAt,
+  timerDurationSec,
 }: TrumpPromptProps) {
   const { t } = useTranslation();
   const promptRef = useFocusTrap<HTMLDivElement>();
+  const showRing = isActiveBidder && Boolean(turnExpiresAt) && (timerDurationSec ?? 0) > 0;
 
   // Non-active bidders see a non-blocking status indicator, not a dialog
   if (!isActiveBidder) {
@@ -114,7 +120,7 @@ export function TrumpPrompt({
           </div>
         )}
 
-        <div className="flex gap-3 justify-center">
+        <div className="flex gap-3 justify-center items-center">
           {biddingRound === 1 && (
             <Button onClick={() => onPick()} data-testid="trump-prompt-pick">
               {t("game.trumpPrompt.pick")}
@@ -123,6 +129,15 @@ export function TrumpPrompt({
           <Button variant="ghost" onClick={onPass} data-testid="trump-prompt-pass">
             {t("game.trumpPrompt.pass")}
           </Button>
+          {showRing && (
+            <div className="relative w-9 h-9 shrink-0" data-testid="trump-prompt-timer">
+              <TimerRing
+                turnExpiresAt={turnExpiresAt ?? null}
+                totalDuration={timerDurationSec ?? 0}
+                size="button"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

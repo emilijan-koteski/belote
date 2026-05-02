@@ -305,7 +305,10 @@
       "playerDisconnected": "A player is disconnected"
     },
     "timer": {
-      "autoPlayed": "Auto-played: {{card}}"
+      "autoPlayed": "Auto-played: {{card}}",
+      "autoPassed": "{{player}} ran out of time — auto-passed",
+      "autoSkippedDeclare": "{{player}} ran out of time — auto-skipped declarations",
+      "autoSkippedBelot": "{{player}} ran out of time — auto-declined belot"
     },
     "score": {
       "tricks": "Tricks",

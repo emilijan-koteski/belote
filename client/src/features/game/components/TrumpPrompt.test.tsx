@@ -210,6 +210,54 @@ describe("TrumpPrompt", () => {
     expect(screen.getByTestId("trump-prompt-suit-S")).toBeInTheDocument();
   });
 
+  it("renders in-dialog timer ring around Pass when active and per-move", () => {
+    const expiry = new Date(Date.now() + 20000).toISOString();
+    render(
+      <TrumpPrompt
+        trumpCandidate={trumpCandidate}
+        biddingRound={1}
+        isActiveBidder={true}
+        onPick={vi.fn()}
+        onPass={vi.fn()}
+        turnExpiresAt={expiry}
+        timerDurationSec={30}
+      />,
+    );
+    const ring = screen.getByTestId("timer-ring");
+    expect(ring.getAttribute("data-size")).toBe("button");
+  });
+
+  it("does not render in-dialog timer ring in relaxed mode (no turnExpiresAt)", () => {
+    render(
+      <TrumpPrompt
+        trumpCandidate={trumpCandidate}
+        biddingRound={1}
+        isActiveBidder={true}
+        onPick={vi.fn()}
+        onPass={vi.fn()}
+        turnExpiresAt={null}
+        timerDurationSec={0}
+      />,
+    );
+    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+  });
+
+  it("does not render in-dialog timer ring for non-active bidders", () => {
+    const expiry = new Date(Date.now() + 20000).toISOString();
+    render(
+      <TrumpPrompt
+        trumpCandidate={trumpCandidate}
+        biddingRound={1}
+        isActiveBidder={false}
+        onPick={vi.fn()}
+        onPass={vi.fn()}
+        turnExpiresAt={expiry}
+        timerDurationSec={30}
+      />,
+    );
+    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+  });
+
   it("has role dialog and aria-modal", () => {
     render(
       <TrumpPrompt

@@ -208,6 +208,14 @@ func TestEventsJSONContract(t *testing.T) {
 			goldenFile: "game_resumed.json",
 		},
 		{
+			name: "AutoActionPayload",
+			sample: ws.AutoActionPayload{
+				PlayerSeat: 1,
+				Type:       ws.AutoActionPassTrump,
+			},
+			goldenFile: "auto_action.json",
+		},
+		{
 			name: "PlayerDisconnectedPayload",
 			sample: ws.PlayerDisconnectedPayload{
 				PlayerSeat:         3,

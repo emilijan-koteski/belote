@@ -78,6 +78,7 @@ export const EVENT_DECLARATIONS_RESOLVED = "event:declarations_resolved" as cons
 export const EVENT_BELOT_ANNOUNCED = "event:belot_announced" as const;
 export const EVENT_GAME_PAUSED = "event:game_paused" as const;
 export const EVENT_GAME_RESUMED = "event:game_resumed" as const;
+export const EVENT_AUTO_ACTION = "event:auto_action" as const;
 
 // Game state payload types will be expanded in Story 4.2 when the session manager
 // defines the exact shape of game state broadcasts. For now, typed as unknown.
@@ -160,6 +161,15 @@ export interface GamePausedPayload {
 export interface GameResumedPayload {
   resumedBy: number;
   ownerOverride: boolean;
+}
+
+// Non-card auto-action emitted on per-move timer expiry. Card auto-play uses
+// the autoPlayed flag on event:card_played and is not represented here.
+export type AutoActionType = "pass_trump" | "skip_declare" | "skip_belot";
+
+export interface AutoActionPayload {
+  playerSeat: number;
+  type: AutoActionType;
 }
 
 // --- Disconnect/reconnect events (server -> client) ---

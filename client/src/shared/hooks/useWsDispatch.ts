@@ -8,6 +8,7 @@ import { useGameStore } from "@/shared/stores/gameStore";
 import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { GameState } from "@/shared/types/gameTypes";
 import type {
+  AutoActionPayload,
   BelotAnnouncedPayload,
   CardPlayedPayload,
   ChatMessagePayload,
@@ -42,6 +43,7 @@ import {
   ERROR_PLAYER_DISCONNECTED,
   ERROR_SURRENDER_EXHAUSTED,
   ERROR_WRONG_PHASE,
+  EVENT_AUTO_ACTION,
   EVENT_BELOT_ANNOUNCED,
   EVENT_CARD_PLAYED,
   EVENT_DECLARATIONS_RESOLVED,
@@ -222,6 +224,33 @@ function dispatchGameEvent(message: WsMessage): void {
 
   if (type === EVENT_GAME_PAUSED) {
     // Informational — the full event:game_state that follows carries pause state
+    return;
+  }
+
+  if (type === EVENT_AUTO_ACTION) {
+    if (store.gameState === null) return;
+    const payload = message.payload as AutoActionPayload;
+    if (
+      typeof payload?.playerSeat !== "number" ||
+      !Number.isInteger(payload.playerSeat) ||
+      payload.playerSeat < 0 ||
+      payload.playerSeat > 3 ||
+      (payload?.type !== "pass_trump" &&
+        payload?.type !== "skip_declare" &&
+        payload?.type !== "skip_belot")
+    ) {
+      console.warn("WS: ignoring malformed event:auto_action payload", payload);
+      return;
+    }
+    const playerName =
+      store.gameState.players[payload.playerSeat]?.username ?? `Player ${payload.playerSeat + 1}`;
+    const i18nKey =
+      payload.type === "pass_trump"
+        ? "game.timer.autoPassed"
+        : payload.type === "skip_declare"
+          ? "game.timer.autoSkippedDeclare"
+          : "game.timer.autoSkippedBelot";
+    toast.info(i18n.t(i18nKey, { player: playerName }), { duration: 3000 });
     return;
   }
 

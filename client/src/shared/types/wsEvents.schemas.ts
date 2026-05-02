@@ -28,6 +28,7 @@
 import { z } from "zod";
 
 import type {
+  AutoActionPayload,
   BelotAnnouncedPayload,
   CardPlayedPayload,
   DeclarationsResolvedPayload,
@@ -228,6 +229,11 @@ export const GameResumedPayloadSchema = z.strictObject({
   ownerOverride: z.boolean(),
 });
 
+export const AutoActionPayloadSchema = z.strictObject({
+  playerSeat: z.number().int().min(0).max(3),
+  type: z.union([z.literal("pass_trump"), z.literal("skip_declare"), z.literal("skip_belot")]),
+});
+
 export const PlayerDisconnectedPayloadSchema = z.strictObject({
   playerSeat: z.number(),
   username: z.string(),
@@ -321,6 +327,12 @@ type _GameResumedConformance = MutualExtends<
 >;
 const _gameResumedConforms: _GameResumedConformance = true;
 
+type _AutoActionConformance = MutualExtends<
+  z.infer<typeof AutoActionPayloadSchema>,
+  AutoActionPayload
+>;
+const _autoActionConforms: _AutoActionConformance = true;
+
 type _PlayerDisconnectedConformance = MutualExtends<
   z.infer<typeof PlayerDisconnectedPayloadSchema>,
   PlayerDisconnectedPayload
@@ -359,6 +371,7 @@ export const _conformanceWitnesses = {
   _belotAnnouncedConforms,
   _gamePausedConforms,
   _gameResumedConforms,
+  _autoActionConforms,
   _playerDisconnectedConforms,
   _playerReconnectedConforms,
   _surrenderProposedConforms,

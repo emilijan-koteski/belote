@@ -108,4 +108,47 @@ describe("DeclarationPrompt", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
   });
+
+  it("renders in-dialog timer ring around Skip when per-move", () => {
+    const expiry = new Date(Date.now() + 20000).toISOString();
+    render(
+      <DeclarationPrompt
+        declarations={mockDeclarations}
+        onDeclare={vi.fn()}
+        onSkip={vi.fn()}
+        turnExpiresAt={expiry}
+        timerDurationSec={30}
+      />,
+    );
+    const ring = screen.getByTestId("timer-ring");
+    expect(ring.getAttribute("data-size")).toBe("button");
+  });
+
+  it("does not render in-dialog timer ring in relaxed mode", () => {
+    render(
+      <DeclarationPrompt
+        declarations={mockDeclarations}
+        onDeclare={vi.fn()}
+        onSkip={vi.fn()}
+        turnExpiresAt={null}
+        timerDurationSec={0}
+      />,
+    );
+    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+  });
+
+  it("does not render in-dialog timer ring when isActivePlayer is false", () => {
+    const expiry = new Date(Date.now() + 20000).toISOString();
+    render(
+      <DeclarationPrompt
+        declarations={mockDeclarations}
+        onDeclare={vi.fn()}
+        onSkip={vi.fn()}
+        turnExpiresAt={expiry}
+        timerDurationSec={30}
+        isActivePlayer={false}
+      />,
+    );
+    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+  });
 });

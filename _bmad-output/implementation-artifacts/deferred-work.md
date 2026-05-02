@@ -1,5 +1,9 @@
 # Deferred Work
 
+## Deferred from: code review of spec-timer-auto-actions-and-dialog-rings (2026-05-02)
+
+- **`cancelTurnTimer()` does not increment `timerGeneration`** — pre-existing paper-guard race in the pause/unpause path. When `ActionPause` runs while a per-move timer goroutine is already past `time.AfterFunc` and blocked on `session.mu.Lock()`, `cancelTurnTimer()` does not bump the generation counter, so the stale handler eventually acquires the lock with a passing staleness check. Today the `default` case in `handleTimerExpiry`'s switch silently returns, so no corruption occurs — but a future patch that adds work above the switch could fire spuriously after pause. Fix scope: increment `session.timerGeneration` inside `cancelTurnTimer()` (or in the pause branch) so the staleness guard catches this case explicitly. [server/internal/session/manager.go:861-919, ws-edge-case review 2026-05-02]
+
 ## Deferred from: code review of spec-quickplay-auto-seat-on-join (2026-04-29)
 
 - **Auto-start broadcasts `system:game_started` even when `gameStarter.StartGame` failed** — clients navigate to `/game/{id}` for a game session that does not exist on the server. Pre-existing pattern duplicated from the `SelectSeat` auto-start branch (`server/internal/room/handler.go:670-731`). Fix scope: refactor both auto-start paths to gate the broadcast and the `playing` status flip on `StartGame` success. [server/internal/room/handler.go:1287-1298]

@@ -13,6 +13,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import autoActionGolden from "../../../../server/internal/ws/testdata/events/auto_action.json";
 import belotAnnouncedGolden from "../../../../server/internal/ws/testdata/events/belot_announced.json";
 import cardPlayedGolden from "../../../../server/internal/ws/testdata/events/card_played.json";
 import declarationsResolvedGolden from "../../../../server/internal/ws/testdata/events/declarations_resolved.json";
@@ -29,6 +30,7 @@ import surrenderProposedGolden from "../../../../server/internal/ws/testdata/eve
 import trickResolvedGolden from "../../../../server/internal/ws/testdata/events/trick_resolved.json";
 import trumpSelectedGolden from "../../../../server/internal/ws/testdata/events/trump_selected.json";
 import {
+  AutoActionPayloadSchema,
   BelotAnnouncedPayloadSchema,
   CardPlayedPayloadSchema,
   DeclarationsResolvedPayloadSchema,
@@ -65,6 +67,7 @@ const cases = [
   ["BelotAnnouncedPayload", BelotAnnouncedPayloadSchema, belotAnnouncedGolden],
   ["GamePausedPayload", GamePausedPayloadSchema, gamePausedGolden],
   ["GameResumedPayload", GameResumedPayloadSchema, gameResumedGolden],
+  ["AutoActionPayload", AutoActionPayloadSchema, autoActionGolden],
   ["PlayerDisconnectedPayload", PlayerDisconnectedPayloadSchema, playerDisconnectedGolden],
   ["PlayerReconnectedPayload", PlayerReconnectedPayloadSchema, playerReconnectedGolden],
   ["SurrenderProposedPayload", SurrenderProposedPayloadSchema, surrenderProposedGolden],

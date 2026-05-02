@@ -817,6 +817,73 @@ describe("useWsDispatch", () => {
     expect(declined?.decliningSeat).toBe(2);
   });
 
+  it("fires info toast for event:auto_action of type pass_trump", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    const { result } = renderHook(() => useWsDispatch());
+    result.current({
+      type: "event:auto_action",
+      payload: { playerSeat: 1, type: "pass_trump" },
+    });
+    expect(toast.info).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires info toast for event:auto_action of type skip_declare", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    const { result } = renderHook(() => useWsDispatch());
+    result.current({
+      type: "event:auto_action",
+      payload: { playerSeat: 2, type: "skip_declare" },
+    });
+    expect(toast.info).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires info toast for event:auto_action of type skip_belot", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    const { result } = renderHook(() => useWsDispatch());
+    result.current({
+      type: "event:auto_action",
+      payload: { playerSeat: 3, type: "skip_belot" },
+    });
+    expect(toast.info).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores event:auto_action when gameState is null", () => {
+    const { result } = renderHook(() => useWsDispatch());
+    result.current({
+      type: "event:auto_action",
+      payload: { playerSeat: 0, type: "pass_trump" },
+    });
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
+  it("ignores malformed event:auto_action payloads", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { result } = renderHook(() => useWsDispatch());
+    result.current({
+      type: "event:auto_action",
+      payload: { playerSeat: 99, type: "pass_trump" },
+    });
+    result.current({
+      type: "event:auto_action",
+      payload: { playerSeat: 1, type: "bogus" as unknown as "pass_trump" },
+    });
+    // NaN slips through `typeof === "number"`; the explicit Number.isInteger
+    // guard must reject it so toasts never render "Player NaN".
+    result.current({
+      type: "event:auto_action",
+      payload: { playerSeat: Number.NaN, type: "pass_trump" },
+    });
+    // Non-integer floats also rejected by the integer guard.
+    result.current({
+      type: "event:auto_action",
+      payload: { playerSeat: 1.5, type: "pass_trump" },
+    });
+    expect(toast.info).not.toHaveBeenCalled();
+    expect(consoleWarnSpy).toHaveBeenCalled();
+    consoleWarnSpy.mockRestore();
+  });
+
   it("propagates outcomeReason+surrenderedBySeat through event:match_end", () => {
     useGameStore.getState().setGameState(mockGameState);
 

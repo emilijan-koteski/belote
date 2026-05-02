@@ -51,4 +51,47 @@ describe("BelotPrompt", () => {
     expect(screen.getByText("Announce Re-belot?")).toBeInTheDocument();
     expect(screen.getByTestId("belot-prompt-announce")).toHaveTextContent("Announce Re-belot");
   });
+
+  it("renders in-dialog timer ring around Decline when per-move", () => {
+    const expiry = new Date(Date.now() + 20000).toISOString();
+    render(
+      <BelotPrompt
+        isKing={false}
+        onAnnounce={vi.fn()}
+        onDecline={vi.fn()}
+        turnExpiresAt={expiry}
+        timerDurationSec={30}
+      />,
+    );
+    const ring = screen.getByTestId("timer-ring");
+    expect(ring.getAttribute("data-size")).toBe("button");
+  });
+
+  it("does not render in-dialog timer ring in relaxed mode", () => {
+    render(
+      <BelotPrompt
+        isKing={false}
+        onAnnounce={vi.fn()}
+        onDecline={vi.fn()}
+        turnExpiresAt={null}
+        timerDurationSec={0}
+      />,
+    );
+    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+  });
+
+  it("does not render in-dialog timer ring when isActivePlayer is false", () => {
+    const expiry = new Date(Date.now() + 20000).toISOString();
+    render(
+      <BelotPrompt
+        isKing={false}
+        onAnnounce={vi.fn()}
+        onDecline={vi.fn()}
+        turnExpiresAt={expiry}
+        timerDurationSec={30}
+        isActivePlayer={false}
+      />,
+    );
+    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+  });
 });

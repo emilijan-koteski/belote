@@ -944,6 +944,16 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 	startedAt := session.startedAt
 	session.mu.Unlock()
 
+	// Inform clients that a non-card auto-action just fired so they can surface
+	// a toast naming the timed-out player. Card auto-play uses the existing
+	// AutoPlayed flag on event:card_played and does NOT emit this event.
+	if autoType, ok := autoActionTypeFor(action.Type); ok {
+		m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventAutoAction, ws.AutoActionPayload{
+			PlayerSeat: expectedSeat,
+			Type:       autoType,
+		}))
+	}
+
 	// Broadcast result
 	isAutoPlayedCard := action.Type == game.ActionPlayCard
 	m.broadcastActionResult(playerIDs, oldState, newState, action, isAutoPlayedCard, startedAt)
@@ -957,6 +967,22 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 	if newState.Phase == game.PhaseMatchEnd {
 		m.handleMatchEnd(session, newState, nil)
 	}
+}
+
+// autoActionTypeFor maps a rules-engine action type to the wire-format
+// AutoActionType emitted on timer expiry. Returns (_, false) for actions that
+// should not produce an EventAutoAction (notably ActionPlayCard, which uses the
+// AutoPlayed flag on EventCardPlayed).
+func autoActionTypeFor(actionType string) (ws.AutoActionType, bool) {
+	switch actionType {
+	case game.ActionPassTrump:
+		return ws.AutoActionPassTrump, true
+	case game.ActionSkipDeclare:
+		return ws.AutoActionSkipDeclare, true
+	case game.ActionSkipBelot:
+		return ws.AutoActionSkipBelot, true
+	}
+	return "", false
 }
 
 func safeDerefInt(p *int) int {

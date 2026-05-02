@@ -167,6 +167,72 @@ describe("ScoreReveal", () => {
     expect(onContinue).toHaveBeenCalledOnce();
   });
 
+  it("auto-dismisses by calling onContinue after 8000ms", () => {
+    const onContinue = vi.fn();
+    render(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={onContinue} />);
+
+    act(() => {
+      vi.advanceTimersByTime(7999);
+    });
+    expect(onContinue).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(onContinue).toHaveBeenCalledOnce();
+  });
+
+  it("auto-dismiss timer is NOT reset when onContinue identity changes mid-reveal", () => {
+    // Regression guard: if the parent rebuilds its onContinue closure after
+    // event:match_end lands, the 8s clock used to restart from zero.
+    const onContinueA = vi.fn();
+    const onContinueB = vi.fn();
+    const { rerender } = render(
+      <ScoreReveal data={normalData} viewerTeam="teamA" onContinue={onContinueA} />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+    // Parent re-renders with a fresh callback identity (e.g. matchEndData arrived)
+    rerender(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={onContinueB} />);
+
+    act(() => {
+      vi.advanceTimersByTime(4001);
+    });
+    // The latest callback fires once at the original 8000ms mark — NOT 12001ms.
+    expect(onContinueB).toHaveBeenCalledOnce();
+    expect(onContinueA).not.toHaveBeenCalled();
+  });
+
+  it("auto-dismisses after 1500ms when reduced motion is preferred", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+    const onContinue = vi.fn();
+    render(<ScoreReveal data={normalData} viewerTeam="teamA" onContinue={onContinue} />);
+
+    act(() => {
+      vi.advanceTimersByTime(1499);
+    });
+    expect(onContinue).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(onContinue).toHaveBeenCalledOnce();
+  });
+
   it("enables Continue button after 500ms when reduced motion is preferred", () => {
     Object.defineProperty(window, "matchMedia", {
       writable: true,

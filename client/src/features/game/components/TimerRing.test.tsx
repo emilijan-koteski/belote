@@ -101,6 +101,29 @@ describe("TimerRing", () => {
     expect(ring.className).not.toContain("motion-safe:animate-pulse");
   });
 
+  it("renders larger svg in default seat size variant", () => {
+    const expiry = new Date(Date.now() + 20000);
+    const { container } = render(
+      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />,
+    );
+    const svg = container.querySelector("svg");
+    expect(svg?.getAttribute("width")).toBe("48");
+    expect(svg?.getAttribute("height")).toBe("48");
+    expect(screen.getByTestId("timer-ring").getAttribute("data-size")).toBe("seat");
+  });
+
+  it("renders compact svg and label in button size variant", () => {
+    const expiry = new Date(Date.now() + 20000);
+    const { container } = render(
+      <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} size="button" />,
+    );
+    const svg = container.querySelector("svg");
+    expect(svg?.getAttribute("width")).toBe("36");
+    expect(svg?.getAttribute("height")).toBe("36");
+    expect(screen.getByTestId("timer-ring").getAttribute("data-size")).toBe("button");
+    expect(screen.getByTestId("timer-seconds").className).toContain("text-[10px]");
+  });
+
   it("uses motion-safe prefix for transitions (reduced-motion safe)", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() + 5000); // warning state

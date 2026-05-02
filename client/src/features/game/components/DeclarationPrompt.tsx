@@ -5,11 +5,18 @@ import { useFocusTrap } from "@/shared/hooks/useFocusTrap";
 import type { Declaration } from "@/shared/types/gameTypes";
 
 import { PlayingCard } from "./PlayingCard";
+import { TimerRing } from "./TimerRing";
 
 interface DeclarationPromptProps {
   declarations: Declaration[];
   onDeclare: () => void;
   onSkip: () => void;
+  turnExpiresAt?: string | null;
+  timerDurationSec?: number;
+  // Defensive component-level invariant: ring renders only when the viewer is
+  // the active player. Caller (GamePage) already gates this prompt on
+  // activePlayerSeat === myPlayerSeat, so this defaults true.
+  isActivePlayer?: boolean;
 }
 
 function declarationLabel(
@@ -22,10 +29,18 @@ function declarationLabel(
   return t("game.declaration.sequence", { count: decl.cards.length, points: decl.value });
 }
 
-export function DeclarationPrompt({ declarations, onDeclare, onSkip }: DeclarationPromptProps) {
+export function DeclarationPrompt({
+  declarations,
+  onDeclare,
+  onSkip,
+  turnExpiresAt,
+  timerDurationSec,
+  isActivePlayer = true,
+}: DeclarationPromptProps) {
   const { t } = useTranslation();
   const promptRef = useFocusTrap<HTMLDivElement>();
   const total = declarations.reduce((sum, d) => sum + d.value, 0);
+  const showRing = isActivePlayer && Boolean(turnExpiresAt) && (timerDurationSec ?? 0) > 0;
 
   return (
     <div
@@ -90,13 +105,22 @@ export function DeclarationPrompt({ declarations, onDeclare, onSkip }: Declarati
           </span>
         </div>
 
-        <div className="flex gap-3 justify-center">
+        <div className="flex gap-3 justify-center items-center">
           <Button onClick={onDeclare} data-testid="declaration-prompt-declare">
             {t("game.declaration.declare")}
           </Button>
           <Button variant="ghost" onClick={onSkip} data-testid="declaration-prompt-skip">
             {t("game.declaration.skip")}
           </Button>
+          {showRing && (
+            <div className="relative w-9 h-9 shrink-0" data-testid="declaration-prompt-timer">
+              <TimerRing
+                turnExpiresAt={turnExpiresAt ?? null}
+                totalDuration={timerDurationSec ?? 0}
+                size="button"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
@@ -22,6 +22,22 @@ export function ScoreReveal({ data, viewerTeam, onContinue }: ScoreRevealProps) 
   useEffect(() => {
     const delay = prefersReducedMotion ? 500 : 2000;
     const timer = setTimeout(() => setContinueEnabled(true), delay);
+    return () => clearTimeout(timer);
+  }, [prefersReducedMotion]);
+
+  // Auto-dismiss after a fixed window so an AFK player doesn't get stuck on
+  // the reveal after the server has already advanced. Mirrors DeclarationReveal
+  // (8000/1500 ms). The 2s "Continue disabled" cushion above is independent.
+  // Hold onContinue in a ref so the timer is NOT reset when the parent
+  // re-creates the callback mid-reveal (e.g. when event:match_end lands and
+  // GamePage's handleScoreRevealContinue closure changes identity).
+  const onContinueRef = useRef(onContinue);
+  useEffect(() => {
+    onContinueRef.current = onContinue;
+  }, [onContinue]);
+  useEffect(() => {
+    const dismissAt = prefersReducedMotion ? 1500 : 8000;
+    const timer = setTimeout(() => onContinueRef.current(), dismissAt);
     return () => clearTimeout(timer);
   }, [prefersReducedMotion]);
 

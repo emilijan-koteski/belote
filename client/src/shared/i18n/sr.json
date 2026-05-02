@@ -305,7 +305,10 @@
       "playerDisconnected": "Igrač je prekinuo vezu"
     },
     "timer": {
-      "autoPlayed": "Automatski odigrano: {{card}}"
+      "autoPlayed": "Automatski odigrano: {{card}}",
+      "autoPassed": "{{player}} — isteklo vreme, automatski pas",
+      "autoSkippedDeclare": "{{player}} — isteklo vreme, najava preskočena",
+      "autoSkippedBelot": "{{player}} — isteklo vreme, belot odbijen"
     },
     "score": {
       "tricks": "Ruke",

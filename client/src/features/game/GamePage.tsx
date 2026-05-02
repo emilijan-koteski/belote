@@ -617,6 +617,8 @@ export function GamePage() {
           isActiveBidder={isActiveBidder}
           onPick={handlePickTrump}
           onPass={handlePassTrump}
+          turnExpiresAt={gameState.turnExpiresAt}
+          timerDurationSec={gameState.timerDurationSec}
         />
       )}
 
@@ -630,6 +632,8 @@ export function GamePage() {
           }
           onDeclare={handleDeclare}
           onSkip={handleSkipDeclare}
+          turnExpiresAt={gameState.turnExpiresAt}
+          timerDurationSec={gameState.timerDurationSec}
         />
       )}
 
@@ -639,6 +643,8 @@ export function GamePage() {
           isKing={belotPromptIsKing}
           onAnnounce={handleAnnounceBelot}
           onDecline={handleDeclineBelot}
+          turnExpiresAt={gameState.turnExpiresAt}
+          timerDurationSec={gameState.timerDurationSec}
         />
       )}
 
