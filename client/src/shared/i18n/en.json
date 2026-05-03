@@ -315,7 +315,9 @@
       "autoSkippedBelot": "{{player}} ran out of time — auto-declined belot"
     },
     "score": {
+      "heading": "Scoreboard",
       "tricks": "Tricks",
+      "trick": "trick",
       "lastTrickBonus": "+{{amount}}",
       "thisHand": "this hand"
     },
@@ -401,6 +403,20 @@
       "matchAbandoned": "{{player}} disconnected \u2014 match ended",
       "matchAbandonedScores": "Final: Us {{us}} : Them {{them}}",
       "returningToLobby": "Returning to lobby..."
+    },
+    "hud": {
+      "pause": "Pause",
+      "rules": "Rules",
+      "settings": "Settings"
+    },
+    "settings": {
+      "title": "Settings",
+      "languageHeading": "Language",
+      "close": "Close"
+    },
+    "rules": {
+      "title": "Game rules",
+      "comingSoon": "Detailed rules are on the way \u2014 check back soon."
     }
   },
   "ws": {

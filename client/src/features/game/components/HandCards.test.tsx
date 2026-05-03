@@ -120,4 +120,42 @@ describe("HandCards", () => {
 
     expect(onPlayCard).toHaveBeenCalledWith("TH");
   });
+
+  it("animates the flying card with the hand-throw keyframe and disables pointer events", () => {
+    render(
+      <HandCards
+        hand={testHand}
+        isMyTurn={true}
+        playableCardIds={["KS", "TH", "7D"]}
+        onPlayCard={vi.fn()}
+        flyingId="KS"
+      />,
+    );
+
+    // The wrapper around the flying card carries the animation + pointer-
+    // events:none. The other cards stay at their normal layout.
+    const flyingWrapper = screen.getByTestId("playing-card-KS").parentElement;
+    const otherWrapper = screen.getByTestId("playing-card-TH").parentElement;
+    expect(flyingWrapper?.style.animation).toContain("handThrow");
+    expect(flyingWrapper?.style.pointerEvents).toBe("none");
+    expect(otherWrapper?.style.animation ?? "").not.toContain("handThrow");
+  });
+
+  it("treats the flying card as 'default' state so it is not clickable mid-flight", () => {
+    const onPlayCard = vi.fn();
+    render(
+      <HandCards
+        hand={testHand}
+        isMyTurn={true}
+        playableCardIds={["KS", "TH", "7D"]}
+        onPlayCard={onPlayCard}
+        flyingId="KS"
+      />,
+    );
+
+    const flying = screen.getByTestId("playing-card-KS");
+    // Without the playable lift class, the card is in default state — no
+    // cursor-pointer hint, no extra click handler that would re-fire onPlay.
+    expect(flying.className).not.toContain("cursor-pointer");
+  });
 });

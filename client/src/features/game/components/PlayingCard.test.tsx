@@ -36,19 +36,20 @@ describe("PlayingCard", () => {
     expect(card).not.toHaveTextContent("\u2660");
   });
 
-  it("has accent glow class and cursor-pointer when playable", () => {
+  it("has lime halo and cursor-pointer when playable", () => {
     render(<PlayingCard card={kingOfSpades} state="playable" size="md" />);
 
     const card = screen.getByTestId("playing-card-KS");
     expect(card.className).toContain("cursor-pointer");
-    expect(card.className).toContain("shadow-[0_0_12px_var(--color-accent-glow)]");
+    // Lime turn-signal halo is applied inline (channel is independent of theme)
+    expect(card.style.boxShadow).toContain("var(--turn-lime");
   });
 
-  it("is faded and lowered with cursor-not-allowed when unplayable (suit color retained)", () => {
+  it("stays at full opacity when unplayable but blocks the cursor (per design — visible, not transparent)", () => {
     render(<PlayingCard card={kingOfSpades} state="unplayable" size="md" />);
 
     const card = screen.getByTestId("playing-card-KS");
-    expect(card.className).toContain("opacity-40");
+    expect(card.className).not.toContain("opacity-40");
     expect(card.className).not.toContain("grayscale");
     expect(card.className).toContain("motion-safe:translate-y-[4px]");
     expect(card.className).toContain("cursor-not-allowed");

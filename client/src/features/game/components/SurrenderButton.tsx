@@ -1,3 +1,4 @@
+import { Flag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -10,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
+
+import { HUDButton } from "./HUDButton";
 
 interface SurrenderButtonProps {
   canRequest: boolean;
@@ -35,7 +38,8 @@ export function SurrenderButton({
 
   // Exhausted state takes priority — once consumed, that's the durable
   // condition; pending only describes a transient partner-side proposal.
-  const caption = isExhausted
+  // The aria-label carries the verbose status; the button itself is icon-only.
+  const ariaLabel = isExhausted
     ? t("game.surrender.exhausted")
     : isPending
       ? t("game.surrender.pending")
@@ -50,15 +54,15 @@ export function SurrenderButton({
 
   return (
     <>
-      <button
-        type="button"
-        className="border border-border text-text-secondary font-body text-sm px-3 py-1.5 rounded-lg hover:text-text-primary hover:border-text-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      <HUDButton
+        variant="danger"
+        icon={<Flag className="h-4 w-4" aria-hidden="true" />}
+        aria-label={ariaLabel}
+        title={ariaLabel}
         onClick={() => setConfirmOpen(true)}
         disabled={isDisabled}
         data-testid="surrender-button"
-      >
-        {caption}
-      </button>
+      />
 
       <Dialog
         open={confirmOpen}

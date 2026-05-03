@@ -1,3 +1,4 @@
+import { HelpCircle, Pause, Settings as SettingsIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
@@ -29,43 +30,52 @@ import { BelotPrompt } from "./components/BelotPrompt";
 import { BelotReveal } from "./components/BelotReveal";
 import { CapotAnimation } from "./components/CapotAnimation";
 import { DealAnimation } from "./components/DealAnimation";
-import { DealerIndicator } from "./components/DealerIndicator";
 import { DeclarationPrompt } from "./components/DeclarationPrompt";
 import { DeclarationReveal } from "./components/DeclarationReveal";
 import { EmoteBubble } from "./components/EmoteBubble";
 import { EmotePickerButton } from "./components/EmotePickerButton";
 import { HandCards } from "./components/HandCards";
+import { HUDButton } from "./components/HUDButton";
 import { MatchChatSidebar } from "./components/MatchChatSidebar";
 import { MatchResult } from "./components/MatchResult";
 import { PauseOverlay } from "./components/PauseOverlay";
-import { PlayerSeat } from "./components/PlayerSeat";
+import { PlayerSeat, type SeatOrientation } from "./components/PlayerSeat";
 import { ReconnectOverlay } from "./components/ReconnectOverlay";
 import { ReshuffleAnimation } from "./components/ReshuffleAnimation";
+import { RulesDialog } from "./components/RulesDialog";
 import { ScorePanel } from "./components/ScorePanel";
 import { ScoreReveal } from "./components/ScoreReveal";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { SurrenderButton } from "./components/SurrenderButton";
 import { SurrenderOpponentBanner } from "./components/SurrenderOpponentBanner";
 import { SurrenderPrompt } from "./components/SurrenderPrompt";
+import { TableAmbience } from "./components/TableAmbience";
+import { TableBackdrop } from "./components/TableBackdrop";
 import { TrickArea } from "./components/TrickArea";
 import { TrumpIndicator } from "./components/TrumpIndicator";
 import { TrumpPrompt } from "./components/TrumpPrompt";
 import { TrumpReveal } from "./components/TrumpReveal";
+import { Wordmark } from "./components/Wordmark";
 import { detectDeclarations } from "./lib/declarations";
 import { legalCardIds } from "./lib/legalCards";
+import { seatTeam } from "./lib/tableTheme";
 
 function compassOffset(seat: number, myPlayerSeat: number): number {
   return (seat - myPlayerSeat + 4) % 4;
 }
 
-function teamForSeat(seat: number): TeamString {
-  return seat % 2 === 0 ? "teamA" : "teamB";
-}
-
 const SEAT_POSITIONS: Record<number, string> = {
-  0: "bottom-24 left-1/2 -translate-x-1/2", // South (self) - above hand cards
+  0: "bottom-44 left-1/2 -translate-x-1/2", // South (self) - above the fanned hand
   1: "right-4 top-1/2 -translate-y-1/2", // East (next player counter-clockwise)
-  2: "top-4 left-1/2 -translate-x-1/2", // North (partner)
+  2: "top-12 left-1/2 -translate-x-1/2", // North (partner) - clears the wordmark
   3: "left-4 top-1/2 -translate-y-1/2", // West (third player)
+};
+
+const SEAT_ORIENTATIONS: Record<number, SeatOrientation> = {
+  0: "bottom",
+  1: "right",
+  2: "top",
+  3: "left",
 };
 
 export function GamePage() {
@@ -100,6 +110,14 @@ export function GamePage() {
   const [showReshuffle, setShowReshuffle] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const errorToastTimerRef = useRef<number | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  // Local card-throw animation: set on play_card dispatch, cleared shortly
+  // after so HandCards animates the played card down + fades it. The actual
+  // hand removal arrives via the next gameState push, which keys the
+  // remaining cards by id so HandCards stays stable across the hand-off.
+  const [flyingCardId, setFlyingCardId] = useState<string | null>(null);
+  const flyingClearTimerRef = useRef<number | null>(null);
 
   const dismissErrorToast = useCallback(() => {
     if (errorToastTimerRef.current !== null) {
@@ -223,6 +241,9 @@ export function GamePage() {
       if (errorToastTimerRef.current !== null) {
         clearTimeout(errorToastTimerRef.current);
       }
+      if (flyingClearTimerRef.current !== null) {
+        clearTimeout(flyingClearTimerRef.current);
+      }
     };
   }, []);
 
@@ -252,6 +273,18 @@ export function GamePage() {
   // --- Action handlers ---
   const handlePlayCard = useCallback(
     (cardId: string) => {
+      // Trigger the hand-throw animation immediately so the gesture starts
+      // before the WS round-trip completes. The card is cleared from the
+      // local hand by the next gameState push (server removes it from
+      // `players[seat].hand`); this state just controls the exit animation.
+      setFlyingCardId(cardId);
+      if (flyingClearTimerRef.current !== null) {
+        clearTimeout(flyingClearTimerRef.current);
+      }
+      flyingClearTimerRef.current = window.setTimeout(() => {
+        setFlyingCardId(null);
+        flyingClearTimerRef.current = null;
+      }, 320);
       sendMessage(ACTION_PLAY_CARD, { cardId });
     },
     [sendMessage],
@@ -363,7 +396,7 @@ export function GamePage() {
   if (!gameState || myPlayerSeat === null) {
     return (
       <div
-        className="h-screen w-screen overflow-hidden bg-background flex items-center justify-center"
+        className="game-table h-screen w-screen overflow-hidden bg-background flex items-center justify-center"
         data-testid="game-page"
       >
         <span className="text-text-secondary font-body text-lg">{t("game.loading")}</span>
@@ -453,9 +486,16 @@ export function GamePage() {
 
   return (
     <div
-      className="h-screen w-screen overflow-hidden relative bg-background"
+      className="game-table h-screen w-screen overflow-hidden relative bg-background"
       data-testid="game-page"
     >
+      {/* Static table chrome — felt + wood rim + brass oval + filigree */}
+      <TableBackdrop />
+      {/* Floating particles + soft top beam (decorative, reduced-motion aware) */}
+      <TableAmbience intensity={0.9} tint="#ffe9b0" />
+      {/* "Beljot.online" wordmark — top center */}
+      <Wordmark />
+
       {/* Score panel - top left */}
       <ScorePanel
         viewerTeam={viewerTeam}
@@ -469,57 +509,57 @@ export function GamePage() {
         lastTrickTeam={scoreRevealData?.lastTrickTeam}
       />
 
-      {/* Dealer + trump indicators - top right, stacked vertically.
-          Trump indicator is gated to play phases (AC 4.4.5); the dealer
-          indicator is visible whenever the dealer's seat resolves to a
-          player. The whole pill is hidden behind any active overlay
-          (dealer-indicator D97). */}
-      {!isOverlayActive && (
-        <div className="absolute top-4 right-16 z-10 flex flex-col items-end gap-2">
-          {(() => {
-            const dealerName = gameState.players.find(
-              (p) => p.seat === gameState.dealerSeat,
-            )?.username;
-            return dealerName ? <DealerIndicator dealerName={dealerName} /> : null;
-          })()}
-          {gameState.trumpSuit &&
-            gameState.phase !== "dealing" &&
-            gameState.phase !== "bidding" && (
-              <TrumpIndicator
-                trumpSuit={gameState.trumpSuit}
-                trumpCallerSeat={gameState.trumpCallerSeat}
-                trumpCallerName={
-                  gameState.trumpCallerSeat !== null
-                    ? (gameState.players.find((p) => p.seat === gameState.trumpCallerSeat)
-                        ?.username ?? null)
-                    : null
-                }
-                viewerTeam={viewerTeam}
-              />
-            )}
-        </div>
-      )}
+      {/* Trump indicator - top right. Gated to play phases (AC 4.4.5) and
+          hidden behind any active overlay. The dealer is now indicated by a
+          chip on the dealer's avatar (Stage 2), so the standalone dealer pill
+          is no longer rendered here. */}
+      {!isOverlayActive &&
+        gameState.trumpSuit &&
+        gameState.phase !== "dealing" &&
+        gameState.phase !== "bidding" && (
+          <div className="absolute top-4 right-4 z-10">
+            <TrumpIndicator
+              trumpSuit={gameState.trumpSuit}
+              trumpCallerSeat={gameState.trumpCallerSeat}
+              trumpCallerName={
+                gameState.trumpCallerSeat !== null
+                  ? (gameState.players.find((p) => p.seat === gameState.trumpCallerSeat)
+                      ?.username ?? null)
+                  : null
+              }
+              viewerTeam={viewerTeam}
+            />
+          </div>
+        )}
 
       {/* Player seats at compass positions */}
       {gameState.players.map((player) => {
         const compass = compassOffset(player.seat, myPlayerSeat);
         const isSelf = player.seat === myPlayerSeat;
         const isActive = gameState.activePlayerSeat === player.seat;
+        // Caller chip only shows the suit when this seat IS the trump caller.
+        const isCaller =
+          gameState.trumpCallerSeat !== null &&
+          gameState.trumpCallerSeat === player.seat &&
+          gameState.trumpSuit !== null;
 
         return (
           <div
             key={player.seat}
             className={`absolute ${SEAT_POSITIONS[compass]}`}
-            data-testid={`player-seat-${compass}`}
+            data-testid={`player-seat-${compass}-wrapper`}
           >
             <PlayerSeat
               player={player}
               isSelf={isSelf}
               isActive={isActive}
-              team={teamForSeat(player.seat)}
+              seatTeam={seatTeam(player.seat, myPlayerSeat)}
               cardCount={isSelf ? undefined : player.hand.length}
               turnExpiresAt={isActive ? gameState.turnExpiresAt : null}
               timerDuration={gameState.timerDurationSec}
+              isDealer={gameState.dealerSeat === player.seat}
+              trumpCallerSuit={isCaller ? gameState.trumpSuit : null}
+              orientation={SEAT_ORIENTATIONS[compass]}
             />
           </div>
         );
@@ -541,28 +581,50 @@ export function GamePage() {
           isMyTurn={isMyTurn}
           playableCardIds={playableCardIds}
           onPlayCard={handlePlayCard}
+          flyingId={flyingCardId}
         />
       </div>
 
-      {/* Pause + surrender controls — bottom-left stack */}
+      {/* Pause + surrender controls — bottom-left HUD cluster */}
       {(gameState.phase === "playing" || gameState.phase === "bidding") && (
-        <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2">
-          <button
-            className="border border-border text-text-secondary font-body text-sm px-3 py-1.5 rounded-lg hover:text-text-primary hover:border-text-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2">
+          <HUDButton
+            icon={<Pause className="h-4 w-4" aria-hidden="true" />}
+            label={
+              gameState.pauseUsed?.[myPlayerSeat] ? t("game.pause.pauseUsed") : t("game.hud.pause")
+            }
             onClick={handlePause}
             disabled={!canPause}
             data-testid="pause-button"
-          >
-            {gameState.pauseUsed?.[myPlayerSeat]
-              ? t("game.pause.pauseUsed")
-              : t("game.pause.pauseButton")}
-          </button>
+          />
 
           <SurrenderButton
             canRequest={canSurrenderRequest}
             isExhausted={!!gameState.surrenderUsed?.[myPlayerSeat]}
             isPending={surrenderProposerSeat !== null}
             onConfirm={handleSurrenderRequest}
+          />
+        </div>
+      )}
+
+      {/* Rules + settings — bottom-right HUD cluster (sits to the LEFT of the
+          chat FAB and emote button which anchor at right-4 / right-20). The
+          Sound button is intentionally omitted until audio ships. */}
+      {!isOverlayActive && (
+        <div className="absolute bottom-4 right-36 z-10 flex items-center gap-2">
+          <HUDButton
+            icon={<HelpCircle className="h-4 w-4" aria-hidden="true" />}
+            aria-label={t("game.hud.rules")}
+            title={t("game.hud.rules")}
+            onClick={() => setRulesOpen(true)}
+            data-testid="rules-button"
+          />
+          <HUDButton
+            icon={<SettingsIcon className="h-4 w-4" aria-hidden="true" />}
+            aria-label={t("game.hud.settings")}
+            title={t("game.hud.settings")}
+            onClick={() => setSettingsOpen(true)}
+            data-testid="settings-button"
           />
         </div>
       )}
@@ -688,13 +750,14 @@ export function GamePage() {
         />
       )}
 
-      {/* Trump-take reveal — table-wide dialog showing the picker and the
-          originally face-up trumpCandidate. Keyed on payload so a reshuffle-
-          then-pick sequence remounts cleanly. */}
+      {/* Trump-take reveal — center-of-table announcement toast that glows
+          in the caller's viewer-relative team color (Gold = Us, Silver = Them)
+          and auto-closes after 8 s with an X-with-countdown-ring escape. */}
       {trumpReveal && (
         <TrumpReveal
           key={`${trumpReveal.playerSeat}-${trumpReveal.cardId}`}
           playerSeat={trumpReveal.playerSeat}
+          myPlayerSeat={myPlayerSeat}
           cardId={trumpReveal.cardId}
           players={gameState.players}
           onComplete={handleTrumpRevealComplete}
@@ -704,14 +767,15 @@ export function GamePage() {
       {/* Match chat sidebar — collapsible right-edge panel broadcasting to the 4 participants */}
       <MatchChatSidebar />
 
-      {/* Emote picker — placed one slot below the match-chat toggle. Hidden
-          during paused/disconnected/match-end so overlays own the screen. */}
+      {/* Emote picker — sits to the LEFT of the chat FAB at the bottom-right.
+          Hidden during paused/disconnected/match-end so overlays own the
+          screen. */}
       {(gameState.phase === "dealing" ||
         gameState.phase === "bidding" ||
         gameState.phase === "playing") &&
         matchEndData === null &&
         matchAbandonedData === null && (
-          <div className="fixed top-32 right-2 z-30">
+          <div className="fixed bottom-5 right-20 z-30">
             <EmotePickerButton onSend={handleSendEmote} />
           </div>
         )}
@@ -762,6 +826,10 @@ export function GamePage() {
           surrenderedByUsername={surrenderedByUsername}
         />
       )}
+
+      {/* Settings + rules dialogs — driven by the bottom-right HUD buttons */}
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <RulesDialog open={rulesOpen} onOpenChange={setRulesOpen} />
 
       {/* Error toast */}
       {errorToast && (

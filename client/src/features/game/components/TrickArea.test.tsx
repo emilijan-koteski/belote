@@ -64,19 +64,20 @@ describe("TrickArea", () => {
     expect(glowElement).toBeInTheDocument();
   });
 
-  it("clears display after resolution and sweep timeout", () => {
+  it("clears display after the resolve pause + winner-collect slide", () => {
     const { rerender } = render(
       <TrickArea trick={trickCards} winnerSeat={null} myPlayerSeat={0} />,
     );
 
     rerender(<TrickArea trick={[]} winnerSeat={2} myPlayerSeat={0} />);
 
-    // Cards still visible during 1s resolve pause
+    // Cards still visible during the 1s resolve pause (winner glow phase).
     expect(screen.getByTestId("playing-card-KS")).toBeInTheDocument();
 
-    // Advance past resolve (1000ms) + sweep (150ms)
+    // Resolve pause is 1000 ms, then the cards slide toward the winner for
+    // 600 ms before unmounting. Advance past both.
     act(() => {
-      vi.advanceTimersByTime(1200);
+      vi.advanceTimersByTime(1700);
     });
 
     expect(screen.queryByTestId("playing-card-KS")).not.toBeInTheDocument();

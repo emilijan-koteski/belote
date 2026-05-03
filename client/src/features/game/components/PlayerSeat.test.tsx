@@ -22,108 +22,178 @@ function makePlayer(overrides: Partial<PlayerState> = {}): PlayerState {
 
 describe("PlayerSeat", () => {
   it("renders empty seat with 'Waiting...' text when player is null", () => {
-    render(<PlayerSeat player={null} isSelf={false} isActive={false} team="teamA" />);
+    render(<PlayerSeat player={null} isSelf={false} isActive={false} seatTeam="gold" />);
 
     expect(screen.getByText("Waiting...")).toBeInTheDocument();
+    expect(screen.getByTestId("player-seat-empty")).toHaveAttribute("data-seat-team", "gold");
   });
 
-  it("renders occupied seat with username, team-a border, and data-team='teamA'", () => {
-    const { container } = render(
+  it("renders occupied seat with username and gold seat-team", () => {
+    render(
       <PlayerSeat
         player={makePlayer({ username: "Bob" })}
         isSelf={false}
         isActive={false}
-        team="teamA"
+        seatTeam="gold"
       />,
     );
 
     expect(screen.getByText("Bob")).toBeInTheDocument();
-    expect(container.firstChild).toHaveClass("border-team-a");
-    expect(container.firstChild).toHaveAttribute("data-team", "teamA");
+    const seat = screen.getByTestId("player-seat-0");
+    expect(seat).toHaveAttribute("data-seat-team", "gold");
+    expect(seat).toHaveAttribute("data-active", "false");
   });
 
-  it("renders teamB border and data-team='teamB' correctly", () => {
-    const { container } = render(
+  it("renders silver seat-team for opponents", () => {
+    render(
       <PlayerSeat
-        player={makePlayer({ team: "teamB" })}
+        player={makePlayer({ team: "teamB", seat: 1 })}
         isSelf={false}
         isActive={false}
-        team="teamB"
+        seatTeam="silver"
       />,
     );
 
-    expect(container.firstChild).toHaveClass("border-team-b");
-    expect(container.firstChild).toHaveAttribute("data-team", "teamB");
+    expect(screen.getByTestId("player-seat-1")).toHaveAttribute("data-seat-team", "silver");
   });
 
-  it("renders active state with accent border and pulse animation class", () => {
-    const { container } = render(
-      <PlayerSeat player={makePlayer()} isSelf={false} isActive={true} team="teamA" />,
-    );
+  it("marks seat as active and lights the lime channel on the name pill", () => {
+    render(<PlayerSeat player={makePlayer()} isSelf={false} isActive={true} seatTeam="gold" />);
 
-    expect(container.firstChild).toHaveClass("border-accent");
-    expect(container.firstChild).toHaveClass("motion-safe:animate-pulse");
+    const seat = screen.getByTestId("player-seat-0");
+    expect(seat).toHaveAttribute("data-active", "true");
+    const namePill = screen.getByTestId("player-seat-name-pill");
+    expect(namePill.getAttribute("style")).toContain("--turn-lime");
   });
 
-  it("renders self seat with 'You' badge and scale-110", () => {
-    const { container } = render(
-      <PlayerSeat player={makePlayer()} isSelf={true} isActive={false} team="teamA" />,
-    );
+  it("renders self seat with 'You' label and scaled-up transform", () => {
+    render(<PlayerSeat player={makePlayer()} isSelf={true} isActive={false} seatTeam="gold" />);
 
     expect(screen.getByText("You")).toBeInTheDocument();
-    expect(container.firstChild).toHaveClass("scale-110");
+    const seat = screen.getByTestId("player-seat-0");
+    expect(seat).toHaveAttribute("data-self", "true");
+    expect(seat.getAttribute("style")).toContain("scale(1.08)");
   });
 
-  it("has correct aria-label including username, team, and active state", () => {
-    const { container } = render(
+  it("uses viewer-relative aria-label (Us/Them, not teamA/teamB)", () => {
+    render(
       <PlayerSeat
         player={makePlayer({ username: "Alice" })}
         isSelf={false}
         isActive={true}
-        team="teamA"
+        seatTeam="gold"
       />,
     );
 
-    expect(container.firstChild).toHaveAttribute("aria-label", "Alice, Team A, active");
+    expect(screen.getByTestId("player-seat-0")).toHaveAttribute("aria-label", "Alice, Us, active");
   });
 
-  it("has correct aria-label for waiting state", () => {
-    const { container } = render(
+  it("uses 'Them' aria-label for the silver team", () => {
+    render(
       <PlayerSeat
-        player={makePlayer({ username: "Bob" })}
+        player={makePlayer({ username: "Bob", team: "teamB", seat: 3 })}
         isSelf={false}
         isActive={false}
-        team="teamB"
+        seatTeam="silver"
       />,
     );
 
-    expect(container.firstChild).toHaveAttribute("aria-label", "Bob, Team B, waiting");
+    expect(screen.getByTestId("player-seat-3")).toHaveAttribute("aria-label", "Bob, Them, waiting");
   });
 
-  it("shows card count for non-self occupied seats", () => {
+  it("shows a card-back stack for opponents when cardCount > 0", () => {
     render(
       <PlayerSeat
         player={makePlayer()}
         isSelf={false}
         isActive={false}
-        team="teamA"
+        seatTeam="gold"
         cardCount={8}
       />,
     );
 
+    expect(screen.getByTestId("player-seat-card-stack")).toBeInTheDocument();
     expect(screen.getByText(/×8/)).toBeInTheDocument();
   });
 
-  it("renders avatar with initial from username", () => {
+  it("does not render the card-back stack for the self seat", () => {
+    render(
+      <PlayerSeat
+        player={makePlayer()}
+        isSelf={true}
+        isActive={false}
+        seatTeam="gold"
+        cardCount={8}
+      />,
+    );
+
+    expect(screen.queryByTestId("player-seat-card-stack")).not.toBeInTheDocument();
+  });
+
+  it("renders the avatar initial from the player's username", () => {
     render(
       <PlayerSeat
         player={makePlayer({ username: "Charlie" })}
         isSelf={false}
         isActive={false}
-        team="teamA"
+        seatTeam="gold"
       />,
     );
 
-    expect(screen.getByText("C")).toBeInTheDocument();
+    expect(screen.getByTestId("player-seat-avatar")).toHaveTextContent("C");
+  });
+
+  it("renders the dealer chip when isDealer is true", () => {
+    render(
+      <PlayerSeat player={makePlayer()} isSelf={false} isActive={false} seatTeam="gold" isDealer />,
+    );
+
+    expect(screen.getByTestId("player-seat-dealer-chip")).toBeInTheDocument();
+  });
+
+  it("renders the trump-caller chip when trumpCallerSuit is set", () => {
+    render(
+      <PlayerSeat
+        player={makePlayer()}
+        isSelf={false}
+        isActive={false}
+        seatTeam="silver"
+        trumpCallerSuit="H"
+      />,
+    );
+
+    expect(screen.getByTestId("player-seat-caller-chip")).toHaveTextContent("♥");
+  });
+
+  it("renders both chips stacked when the seat is dealer AND trump caller", () => {
+    render(
+      <PlayerSeat
+        player={makePlayer()}
+        isSelf={false}
+        isActive={false}
+        seatTeam="gold"
+        isDealer
+        trumpCallerSuit="S"
+      />,
+    );
+
+    expect(screen.getByTestId("player-seat-dealer-chip")).toBeInTheDocument();
+    expect(screen.getByTestId("player-seat-caller-chip")).toBeInTheDocument();
+  });
+
+  it("dims and grayscales a disconnected player", () => {
+    render(
+      <PlayerSeat
+        player={makePlayer({ connected: false })}
+        isSelf={false}
+        isActive={false}
+        seatTeam="gold"
+      />,
+    );
+
+    const seat = screen.getByTestId("player-seat-0");
+    expect(seat.getAttribute("style")).toContain("grayscale");
+    expect(seat.getAttribute("style")).toContain("opacity: 0.5");
+    expect(seat).toHaveAttribute("aria-label", "Alice, Us, disconnected");
   });
 });

@@ -157,7 +157,14 @@ export function EmotePickerButton({ onSend, disabled = false }: EmotePickerButto
         disabled={disabled}
         aria-label={t("game.emote.button")}
         aria-pressed={isOpen}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background shadow-lg transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors hover:not-disabled:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brass) disabled:cursor-not-allowed disabled:opacity-40"
+        style={{
+          background: "var(--panel-hud, rgba(18,32,22,0.85))",
+          border: "1px solid rgba(201,168,118,0.4)",
+          color: "var(--ink-light, #f5f2e8)",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+        }}
         data-testid="emote-toggle"
       >
         <Smile className="h-5 w-5" aria-hidden="true" />
@@ -168,7 +175,13 @@ export function EmotePickerButton({ onSend, disabled = false }: EmotePickerButto
           ref={popoverRef}
           role="group"
           aria-label={t("game.emote.picker.title")}
-          className="absolute right-0 top-12 z-30 w-44 rounded-lg border border-border bg-background/95 p-2 shadow-xl backdrop-blur"
+          className="absolute right-0 bottom-12 z-30 w-44 rounded-lg p-2 shadow-xl"
+          style={{
+            background: "var(--panel-deeper, rgba(18,32,22,0.94))",
+            border: "1px solid rgba(201,168,118,0.4)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+          }}
           data-testid="emote-picker"
         >
           <div className="grid grid-cols-3 gap-1" onKeyDown={handleGridKeyDown}>

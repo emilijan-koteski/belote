@@ -7,10 +7,32 @@ interface TimerRingProps {
 }
 
 const SIZE_CONFIG = {
-  seat: { px: 48, strokeWidth: 3, labelClass: "text-xs" },
+  // 80px matches the avatar's outer frame in PlayerSeat (avatar 64 + 16
+  // padding so the ring traces around the team-color frame, not the felt).
+  seat: { px: 80, strokeWidth: 3.5, labelClass: "text-xs" },
   button: { px: 36, strokeWidth: 2, labelClass: "text-[10px]" },
 } as const;
 
+// Urgency threshold expressed as a fraction of `totalDuration`. When ≤25% of
+// the turn timer remains, the ring + label flip from lime to red. The flip is
+// independent of team identity (Gold/Silver carry that channel separately).
+const URGENT_FRACTION = 0.25;
+
+const COLOR_LIME = "var(--turn-lime, #00e5a0)";
+const COLOR_URGENT = "var(--turn-urgent, #ef4444)";
+
+/**
+ * SVG countdown ring around the active player's avatar (or wrapped around an
+ * action button via `size="button"`).
+ *
+ * Color channel:
+ *  • lime  → plenty of time
+ *  • red   → ≤25% of `totalDuration` remains, including 0s (expired)
+ *
+ * The ring transitions stroke + dashoffset on a 1s linear sweep so the
+ * countdown reads continuously rather than ticking. A drop-shadow glow on the
+ * progress arc lifts it off the felt without needing a second stroke.
+ */
 export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: TimerRingProps) {
   const [secondsLeft, setSecondsLeft] = useState(0);
 
@@ -43,28 +65,27 @@ export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: Timer
     return null;
   }
 
-  const isWarning = secondsLeft <= 10;
-  const isExpired = secondsLeft <= 0;
-
   const { px, strokeWidth, labelClass } = SIZE_CONFIG[size];
   const radius = (px - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = totalDuration > 0 ? Math.min(1, Math.max(0, secondsLeft / totalDuration)) : 0;
   const dashOffset = circumference * (1 - progress);
 
-  const strokeColor = isExpired
-    ? "var(--color-destructive)"
-    : isWarning
-      ? "var(--color-warning)"
-      : "var(--color-text-secondary)";
-
-  const pulseClass = isWarning && !isExpired ? "motion-safe:animate-pulse" : "";
+  // Single threshold: under URGENT_FRACTION of the original duration the ring
+  // flips to red. 0s remaining still reads as red because progress = 0.
+  const isUrgent = totalDuration > 0 && progress <= URGENT_FRACTION;
+  const strokeColor = isUrgent ? COLOR_URGENT : COLOR_LIME;
+  // Pulse the ring while urgent so the urgency reads even at a glance. Only
+  // applied while the timer hasn't fully expired so a parked 0 doesn't
+  // pulsate forever in edge cases.
+  const pulseClass = isUrgent && secondsLeft > 0 ? "motion-safe:animate-pulse" : "";
 
   return (
     <div
       className={`absolute inset-0 flex items-center justify-center pointer-events-none ${pulseClass}`}
       data-testid="timer-ring"
       data-size={size}
+      data-urgent={isUrgent ? "true" : "false"}
       aria-label={`${secondsLeft} seconds remaining`}
     >
       <svg
@@ -78,11 +99,10 @@ export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: Timer
           cy={px / 2}
           r={radius}
           fill="none"
-          stroke="var(--color-border)"
+          stroke="rgba(255,255,255,0.15)"
           strokeWidth={strokeWidth}
-          opacity={0.3}
         />
-        {/* Progress ring */}
+        {/* Progress ring — drop-shadow glow lifts the arc off the felt */}
         <circle
           cx={px / 2}
           cy={px / 2}
@@ -94,12 +114,16 @@ export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: Timer
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
           transform={`rotate(-90 ${px / 2} ${px / 2})`}
-          className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-1000 motion-safe:ease-linear motion-reduce:transition-none"
+          style={{
+            filter: `drop-shadow(0 0 8px ${strokeColor})`,
+            transition: "stroke-dashoffset 1s linear, stroke 300ms ease",
+          }}
+          className="motion-reduce:transition-none"
         />
       </svg>
       <span
-        className={`absolute font-body font-semibold ${labelClass}`}
-        style={{ color: strokeColor }}
+        className={`absolute font-body font-semibold tabular-nums ${labelClass}`}
+        style={{ color: strokeColor, transition: "color 300ms ease" }}
         data-testid="timer-seconds"
       >
         {secondsLeft}

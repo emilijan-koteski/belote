@@ -29,38 +29,42 @@ describe("TimerRing", () => {
     expect(Number(seconds.textContent)).toBeLessThanOrEqual(26);
   });
 
-  it("displays text-secondary color when more than 10 seconds remain", () => {
+  it("renders lime color while above the 25% urgency threshold", () => {
     const now = new Date();
-    const expiry = new Date(now.getTime() + 20000); // 20 seconds
+    const expiry = new Date(now.getTime() + 20000); // 20s of 30s = 66.6%
 
     render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     const seconds = screen.getByTestId("timer-seconds");
-    expect(seconds.style.color).toBe("var(--color-text-secondary)");
+    expect(seconds.style.color).toContain("--turn-lime");
+    const ring = screen.getByTestId("timer-ring");
+    expect(ring.dataset.urgent).toBe("false");
   });
 
-  it("transitions to warning state at 10 seconds or less", () => {
+  it("flips to urgent red when ≤25% of the turn timer remains", () => {
     const now = new Date();
-    const expiry = new Date(now.getTime() + 8000); // 8 seconds
+    const expiry = new Date(now.getTime() + 6000); // 6s of 30s = 20% — urgent
 
     render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     const seconds = screen.getByTestId("timer-seconds");
-    expect(seconds.style.color).toBe("var(--color-warning)");
-
+    expect(seconds.style.color).toContain("--turn-urgent");
     const ring = screen.getByTestId("timer-ring");
+    expect(ring.dataset.urgent).toBe("true");
     expect(ring.className).toContain("motion-safe:animate-pulse");
   });
 
-  it("shows destructive color when expired (0 seconds)", () => {
+  it("stays red when expired (0 seconds), but stops pulsing", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() - 1000); // already expired
 
     render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
     const seconds = screen.getByTestId("timer-seconds");
-    expect(seconds.style.color).toBe("var(--color-destructive)");
+    expect(seconds.style.color).toContain("--turn-urgent");
     expect(seconds.textContent).toBe("0");
+    const ring = screen.getByTestId("timer-ring");
+    expect(ring.className).not.toContain("motion-safe:animate-pulse");
   });
 
   it("decrements countdown over time", () => {
@@ -91,9 +95,9 @@ describe("TimerRing", () => {
     expect(ring.getAttribute("aria-label")).toMatch(/\d+ seconds remaining/);
   });
 
-  it("does not have pulse class when not in warning state", () => {
+  it("does not pulse while plenty of time remains", () => {
     const now = new Date();
-    const expiry = new Date(now.getTime() + 20000); // 20 seconds, well above 10
+    const expiry = new Date(now.getTime() + 20000); // 20s of 30s = 66.6%
 
     render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
@@ -101,18 +105,18 @@ describe("TimerRing", () => {
     expect(ring.className).not.toContain("motion-safe:animate-pulse");
   });
 
-  it("renders larger svg in default seat size variant", () => {
+  it("renders 80px svg in seat size variant (matches avatar frame)", () => {
     const expiry = new Date(Date.now() + 20000);
     const { container } = render(
       <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />,
     );
     const svg = container.querySelector("svg");
-    expect(svg?.getAttribute("width")).toBe("48");
-    expect(svg?.getAttribute("height")).toBe("48");
+    expect(svg?.getAttribute("width")).toBe("80");
+    expect(svg?.getAttribute("height")).toBe("80");
     expect(screen.getByTestId("timer-ring").getAttribute("data-size")).toBe("seat");
   });
 
-  it("renders compact svg and label in button size variant", () => {
+  it("renders compact 36px svg in button size variant", () => {
     const expiry = new Date(Date.now() + 20000);
     const { container } = render(
       <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} size="button" />,
@@ -126,7 +130,7 @@ describe("TimerRing", () => {
 
   it("uses motion-safe prefix for transitions (reduced-motion safe)", () => {
     const now = new Date();
-    const expiry = new Date(now.getTime() + 5000); // warning state
+    const expiry = new Date(now.getTime() + 5000); // urgent state
 
     const { container } = render(
       <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />,

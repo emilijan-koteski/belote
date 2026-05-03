@@ -210,7 +210,7 @@ describe("TrumpPrompt", () => {
     expect(screen.getByTestId("trump-prompt-suit-S")).toBeInTheDocument();
   });
 
-  it("renders in-dialog timer ring around Pass when active and per-move", () => {
+  it("wraps the Pass button with the rounded-rect button-timer ring when active and per-move", () => {
     const expiry = new Date(Date.now() + 20000).toISOString();
     render(
       <TrumpPrompt
@@ -223,11 +223,13 @@ describe("TrumpPrompt", () => {
         timerDurationSec={30}
       />,
     );
-    const ring = screen.getByTestId("timer-ring");
-    expect(ring.getAttribute("data-size")).toBe("button");
+    const ring = screen.getByTestId("button-timer-ring");
+    expect(ring).toBeInTheDocument();
+    // Ring should wrap the Pass button so a Tab from the dialog still reaches Pass.
+    expect(ring.querySelector('[data-testid="trump-prompt-pass"]')).toBeInTheDocument();
   });
 
-  it("does not render in-dialog timer ring in relaxed mode (no turnExpiresAt)", () => {
+  it("does not render the in-dialog timer ring in relaxed mode (no turnExpiresAt)", () => {
     render(
       <TrumpPrompt
         trumpCandidate={trumpCandidate}
@@ -239,10 +241,10 @@ describe("TrumpPrompt", () => {
         timerDurationSec={0}
       />,
     );
-    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-timer-ring")).not.toBeInTheDocument();
   });
 
-  it("does not render in-dialog timer ring for non-active bidders", () => {
+  it("does not render the in-dialog timer ring for non-active bidders", () => {
     const expiry = new Date(Date.now() + 20000).toISOString();
     render(
       <TrumpPrompt
@@ -255,7 +257,7 @@ describe("TrumpPrompt", () => {
         timerDurationSec={30}
       />,
     );
-    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-timer-ring")).not.toBeInTheDocument();
   });
 
   it("has role dialog and aria-modal", () => {

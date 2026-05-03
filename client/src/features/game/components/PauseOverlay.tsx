@@ -2,6 +2,11 @@ import { useTranslation } from "react-i18next";
 
 import type { PlayerState } from "@/shared/types/gameTypes";
 
+import { seatTeam, teamColors } from "../lib/tableTheme";
+import { ClassicButton } from "./overlay/ClassicButton";
+import { ClassicPanel } from "./overlay/ClassicPanel";
+import { OverlayBackdrop } from "./overlay/OverlayBackdrop";
+
 interface PauseOverlayProps {
   pausedPlayers: [boolean, boolean, boolean, boolean];
   pauseUsed: [boolean, boolean, boolean, boolean];
@@ -13,6 +18,18 @@ interface PauseOverlayProps {
   onOwnerResume: () => void;
 }
 
+/**
+ * Pause overlay — felt panel with per-player rows showing pause status.
+ *
+ *  • Player who actively paused → "Resume" button.
+ *  • Player who hasn't used their pause yet → "Pause" stack button.
+ *  • Player who already used their pause → quiet "waiting…" line.
+ *  • Room owner → additional "Resume All" override (matches the server's
+ *    ACTION_OWNER_UNPAUSE privilege; see [server/internal/game/pause.go]).
+ *
+ * No timer here — pause is open-ended on the server side. Players choose to
+ * resume manually.
+ */
 export function PauseOverlay({
   pausedPlayers,
   pauseUsed,
@@ -28,69 +45,118 @@ export function PauseOverlay({
   const canStackPause = !hasActivePause && !pauseUsed[myPlayerSeat];
 
   return (
-    <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-      data-testid="pause-overlay"
-      aria-live="polite"
-    >
-      <div className="bg-surface-elevated border border-border rounded-xl max-w-sm w-full mx-4 p-8 text-center">
-        <h2 className="font-display text-2xl font-bold text-text-primary mb-4">
-          {t("game.pause.title")}
-        </h2>
-
-        <div className="space-y-2 mb-6">
-          {pausedPlayers.map(
-            (isPaused, seat) =>
-              isPaused && (
-                <p
-                  key={seat}
-                  className="text-text-secondary text-sm"
-                  data-testid={`pause-player-${seat}`}
+    <div className="fixed inset-0 z-20" data-testid="pause-overlay" aria-live="polite">
+      <OverlayBackdrop dim={0.65}>
+        <ClassicPanel
+          width={440}
+          title={t("game.pause.title")}
+          subtitle={t("game.pause.pausedBy", {
+            player: pausedPlayers
+              .map((isPaused, seat) => (isPaused ? players[seat]?.username : null))
+              .filter(Boolean)
+              .join(", "),
+          })}
+        >
+          <div className="flex flex-col gap-2 mb-4">
+            {players.map((player) => {
+              const team = seatTeam(player.seat, myPlayerSeat);
+              const dotColor = teamColors(team)[0];
+              const isPaused = pausedPlayers[player.seat];
+              const usedPause = pauseUsed[player.seat];
+              return (
+                <div
+                  key={player.seat}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg"
+                  style={{
+                    background: isPaused ? "rgba(201,168,118,0.14)" : "rgba(0,0,0,0.18)",
+                    border: isPaused
+                      ? "1px solid rgba(201,168,118,0.45)"
+                      : "1px solid rgba(255,255,255,0.05)",
+                  }}
+                  data-testid={isPaused ? `pause-player-${player.seat}` : undefined}
                 >
-                  {t("game.pause.pausedBy", {
-                    player: players[seat]?.username ?? `Player ${seat + 1}`,
-                  })}
-                </p>
-              ),
-          )}
-        </div>
-
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center justify-center gap-3">
-            {hasActivePause ? (
-              <button
-                onClick={onResume}
-                className="bg-accent text-background font-semibold px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
-                data-testid="pause-resume-button"
-              >
-                {t("game.pause.resume")}
-              </button>
-            ) : canStackPause ? (
-              <button
-                onClick={onPause}
-                className="border border-border text-text-secondary font-semibold px-6 py-3 rounded-lg hover:text-text-primary hover:border-text-secondary transition-colors"
-                data-testid="pause-stack-button"
-              >
-                {t("game.pause.pauseButton")}
-              </button>
-            ) : (
-              <p className="text-text-secondary text-sm italic" data-testid="pause-waiting">
-                {t("game.pause.waitingToResume")}
-              </p>
-            )}
+                  <span
+                    aria-hidden
+                    className="rounded-full"
+                    style={{
+                      width: 6,
+                      height: 6,
+                      background: dotColor,
+                      boxShadow: `0 0 6px ${dotColor}`,
+                    }}
+                  />
+                  <span
+                    className="font-display text-sm flex-1"
+                    style={{ color: "var(--ink-light, #f5f2e8)" }}
+                  >
+                    {player.username || `Player ${player.seat + 1}`}
+                  </span>
+                  {isPaused ? (
+                    <span
+                      className="font-body text-[11px] font-semibold"
+                      style={{ color: "var(--brass, #c9a876)" }}
+                    >
+                      {t("game.pause.pausedNow", { defaultValue: "paused now" })}
+                    </span>
+                  ) : (
+                    <span
+                      className="font-body text-[11px]"
+                      style={{ color: "var(--ink-light, #f5f2e8)", opacity: 0.7 }}
+                    >
+                      {usedPause
+                        ? t("game.pause.pauseUsedRow", { defaultValue: "pause used" })
+                        : t("game.pause.pauseAvailable", { defaultValue: "pause available" })}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          {isRoomOwner && (
-            <button
-              onClick={onOwnerResume}
-              className="border border-red-500/50 text-red-400 font-semibold px-6 py-2 rounded-lg hover:bg-red-500/10 transition-colors text-sm"
-              data-testid="pause-owner-resume-button"
-            >
-              {t("game.pause.resumeAll")}
-            </button>
-          )}
-        </div>
-      </div>
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center justify-center gap-3">
+              {hasActivePause ? (
+                <ClassicButton
+                  variant="primary"
+                  onClick={onResume}
+                  data-testid="pause-resume-button"
+                >
+                  {t("game.pause.resume")}
+                </ClassicButton>
+              ) : canStackPause ? (
+                <ClassicButton onClick={onPause} data-testid="pause-stack-button">
+                  {t("game.pause.pauseButton")}
+                </ClassicButton>
+              ) : (
+                <p
+                  className="font-body text-sm italic"
+                  style={{ color: "var(--ink-light, #f5f2e8)", opacity: 0.65 }}
+                  data-testid="pause-waiting"
+                >
+                  {t("game.pause.waitingToResume")}
+                </p>
+              )}
+            </div>
+
+            {isRoomOwner && (
+              <button
+                type="button"
+                onClick={onOwnerResume}
+                data-testid="pause-owner-resume-button"
+                className="font-body text-sm font-semibold rounded-lg px-4 py-1.5 transition-colors hover:bg-red-500/10"
+                style={{
+                  border: "1px solid rgba(239,68,68,0.45)",
+                  color: "rgb(248,113,113)",
+                  background: "transparent",
+                  fontFamily: 'Georgia, "Times New Roman", serif',
+                }}
+              >
+                {t("game.pause.resumeAll")}
+              </button>
+            )}
+          </div>
+        </ClassicPanel>
+      </OverlayBackdrop>
     </div>
   );
 }

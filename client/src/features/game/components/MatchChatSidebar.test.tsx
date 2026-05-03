@@ -63,12 +63,14 @@ describe("MatchChatSidebar", () => {
 
   it("toggles the sidebar open/closed on click", () => {
     render(<MatchChatSidebar />);
-    const toggle = screen.getByTestId("match-chat-toggle");
 
-    fireEvent.click(toggle);
+    // Open: click the FAB. Closed-state and open-state expose the same
+    // `match-chat-toggle` testid (FAB vs in-header chevron) so the test must
+    // re-resolve the toggle after each transition rather than caching it.
+    fireEvent.click(screen.getByTestId("match-chat-toggle"));
     expect(screen.getByTestId("match-chat-sidebar")).toBeInTheDocument();
 
-    fireEvent.click(toggle);
+    fireEvent.click(screen.getByTestId("match-chat-toggle"));
     expect(screen.queryByTestId("match-chat-sidebar")).not.toBeInTheDocument();
   });
 

@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SurrenderButton } from "./SurrenderButton";
 
 describe("SurrenderButton", () => {
-  it("renders enabled with default caption when canRequest is true", () => {
+  it("renders enabled with the default surrender label when canRequest is true", () => {
     render(
       <SurrenderButton
         canRequest={true}
@@ -18,10 +18,11 @@ describe("SurrenderButton", () => {
     );
     const button = screen.getByTestId("surrender-button");
     expect(button).toBeEnabled();
-    expect(button).toHaveTextContent(/Surrender/i);
+    // The HUD button is icon-only; the verbose status reads through aria-label.
+    expect(button.getAttribute("aria-label")).toMatch(/Surrender/i);
   });
 
-  it("is disabled and shows the exhausted caption when isExhausted is true", () => {
+  it("is disabled and exposes the exhausted status via aria-label when isExhausted is true", () => {
     render(
       <SurrenderButton
         canRequest={false}
@@ -32,10 +33,10 @@ describe("SurrenderButton", () => {
     );
     const button = screen.getByTestId("surrender-button");
     expect(button).toBeDisabled();
-    expect(button).toHaveTextContent(/used/i);
+    expect(button.getAttribute("aria-label")).toMatch(/used/i);
   });
 
-  it("is disabled and shows the pending caption when isPending is true", () => {
+  it("is disabled and exposes the pending status via aria-label when isPending is true", () => {
     render(
       <SurrenderButton
         canRequest={false}
@@ -46,7 +47,7 @@ describe("SurrenderButton", () => {
     );
     const button = screen.getByTestId("surrender-button");
     expect(button).toBeDisabled();
-    expect(button).toHaveTextContent(/pending/i);
+    expect(button.getAttribute("aria-label")).toMatch(/pending/i);
   });
 
   it("opens the confirm dialog on click and fires onConfirm when confirmed", async () => {

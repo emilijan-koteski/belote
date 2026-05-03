@@ -315,7 +315,9 @@
       "autoSkippedBelot": "{{player}} — isteklo vreme, belot odbijen"
     },
     "score": {
+      "heading": "Rezultat",
       "tricks": "Ruke",
+      "trick": "ruka",
       "lastTrickBonus": "+{{amount}}",
       "thisHand": "ovo deljenje"
     },
@@ -401,6 +403,20 @@
       "matchAbandoned": "{{player}} je prekinuo vezu — meč završen",
       "matchAbandonedScores": "Rezultat: Mi {{us}} : Oni {{them}}",
       "returningToLobby": "Povratak u lobi..."
+    },
+    "hud": {
+      "pause": "Pauza",
+      "rules": "Pravila",
+      "settings": "Podešavanja"
+    },
+    "settings": {
+      "title": "Podešavanja",
+      "languageHeading": "Jezik",
+      "close": "Zatvori"
+    },
+    "rules": {
+      "title": "Pravila igre",
+      "comingSoon": "Detaljna pravila stižu uskoro — proverite ponovo."
     }
   },
   "ws": {

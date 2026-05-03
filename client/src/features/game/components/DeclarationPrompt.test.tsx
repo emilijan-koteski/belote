@@ -109,7 +109,7 @@ describe("DeclarationPrompt", () => {
     expect(dialog).toHaveAttribute("aria-modal", "true");
   });
 
-  it("renders in-dialog timer ring around Skip when per-move", () => {
+  it("wraps the Skip button with the button-timer ring when per-move", () => {
     const expiry = new Date(Date.now() + 20000).toISOString();
     render(
       <DeclarationPrompt
@@ -120,11 +120,12 @@ describe("DeclarationPrompt", () => {
         timerDurationSec={30}
       />,
     );
-    const ring = screen.getByTestId("timer-ring");
-    expect(ring.getAttribute("data-size")).toBe("button");
+    const ring = screen.getByTestId("button-timer-ring");
+    expect(ring).toBeInTheDocument();
+    expect(ring.querySelector('[data-testid="declaration-prompt-skip"]')).toBeInTheDocument();
   });
 
-  it("does not render in-dialog timer ring in relaxed mode", () => {
+  it("does not render the in-dialog timer ring in relaxed mode", () => {
     render(
       <DeclarationPrompt
         declarations={mockDeclarations}
@@ -134,10 +135,10 @@ describe("DeclarationPrompt", () => {
         timerDurationSec={0}
       />,
     );
-    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-timer-ring")).not.toBeInTheDocument();
   });
 
-  it("does not render in-dialog timer ring when isActivePlayer is false", () => {
+  it("does not render the in-dialog timer ring when isActivePlayer is false", () => {
     const expiry = new Date(Date.now() + 20000).toISOString();
     render(
       <DeclarationPrompt
@@ -149,6 +150,6 @@ describe("DeclarationPrompt", () => {
         isActivePlayer={false}
       />,
     );
-    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-timer-ring")).not.toBeInTheDocument();
   });
 });

@@ -52,7 +52,7 @@ describe("BelotPrompt", () => {
     expect(screen.getByTestId("belot-prompt-announce")).toHaveTextContent("Announce Re-belot");
   });
 
-  it("renders in-dialog timer ring around Decline when per-move", () => {
+  it("wraps the Decline button with the button-timer ring when per-move", () => {
     const expiry = new Date(Date.now() + 20000).toISOString();
     render(
       <BelotPrompt
@@ -63,11 +63,13 @@ describe("BelotPrompt", () => {
         timerDurationSec={30}
       />,
     );
-    const ring = screen.getByTestId("timer-ring");
-    expect(ring.getAttribute("data-size")).toBe("button");
+    const ring = screen.getByTestId("button-timer-ring");
+    expect(ring).toBeInTheDocument();
+    // Auto-action target on expiry is Decline, so the ring must wrap it.
+    expect(ring.querySelector('[data-testid="belot-prompt-decline"]')).toBeInTheDocument();
   });
 
-  it("does not render in-dialog timer ring in relaxed mode", () => {
+  it("does not render the in-dialog timer ring in relaxed mode", () => {
     render(
       <BelotPrompt
         isKing={false}
@@ -77,10 +79,10 @@ describe("BelotPrompt", () => {
         timerDurationSec={0}
       />,
     );
-    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-timer-ring")).not.toBeInTheDocument();
   });
 
-  it("does not render in-dialog timer ring when isActivePlayer is false", () => {
+  it("does not render the in-dialog timer ring when isActivePlayer is false", () => {
     const expiry = new Date(Date.now() + 20000).toISOString();
     render(
       <BelotPrompt
@@ -92,7 +94,7 @@ describe("BelotPrompt", () => {
         isActivePlayer={false}
       />,
     );
-    expect(screen.queryByTestId("timer-ring")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-timer-ring")).not.toBeInTheDocument();
   });
 
   it("Escape key triggers onDecline (AC7)", () => {
