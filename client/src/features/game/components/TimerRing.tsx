@@ -7,9 +7,12 @@ interface TimerRingProps {
 }
 
 const SIZE_CONFIG = {
-  // 80px matches the avatar's outer frame in PlayerSeat (avatar 64 + 16
-  // padding so the ring traces around the team-color frame, not the felt).
-  seat: { px: 80, strokeWidth: 3.5, labelClass: "text-xs" },
+  // 70px sits inside the avatar's 80px outer frame (avatar 64 + 16 padding)
+  // so the countdown traces *just inside* the gold/silver team ring rather
+  // than around it. Combined with the active-state outer lime ring on the
+  // frame's box-shadow, this gives a 3-band stack: outer lime · gold ·
+  // inner lime timer.
+  seat: { px: 70, strokeWidth: 2.5, labelClass: "text-xs" },
   button: { px: 36, strokeWidth: 2, labelClass: "text-[10px]" },
 } as const;
 

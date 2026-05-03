@@ -168,10 +168,6 @@ export function TrickArea({ trick: rawTrick, winnerSeat, myPlayerSeat }: TrickAr
           interpolate the per-slot approach offsets without a global stylesheet. */}
       {!prefersReducedMotion && <style>{incomingKeyframes}</style>}
 
-      {displayTrick.length === 0 && !collecting && (
-        <div className="absolute inset-0 border border-border rounded-full opacity-30" />
-      )}
-
       {displayTrick.map((tc) => {
         const compass = compassOffset(tc.playerSeat, myPlayerSeat);
         const slot = SLOT_POSITIONS[compass];

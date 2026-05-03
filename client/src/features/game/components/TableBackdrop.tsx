@@ -34,48 +34,53 @@ export function TableBackdrop() {
           boxShadow: "inset 0 0 60px rgba(0,0,0,0.55), inset 0 0 200px rgba(0,0,0,0.25)",
         }}
       />
-      {/* Brass oval boundary + filigree corners */}
-      <svg
-        className="absolute"
-        style={{ inset: 36 }}
-        viewBox="0 0 1368 828"
-        preserveAspectRatio="none"
-      >
-        {/* Outer dashed oval */}
-        <ellipse
-          cx="684"
-          cy="414"
-          rx="540"
-          ry="310"
-          fill="none"
-          stroke="rgba(201,168,118,0.28)"
-          strokeWidth="2"
-          strokeDasharray="3 6"
-        />
-        {/* Inner thin oval — inset 1.5% to read as a double rule */}
-        <ellipse
-          cx="684"
-          cy="414"
-          rx="531.9"
-          ry="305.35"
-          fill="none"
-          stroke="rgba(201,168,118,0.18)"
-          strokeWidth="1"
-        />
-        {/* Filigree corner glyphs at the four 'corners' of the oval */}
-        {(
-          [
-            [150, 120, 0],
-            [1218, 120, 90],
-            [150, 708, 270],
-            [1218, 708, 180],
-          ] as const
-        ).map(([x, y, rot], i) => (
-          <g key={i} transform={`translate(${x}, ${y}) rotate(${rot})`} opacity="0.32">
-            <path d="M0 0 Q 18 4, 22 22 Q 4 18, 0 0" fill="var(--brass)" />
-          </g>
-        ))}
-      </svg>
+      {/* Brass oval boundary + filigree corners. Wrapped in a sized div
+          because <svg> with viewBox preserves its intrinsic aspect ratio
+          even under `inset: 0`, which would push the oval off-center. */}
+      <div className="absolute" style={{ inset: 36 }}>
+        <svg
+          className="absolute inset-0 h-full w-full"
+          viewBox="0 0 1368 828"
+          preserveAspectRatio="none"
+        >
+          {/* Outer dashed oval — rx reduced from 540 to 470 so the oval
+              tracks closer to the felt's true visual centerline rather than
+              hugging the wood rim left/right. */}
+          <ellipse
+            cx="684"
+            cy="414"
+            rx="470"
+            ry="310"
+            fill="none"
+            stroke="rgba(201,168,118,0.28)"
+            strokeWidth="2"
+            strokeDasharray="3 6"
+          />
+          {/* Inner thin oval — inset 1.5% to read as a double rule */}
+          <ellipse
+            cx="684"
+            cy="414"
+            rx="462.95"
+            ry="305.35"
+            fill="none"
+            stroke="rgba(201,168,118,0.18)"
+            strokeWidth="1"
+          />
+          {/* Filigree corner glyphs at the four 'corners' of the oval */}
+          {(
+            [
+              [150, 120, 0],
+              [1218, 120, 90],
+              [150, 708, 270],
+              [1218, 708, 180],
+            ] as const
+          ).map(([x, y, rot], i) => (
+            <g key={i} transform={`translate(${x}, ${y}) rotate(${rot})`} opacity="0.32">
+              <path d="M0 0 Q 18 4, 22 22 Q 4 18, 0 0" fill="var(--brass)" />
+            </g>
+          ))}
+        </svg>
+      </div>
     </div>
   );
 }

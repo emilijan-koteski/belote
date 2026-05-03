@@ -37,12 +37,11 @@ const trickCards: TrickCard[] = [
 ];
 
 describe("TrickArea", () => {
-  it("renders empty state with oval outline when no cards", () => {
+  it("renders empty state without a placeholder ring", () => {
     const { container } = render(<TrickArea trick={[]} winnerSeat={null} myPlayerSeat={0} />);
 
     expect(screen.getByTestId("trick-area")).toBeInTheDocument();
-    const oval = container.querySelector(".rounded-full.opacity-30");
-    expect(oval).toBeInTheDocument();
+    expect(container.querySelector(".rounded-full.opacity-30")).toBeNull();
   });
 
   it("renders played cards in correct compass positions", () => {

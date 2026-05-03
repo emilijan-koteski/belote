@@ -66,9 +66,9 @@ function compassOffset(seat: number, myPlayerSeat: number): number {
 
 const SEAT_POSITIONS: Record<number, string> = {
   0: "bottom-44 left-1/2 -translate-x-1/2", // South (self) - above the fanned hand
-  1: "right-4 top-1/2 -translate-y-1/2", // East (next player counter-clockwise)
+  1: "right-12 top-1/2 -translate-y-1/2", // East (next player counter-clockwise) - inset off wood rim
   2: "top-12 left-1/2 -translate-x-1/2", // North (partner) - clears the wordmark
-  3: "left-4 top-1/2 -translate-y-1/2", // West (third player)
+  3: "left-12 top-1/2 -translate-y-1/2", // West (third player) - inset off wood rim
 };
 
 const SEAT_ORIENTATIONS: Record<number, SeatOrientation> = {
@@ -130,6 +130,10 @@ export function GamePage() {
   // Overlay flow state: normal → capot_animation → score_reveal → normal/match_result
   type OverlayPhase = "normal" | "capot_animation" | "score_reveal" | "match_result";
   const [overlayPhase, setOverlayPhase] = useState<OverlayPhase>("normal");
+
+  // Chat sidebar open/closed — lifted here so the rules/settings cluster can
+  // hide the emote button while the chat sidebar is occupying the right rail.
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Match chat history is tied to the GamePage lifecycle — clear it on
   // unmount (navigation away, abandonment, match-end → lobby) so the next
@@ -607,11 +611,13 @@ export function GamePage() {
         </div>
       )}
 
-      {/* Rules + settings — bottom-right HUD cluster (sits to the LEFT of the
-          chat FAB and emote button which anchor at right-4 / right-20). The
-          Sound button is intentionally omitted until audio ships. */}
+      {/* Rules + settings + emote — bottom-right HUD cluster sitting LEFT of
+          the chat FAB. The emote button joins this row (instead of floating
+          on its own) and is hidden while the chat sidebar is open so it
+          doesn't peek out from behind the rail. The Sound button is
+          intentionally omitted until audio ships. */}
       {!isOverlayActive && (
-        <div className="absolute bottom-4 right-36 z-10 flex items-center gap-2">
+        <div className="absolute bottom-4 right-24 z-10 flex items-center gap-2">
           <HUDButton
             icon={<HelpCircle className="h-4 w-4" aria-hidden="true" />}
             aria-label={t("game.hud.rules")}
@@ -626,6 +632,12 @@ export function GamePage() {
             onClick={() => setSettingsOpen(true)}
             data-testid="settings-button"
           />
+          {!isChatOpen &&
+            (gameState.phase === "dealing" ||
+              gameState.phase === "bidding" ||
+              gameState.phase === "playing") &&
+            matchEndData === null &&
+            matchAbandonedData === null && <EmotePickerButton onSend={handleSendEmote} />}
         </div>
       )}
 
@@ -765,20 +777,7 @@ export function GamePage() {
       )}
 
       {/* Match chat sidebar — collapsible right-edge panel broadcasting to the 4 participants */}
-      <MatchChatSidebar />
-
-      {/* Emote picker — sits to the LEFT of the chat FAB at the bottom-right.
-          Hidden during paused/disconnected/match-end so overlays own the
-          screen. */}
-      {(gameState.phase === "dealing" ||
-        gameState.phase === "bidding" ||
-        gameState.phase === "playing") &&
-        matchEndData === null &&
-        matchAbandonedData === null && (
-          <div className="fixed bottom-5 right-20 z-30">
-            <EmotePickerButton onSend={handleSendEmote} />
-          </div>
-        )}
+      <MatchChatSidebar isOpen={isChatOpen} onOpenChange={setIsChatOpen} />
 
       {/* Emote bubbles — one per seat that has an active emote. Suppressed
           when an overlay or pause owns the screen; the store still records

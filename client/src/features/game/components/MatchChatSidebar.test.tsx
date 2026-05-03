@@ -1,6 +1,7 @@
 import "@/shared/i18n/i18n";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useChatStore } from "@/shared/stores/chatStore";
@@ -8,6 +9,15 @@ import { useGameStore } from "@/shared/stores/gameStore";
 import type { ChatMessagePayload } from "@/shared/types/wsEvents";
 
 import { MatchChatSidebar } from "./MatchChatSidebar";
+
+// Wrapper that re-creates the production controlled-component contract:
+// GamePage owns the open/closed flag and passes it down. Tests target
+// behavior, not the wiring — so the wrapper holds local state instead of
+// duplicating useState in every case.
+function ControlledSidebar({ initialOpen = false }: { initialOpen?: boolean }) {
+  const [isOpen, setIsOpen] = useState(initialOpen);
+  return <MatchChatSidebar isOpen={isOpen} onOpenChange={setIsOpen} />;
+}
 
 const mockSendMessage = vi.fn();
 let mockConnectionState: "connected" | "connecting" | "authenticating" | "disconnected" =
@@ -48,7 +58,7 @@ afterEach(() => {
 
 describe("MatchChatSidebar", () => {
   it("renders the toggle button when roomId is set", () => {
-    render(<MatchChatSidebar />);
+    render(<ControlledSidebar />);
     expect(screen.getByTestId("match-chat-toggle")).toBeInTheDocument();
     expect(screen.queryByTestId("match-chat-sidebar")).not.toBeInTheDocument();
   });
@@ -57,12 +67,12 @@ describe("MatchChatSidebar", () => {
     act(() => {
       useGameStore.setState({ roomId: null });
     });
-    const { container } = render(<MatchChatSidebar />);
+    const { container } = render(<ControlledSidebar />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it("toggles the sidebar open/closed on click", () => {
-    render(<MatchChatSidebar />);
+    render(<ControlledSidebar />);
 
     // Open: click the FAB. Closed-state and open-state expose the same
     // `match-chat-toggle` testid (FAB vs in-header chevron) so the test must
@@ -75,7 +85,7 @@ describe("MatchChatSidebar", () => {
   });
 
   it("increments unread badge when new match messages arrive while closed", () => {
-    render(<MatchChatSidebar />);
+    render(<ControlledSidebar />);
 
     act(() => {
       useChatStore.getState().appendMatch(makeMatchMessage({ message: "m1" }));
@@ -87,7 +97,7 @@ describe("MatchChatSidebar", () => {
   });
 
   it("resets unread count to 0 when the sidebar is opened", () => {
-    render(<MatchChatSidebar />);
+    render(<ControlledSidebar />);
 
     act(() => {
       useChatStore.getState().appendMatch(makeMatchMessage({ message: "m1" }));
@@ -100,7 +110,7 @@ describe("MatchChatSidebar", () => {
   });
 
   it("does NOT increment unread badge when messages arrive while sidebar is open", () => {
-    render(<MatchChatSidebar />);
+    render(<ControlledSidebar />);
     fireEvent.click(screen.getByTestId("match-chat-toggle"));
 
     act(() => {
@@ -112,7 +122,7 @@ describe("MatchChatSidebar", () => {
   });
 
   it("caps the unread badge at 99+ when more than 99 messages arrive", () => {
-    render(<MatchChatSidebar />);
+    render(<ControlledSidebar />);
 
     act(() => {
       for (let i = 0; i < 120; i++) {
@@ -124,7 +134,7 @@ describe("MatchChatSidebar", () => {
   });
 
   it("keeps incrementing the unread badge after matchMessages hits the 200-message cap", () => {
-    render(<MatchChatSidebar />);
+    render(<ControlledSidebar />);
 
     // Fill past the ring-buffer cap — matchMessages.length plateaus at 200
     // but the monotonic counter keeps growing, so unread tracking must
@@ -143,7 +153,7 @@ describe("MatchChatSidebar", () => {
   });
 
   it("resets the unread badge when matchMessages is cleared while the sidebar is closed", () => {
-    render(<MatchChatSidebar />);
+    render(<ControlledSidebar />);
 
     act(() => {
       useChatStore.getState().appendMatch(makeMatchMessage({ message: "pre-clear" }));
@@ -161,7 +171,7 @@ describe("MatchChatSidebar", () => {
   });
 
   it("renders match messages inside the opened sidebar", () => {
-    render(<MatchChatSidebar />);
+    render(<ControlledSidebar />);
     act(() => {
       useChatStore.setState({
         matchMessages: [makeMatchMessage({ userId: 2, username: "bob", message: "nice play" })],

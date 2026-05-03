@@ -57,6 +57,11 @@ const AVATAR_DISC_PX = 64;
 const AVATAR_FRAME_PX = AVATAR_DISC_PX + 16; // 3 px conic frame + 5 px ring lane
 
 const TURN_LIME = "var(--turn-lime, #00e5a0)";
+// Hard-coded RGBA so the active glow keeps its alpha — `var()` cannot be
+// concatenated with extra hex digits (the CSS parser drops the whole
+// declaration on `var(--x, #fff)99`, which had been silently disabling
+// the active-seat outer ring).
+const TURN_LIME_GLOW = "rgba(0, 229, 160, 0.6)";
 
 /**
  * Status indicator chip — 30 px circle with a thick felt-toned border so it
@@ -102,23 +107,26 @@ function StatusChip({
   );
 }
 
-/** Fanned face-down card-back pile shown next to non-self avatars. */
+/** Fanned face-down card-back pile shown next to non-self avatars, with a
+ *  trailing `×N` count so a glance reveals exactly how many cards the seat
+ *  still holds (5 in trump-bidding, 8 once dealing finishes, then drops as
+ *  cards are played). */
 function CardBackStack({ count, isHorizontal }: { count: number; isHorizontal: boolean }) {
   const visible = Math.min(count, 5);
   if (visible <= 0) return null;
   return (
     <div
-      className="flex"
+      className="flex items-center"
       style={{
         marginLeft: isHorizontal ? 8 : 0,
         marginTop: isHorizontal ? 0 : 4,
       }}
-      aria-hidden
       data-testid="player-seat-card-stack"
     >
       {Array.from({ length: visible }).map((_, i) => (
         <div
           key={i}
+          aria-hidden
           style={{
             width: 26,
             height: 38,
@@ -131,14 +139,18 @@ function CardBackStack({ count, isHorizontal }: { count: number; isHorizontal: b
           }}
         />
       ))}
-      {count > 5 && (
-        <span
-          className="self-center text-text-secondary font-body text-[10px] tabular-nums"
-          style={{ marginLeft: 6 }}
-        >
-          ×{count}
-        </span>
-      )}
+      <span
+        className="font-body text-[11px] tabular-nums"
+        style={{
+          marginLeft: 8,
+          color: "var(--ink-light, #f5f2e8)",
+          opacity: 0.7,
+        }}
+        data-testid="player-seat-card-count"
+        aria-label={`${count} cards remaining`}
+      >
+        ×{count}
+      </span>
     </div>
   );
 }
@@ -267,7 +279,7 @@ export function PlayerSeat({
             padding: 3,
             boxShadow:
               isActive && !isDisconnected
-                ? `0 0 0 2px ${TURN_LIME}, 0 0 24px ${TURN_LIME}99`
+                ? `0 0 0 1.5px ${TURN_LIME}, 0 0 18px ${TURN_LIME_GLOW}`
                 : "0 2px 8px rgba(0,0,0,0.3)",
             transition: "box-shadow 300ms ease",
           }}
@@ -323,7 +335,7 @@ export function PlayerSeat({
             isActive && !isDisconnected
               ? `1px solid ${TURN_LIME}`
               : "1px solid rgba(255,255,255,0.08)",
-          boxShadow: isActive && !isDisconnected ? `0 0 12px ${TURN_LIME}55` : undefined,
+          boxShadow: isActive && !isDisconnected ? "0 0 12px rgba(0, 229, 160, 0.33)" : undefined,
           transition: "border-color 300ms ease, box-shadow 300ms ease",
         }}
         data-testid="player-seat-name-pill"

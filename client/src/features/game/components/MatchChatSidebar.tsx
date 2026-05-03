@@ -2,14 +2,26 @@ import { ChevronRight, MessageSquare } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ChatPanel } from "@/features/chat/ChatPanel";
 import { useChatStore } from "@/shared/stores/chatStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 
 import { seatTeam, teamColors } from "../lib/tableTheme";
+import { GameChatBody } from "./GameChatBody";
 
 const UNREAD_BADGE_CAP = 99;
 const PEEK_MAX_CHARS = 90;
+// Peek bubble auto-dismisses on the same 2s timeout as in-table emote
+// bubbles so the floating preview doesn't linger and obscure the table.
+// Each new arrival resets the timer so the latest message always gets its
+// full visible window.
+const PEEK_AUTO_DISMISS_MS = 2000;
+
+interface MatchChatSidebarProps {
+  /** Open/closed flag — lifted to parent so the surrounding HUD (e.g. the
+   *  emote button) can react to chat state. */
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
 /**
  * Bottom-right chat FAB (closed) → right-edge collapsible rail (open).
@@ -25,43 +37,54 @@ const PEEK_MAX_CHARS = 90;
  * the user opens the sidebar — there's no separate timer because it's already
  * decay-driven by the unread → 0 transition on open.
  */
-export function MatchChatSidebar() {
+export function MatchChatSidebar({ isOpen, onOpenChange }: MatchChatSidebarProps) {
   const { t } = useTranslation();
   const roomId = useGameStore((s) => s.roomId);
   const players = useGameStore((s) => s.gameState?.players);
   const myPlayerSeat = useGameStore((s) => s.myPlayerSeat);
 
-  // Monotonic counter survives ring-buffer eviction (chatStore caps at 200).
   const totalReceived = useChatStore((s) => s.matchMessagesReceivedTotal);
   const matchMessages = useChatStore((s) => s.matchMessages);
 
-  const [isOpen, setIsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  // `peekVisible` controls only the floating preview bubble — the unread
+  // badge stays up until the user opens the chat. Decoupling them lets the
+  // bubble auto-fade after 2s while the badge keeps signalling backlog.
+  const [peekVisible, setPeekVisible] = useState(false);
   const prevTotalRef = useRef(totalReceived);
 
   useEffect(() => {
     const prev = prevTotalRef.current;
     if (totalReceived < prev) {
-      // clearMatch reset the counter — drop any pending unread.
       setUnread(0);
+      setPeekVisible(false);
       prevTotalRef.current = totalReceived;
       return;
     }
     if (totalReceived > prev && !isOpen) {
       setUnread((u) => u + (totalReceived - prev));
+      setPeekVisible(true);
     }
     prevTotalRef.current = totalReceived;
   }, [totalReceived, isOpen]);
 
   useEffect(() => {
-    if (isOpen) setUnread(0);
+    if (isOpen) {
+      setUnread(0);
+      setPeekVisible(false);
+    }
   }, [isOpen]);
 
-  // Resolve the latest match message → { sender, text, senderTeam } for the
-  // peek bubble. Sender team is viewer-relative gold/silver, falling back to
-  // brass when the userId can't be matched (e.g. system messages, race with
-  // gameState load). Memoised on (matchMessages, players, myPlayerSeat) so a
-  // stable last-message reference doesn't churn across renders.
+  // Auto-dismiss the peek bubble 2s after it appears. Reschedules on every
+  // new arrival because `totalReceived` changes — so the latest message
+  // always gets its own 2s window rather than inheriting the prior one's
+  // remaining time.
+  useEffect(() => {
+    if (!peekVisible) return;
+    const handle = window.setTimeout(() => setPeekVisible(false), PEEK_AUTO_DISMISS_MS);
+    return () => window.clearTimeout(handle);
+  }, [peekVisible, totalReceived]);
+
   const peek = useMemo(() => {
     if (matchMessages.length === 0 || myPlayerSeat === null || !players) return null;
     const last = matchMessages[matchMessages.length - 1];
@@ -75,9 +98,6 @@ export function MatchChatSidebar() {
     return { sender: last.username, text: truncated, color: senderColor };
   }, [matchMessages, players, myPlayerSeat]);
 
-  // Server roomIDs are positive auto-increment integers; treat 0/-/NaN as
-  // "no room" — without this guard a stray send to a non-existent room is
-  // silently dropped by the server every time, wasting frames.
   if (roomId === null || roomId <= 0) return null;
 
   const unreadLabel = unread > UNREAD_BADGE_CAP ? `${UNREAD_BADGE_CAP}+` : String(unread);
@@ -85,7 +105,7 @@ export function MatchChatSidebar() {
   if (!isOpen) {
     return (
       <div className="fixed bottom-4 right-4 z-30 flex flex-col items-end gap-2">
-        {peek && unread > 0 && (
+        {peek && peekVisible && (
           <div
             className="rounded-xl px-3 py-2 max-w-60"
             style={{
@@ -113,11 +133,11 @@ export function MatchChatSidebar() {
         )}
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
+          onClick={() => onOpenChange(true)}
           aria-label={t("game.chat.toggleOpen")}
           aria-pressed={false}
           data-testid="match-chat-toggle"
-          className="relative inline-flex h-12 w-12 items-center justify-center rounded-full transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brass)"
+          className="relative inline-flex h-14 w-14 items-center justify-center rounded-full transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brass)"
           style={{
             background: "var(--panel-deeper, rgba(18,32,22,0.94))",
             border: `1px solid ${unread > 0 ? "var(--brass, #c9a876)" : "rgba(180,220,200,0.18)"}`,
@@ -130,7 +150,7 @@ export function MatchChatSidebar() {
             WebkitBackdropFilter: "blur(10px)",
           }}
         >
-          <MessageSquare className="h-5 w-5" aria-hidden="true" />
+          <MessageSquare className="h-6 w-6" aria-hidden="true" />
           {unread > 0 && (
             <span
               className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums"
@@ -152,8 +172,9 @@ export function MatchChatSidebar() {
 
   return (
     <aside
-      className="fixed top-0 right-0 z-30 flex h-full w-80 max-w-[90vw] flex-col"
+      className="fixed top-0 right-0 z-30 flex h-full max-w-[90vw] flex-col overflow-hidden"
       style={{
+        width: 260,
         background: "var(--panel-deeper, rgba(18,32,22,0.94))",
         borderLeft: "1px solid rgba(180,220,200,0.1)",
         backdropFilter: "blur(10px)",
@@ -162,31 +183,37 @@ export function MatchChatSidebar() {
       data-testid="match-chat-sidebar"
     >
       <header
-        className="flex items-center justify-between gap-2 px-4 py-3"
-        style={{ borderBottom: "1px solid rgba(201,168,118,0.18)" }}
+        className="flex items-center justify-between gap-2"
+        style={{
+          padding: "12px 14px",
+          borderBottom: "1px solid rgba(180,220,200,0.1)",
+        }}
       >
         <div
           className="font-body text-xs font-semibold uppercase"
-          style={{ color: "var(--ink-light, #f5f2e8)", letterSpacing: 1.5, opacity: 0.85 }}
+          style={{
+            color: "var(--ink-light, #f5f2e8)",
+            letterSpacing: 1.5,
+            opacity: 0.8,
+          }}
         >
           {t("game.chat.title")}
         </div>
         <button
           type="button"
-          onClick={() => setIsOpen(false)}
+          onClick={() => onOpenChange(false)}
           aria-label={t("game.chat.toggleClose")}
           aria-pressed={true}
           data-testid="match-chat-toggle"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brass)"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brass)"
           style={{ color: "var(--ink-light, #f5f2e8)", opacity: 0.7 }}
           title={t("game.chat.toggleClose")}
         >
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </header>
-      <div className="flex-1 overflow-hidden">
-        <ChatPanel channel="match" matchId={roomId} className="h-full border-0 rounded-none" />
-      </div>
+
+      <GameChatBody />
     </aside>
   );
 }
