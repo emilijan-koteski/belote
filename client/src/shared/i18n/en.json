@@ -261,9 +261,13 @@
       "label": "Dealer: {{name}}"
     },
     "trumpPrompt": {
-      "titleRound1": "Trump Candidate",
-      "titleRound2": "Choose Trump Suit",
-      "pick": "Pick",
+      "titleRound1": "Take trump or pass",
+      "titleRound2": "Choose any suit — or pass",
+      "subtitleRound1": "Candidate: {{candidate}} · adopt this suit, or pass to the next player.",
+      "subtitleRound2": "Round 2 · any suit except the candidate.",
+      "bodyRound1": "The candidate card was turned face-up. Take it as trump for your team, or pass to the next player.",
+      "roundLabel": "Round {{round}} / 2",
+      "pick": "Take",
       "pass": "Pass",
       "waiting": "Waiting for bidder..."
     },

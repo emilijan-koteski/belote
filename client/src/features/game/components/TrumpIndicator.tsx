@@ -126,7 +126,11 @@ export function TrumpIndicator({
           ? undefined
           : {
               background: PANEL_BG,
-              border: `1px solid ${BRASS}66`,
+              // Match the ScorePanel chrome: literal rgba so the alpha is
+              // applied (the previous `${BRASS}66` concatenated `var(...)`
+              // with hex alpha, producing an invalid color the browser
+              // dropped — leaving the chip with no visible border).
+              border: "1px solid rgba(201,168,118,0.4)",
               backdropFilter: "blur(8px)",
               WebkitBackdropFilter: "blur(8px)",
               boxShadow: "0 8px 24px rgba(0,0,0,0.3)",

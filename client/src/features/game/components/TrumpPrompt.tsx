@@ -28,10 +28,13 @@ const SUIT_SYMBOL: Record<Suit, string> = {
   C: "♣",
 };
 
+// Card-on-white suit colors — these buttons read like miniature playing cards,
+// so use the deep card-red (`--suit-red`) rather than the lifted variant
+// (`--suit-red-up`) which is only legible on dark felt.
 const SUIT_COLOR: Record<Suit, string> = {
   S: "var(--suit-black, #1a1a1a)",
-  H: "var(--suit-red-up, #ff8585)",
-  D: "var(--suit-red-up, #ff8585)",
+  H: "var(--suit-red, #c62828)",
+  D: "var(--suit-red, #c62828)",
   C: "var(--suit-black, #1a1a1a)",
 };
 
@@ -48,7 +51,6 @@ export function TrumpPrompt({
   const promptRef = useFocusTrap<HTMLDivElement>();
   const showRing = isActiveBidder && Boolean(turnExpiresAt) && (timerDurationSec ?? 0) > 0;
 
-  // Non-active bidders see a non-blocking status indicator, not a dialog.
   if (!isActiveBidder) {
     return (
       <div
@@ -78,6 +80,24 @@ export function TrumpPrompt({
   const title =
     biddingRound === 1 ? t("game.trumpPrompt.titleRound1") : t("game.trumpPrompt.titleRound2");
 
+  // Subtitle mirrors the design: round 1 calls out the candidate's rank+suit
+  // glyph; round 2 reminds the player the candidate suit is locked.
+  const candidateLabel =
+    trumpCandidate !== null ? `${trumpCandidate.rank}${SUIT_SYMBOL[trumpCandidate.suit]}` : "";
+  const subtitle =
+    biddingRound === 1
+      ? t("game.trumpPrompt.subtitleRound1", {
+          candidate: candidateLabel,
+          defaultValue: `Candidate: ${candidateLabel} · adopt this suit, or pass to the next player.`,
+        })
+      : t("game.trumpPrompt.subtitleRound2");
+
+  // Round 2: all four suits render so the layout is stable, but the
+  // candidate suit (Bitola "spent suit") is disabled — visually muted and
+  // not clickable. Keeping it on screen makes the lock-out explicit rather
+  // than leaving the player guessing why a suit they thought was available
+  // disappeared.
+
   return (
     <OverlayBackdrop dim={0.5}>
       <div
@@ -86,51 +106,89 @@ export function TrumpPrompt({
         aria-modal="true"
         aria-labelledby="trump-prompt-title"
         data-testid="trump-prompt"
-        className="motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150 max-h-[90vh] overflow-y-auto"
+        className="motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150"
       >
-        <ClassicPanel width={520} title={<span id="trump-prompt-title">{title}</span>}>
-          {/* Trump candidate card — visible in both rounds. In round 2 the
-              picker still inherits this card as their 8th card after picking,
-              so it stays on-screen alongside the suit-selection grid. */}
-          {trumpCandidate && (
-            <div className="flex justify-center mb-4">
-              <PlayingCard card={trumpCandidate} state="default" size="lg" withTransition={false} />
-            </div>
-          )}
-
-          {/* Round 2: 4 suit buttons. The originally face-up candidate's suit
-              is locked (Bitola "spent suit" rule) — it stays in the grid but
-              disabled so the layout is stable and the player sees which suit
-              is unavailable. */}
-          {biddingRound === 2 && (
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {SUITS.map((suit) => {
-                const isLocked = trumpCandidate?.suit === suit;
-                return (
-                  <button
-                    key={suit}
-                    type="button"
-                    disabled={isLocked}
-                    aria-disabled={isLocked}
-                    onClick={() => onPick(suit)}
-                    data-testid={`trump-prompt-suit-${suit}`}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:not-disabled:brightness-110 transition-[filter] duration-150"
-                    style={{
-                      background: "rgba(0,0,0,0.25)",
-                      border: "1px solid rgba(201,168,118,0.35)",
-                      color: "var(--ink-light, #f5f2e8)",
-                      fontFamily: 'Georgia, "Times New Roman", serif',
-                      fontSize: 15,
-                    }}
-                  >
-                    <span style={{ fontSize: 22, color: SUIT_COLOR[suit] }}>
-                      {SUIT_SYMBOL[suit]}
-                    </span>
-                    <span className="capitalize">{t(`game.suits.${suitName(suit)}`)}</span>
-                  </button>
-                );
-              })}
-            </div>
+        {/* Scroll guard moves onto the panel itself. A wrapping div with
+            overflow-y-auto would clip the panel's brass halo at its
+            rectangular bounds (CSS forces overflow-x:auto when overflow-y is
+            set). Inline `overflowY: auto` on the panel only overrides the Y
+            axis — X stays hidden for corner clipping, and the panel's own
+            box-shadow is unaffected by its own overflow. */}
+        <ClassicPanel
+          width={560}
+          title={<span id="trump-prompt-title">{title}</span>}
+          subtitle={subtitle}
+          style={{ maxHeight: "90vh", overflowY: "auto" }}
+        >
+          {biddingRound === 1 ? (
+            // Round 1: candidate card sits on the left, descriptive copy on
+            // the right — matches the design's 80×116 card + flex-1 paragraph.
+            trumpCandidate && (
+              <div className="flex items-center gap-5 mb-5">
+                <PlayingCard
+                  card={trumpCandidate}
+                  state="default"
+                  size="lg"
+                  withTransition={false}
+                />
+                <p
+                  className="font-body text-[13px] leading-relaxed flex-1"
+                  style={{ color: "var(--ink-light, #f5f2e8)", opacity: 0.8 }}
+                >
+                  {t("game.trumpPrompt.bodyRound1")}
+                </p>
+              </div>
+            )
+          ) : (
+            <>
+              {trumpCandidate && (
+                <div className="flex justify-center mb-4">
+                  <PlayingCard
+                    card={trumpCandidate}
+                    state="default"
+                    size="lg"
+                    withTransition={false}
+                  />
+                </div>
+              )}
+              {/* Card-style picker buttons: white parchment surface mirroring
+                  PlayingCard so the tap target reads as "pick this suit's
+                  card". Just the suit glyph — the suit name is redundant
+                  next to a 60×80 white card with a 40 px symbol. The
+                  candidate suit stays in the grid as a disabled tile so the
+                  layout doesn't shift and the lock-out is visible. */}
+              <div className="grid grid-cols-4 gap-2.5 mb-3.5">
+                {SUITS.map((suit) => {
+                  const isLocked = trumpCandidate?.suit === suit;
+                  return (
+                    <button
+                      key={suit}
+                      type="button"
+                      disabled={isLocked}
+                      aria-disabled={isLocked}
+                      onClick={() => onPick(suit)}
+                      aria-label={t(`game.suits.${suitName(suit)}`)}
+                      data-testid={`trump-prompt-suit-${suit}`}
+                      className="flex items-center justify-center rounded-md transition-[filter,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brass) focus-visible:ring-offset-2 focus-visible:ring-offset-(--felt-deep,#072a14) disabled:cursor-not-allowed not-disabled:cursor-pointer not-disabled:hover:brightness-105 not-disabled:motion-safe:hover:-translate-y-0.5"
+                      style={{
+                        height: 52,
+                        background: "linear-gradient(180deg, #fdfaf0 0%, #f4ecd8 100%)",
+                        border: "1px solid rgba(0,0,0,0.15)",
+                        boxShadow: "0 3px 6px rgba(0,0,0,0.3)",
+                        color: SUIT_COLOR[suit],
+                        fontFamily: 'Georgia, "Times New Roman", serif',
+                        fontSize: 28,
+                        lineHeight: 1,
+                        opacity: isLocked ? 0.4 : 1,
+                        filter: isLocked ? "grayscale(0.85)" : undefined,
+                      }}
+                    >
+                      <span aria-hidden="true">{SUIT_SYMBOL[suit]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           )}
 
           <div className="flex items-center justify-between gap-3">
@@ -143,11 +201,12 @@ export function TrumpPrompt({
                 defaultValue: `Round ${biddingRound} / 2`,
               })}
             </span>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3.5">
               {showRing ? (
                 <ButtonTimerRing
                   turnExpiresAt={turnExpiresAt}
                   totalDuration={timerDurationSec ?? 0}
+                  onExpire={onPass}
                 >
                   <ClassicButton onClick={onPass} data-testid="trump-prompt-pass">
                     {t("game.trumpPrompt.pass")}

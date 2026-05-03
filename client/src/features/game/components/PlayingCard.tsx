@@ -80,6 +80,11 @@ function isFace(rank: Rank): boolean {
 }
 
 const DEFAULT_GLOW = "var(--turn-lime, #00e5a0)";
+// Halo (alpha) twin of the default glow. Hardcoded as `rgba(...)` because
+// CSS rejects `var(--x, #fff)cc` — you can't concatenate hex-alpha onto a
+// `var()` reference, and that silently drops the whole `box-shadow`
+// declaration. Caller-supplied glowColors fall back to this lime halo.
+const DEFAULT_GLOW_HALO = "rgba(0, 229, 160, 0.8)";
 
 /**
  * Classic casino-style playing card. Three states drive presentation:
@@ -138,10 +143,14 @@ export function PlayingCard({
   const cardId = card ? `${card.rank}${card.suit}` : undefined;
   const role = isPlayable ? "button" : undefined;
 
-  // Lime halo on playable cards. Inline so we can pin the glow stops to the
-  // lime token regardless of nesting.
+  // Lime halo on playable cards. Two channels: a 2 px ring for the green
+  // border, and a soft 24 px halo for the glow. The ring uses `glowColor`
+  // (which can be a `var()`); the halo uses its hardcoded rgba twin so we
+  // don't re-introduce the dropped-shadow bug from concatenating hex alpha
+  // onto a `var()` reference.
+  const haloColor = glowColor === DEFAULT_GLOW ? DEFAULT_GLOW_HALO : glowColor;
   const playableGlow = isPlayable
-    ? `0 10px 22px rgba(0,0,0,0.35), 0 0 0 2px ${glowColor}, 0 0 18px ${glowColor}cc`
+    ? `0 10px 22px rgba(0,0,0,0.35), 0 0 0 2px ${glowColor}, 0 0 24px ${haloColor}`
     : isFaceDown
       ? "0 4px 10px rgba(0,0,0,0.45)"
       : "0 3px 6px rgba(0,0,0,0.3)";

@@ -12,13 +12,14 @@ const EMOTE_GLYPHS: Record<EmoteID, string> = {
   heart: "❤️",
 };
 
-// Local copy of the seat-position class strings used by GamePage. Four lines
-// of CSS — duplication is cheaper than introducing a new shared util file.
+// Bubble sits on the table-facing side of each seat (between the seat and the
+// table center) so the emote reads as coming from that player without
+// overlapping their name pill / card stack.
 const SEAT_POSITIONS: Record<0 | 1 | 2 | 3, string> = {
-  0: "bottom-44 left-1/2 -translate-x-1/2", // South — above the local player's hand area
-  1: "right-24 top-1/2 -translate-y-1/2", // East
-  2: "top-24 left-1/2 -translate-x-1/2", // North
-  3: "left-24 top-1/2 -translate-y-1/2", // West
+  0: "bottom-[22rem] left-1/2 -translate-x-1/2", // South — above the self avatar/name pill
+  1: "right-[22rem] top-1/2 -translate-y-1/2", // East — left of the seat (toward table)
+  2: "top-[16rem] left-1/2 -translate-x-1/2", // North — below the partner's seat + card stack
+  3: "left-[22rem] top-1/2 -translate-y-1/2", // West — right of the seat (toward table)
 };
 
 const DURATION_MS = 2000;
@@ -58,7 +59,12 @@ export function EmoteBubble({ emote, compassPosition, onDismiss }: EmoteBubblePr
       className={`absolute ${SEAT_POSITIONS[compassPosition]} pointer-events-none z-20 motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150`}
     >
       <span
-        className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border bg-background/95 text-3xl leading-none shadow-lg"
+        className="inline-flex h-12 w-12 items-center justify-center rounded-full text-3xl leading-none"
+        style={{
+          background: "var(--panel-dark, rgba(20,45,30,0.85))",
+          border: "1px solid var(--brass, #c9a876)",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)",
+        }}
         aria-hidden="true"
       >
         {EMOTE_GLYPHS[emote]}

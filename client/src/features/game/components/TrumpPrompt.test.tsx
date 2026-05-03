@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TrumpPrompt } from "./TrumpPrompt";
 
@@ -96,7 +96,7 @@ describe("TrumpPrompt", () => {
     expect(screen.queryByTestId("trump-prompt-suit-S")).not.toBeInTheDocument();
   });
 
-  it("shows suit buttons in round 2 for active bidder", () => {
+  it("shows all four suit buttons in round 2 for active bidder (candidate locked)", () => {
     render(
       <TrumpPrompt
         trumpCandidate={trumpCandidate}
@@ -129,7 +129,7 @@ describe("TrumpPrompt", () => {
     expect(onPick).toHaveBeenCalledWith("S");
   });
 
-  it("disables the candidate-suit button in round 2 and leaves the others enabled", () => {
+  it("disables the candidate-suit button in round 2 and keeps the others enabled", () => {
     render(
       <TrumpPrompt
         trumpCandidate={trumpCandidate}
@@ -139,12 +139,12 @@ describe("TrumpPrompt", () => {
         onPass={vi.fn()}
       />,
     );
-    // Candidate is KH — the H button is "spent" and must be disabled.
+    // Candidate is KH — H stays in the grid as a visibly disabled tile so
+    // the layout is stable and the lock-out is explicit.
     const lockedButton = screen.getByTestId("trump-prompt-suit-H");
     expect(lockedButton).toBeDisabled();
     expect(lockedButton).toHaveAttribute("aria-disabled", "true");
 
-    // The other three suits remain enabled.
     expect(screen.getByTestId("trump-prompt-suit-S")).toBeEnabled();
     expect(screen.getByTestId("trump-prompt-suit-D")).toBeEnabled();
     expect(screen.getByTestId("trump-prompt-suit-C")).toBeEnabled();
@@ -274,6 +274,37 @@ describe("TrumpPrompt", () => {
     expect(dialog).toHaveAttribute("aria-modal", "true");
   });
 
+  describe("auto-pass on timer expiry", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("calls onPass once when the in-dialog timer ring reaches zero", () => {
+      const onPass = vi.fn();
+      const expiry = new Date(Date.now() + 5000).toISOString();
+      render(
+        <TrumpPrompt
+          trumpCandidate={trumpCandidate}
+          biddingRound={1}
+          isActiveBidder={true}
+          onPick={vi.fn()}
+          onPass={onPass}
+          turnExpiresAt={expiry}
+          timerDurationSec={5}
+        />,
+      );
+
+      expect(onPass).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(6000);
+      });
+      expect(onPass).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("inner dialog has overflow guard for short viewports (AC5)", () => {
     render(
       <TrumpPrompt
@@ -284,8 +315,14 @@ describe("TrumpPrompt", () => {
         onPass={vi.fn()}
       />,
     );
+    // Constraint lives on the panel itself, not the dialog wrapper — wrapping
+    // the panel in an overflow-clipping div clips the brass halo at the
+    // wrapper's rectangular bounds. Putting the constraint on the panel
+    // leaves its own box-shadow intact.
     const dialog = screen.getByRole("dialog");
-    expect(dialog.className).toContain("max-h-[90vh]");
-    expect(dialog.className).toContain("overflow-y-auto");
+    const panel = dialog.firstElementChild as HTMLElement | null;
+    expect(panel).not.toBeNull();
+    expect(panel!.style.maxHeight).toBe("90vh");
+    expect(panel!.style.overflowY).toBe("auto");
   });
 });

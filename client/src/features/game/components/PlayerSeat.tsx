@@ -302,13 +302,17 @@ export function PlayerSeat({
         {showRing && (
           <TimerRing turnExpiresAt={turnExpiresAt ?? null} totalDuration={timerDuration ?? 0} />
         )}
-        {/* Stackable status chips: caller behind & right, dealer in front. */}
+        {/* Stackable status chips: caller occupies the left slot, dealer the
+            right (positions kept as before). The caller chip wins the z-order
+            so its suit glyph hovers above the dealer chip in the overlap
+            region — the suit is the more important piece of information once
+            trump has been taken. */}
         {callerChipNode && dealerChipNode && (
           <>
-            <div className="absolute" style={{ top: -6, right: -22, zIndex: 1 }}>
+            <div className="absolute" style={{ top: -6, right: -16, zIndex: 2 }}>
               {callerChipNode}
             </div>
-            <div className="absolute" style={{ top: -6, right: -6, zIndex: 2 }}>
+            <div className="absolute" style={{ top: -6, right: -6, zIndex: 1 }}>
               {dealerChipNode}
             </div>
           </>
