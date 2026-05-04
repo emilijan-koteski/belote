@@ -759,6 +759,7 @@ export function GamePage() {
           myPlayerSeat={myPlayerSeat}
           cardId={belotReveal.cardId}
           isKing={belotReveal.cardId.startsWith("K")}
+          players={gameState.players}
           onComplete={handleBelotRevealComplete}
         />
       )}

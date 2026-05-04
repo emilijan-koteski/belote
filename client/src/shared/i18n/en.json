@@ -303,7 +303,11 @@
       "decline": "Skip",
       "reveal": {
         "belot": "Belot!",
-        "rebelot": "Re-belot!"
+        "rebelot": "Re-belot!",
+        "titleBelot": "{{name}} announced belot",
+        "titleRebelot": "{{name}} announced re-belot",
+        "bonus": "+20 to your team's score",
+        "dismiss": "Dismiss"
       }
     },
     "errors": {

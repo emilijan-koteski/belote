@@ -47,6 +47,53 @@ describe("BelotReveal", () => {
     expect(screen.getByTestId("playing-card-KC")).toBeInTheDocument();
   });
 
+  it("renders the announcer's name in the title when players is provided", () => {
+    render(
+      <BelotReveal
+        playerSeat={2}
+        myPlayerSeat={0}
+        cardId="KC"
+        isKing={true}
+        players={[
+          { seat: 0, userId: "u0", username: "Alice", hand: [], declarations: [], connected: true },
+          { seat: 1, userId: "u1", username: "Bob", hand: [], declarations: [], connected: true },
+          {
+            seat: 2,
+            userId: "u2",
+            username: "Stefan",
+            hand: [],
+            declarations: [],
+            connected: true,
+          },
+          {
+            seat: 3,
+            userId: "u3",
+            username: "Mirela",
+            hand: [],
+            declarations: [],
+            connected: true,
+          },
+        ]}
+        onComplete={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("belot-reveal-title")).toHaveTextContent("Stefan announced re-belot");
+  });
+
+  it("falls back to the team label when players is not provided", () => {
+    render(
+      <BelotReveal
+        playerSeat={0}
+        myPlayerSeat={0}
+        cardId="QC"
+        isKing={false}
+        onComplete={vi.fn()}
+      />,
+    );
+    // Stand-alone test render — no players roster, viewer-relative team only.
+    expect(screen.getByTestId("belot-reveal-title")).toHaveTextContent("Us");
+  });
+
   it("auto-dismisses after 8 seconds", () => {
     vi.useFakeTimers();
     const onComplete = vi.fn();

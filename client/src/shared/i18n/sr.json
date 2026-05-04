@@ -303,7 +303,11 @@
       "decline": "Preskoči",
       "reveal": {
         "belot": "Belot!",
-        "rebelot": "Re-belot!"
+        "rebelot": "Re-belot!",
+        "titleBelot": "{{name}} je objavio belot",
+        "titleRebelot": "{{name}} je objavio re-belot",
+        "bonus": "+20 poena za tim",
+        "dismiss": "Zatvori"
       }
     },
     "errors": {

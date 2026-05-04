@@ -64,7 +64,14 @@ export function BelotReveal({
   const teamLabel = t(team === "gold" ? "team.us" : "team.them");
 
   const labelKey = isKing ? "game.belot.reveal.rebelot" : "game.belot.reveal.belot";
+  const titleKey = isKing ? "game.belot.reveal.titleRebelot" : "game.belot.reveal.titleBelot";
   const announcer = players?.find((p) => p.seat === playerSeat)?.username;
+  // Mirror TrumpReveal: full sentence on the title row when we know who
+  // announced ("{{name}} announced re-belot"), graceful fallback to the
+  // team label when the players roster wasn't passed (test renders).
+  const titleText = announcer
+    ? t(titleKey, { name: announcer })
+    : t(team === "gold" ? "team.us" : "team.them");
 
   return (
     <div
@@ -103,8 +110,10 @@ export function BelotReveal({
               fontSize: 18,
               letterSpacing: 0.2,
             }}
+            data-testid="belot-reveal-title"
+            data-seat={playerSeat}
           >
-            {announcer ?? t(team === "gold" ? "team.us" : "team.them")}
+            {titleText}
           </div>
           <div className="flex items-center gap-2 mt-1">
             <span
@@ -123,7 +132,7 @@ export function BelotReveal({
               {teamLabel}
             </span>
             <span className="text-xs opacity-70">
-              {t("game.belot.reveal.bonus", { defaultValue: "+20 to your team" })}
+              {t("game.belot.reveal.bonus", { defaultValue: "+20 to your team's score" })}
             </span>
           </div>
         </div>
