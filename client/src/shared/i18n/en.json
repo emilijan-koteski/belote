@@ -288,7 +288,13 @@
       "sequenceShort": "Sequence of {{count}}",
       "fourOfAKindShort": "Four of a Kind",
       "resolved": "Declarations",
-      "teamDeclared": "{{team}} declared"
+      "teamDeclared": "{{team}} declared",
+      "headline": "{{team}} won the declarations",
+      "tiebreaker": "{{player}}'s {{label}} — highest meld at the table",
+      "byPlayer": "by {{name}}",
+      "awardedTo": "Awarded to {{team}}",
+      "addedToHand": "Added to this hand's score",
+      "dismiss": "Dismiss"
     },
     "belot": {
       "titleBelot": "Announce Belot?",

@@ -288,7 +288,13 @@
       "sequenceShort": "Niz od {{count}}",
       "fourOfAKindShort": "Četvorka",
       "resolved": "Zvanja",
-      "teamDeclared": "Zvanje — {{team}}"
+      "teamDeclared": "Zvanje — {{team}}",
+      "headline": "{{team}} su osvojili zvanja",
+      "tiebreaker": "{{player}} — {{label}} · najviše zvanje za stolom",
+      "byPlayer": "od {{name}}",
+      "awardedTo": "Pripada {{team}}",
+      "addedToHand": "Dodato na rezultat ovog deljenja",
+      "dismiss": "Zatvori"
     },
     "belot": {
       "titleBelot": "Objavi belot?",

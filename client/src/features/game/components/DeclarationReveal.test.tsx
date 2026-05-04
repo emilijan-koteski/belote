@@ -10,10 +10,17 @@ vi.mock("react-i18next", () => ({
       const translations: Record<string, string> = {
         "team.us": "Us",
         "team.them": "Them",
+        "game.declaration.resolved": "Declarations",
+        "game.declaration.addedToHand": "Added to this hand's score",
       };
       if (key === "game.declaration.teamDeclared" && opts) return `${opts.team} declared`;
+      if (key === "game.declaration.headline" && opts) return `${opts.team} won the declarations`;
+      if (key === "game.declaration.tiebreaker" && opts)
+        return `${opts.player}'s ${opts.label} — highest meld at the table`;
+      if (key === "game.declaration.byPlayer" && opts) return `by ${opts.name}`;
+      if (key === "game.declaration.awardedTo" && opts) return `Awarded to ${opts.team}`;
       if (key === "game.declaration.sequenceShort" && opts) return `${opts.count} in a row`;
-      if (key === "game.declaration.fourOfAKindShort" && opts) return `four of a kind`;
+      if (key === "game.declaration.fourOfAKindShort") return "four of a kind";
       return translations[key] ?? key;
     },
   }),
@@ -79,7 +86,7 @@ describe("DeclarationReveal", () => {
     expect(screen.getByTestId("playing-card-AD")).toBeInTheDocument();
   });
 
-  it("renders 'Us declared' when viewer's partner declares", () => {
+  it("renders 'Us won the declarations' when viewer's partner declares", () => {
     // viewer is teamB (seat 1 or 3); declarer is seat 1 (teamB) → both partners see Us
     render(
       <DeclarationReveal
@@ -91,10 +98,10 @@ describe("DeclarationReveal", () => {
     );
     const label = screen.getByTestId("declaration-reveal-team");
     expect(label).toHaveAttribute("data-team", "teamB");
-    expect(label).toHaveTextContent("Us declared");
+    expect(label).toHaveTextContent("Us won the declarations");
   });
 
-  it("renders 'Them declared' when viewer is teamA and opponents declare", () => {
+  it("renders 'Them won the declarations' when viewer is teamA and opponents declare", () => {
     // viewer is teamA; declarer is on teamB → they see Them
     render(
       <DeclarationReveal
@@ -108,7 +115,7 @@ describe("DeclarationReveal", () => {
     // The winner team is still teamB — data-team reflects the winner team
     // (used for styling), not the viewer-relative label.
     expect(label).toHaveAttribute("data-team", "teamB");
-    expect(label).toHaveTextContent("Them declared");
+    expect(label).toHaveTextContent("Them won the declarations");
   });
 
   it("centers the panel regardless of winning declarer's seat", () => {
@@ -153,17 +160,25 @@ describe("DeclarationReveal", () => {
     }
   });
 
-  it("does not render any +total number", () => {
+  it("renders +value per meld and a +total in the brass strip (sum of meld values)", () => {
+    const payload: DeclarationsResolvedPayload = {
+      winnerTeam: 0,
+      declarations: [
+        { playerSeat: 0, type: "sequence", value: 50, cards: ["JS", "QS", "KS", "AS"] },
+        { playerSeat: 2, type: "sequence", value: 20, cards: ["8H", "9H", "TH"] },
+      ],
+    };
     render(
       <DeclarationReveal
-        payload={mockPayload}
+        payload={payload}
         players={mockPlayers}
         viewerTeam="teamA"
         onComplete={vi.fn()}
       />,
     );
-    expect(screen.queryByText(/\+50/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/\+100/)).not.toBeInTheDocument();
+    const meldValues = screen.getAllByTestId("declaration-reveal-meld-value");
+    expect(meldValues.map((n) => n.textContent)).toEqual(["+50", "+20"]);
+    expect(screen.getByTestId("declaration-reveal-total-value")).toHaveTextContent("+70");
   });
 
   it("does not render when winnerTeam is null", () => {
@@ -224,9 +239,62 @@ describe("DeclarationReveal", () => {
     const declarers = screen.getAllByTestId("declaration-reveal-declarer");
     expect(declarers).toHaveLength(2);
     expect(declarers[0]).toHaveAttribute("data-seat", "0");
-    expect(declarers[0]).toHaveTextContent("alice");
+    expect(declarers[0]).toHaveTextContent("by alice");
     expect(declarers[1]).toHaveAttribute("data-seat", "2");
-    expect(declarers[1]).toHaveTextContent("carol");
+    expect(declarers[1]).toHaveTextContent("by carol");
+  });
+
+  it("renders the tiebreaker line only when there is more than one meld", () => {
+    const single: DeclarationsResolvedPayload = {
+      winnerTeam: 1,
+      declarations: [
+        { playerSeat: 1, type: "sequence", value: 50, cards: ["JD", "QD", "KD", "AD"] },
+      ],
+    };
+    const { rerender } = render(
+      <DeclarationReveal
+        payload={single}
+        players={mockPlayers}
+        viewerTeam="teamA"
+        onComplete={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("declaration-reveal-tiebreaker")).not.toBeInTheDocument();
+
+    const multi: DeclarationsResolvedPayload = {
+      winnerTeam: 1,
+      declarations: [
+        { playerSeat: 1, type: "sequence", value: 20, cards: ["8H", "9H", "TH"] },
+        { playerSeat: 3, type: "four_of_a_kind", value: 200, cards: ["JC", "JH", "JD", "JS"] },
+      ],
+    };
+    rerender(
+      <DeclarationReveal
+        payload={multi}
+        players={mockPlayers}
+        viewerTeam="teamA"
+        onComplete={vi.fn()}
+      />,
+    );
+    // Highest meld is dave's four_of_a_kind (200) — that's what tipped the team.
+    expect(screen.getByTestId("declaration-reveal-tiebreaker")).toHaveTextContent(
+      "dave's four of a kind — highest meld at the table",
+    );
+  });
+
+  it("renders the awarded-to label and total in the brass strip", () => {
+    render(
+      <DeclarationReveal
+        payload={mockPayload}
+        players={mockPlayers}
+        viewerTeam="teamB"
+        onComplete={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("declaration-reveal-total")).toHaveTextContent("Awarded to Us");
+    expect(screen.getByTestId("declaration-reveal-total")).toHaveTextContent(
+      "Added to this hand's score",
+    );
   });
 
   it("falls back to seat marker when player is unknown", () => {
@@ -237,7 +305,7 @@ describe("DeclarationReveal", () => {
     render(
       <DeclarationReveal payload={payload} players={[]} viewerTeam="teamA" onComplete={vi.fn()} />,
     );
-    expect(screen.getByTestId("declaration-reveal-declarer")).toHaveTextContent("#3");
+    expect(screen.getByTestId("declaration-reveal-declarer")).toHaveTextContent("by #3");
   });
 
   it("auto-dismisses after 8 seconds", () => {
