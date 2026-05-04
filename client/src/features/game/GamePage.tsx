@@ -711,24 +711,36 @@ export function GamePage() {
         />
       )}
 
-      {/* Deal animation overlay */}
-      {isDealingPhase && <DealAnimation trumpCandidate={gameState.trumpCandidate} />}
+      {/* Next-hand UI is suppressed while the end-of-hand overlay sequence
+          (capot animation → score reveal → match result) owns the screen.
+          Without this gate the new hand's deal animation + first-bidder
+          trump prompt paint behind the score reveal because both layers
+          live at z-50; their order in the DOM decides the painted result.
+          Holding them off until overlayPhase === "normal" makes the
+          end-of-hand summary unambiguously the front overlay, then the
+          new-hand prompts surface in sequence as the player dismisses it. */}
+      {overlayPhase === "normal" && (
+        <>
+          {/* Deal animation overlay */}
+          {isDealingPhase && <DealAnimation trumpCandidate={gameState.trumpCandidate} />}
+
+          {/* Trump bidding prompt overlay */}
+          {isBiddingPhase && (
+            <TrumpPrompt
+              trumpCandidate={gameState.trumpCandidate}
+              biddingRound={gameState.biddingRound}
+              isActiveBidder={isActiveBidder}
+              onPick={handlePickTrump}
+              onPass={handlePassTrump}
+              turnExpiresAt={gameState.turnExpiresAt}
+              timerDurationSec={gameState.timerDurationSec}
+            />
+          )}
+        </>
+      )}
 
       {/* Reshuffle animation overlay */}
       {showReshuffle && <ReshuffleAnimation onComplete={handleReshuffleComplete} />}
-
-      {/* Trump bidding prompt overlay */}
-      {isBiddingPhase && (
-        <TrumpPrompt
-          trumpCandidate={gameState.trumpCandidate}
-          biddingRound={gameState.biddingRound}
-          isActiveBidder={isActiveBidder}
-          onPick={handlePickTrump}
-          onPass={handlePassTrump}
-          turnExpiresAt={gameState.turnExpiresAt}
-          timerDurationSec={gameState.timerDurationSec}
-        />
-      )}
 
       {/* Declaration prompt overlay */}
       {showDeclarationPrompt && myPlayer && (
