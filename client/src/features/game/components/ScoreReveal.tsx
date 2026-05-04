@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
-import { type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
+import { type Suit, type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
 import type { HandScoredPayload } from "@/shared/types/wsEvents";
 
 import { TEAM_GOLD, TEAM_SILVER, type TeamGradient } from "../lib/tableTheme";
@@ -15,6 +15,23 @@ interface ScoreRevealProps {
   data: HandScoredPayload;
   viewerTeam: TeamString;
   onContinue: () => void;
+  /** Hand number (1-based) used in the title — "Hand N — results". */
+  handNumber?: number;
+  /** Trump suit for the just-finished hand (used in the subtitle). */
+  trumpSuit?: Suit | null;
+  /** Seat that called the trump (used for "your team called X" wording). */
+  trumpCallerSeat?: number | null;
+}
+
+const SUIT_NAME_KEY: Record<Suit, string> = {
+  S: "game.suits.spades",
+  H: "game.suits.hearts",
+  D: "game.suits.diamonds",
+  C: "game.suits.clubs",
+};
+
+function callerTeamString(seat: number): TeamString {
+  return seat % 2 === 0 ? "teamA" : "teamB";
 }
 
 const AUTO_DISMISS_MS = 8000;
@@ -30,7 +47,14 @@ const ENABLE_DELAY_MS_REDUCED = 500;
  * then enabled. The whole reveal auto-closes after 8 s — the timer ring
  * around Continue makes that explicit.
  */
-export function ScoreReveal({ data, viewerTeam, onContinue }: ScoreRevealProps) {
+export function ScoreReveal({
+  data,
+  viewerTeam,
+  onContinue,
+  handNumber,
+  trumpSuit,
+  trumpCallerSeat,
+}: ScoreRevealProps) {
   const { t } = useTranslation();
   const [continueEnabled, setContinueEnabled] = useState(false);
   const prefersReducedMotion = useReducedMotion();
@@ -56,15 +80,43 @@ export function ScoreReveal({ data, viewerTeam, onContinue }: ScoreRevealProps) 
     return () => clearTimeout(t);
   }, [dismissAt]);
 
-  const teamName = (team: number) => {
-    const teamString = teamStringForIndex(team === 0 ? 0 : 1);
-    return teamString === viewerTeam ? t("team.us") : t("team.them");
-  };
-
   const teamAGradient: TeamGradient = viewerTeam === "teamA" ? TEAM_GOLD : TEAM_SILVER;
   const teamBGradient: TeamGradient = viewerTeam === "teamB" ? TEAM_GOLD : TEAM_SILVER;
 
   const hasDeclarations = data.teamADeclPoints > 0 || data.teamBDeclPoints > 0;
+
+  // Title + contract subtitle per design ("Hand N — results / Contract held ·
+  // your team called Spades"). When handNumber / trumpSuit aren't passed
+  // (legacy callers, test renders) we fall back to a plain "Hand Score".
+  const title =
+    handNumber !== undefined
+      ? t("game.scoreReveal.titleWithHand", {
+          hand: handNumber,
+          defaultValue: `Hand ${handNumber} — results`,
+        })
+      : t("game.scoreReveal.title");
+
+  const callerTeam: TeamString | null =
+    typeof trumpCallerSeat === "number" ? callerTeamString(trumpCallerSeat) : null;
+  const callerWasViewer = callerTeam !== null && callerTeam === viewerTeam;
+  const trumpSuitName = trumpSuit ? t(SUIT_NAME_KEY[trumpSuit]) : null;
+
+  // Subtitle carries the contract callout per design. When the contract
+  // failed, it also names the beneficiary team so the "all points to Them"
+  // message no longer floats awkwardly between the score rows. Held =
+  // "Contract held · your team called Spades"; failed = "Contract failed ·
+  // all points to Them".
+  let subtitle: string | null = null;
+  if (data.failedContract) {
+    const beneficiary: TeamString = data.contractingTeam === 0 ? "teamB" : "teamA";
+    const beneficiaryLabel = beneficiary === viewerTeam ? t("team.us") : t("team.them");
+    subtitle = t("game.scoreReveal.subtitleFailed", { team: beneficiaryLabel });
+  } else if (trumpSuitName && callerTeam) {
+    subtitle = t(
+      callerWasViewer ? "game.scoreReveal.subtitleHeldYour" : "game.scoreReveal.subtitleHeldTheir",
+      { suit: trumpSuitName },
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-30" data-testid="score-reveal">
@@ -77,8 +129,9 @@ export function ScoreReveal({ data, viewerTeam, onContinue }: ScoreRevealProps) 
           }
         >
           <ClassicPanel
-            width={520}
-            title={<span data-testid="score-reveal-title">{t("game.scoreReveal.title")}</span>}
+            width={560}
+            title={<span data-testid="score-reveal-title">{title}</span>}
+            subtitle={subtitle ?? undefined}
           >
             {/* Header eyebrow row — Us / Them column labels */}
             <div
@@ -133,18 +186,6 @@ export function ScoreReveal({ data, viewerTeam, onContinue }: ScoreRevealProps) 
                   testId="row-capot-bonus"
                 />
               )}
-              {data.failedContract && (
-                <p
-                  className="font-body text-[12.5px] text-center py-2"
-                  style={{ color: "rgb(234,179,8)" }}
-                  data-testid="row-failed-contract"
-                >
-                  {t("game.scoreReveal.failedContractDesc", {
-                    team: teamName(data.contractingTeam),
-                    otherTeam: teamName(1 - data.contractingTeam),
-                  })}
-                </p>
-              )}
               <ScoreRow
                 label={t("game.scoreReveal.handTotal")}
                 teamAValue={data.teamAHandTotal}
@@ -155,23 +196,26 @@ export function ScoreReveal({ data, viewerTeam, onContinue }: ScoreRevealProps) 
               />
             </div>
 
-            {/* Match-score brass strip */}
+            {/* Match-score brass strip — per design, the strip hosts the
+                "Match score" eyebrow + the {Us · Them / 1001} totals on the
+                left and the Continue button (with its countdown ring) on the
+                right. Combining them keeps the dialog footprint tight. */}
             <div
-              className="rounded-lg px-4 py-3 mt-4"
+              className="rounded-lg px-4 py-3 mt-4 flex items-center justify-between gap-4"
               style={{
                 background: "rgba(201,168,118,0.1)",
                 border: "1px solid rgba(201,168,118,0.3)",
               }}
               data-testid="row-match-total"
             >
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-0.5">
                 <span
                   className="font-body text-[10.5px] uppercase tracking-widest"
                   style={{ color: "var(--brass, #c9a876)" }}
                 >
                   {t("game.scoreReveal.matchTotal")}
                 </span>
-                <div className="flex items-center gap-3 font-display text-2xl font-bold tabular-nums">
+                <div className="flex items-baseline gap-2 font-display text-lg font-bold tabular-nums">
                   <span style={{ color: teamAGradient[0] }} data-team="teamA">
                     {data.teamAMatchScore}
                   </span>
@@ -179,11 +223,14 @@ export function ScoreReveal({ data, viewerTeam, onContinue }: ScoreRevealProps) 
                   <span style={{ color: teamBGradient[0] }} data-team="teamB">
                     {data.teamBMatchScore}
                   </span>
+                  <span
+                    className="text-[12px] font-body font-normal"
+                    style={{ color: "var(--ink-light, #f5f2e8)", opacity: 0.5 }}
+                  >
+                    / 1001
+                  </span>
                 </div>
               </div>
-            </div>
-
-            <div className="mt-5 flex justify-center">
               <ButtonTimerRing
                 clientCountdown
                 totalDuration={Math.ceil(dismissAt / 1000)}

@@ -119,6 +119,23 @@ export function GamePage() {
   const [flyingCardId, setFlyingCardId] = useState<string | null>(null);
   const flyingClearTimerRef = useRef<number | null>(null);
 
+  // ScoreReveal needs the trump suit / caller seat from the just-finished
+  // hand for its contract-held subtitle. The server pushes the next-hand
+  // gameState (trumpSuit=null) close to the hand_scored payload, so by the
+  // time the reveal mounts those fields may already be cleared. Snapshot
+  // the latest non-null trump info every render — the snapshot survives
+  // the next-hand reset and feeds ScoreReveal cleanly.
+  const lastTrumpRef = useRef<{ suit: Suit | null; callerSeat: number | null }>({
+    suit: null,
+    callerSeat: null,
+  });
+  if (gameState?.trumpSuit) {
+    lastTrumpRef.current = {
+      suit: gameState.trumpSuit,
+      callerSeat: gameState.trumpCallerSeat,
+    };
+  }
+
   const dismissErrorToast = useCallback(() => {
     if (errorToastTimerRef.current !== null) {
       clearTimeout(errorToastTimerRef.current);
@@ -511,6 +528,8 @@ export function GamePage() {
         teamBHandPotential={gameState.handPoints[1] + gameState.declarationPoints[1]}
         lastTrickBonus={scoreRevealData?.lastTrickBonus}
         lastTrickTeam={scoreRevealData?.lastTrickTeam}
+        handNumber={gameState.handNumber}
+        variantLabel={t(`game.variants.${gameState.variant}`, { defaultValue: gameState.variant })}
       />
 
       {/* Trump indicator - top right. Gated to play phases (AC 4.4.5) and
@@ -815,6 +834,9 @@ export function GamePage() {
           data={scoreRevealData}
           viewerTeam={viewerTeam}
           onContinue={handleScoreRevealContinue}
+          handNumber={gameState.handNumber}
+          trumpSuit={gameState.trumpSuit ?? lastTrumpRef.current.suit}
+          trumpCallerSeat={gameState.trumpCallerSeat ?? lastTrumpRef.current.callerSeat}
         />
       )}
 

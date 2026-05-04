@@ -3,14 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, opts?: Record<string, unknown> & { defaultValue?: string }) => {
       const translations: Record<string, string> = {
         "team.us": "Us",
         "team.them": "Them",
-        "game.score.tricks": "Tricks",
+        "game.score.tricks": "tricks",
+        "game.score.trick": "trick",
         "game.score.thisHand": "this hand",
+        "game.score.heading": "Scoreboard",
       };
-      return translations[key] ?? key;
+      // Honour the component's defaultValue contract so the test mock matches
+      // production i18n behavior (interpolated strings used by score-meta etc.).
+      return (
+        translations[key] ?? (typeof opts?.defaultValue === "string" ? opts.defaultValue : key)
+      );
     },
   }),
 }));
@@ -83,7 +89,7 @@ describe("ScorePanel", () => {
     expect(screen.getByTestId("score-row-b")).toHaveAttribute("data-team", "teamB");
   });
 
-  it("renders trick count", () => {
+  it("does not render the legacy 'Tricks: A - B' footer (per-row chip is the source of truth)", () => {
     render(
       <ScorePanel
         viewerTeam="teamA"
@@ -93,8 +99,51 @@ describe("ScorePanel", () => {
         teamBTricks={3}
       />,
     );
+    expect(screen.queryByTestId("score-tricks")).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByTestId("score-tricks")).toHaveTextContent("Tricks: 5 - 3");
+  it("renders Hand N · Variant in the header when both are provided", () => {
+    render(
+      <ScorePanel
+        viewerTeam="teamA"
+        teamAScore={0}
+        teamBScore={0}
+        teamATricks={0}
+        teamBTricks={0}
+        handNumber={3}
+        variantLabel="Bitola"
+      />,
+    );
+    expect(screen.getByTestId("score-meta")).toHaveTextContent("Hand 3 · Bitola");
+  });
+
+  it("hides the metadata pill when neither handNumber nor variantLabel is provided", () => {
+    render(
+      <ScorePanel
+        viewerTeam="teamA"
+        teamAScore={0}
+        teamBScore={0}
+        teamATricks={0}
+        teamBTricks={0}
+      />,
+    );
+    expect(screen.queryByTestId("score-meta")).not.toBeInTheDocument();
+  });
+
+  it("renders the viewer's row first (Us above Them) for a teamB viewer", () => {
+    const { container } = render(
+      <ScorePanel
+        viewerTeam="teamB"
+        teamAScore={100}
+        teamBScore={250}
+        teamATricks={1}
+        teamBTricks={2}
+      />,
+    );
+    const rows = container.querySelectorAll('[data-testid^="score-row-"]');
+    // Viewer is teamB, so the teamB ("Us") row must precede the teamA ("Them") row.
+    expect(rows[0]?.getAttribute("data-testid")).toBe("score-row-b");
+    expect(rows[1]?.getAttribute("data-testid")).toBe("score-row-a");
   });
 
   it("has aria-live polite for accessibility", () => {

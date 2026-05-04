@@ -328,13 +328,22 @@
     },
     "score": {
       "heading": "Scoreboard",
-      "tricks": "Tricks",
+      "tricks": "tricks",
       "trick": "trick",
       "lastTrickBonus": "+{{amount}}",
-      "thisHand": "this hand"
+      "thisHand": "this hand",
+      "handLabel": "Hand {{hand}}",
+      "handVariant": "Hand {{hand}} · {{variant}}"
+    },
+    "variants": {
+      "bitola": "Bitola"
     },
     "scoreReveal": {
       "title": "Hand Score",
+      "titleWithHand": "Hand {{hand}} — results",
+      "subtitleHeldYour": "Contract held · your team called {{suit}}",
+      "subtitleHeldTheir": "Contract held · their team called {{suit}}",
+      "subtitleFailed": "Contract failed · all points to {{team}}",
       "cardPoints": "Card Points",
       "declarationPoints": "Declarations",
       "lastTrickBonus": "Last Trick Bonus",
@@ -342,7 +351,7 @@
       "failedContract": "Failed Contract",
       "failedContractDesc": "{{team}} failed — all points to {{otherTeam}}",
       "handTotal": "Hand Total",
-      "matchTotal": "Match Total",
+      "matchTotal": "Match Score",
       "continue": "Continue"
     },
     "capot": {

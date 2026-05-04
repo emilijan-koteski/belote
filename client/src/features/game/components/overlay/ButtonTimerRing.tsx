@@ -119,7 +119,10 @@ export function ButtonTimerRing({
 
   const pct = totalDuration > 0 ? Math.max(0, secondsLeft) / totalDuration : 0;
   const isUrgent = totalDuration > 0 && pct <= 0.25;
-  const stroke = isUrgent ? "var(--turn-urgent, #ef4444)" : "var(--turn-lime, #00e5a0)";
+  // Cream / red palette to match the AutoCloseRing on info-toast X buttons
+  // (the avatar's lime/red ring stays the primary turn signal — dialogs use
+  // this softer pair so two countdown channels don't compete for attention).
+  const stroke = isUrgent ? "var(--turn-urgent, #ef4444)" : "#d4d0c4";
   const pad = 4;
   const strokeW = 1.75;
   const w = size.w + pad * 2;

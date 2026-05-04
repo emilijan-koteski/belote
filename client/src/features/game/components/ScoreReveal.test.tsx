@@ -13,13 +13,19 @@ vi.mock("react-i18next", () => ({
         "game.scoreReveal.capotBonus": "Capot Bonus",
         "game.scoreReveal.failedContract": "Failed Contract",
         "game.scoreReveal.handTotal": "Hand Total",
-        "game.scoreReveal.matchTotal": "Match Total",
+        "game.scoreReveal.matchTotal": "Match Score",
         "game.scoreReveal.continue": "Continue",
         "team.us": "Us",
         "team.them": "Them",
       };
-      if (key === "game.scoreReveal.failedContractDesc" && opts) {
-        return `${opts.team} failed — all points to ${opts.otherTeam}`;
+      if (key === "game.scoreReveal.subtitleFailed" && opts) {
+        return `Contract failed · all points to ${opts.team}`;
+      }
+      if (key === "game.scoreReveal.subtitleHeldYour" && opts) {
+        return `Contract held · your team called ${opts.suit}`;
+      }
+      if (key === "game.scoreReveal.subtitleHeldTheir" && opts) {
+        return `Contract held · their team called ${opts.suit}`;
       }
       return translations[key] ?? key;
     },
@@ -125,21 +131,37 @@ describe("ScoreReveal", () => {
     expect(screen.getByTestId("row-capot-bonus")).toHaveTextContent("+100");
   });
 
-  it("shows failed-contract message — viewer on contracting team renders 'Us failed'", () => {
+  it("shows the failed-contract subtitle — points go to the viewer when contracting team is Them", () => {
     const failedData = { ...normalData, failedContract: true, contractingTeam: 1 };
-    // Viewer on teamB → contracting team (index 1) is "Us"
-    render(<ScoreReveal data={failedData} viewerTeam="teamB" onContinue={vi.fn()} />);
-
-    expect(screen.getByTestId("row-failed-contract")).toBeInTheDocument();
-    expect(screen.getByTestId("row-failed-contract")).toHaveTextContent("Us failed");
+    // contracting team = teamB; viewer on teamA → beneficiary (teamA) is "Us"
+    const { container } = render(
+      <ScoreReveal data={failedData} viewerTeam="teamA" onContinue={vi.fn()} />,
+    );
+    expect(container.textContent).toContain("Contract failed · all points to Us");
+    // The legacy middle paragraph is gone — the message lives in the subtitle.
+    expect(screen.queryByTestId("row-failed-contract")).not.toBeInTheDocument();
   });
 
-  it("shows failed-contract message — viewer NOT on contracting team renders 'Them failed'", () => {
+  it("shows the failed-contract subtitle — points go to opponents when viewer's team failed", () => {
     const failedData = { ...normalData, failedContract: true, contractingTeam: 1 };
-    // Viewer on teamA → contracting team (index 1) is "Them"
-    render(<ScoreReveal data={failedData} viewerTeam="teamA" onContinue={vi.fn()} />);
+    // contracting team = teamB (viewer); beneficiary (teamA) is "Them"
+    const { container } = render(
+      <ScoreReveal data={failedData} viewerTeam="teamB" onContinue={vi.fn()} />,
+    );
+    expect(container.textContent).toContain("Contract failed · all points to Them");
+  });
 
-    expect(screen.getByTestId("row-failed-contract")).toHaveTextContent("Them failed");
+  it("shows the contract-held subtitle when the viewer's team called trump", () => {
+    const { container } = render(
+      <ScoreReveal
+        data={normalData}
+        viewerTeam="teamA"
+        onContinue={vi.fn()}
+        trumpSuit="H"
+        trumpCallerSeat={0}
+      />,
+    );
+    expect(container.textContent).toContain("Contract held · your team called");
   });
 
   it("Continue button is disabled initially and enabled after 2 seconds", () => {

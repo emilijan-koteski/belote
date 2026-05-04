@@ -18,6 +18,12 @@ interface ScorePanelProps {
   lastTrickTeam?: number;
   /** Match target — defaults to 1001 for Bitola. */
   matchTarget?: number;
+  /** Current hand number (1-based). When omitted, the header right-side
+   *  pill (Hand N · Variant) is hidden — keeps stand-alone test renders
+   *  free of game-state coupling. */
+  handNumber?: number;
+  /** Variant label rendered next to the hand number ("Bitola"). */
+  variantLabel?: string;
 }
 
 const PANEL_BG = "var(--panel-dark, rgba(20,45,30,0.85))";
@@ -146,6 +152,8 @@ export function ScorePanel({
   lastTrickBonus,
   lastTrickTeam,
   matchTarget = 1001,
+  handNumber,
+  variantLabel,
 }: ScorePanelProps) {
   const { t } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
@@ -194,7 +202,9 @@ export function ScorePanel({
       data-testid="score-panel"
       aria-live="polite"
     >
-      {/* Header eyebrow — brass label on top */}
+      {/* Header eyebrow — brass "SCOREBOARD" on the left, "Hand N · Variant"
+          metadata on the right (per design). Both lines share the same brass
+          uppercase tracking so they read as one band. */}
       <div
         className="flex items-center justify-between px-4 py-2 font-body text-[10.5px] uppercase tracking-wider"
         style={{
@@ -203,46 +213,86 @@ export function ScorePanel({
         }}
       >
         <span>{t("game.score.heading", { defaultValue: "Scoreboard" })}</span>
+        {(handNumber !== undefined || variantLabel) && (
+          <span style={{ opacity: 0.85 }} data-testid="score-meta">
+            {handNumber !== undefined && variantLabel
+              ? t("game.score.handVariant", {
+                  hand: handNumber,
+                  variant: variantLabel,
+                  defaultValue: `Hand ${handNumber} · ${variantLabel}`,
+                })
+              : handNumber !== undefined
+                ? t("game.score.handLabel", {
+                    hand: handNumber,
+                    defaultValue: `Hand ${handNumber}`,
+                  })
+                : variantLabel}
+          </span>
+        )}
       </div>
 
-      <ScoreRow
-        label={teamALabel}
-        rowTestId="score-row-a"
-        scoreTestId="score-a"
-        potentialTestId="score-a-potential"
-        team="teamA"
-        teamGradient={teamAGradient}
-        score={teamAScore}
-        potential={teamAHandPotential}
-        tricks={teamATricks}
-        matchTarget={matchTarget}
-      />
-      <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
-      <ScoreRow
-        label={teamBLabel}
-        rowTestId="score-row-b"
-        scoreTestId="score-b"
-        potentialTestId="score-b-potential"
-        team="teamB"
-        teamGradient={teamBGradient}
-        score={teamBScore}
-        potential={teamBHandPotential}
-        tricks={teamBTricks}
-        matchTarget={matchTarget}
-      />
-
-      {/* Trick count footer (kept for parity with previous data-testid contract) */}
-      <div
-        className="px-4 py-1.5 font-body text-[10.5px] text-center tabular-nums"
-        style={{
-          color: INK,
-          opacity: 0.55,
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-        }}
-        data-testid="score-tricks"
-      >
-        {t("game.score.tricks")}: {teamATricks} - {teamBTricks}
-      </div>
+      {/* Rows are laid out viewer-first: the viewer's row ("Us") always
+          renders above the opposition ("Them"), regardless of which seats
+          map to teamA / teamB. The wire-level data-testid contract still
+          tags rows by absolute team identity (score-row-a / score-row-b),
+          so existing assertions on team-A vs team-B numbers stay valid. */}
+      {viewerTeam === "teamA" ? (
+        <>
+          <ScoreRow
+            label={teamALabel}
+            rowTestId="score-row-a"
+            scoreTestId="score-a"
+            potentialTestId="score-a-potential"
+            team="teamA"
+            teamGradient={teamAGradient}
+            score={teamAScore}
+            potential={teamAHandPotential}
+            tricks={teamATricks}
+            matchTarget={matchTarget}
+          />
+          <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+          <ScoreRow
+            label={teamBLabel}
+            rowTestId="score-row-b"
+            scoreTestId="score-b"
+            potentialTestId="score-b-potential"
+            team="teamB"
+            teamGradient={teamBGradient}
+            score={teamBScore}
+            potential={teamBHandPotential}
+            tricks={teamBTricks}
+            matchTarget={matchTarget}
+          />
+        </>
+      ) : (
+        <>
+          <ScoreRow
+            label={teamBLabel}
+            rowTestId="score-row-b"
+            scoreTestId="score-b"
+            potentialTestId="score-b-potential"
+            team="teamB"
+            teamGradient={teamBGradient}
+            score={teamBScore}
+            potential={teamBHandPotential}
+            tricks={teamBTricks}
+            matchTarget={matchTarget}
+          />
+          <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+          <ScoreRow
+            label={teamALabel}
+            rowTestId="score-row-a"
+            scoreTestId="score-a"
+            potentialTestId="score-a-potential"
+            team="teamA"
+            teamGradient={teamAGradient}
+            score={teamAScore}
+            potential={teamAHandPotential}
+            tricks={teamATricks}
+            matchTarget={matchTarget}
+          />
+        </>
+      )}
 
       {/* Float-up bonus animation */}
       {showBonus !== null && bonusTeamString !== null && bonusGradient !== null && (

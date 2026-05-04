@@ -328,13 +328,22 @@
     },
     "score": {
       "heading": "Rezultat",
-      "tricks": "Ruke",
+      "tricks": "ruke",
       "trick": "ruka",
       "lastTrickBonus": "+{{amount}}",
-      "thisHand": "ovo deljenje"
+      "thisHand": "ovo deljenje",
+      "handLabel": "Deljenje {{hand}}",
+      "handVariant": "Deljenje {{hand}} · {{variant}}"
+    },
+    "variants": {
+      "bitola": "Bitola"
     },
     "scoreReveal": {
       "title": "Rezultat ruke",
+      "titleWithHand": "Deljenje {{hand}} — rezultat",
+      "subtitleHeldYour": "Ugovor držan · tvoj tim je zvao {{suit}}",
+      "subtitleHeldTheir": "Ugovor držan · njihov tim je zvao {{suit}}",
+      "subtitleFailed": "Ugovor pao · svi poeni za {{team}}",
       "cardPoints": "Poeni karata",
       "declarationPoints": "Zvanja",
       "lastTrickBonus": "Bonus poslednje ruke",
@@ -342,7 +351,7 @@
       "failedContract": "Pao ugovor",
       "failedContractDesc": "{{team}} pao — svi poeni za {{otherTeam}}",
       "handTotal": "Ukupno ruka",
-      "matchTotal": "Ukupno meč",
+      "matchTotal": "Rezultat meča",
       "continue": "Nastavi"
     },
     "capot": {
