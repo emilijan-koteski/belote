@@ -1,8 +1,8 @@
 import "@/shared/i18n/i18n";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BelotPrompt } from "./BelotPrompt";
 
@@ -110,5 +110,34 @@ describe("BelotPrompt", () => {
     const wrapper = screen.getByTestId("belot-prompt");
     expect(wrapper.className).toContain("fixed");
     expect(wrapper.className).not.toMatch(/(^|\s)absolute(\s|$)/);
+  });
+
+  describe("auto-skip on timer expiry", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("calls onDecline once when the in-dialog timer ring reaches zero", () => {
+      const onDecline = vi.fn();
+      const expiry = new Date(Date.now() + 5000).toISOString();
+      render(
+        <BelotPrompt
+          isKing={false}
+          onAnnounce={vi.fn()}
+          onDecline={onDecline}
+          turnExpiresAt={expiry}
+          timerDurationSec={5}
+        />,
+      );
+
+      expect(onDecline).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(6000);
+      });
+      expect(onDecline).toHaveBeenCalledTimes(1);
+    });
   });
 });

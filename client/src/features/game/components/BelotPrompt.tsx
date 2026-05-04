@@ -1,14 +1,22 @@
 import { useTranslation } from "react-i18next";
 
 import { useFocusTrap } from "@/shared/hooks/useFocusTrap";
+import type { Suit } from "@/shared/types/gameTypes";
 
 import { ButtonTimerRing } from "./overlay/ButtonTimerRing";
 import { ClassicButton } from "./overlay/ClassicButton";
 import { ClassicPanel } from "./overlay/ClassicPanel";
 import { OverlayBackdrop } from "./overlay/OverlayBackdrop";
+import { PlayingCard } from "./PlayingCard";
 
 interface BelotPromptProps {
   isKing: boolean;
+  /**
+   * Trump suit — drives which Q/K to render. Optional so existing test
+   * renders that don't care about the cards still work; falls back to
+   * spades for purely visual purposes.
+   */
+  trumpSuit?: Suit;
   onAnnounce: () => void;
   onDecline: () => void;
   turnExpiresAt?: string | null;
@@ -22,6 +30,7 @@ interface BelotPromptProps {
 
 export function BelotPrompt({
   isKing,
+  trumpSuit = "S",
   onAnnounce,
   onDecline,
   turnExpiresAt,
@@ -36,6 +45,8 @@ export function BelotPrompt({
 
   const titleKey = isKing ? "game.belot.titleRebelot" : "game.belot.titleBelot";
   const announceKey = isKing ? "game.belot.announceRebelot" : "game.belot.announceBelot";
+  const subtitleKey = isKing ? "game.belot.subtitleRebelot" : "game.belot.subtitleBelot";
+  const accentStripKey = isKing ? "game.belot.accentStripRebelot" : "game.belot.accentStripBelot";
 
   return (
     <div className="fixed inset-0" data-testid="belot-prompt">
@@ -50,13 +61,58 @@ export function BelotPrompt({
           <ClassicPanel
             width={460}
             title={<span id="belot-prompt-title">{t(titleKey)}</span>}
-            subtitle={t("game.belot.description")}
+            subtitle={t(subtitleKey)}
           >
-            <div className="flex justify-end items-center gap-3">
+            {/* Q + K of trump side-by-side. The card matching the just-played
+                K/Q lifts up with the lime playable halo so the player sees
+                exactly which card the announcement is anchored to. */}
+            <div className="flex justify-center items-end gap-3.5 mt-2 mb-5">
+              <PlayingCard
+                card={{ rank: "Q", suit: trumpSuit }}
+                state={isKing ? "default" : "playable"}
+                size="md"
+                withTransition={false}
+              />
+              <PlayingCard
+                card={{ rank: "K", suit: trumpSuit }}
+                state={isKing ? "playable" : "default"}
+                size="md"
+                withTransition={false}
+              />
+            </div>
+
+            {/* Brass-bordered accent strip — small felt callout reminding the
+                player of the +20 swing if they announce. Sits in the same
+                family as the panel chrome. */}
+            <div
+              className="mb-3.5 px-3 py-2 rounded-lg flex items-center gap-2 font-body"
+              style={{
+                border: "1px solid rgba(201,168,118,0.32)",
+                background: "linear-gradient(90deg, rgba(20,46,28,0.55), rgba(14,40,24,0.35))",
+                color: "#e8dfc8",
+                fontSize: 12,
+                boxShadow: "inset 0 1px 0 rgba(201,168,118,0.12)",
+              }}
+            >
+              <span
+                aria-hidden
+                className="rounded-full"
+                style={{
+                  width: 7,
+                  height: 7,
+                  background: "var(--brass, #c9a876)",
+                  boxShadow: "0 0 6px rgba(201,168,118,0.55)",
+                }}
+              />
+              {t(accentStripKey)}
+            </div>
+
+            <div className="flex justify-end items-center gap-3.5">
               {showRing ? (
                 <ButtonTimerRing
                   turnExpiresAt={turnExpiresAt}
                   totalDuration={timerDurationSec ?? 0}
+                  onExpire={onDecline}
                 >
                   <ClassicButton onClick={onDecline} data-testid="belot-prompt-decline">
                     {t("game.belot.decline")}

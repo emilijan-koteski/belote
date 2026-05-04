@@ -727,9 +727,10 @@ export function GamePage() {
       )}
 
       {/* Belot prompt overlay */}
-      {showBelotPrompt && (
+      {showBelotPrompt && gameState.trumpSuit && (
         <BelotPrompt
           isKing={belotPromptIsKing}
+          trumpSuit={gameState.trumpSuit}
           onAnnounce={handleAnnounceBelot}
           onDecline={handleDeclineBelot}
           turnExpiresAt={gameState.turnExpiresAt}
