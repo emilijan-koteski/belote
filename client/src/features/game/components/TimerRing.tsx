@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { MOTION } from "@/shared/lib/motion";
+
 interface TimerRingProps {
   turnExpiresAt: string | null;
   totalDuration: number; // total timer duration in seconds (for ring progress)
@@ -59,7 +61,7 @@ export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: Timer
       if (remaining <= 0) {
         clearInterval(interval);
       }
-    }, 1000);
+    }, MOTION.COUNTDOWN_TICK);
 
     return () => clearInterval(interval);
   }, [turnExpiresAt]);
@@ -119,14 +121,14 @@ export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: Timer
           transform={`rotate(-90 ${px / 2} ${px / 2})`}
           style={{
             filter: `drop-shadow(0 0 8px ${strokeColor})`,
-            transition: "stroke-dashoffset 1s linear, stroke 300ms ease",
+            transition: `stroke-dashoffset ${MOTION.COUNTDOWN_TICK}ms linear, stroke ${MOTION.RING_COLOR_FLIP}ms ease`,
           }}
           className="motion-reduce:transition-none"
         />
       </svg>
       <span
         className={`absolute font-body font-semibold tabular-nums ${labelClass}`}
-        style={{ color: strokeColor, transition: "color 300ms ease" }}
+        style={{ color: strokeColor, transition: `color ${MOTION.RING_COLOR_FLIP}ms ease` }}
         data-testid="timer-seconds"
       >
         {secondsLeft}

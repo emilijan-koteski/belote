@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
+import { MOTION, motionDuration } from "@/shared/lib/motion";
 import type { EmoteID } from "@/shared/types/wsEvents";
 
 const EMOTE_GLYPHS: Record<EmoteID, string> = {
@@ -21,9 +22,6 @@ const SEAT_POSITIONS: Record<0 | 1 | 2 | 3, string> = {
   2: "top-[16rem] left-1/2 -translate-x-1/2", // North — below the partner's seat + card stack
   3: "left-[22rem] top-1/2 -translate-y-1/2", // West — right of the seat (toward table)
 };
-
-const DURATION_MS = 2000;
-const REDUCED_MOTION_DURATION_MS = 1000;
 
 interface EmoteBubbleProps {
   emote: EmoteID;
@@ -46,7 +44,11 @@ export function EmoteBubble({ emote, compassPosition, onDismiss }: EmoteBubblePr
   const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    const duration = reducedMotion ? REDUCED_MOTION_DURATION_MS : DURATION_MS;
+    const duration = motionDuration(
+      reducedMotion,
+      MOTION.EMOTE_BUBBLE,
+      MOTION.EMOTE_BUBBLE_REDUCED,
+    );
     const handle = window.setTimeout(() => onDismissRef.current(), duration);
     return () => window.clearTimeout(handle);
   }, [reducedMotion]);

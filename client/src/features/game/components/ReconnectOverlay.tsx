@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { MOTION } from "@/shared/lib/motion";
 import type { TeamString } from "@/shared/types/gameTypes";
 import type { MatchAbandonedPayload } from "@/shared/types/wsEvents";
 
@@ -45,16 +46,16 @@ export function ReconnectOverlay({
     };
 
     tick();
-    const interval = setInterval(tick, 1000);
+    const interval = setInterval(tick, MOTION.COUNTDOWN_TICK);
     return () => clearInterval(interval);
   }, [reconnectExpiresAt, abandonedData]);
 
-  // Auto-redirect to lobby after 3 seconds when match is abandoned
+  // Auto-redirect to lobby after match abandonment
   useEffect(() => {
     if (!abandonedData || !onReturnToLobby) return;
     const timer = setTimeout(() => {
       onReturnToLobby();
-    }, 3000);
+    }, MOTION.RECONNECT_REDIRECT);
     return () => clearTimeout(timer);
   }, [abandonedData, onReturnToLobby]);
 

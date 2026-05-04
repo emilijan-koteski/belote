@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
+import { MOTION, motionDuration } from "@/shared/lib/motion";
 import { type Suit, type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
 import type { HandScoredPayload } from "@/shared/types/wsEvents";
 
@@ -34,10 +35,11 @@ function callerTeamString(seat: number): TeamString {
   return seat % 2 === 0 ? "teamA" : "teamB";
 }
 
-const AUTO_DISMISS_MS = 8000;
-const AUTO_DISMISS_MS_REDUCED = 1500;
-const ENABLE_DELAY_MS = 2000;
-const ENABLE_DELAY_MS_REDUCED = 500;
+// Re-exported constants for tests / reads — see `MOTION` for canonical values.
+const AUTO_DISMISS_MS = MOTION.SCORE_REVEAL_DISMISS;
+const AUTO_DISMISS_MS_REDUCED = MOTION.SCORE_REVEAL_DISMISS_REDUCED;
+const ENABLE_DELAY_MS = MOTION.SCORE_REVEAL_ENABLE_DELAY;
+const ENABLE_DELAY_MS_REDUCED = MOTION.SCORE_REVEAL_ENABLE_DELAY_REDUCED;
 
 /**
  * End-of-hand score reveal — felt-panel breakdown of card points + decls
@@ -59,8 +61,12 @@ export function ScoreReveal({
   const [continueEnabled, setContinueEnabled] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
-  const enableDelay = prefersReducedMotion ? ENABLE_DELAY_MS_REDUCED : ENABLE_DELAY_MS;
-  const dismissAt = prefersReducedMotion ? AUTO_DISMISS_MS_REDUCED : AUTO_DISMISS_MS;
+  const enableDelay = motionDuration(
+    prefersReducedMotion,
+    ENABLE_DELAY_MS,
+    ENABLE_DELAY_MS_REDUCED,
+  );
+  const dismissAt = motionDuration(prefersReducedMotion, AUTO_DISMISS_MS, AUTO_DISMISS_MS_REDUCED);
 
   useEffect(() => {
     const t = setTimeout(() => setContinueEnabled(true), enableDelay);

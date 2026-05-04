@@ -24,6 +24,7 @@ import {
 } from "@/shared/hooks/mutations/useRooms";
 import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
+import { MOTION } from "@/shared/lib/motion";
 import { useWsConnectionState } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useChatStore } from "@/shared/stores/chatStore";
@@ -197,7 +198,7 @@ export function RoomLobby() {
       setShowSelfLabel(true);
       return;
     }
-    const timer = setTimeout(() => setShowSelfLabel(true), 300);
+    const timer = setTimeout(() => setShowSelfLabel(true), MOTION.ROOM_SELF_LABEL_DELAY);
     return () => clearTimeout(timer);
   }, [isViewerSeated, viewerSeat, prefersReducedMotion]);
 

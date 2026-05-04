@@ -2,6 +2,7 @@ import { ChevronRight, MessageSquare } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { MOTION } from "@/shared/lib/motion";
 import { useChatStore } from "@/shared/stores/chatStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 
@@ -14,7 +15,7 @@ const PEEK_MAX_CHARS = 90;
 // bubbles so the floating preview doesn't linger and obscure the table.
 // Each new arrival resets the timer so the latest message always gets its
 // full visible window.
-const PEEK_AUTO_DISMISS_MS = 2000;
+const PEEK_AUTO_DISMISS_MS = MOTION.CHAT_PEEK;
 
 interface MatchChatSidebarProps {
   /** Open/closed flag — lifted to parent so the surrounding HUD (e.g. the
@@ -88,6 +89,7 @@ export function MatchChatSidebar({ isOpen, onOpenChange }: MatchChatSidebarProps
   const peek = useMemo(() => {
     if (matchMessages.length === 0 || myPlayerSeat === null || !players) return null;
     const last = matchMessages[matchMessages.length - 1];
+    if (!last) return null;
     const senderPlayer = players.find((p) => p.userId === last.userId);
     const senderTeam = senderPlayer ? seatTeam(senderPlayer.seat, myPlayerSeat) : null;
     const senderColor = senderTeam ? teamColors(senderTeam)[0] : "var(--brass, #c9a876)";

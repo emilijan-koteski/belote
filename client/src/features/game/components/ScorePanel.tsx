@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
+import { MOTION, motionDuration } from "@/shared/lib/motion";
 import { type TeamString, teamStringForIndex } from "@/shared/types/gameTypes";
 
 import { TEAM_GOLD, TEAM_SILVER, type TeamGradient } from "../lib/tableTheme";
@@ -168,7 +169,14 @@ export function ScorePanel({
 
   useEffect(() => {
     if (showBonus === null) return;
-    const timer = setTimeout(() => setShowBonus(null), prefersReducedMotion ? 300 : 1200);
+    const timer = setTimeout(
+      () => setShowBonus(null),
+      motionDuration(
+        prefersReducedMotion,
+        MOTION.SCORE_BONUS_FADE,
+        MOTION.SCORE_BONUS_FADE_REDUCED,
+      ),
+    );
     return () => clearTimeout(timer);
   }, [showBonus, prefersReducedMotion]);
 

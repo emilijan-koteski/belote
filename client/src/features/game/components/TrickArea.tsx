@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
+import { FLAG_LIFETIME, MOTION } from "@/shared/lib/motion";
 import type { TrickCard } from "@/shared/types/gameTypes";
 
 import { PlayingCard } from "./PlayingCard";
@@ -13,71 +14,92 @@ interface TrickAreaProps {
   myPlayerSeat: number;
 }
 
-function compassOffset(seat: number, myPlayerSeat: number): number {
-  return (seat - myPlayerSeat + 4) % 4;
+type Compass = 0 | 1 | 2 | 3;
+
+function compassOffset(seat: number, myPlayerSeat: number): Compass {
+  return ((((seat - myPlayerSeat) % 4) + 4) % 4) as Compass;
 }
 
-// Compass slot positions with intentional rotation jitter so cards don't land
-// at perfect angles. Mirrors the design's 'imperfect throw' feel — a real
-// player isn't a robot.
+// Tight diamond layout matching the design's 280x240 trick area. Each slot is
+// anchored at the container center via translate(-50%, -50%); offsetX/offsetY
+// shifts the card outward toward the player who threw it. Rotation is a small
+// jitter so cards don't land at perfect angles.
 type SlotPosition = {
-  className: string;
+  offsetX: number;
+  offsetY: number;
   rotation: number;
-  /** Direction the card flies in from (matches the player's seat direction). */
+  /** Where the card starts the incoming animation, in trick-area-local
+   *  coordinates relative to the diamond center. Self emerges from the
+   *  screen's center-bottom (continuing the hand-throw exit); opponents
+   *  emerge from their own card stack beside their seat. */
   approachFrom: { x: number; y: number };
+  /** Scale at the start of the incoming animation. Self stays at full size —
+   *  the gesture is a slide, not a grow — so the card looks like a real card
+   *  flicked from the player's hand. Opponents start small (deck-card sized)
+   *  and grow to full size as the card reaches the table. */
+  approachScale: number;
+  /** Where cards translate when sliding to the winner's pile after the trick
+   *  resolves. Distances are tuned so cards visibly travel toward the winning
+   *  player's seat before fading. */
+  collectTo: { x: number; y: number };
 };
 
-const SLOT_POSITIONS: Record<number, SlotPosition> = {
-  // South — self. Self cards "fly up" from below screen, synced with the
-  // hand-throw animation so the gesture reads as one continuous pickup.
+const SLOT_POSITIONS: Record<Compass, SlotPosition> = {
+  // South — self. Hand card slides off-screen-bottom (HandCards' handThrow),
+  // then a fresh card enters from the same bottom-center region and slides
+  // up to the south slot at full size.
   0: {
-    className: "bottom-0 left-1/2 -translate-x-1/2",
+    offsetX: 0,
+    offsetY: 60,
     rotation: -3,
-    approachFrom: { x: 0, y: 240 },
+    approachFrom: { x: 0, y: 460 },
+    approachScale: 1,
+    collectTo: { x: 0, y: 460 },
   },
-  // East — opponent on the right.
+  // East — opponent on the right. Card lifts off the small brown deck beside
+  // their seat (~420 px right of the trick centre) and grows as it slides.
   1: {
-    className: "top-1/2 right-0 -translate-y-1/2",
+    offsetX: 74,
+    offsetY: 0,
     rotation: 8,
-    approachFrom: { x: 360, y: 0 },
+    approachFrom: { x: 420, y: 0 },
+    approachScale: 0.4,
+    collectTo: { x: 540, y: 0 },
   },
   // North — partner.
   2: {
-    className: "top-0 left-1/2 -translate-x-1/2",
+    offsetX: 0,
+    offsetY: -60,
     rotation: 4,
-    approachFrom: { x: 0, y: -320 },
+    approachFrom: { x: 0, y: -260 },
+    approachScale: 0.4,
+    collectTo: { x: 0, y: -300 },
   },
   // West — opponent on the left.
   3: {
-    className: "top-1/2 left-0 -translate-y-1/2",
+    offsetX: -74,
+    offsetY: 0,
     rotation: -8,
-    approachFrom: { x: -360, y: 0 },
+    approachFrom: { x: -420, y: 0 },
+    approachScale: 0.4,
+    collectTo: { x: -540, y: 0 },
   },
 };
 
-// When the trick resolves, all four cards slide toward the winner's seat
-// compass and scale down — the winner "collects" the trick. These translations
-// are applied as inline transforms so the destination follows the winner's
-// position regardless of which seat they're at.
-function winnerCollectTransform(winnerCompass: number, ownRotation: number): string {
-  const dest = {
-    0: { x: 0, y: 220 }, // collect to self (bottom)
-    1: { x: 220, y: 0 }, // collect to right
-    2: { x: 0, y: -220 }, // collect to top
-    3: { x: -220, y: 0 }, // collect to left
-  }[winnerCompass] ?? { x: 0, y: 0 };
-  return `translate(${dest.x}px, ${dest.y}px) rotate(${ownRotation}deg) scale(0.5)`;
-}
+const RESOLVE_PAUSE_MS = MOTION.TRICK_RESOLVE_PAUSE;
+const COLLECT_SLIDE_MS = MOTION.TRICK_COLLECT;
 
-const RESOLVE_PAUSE_MS = 1000;
-const COLLECT_SLIDE_MS = 600;
+// Empty-slot ghost dimensions — slightly larger than `md` PlayingCard so the
+// placeholder reads as the card's silhouette without dominating the trick.
+const PLACEHOLDER_W = 72;
+const PLACEHOLDER_H = 104;
 
 export function TrickArea({ trick: rawTrick, winnerSeat, myPlayerSeat }: TrickAreaProps) {
   const trick = rawTrick ?? EMPTY_TRICK;
   const [displayTrick, setDisplayTrick] = useState<TrickCard[]>([]);
   const [resolving, setResolving] = useState(false);
   const [collecting, setCollecting] = useState(false);
-  const [incomingCompass, setIncomingCompass] = useState<number | null>(null);
+  const [incomingCompass, setIncomingCompass] = useState<Compass | null>(null);
   const displayTrickRef = useRef<TrickCard[]>([]);
   displayTrickRef.current = displayTrick;
 
@@ -97,9 +119,10 @@ export function TrickArea({ trick: rawTrick, winnerSeat, myPlayerSeat }: TrickAr
       setResolving(false);
       setCollecting(false);
       const newest = trick[trick.length - 1];
-      const compass = compassOffset(newest.playerSeat, myPlayerSeat);
-      setIncomingCompass(compass);
-      const clearTimer = setTimeout(() => setIncomingCompass(null), 500);
+      if (newest) {
+        setIncomingCompass(compassOffset(newest.playerSeat, myPlayerSeat));
+      }
+      const clearTimer = setTimeout(() => setIncomingCompass(null), FLAG_LIFETIME.INCOMING_COMPASS);
       return () => clearTimeout(clearTimer);
     }
 
@@ -143,30 +166,71 @@ export function TrickArea({ trick: rawTrick, winnerSeat, myPlayerSeat }: TrickAr
   }, [trick, prefersReducedMotion, myPlayerSeat]);
 
   const winnerCompass = winnerSeat !== null ? compassOffset(winnerSeat, myPlayerSeat) : null;
+  const playedByCompass = new Set(
+    displayTrick.map((tc) => compassOffset(tc.playerSeat, myPlayerSeat)),
+  );
 
   // Keyframes for incoming card landings — namespaced via animScope so
   // multiple instances don't collide.
-  const incomingKeyframes = (Object.keys(SLOT_POSITIONS) as Array<keyof typeof SLOT_POSITIONS>)
+  //
+  // Self (compass 0) slides up from the screen's center-bottom at full size,
+  // pairing with the hand-throw exit: hand card disappears off the bottom,
+  // then the trick card enters from the same region and travels up to the
+  // south placeholder.
+  //
+  // Opponents (compass 1/2/3) emerge tiny — like a card lifted off their
+  // brown deck beside their seat — and grow to full size as they reach the
+  // table. The slight rotation under-shoot adds a "throw" feel.
+  const incomingKeyframes = ([0, 1, 2, 3] as const)
     .map((key) => {
-      const slot = SLOT_POSITIONS[Number(key)];
-      const fromX = slot.approachFrom.x;
-      const fromY = slot.approachFrom.y;
-      const isSelf = Number(key) === 0;
-      const startOpacity = isSelf ? 1 : 0;
-      const startScale = isSelf ? 0.92 : 1.18;
+      const slot = SLOT_POSITIONS[key];
+      const { x: fromX, y: fromY } = slot.approachFrom;
+      const startScale = slot.approachScale;
       return `@keyframes trickLand_${animScope}_${key} {
-        0%   { transform: translate(${fromX}px, ${fromY}px) rotate(${slot.rotation - 6}deg) scale(${startScale}); opacity: ${startOpacity}; }
-        30%  { opacity: 1; }
-        100% { transform: translate(0, 0) rotate(${slot.rotation}deg) scale(1); opacity: 1; }
+        0%   { transform: translate(calc(-50% + ${fromX}px), calc(-50% + ${fromY}px)) rotate(${slot.rotation - 6}deg) scale(${startScale}); opacity: 0; }
+        20%  { opacity: 1; }
+        100% { transform: translate(calc(-50% + ${slot.offsetX}px), calc(-50% + ${slot.offsetY}px)) rotate(${slot.rotation}deg) scale(1); opacity: 1; }
       }`;
     })
     .join("\n");
 
   return (
-    <div className="relative w-[25vw] aspect-square" data-testid="trick-area">
+    <div
+      className="relative pointer-events-none"
+      style={{ width: 280, height: 240 }}
+      data-testid="trick-area"
+    >
       {/* Inline keyframe definitions — kept local to the component so we can
           interpolate the per-slot approach offsets without a global stylesheet. */}
       {!prefersReducedMotion && <style>{incomingKeyframes}</style>}
+
+      {/* Empty-slot ghosts — render at every compass that hasn't received a
+          card yet (including the active player's slot) so players see where
+          the next card will land. Hidden during the winner-collect slide so
+          the placeholder doesn't peek out under the moving cards. */}
+      {!collecting &&
+        ([0, 1, 2, 3] as const).map((compass) => {
+          if (playedByCompass.has(compass)) return null;
+          const slot = SLOT_POSITIONS[compass];
+          return (
+            <div
+              key={`placeholder-${compass}`}
+              className="absolute"
+              style={{
+                left: "50%",
+                top: "50%",
+                width: PLACEHOLDER_W,
+                height: PLACEHOLDER_H,
+                transform: `translate(calc(-50% + ${slot.offsetX}px), calc(-50% + ${slot.offsetY}px)) rotate(${slot.rotation}deg)`,
+                borderRadius: 6,
+                border: "1.5px dashed rgba(255,255,255,0.14)",
+                background: "rgba(255,255,255,0.02)",
+              }}
+              data-testid={`trick-slot-${compass}`}
+              aria-hidden="true"
+            />
+          );
+        })}
 
       {displayTrick.map((tc) => {
         const compass = compassOffset(tc.playerSeat, myPlayerSeat);
@@ -174,32 +238,46 @@ export function TrickArea({ trick: rawTrick, winnerSeat, myPlayerSeat }: TrickAr
         const isWinner = resolving && compass === winnerCompass;
         const isIncoming = incomingCompass === compass && !prefersReducedMotion;
 
-        const baseTransform = `rotate(${slot.rotation}deg)`;
-        const inlineStyle: React.CSSProperties = collecting
-          ? {
-              transform:
-                winnerCompass !== null
-                  ? winnerCollectTransform(winnerCompass, slot.rotation)
-                  : baseTransform,
-              opacity: 0,
-              transition: `transform ${COLLECT_SLIDE_MS}ms cubic-bezier(0.45, 0, 0.55, 1), opacity ${COLLECT_SLIDE_MS}ms ease-in`,
-            }
-          : { transform: baseTransform };
-        if (isIncoming) {
-          inlineStyle.animation = `trickLand_${animScope}_${compass} ${
-            compass === 0 ? 460 : 360
-          }ms cubic-bezier(0.22, 1, 0.36, 1) both`;
+        const baseTransform = `translate(calc(-50% + ${slot.offsetX}px), calc(-50% + ${slot.offsetY}px)) rotate(${slot.rotation}deg)`;
+
+        // Transition is *always* present so the collect-phase property change
+        // (transform + opacity) reliably interpolates instead of snapping —
+        // the previous render's lingering `animation` from the incoming phase
+        // would otherwise clobber the transition. Both transforms include
+        // scale() so the function lists match component-by-component, which
+        // avoids the matrix-decomposition snap browsers fall back to when
+        // the FROM and TO have different transform-function signatures.
+        const collectFadeMs = Math.min(500, Math.round(COLLECT_SLIDE_MS * 0.35));
+        const collectFadeDelay = COLLECT_SLIDE_MS - collectFadeMs;
+        const baseTransformWithScale = `${baseTransform} scale(1)`;
+        const inlineStyle: React.CSSProperties = {
+          left: "50%",
+          top: "50%",
+          transform: baseTransformWithScale,
+          transition: `transform ${COLLECT_SLIDE_MS}ms ease-in-out, opacity ${collectFadeMs}ms ease-in ${collectFadeDelay}ms`,
+        };
+        if (collecting && winnerCompass !== null) {
+          const dest = SLOT_POSITIONS[winnerCompass].collectTo;
+          // `animation: none` is required: the incoming keyframe runs with
+          // `animation-fill-mode: both`, which keeps the end-state transform
+          // applied even after the animation completes. That held state wins
+          // over any inline transform we set, so the collect transition
+          // never paints. Clearing the animation here lets the transition take.
+          inlineStyle.animation = "none";
+          inlineStyle.transform = `translate(calc(-50% + ${dest.x}px), calc(-50% + ${dest.y}px)) rotate(${slot.rotation}deg) scale(0.45)`;
+          inlineStyle.opacity = 0;
+        } else if (isIncoming) {
+          const landMs = compass === 0 ? MOTION.CARD_LAND_SELF : MOTION.CARD_LAND_OPPONENT;
+          inlineStyle.animation = `trickLand_${animScope}_${compass} ${landMs}ms cubic-bezier(0.22, 1, 0.36, 1) both`;
         }
 
         return (
           <div
             key={`${tc.card.rank}${tc.card.suit}`}
-            className={`absolute ${slot.className} ${
-              isWinner ? "shadow-[0_0_20px_var(--color-accent)]" : ""
-            }`}
+            className={`absolute ${isWinner ? "shadow-[0_0_20px_var(--color-accent)]" : ""}`}
             style={inlineStyle}
           >
-            <PlayingCard card={tc.card} state="default" size="sm" withTransition={false} />
+            <PlayingCard card={tc.card} state="default" size="md" withTransition={false} />
           </div>
         );
       })}

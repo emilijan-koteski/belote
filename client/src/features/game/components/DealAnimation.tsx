@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
+import { MOTION } from "@/shared/lib/motion";
 import type { Card } from "@/shared/types/gameTypes";
 
 import { PlayingCard } from "./PlayingCard";
@@ -32,15 +33,15 @@ export function DealAnimation({ trumpCandidate }: DealAnimationProps) {
       return;
     }
 
-    // Phase 1: dealing cards (3+2 sequence) — show for 800ms
+    // Phase 1: dealing cards (3+2 sequence)
     const dealTimer = setTimeout(() => {
       setDealPhase("revealing");
-    }, 800);
+    }, MOTION.DEAL_PHASE_DEAL);
 
-    // Phase 2: reveal trump candidate — after 1200ms total
+    // Phase 2: reveal trump candidate — at total = phase1 + phase2-extension
     const revealTimer = setTimeout(() => {
       setDealPhase("done");
-    }, 1200);
+    }, MOTION.DEAL_PHASE_TRUMP);
 
     return () => {
       clearTimeout(dealTimer);

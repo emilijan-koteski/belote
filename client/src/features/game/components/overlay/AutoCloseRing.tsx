@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { MOTION } from "@/shared/lib/motion";
+
 import { IconX } from "./icons";
 
 interface AutoCloseRingProps {
@@ -57,7 +59,7 @@ export function AutoCloseRing({
     };
     updatePct();
 
-    const tickId = setInterval(updatePct, 1000);
+    const tickId = setInterval(updatePct, MOTION.COUNTDOWN_TICK);
     const fireId = setTimeout(() => {
       if (firedRef.current) return;
       firedRef.current = true;

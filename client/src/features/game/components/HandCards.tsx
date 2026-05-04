@@ -1,5 +1,6 @@
 import { useId } from "react";
 
+import { MOTION } from "@/shared/lib/motion";
 import type { Card, Rank, Suit } from "@/shared/types/gameTypes";
 
 import type { CardState } from "./PlayingCard";
@@ -68,11 +69,11 @@ function sortHand(hand: Card[]): Card[] {
  *  • `default`    — when it's not my turn, every card renders in default state
  *                   so the legality hint never bleeds across turns.
  */
-// Hand-throw animation for the played card — ~280 ms downward slide + fade
+// Hand-throw animation for the played card — short downward slide + fade
 // that pairs with TrickArea's incoming-card animation for the same card. The
 // card is unmounted from the hand by the WS gameState push (server clears it
 // from `players[seat].hand`), so we only need the exit animation here.
-const HAND_THROW_MS = 280;
+const HAND_THROW_MS = MOTION.CARD_THROW;
 
 export function HandCards({
   hand,

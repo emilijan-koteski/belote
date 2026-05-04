@@ -55,20 +55,38 @@ describe("BelotReveal", () => {
         cardId="KC"
         isKing={true}
         players={[
-          { seat: 0, userId: "u0", username: "Alice", hand: [], declarations: [], connected: true },
-          { seat: 1, userId: "u1", username: "Bob", hand: [], declarations: [], connected: true },
+          {
+            seat: 0,
+            userId: 0,
+            username: "Alice",
+            team: "teamA",
+            hand: [],
+            declarations: [],
+            connected: true,
+          },
+          {
+            seat: 1,
+            userId: 1,
+            username: "Bob",
+            team: "teamB",
+            hand: [],
+            declarations: [],
+            connected: true,
+          },
           {
             seat: 2,
-            userId: "u2",
+            userId: 2,
             username: "Stefan",
+            team: "teamA",
             hand: [],
             declarations: [],
             connected: true,
           },
           {
             seat: 3,
-            userId: "u3",
+            userId: 3,
             username: "Mirela",
+            team: "teamB",
             hand: [],
             declarations: [],
             connected: true,

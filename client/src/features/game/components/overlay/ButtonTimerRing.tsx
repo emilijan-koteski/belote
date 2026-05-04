@@ -1,5 +1,7 @@
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { MOTION } from "@/shared/lib/motion";
+
 interface ButtonTimerRingProps {
   /**
    * Either a wall-clock expiry (`turnExpiresAt` ISO string) **or** a
@@ -74,7 +76,7 @@ export function ButtonTimerRing({
       const id = setInterval(() => {
         const remaining = tick();
         if (remaining <= 0) clearInterval(id);
-      }, 1000);
+      }, MOTION.COUNTDOWN_TICK);
       return () => clearInterval(id);
     }
     if (clientCountdown) {
@@ -87,7 +89,7 @@ export function ButtonTimerRing({
           }
           return s - 1;
         });
-      }, 1000);
+      }, MOTION.COUNTDOWN_TICK);
       return () => clearInterval(id);
     }
   }, [turnExpiresAt, totalDuration, clientCountdown]);
@@ -177,7 +179,7 @@ export function ButtonTimerRing({
             strokeDasharray={perim}
             strokeDashoffset={perim * (1 - pct)}
             style={{
-              transition: "stroke-dashoffset 1s linear, stroke 200ms ease-out",
+              transition: `stroke-dashoffset ${MOTION.COUNTDOWN_TICK}ms linear, stroke ${MOTION.RING_COLOR_FLIP_FAST}ms ease-out`,
             }}
           />
         </svg>

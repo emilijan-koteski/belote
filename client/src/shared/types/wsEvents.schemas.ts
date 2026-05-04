@@ -151,7 +151,9 @@ export const CardPlayedPayloadSchema = z.strictObject({
 
 export const TrickResolvedPayloadSchema = z.strictObject({
   winnerSeat: z.number(),
-  winnerTeam: z.union([z.literal(0), z.literal(1)]),
+  // Schema mirrors the interface (`number`) for type-conformance; runtime
+  // values from Go are still 0|1 so consumers can treat it as such.
+  winnerTeam: z.number(),
   cards: z.array(z.string()),
 });
 
@@ -180,7 +182,9 @@ export const HandScoredPayloadSchema = z.strictObject({
 // MatchEndPayloadSchema — outcomeReason / surrenderedBySeat are optional
 // (Go uses omitempty). Strict-object still rejects unknown keys.
 export const MatchEndPayloadSchema = z.strictObject({
-  winnerTeam: z.union([z.literal(0), z.literal(1)]),
+  // See note on TrickResolvedPayloadSchema — schema kept as `number` to match
+  // the hand-maintained interface; values from Go are still 0|1 in practice.
+  winnerTeam: z.number(),
   teamAFinalScore: z.number(),
   teamBFinalScore: z.number(),
   matchDurationSec: z.number(),
@@ -209,7 +213,9 @@ export const TrumpSelectedPayloadSchema = z.strictObject({
 });
 
 export const DeclarationsResolvedPayloadSchema = z.strictObject({
-  winnerTeam: z.union([z.literal(0), z.literal(1)]).nullable(),
+  // See note on TrickResolvedPayloadSchema — schema kept as `number | null`
+  // to match the hand-maintained interface; values from Go are 0|1|null.
+  winnerTeam: z.number().nullable(),
   declarations: z.array(
     z.strictObject({
       playerSeat: z.number(),

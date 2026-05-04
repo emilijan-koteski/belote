@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { MOTION } from "@/shared/lib/motion";
 import { useGameStore } from "@/shared/stores/gameStore";
 import { EMOTE_IDS, type EmoteID } from "@/shared/types/wsEvents";
 
@@ -30,7 +31,7 @@ const EMOTE_I18N_KEYS: Record<EmoteID, string> = {
   heart: "heart",
 };
 
-const COOLDOWN_MS = 3000;
+const COOLDOWN_MS = MOTION.EMOTE_COOLDOWN;
 
 interface EmotePickerButtonProps {
   onSend: (emote: EmoteID) => void;

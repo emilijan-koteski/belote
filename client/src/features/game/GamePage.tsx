@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 
+import { FLAG_LIFETIME, MOTION } from "@/shared/lib/motion";
 import { useWsSendMessage } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useChatStore } from "@/shared/stores/chatStore";
@@ -254,7 +255,7 @@ export function GamePage() {
     errorToastTimerRef.current = window.setTimeout(() => {
       setErrorToast(null);
       errorToastTimerRef.current = null;
-    }, 3000);
+    }, MOTION.TOAST_ERROR);
   }, [lastError, setLastError, t]);
 
   useEffect(() => {
@@ -305,7 +306,7 @@ export function GamePage() {
       flyingClearTimerRef.current = window.setTimeout(() => {
         setFlyingCardId(null);
         flyingClearTimerRef.current = null;
-      }, 320);
+      }, FLAG_LIFETIME.FLYING_CARD);
       sendMessage(ACTION_PLAY_CARD, { cardId });
     },
     [sendMessage],

@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 
 import { handleWsMessage as handleRoomListMessage } from "@/features/lobby/useRoomUpdates";
+import { MOTION } from "@/shared/lib/motion";
 import { useChatStore } from "@/shared/stores/chatStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
@@ -169,7 +170,7 @@ function dispatchGameEvent(message: WsMessage): void {
     // Auto-play toast notification
     if (payload.autoPlayed) {
       toast.info(i18n.t("game.timer.autoPlayed", { card: payload.cardId }), {
-        duration: 3000,
+        duration: MOTION.TOAST_INFO,
       });
     }
     return;
@@ -306,7 +307,7 @@ function dispatchGameEvent(message: WsMessage): void {
       payload.username ??
       `Player ${payload.playerSeat + 1}`;
     toast.warning(i18n.t("game.disconnect.playerDisconnected", { player: playerName }), {
-      duration: 5000,
+      duration: MOTION.TOAST_LONG,
     });
     // Full state update follows via event:game_state
     return;
@@ -318,7 +319,7 @@ function dispatchGameEvent(message: WsMessage): void {
     const playerName =
       current?.players[payload.playerSeat]?.username ?? `Player ${payload.playerSeat + 1}`;
     toast.success(i18n.t("game.disconnect.playerReconnected", { player: playerName }), {
-      duration: 3000,
+      duration: MOTION.TOAST_INFO,
     });
     // Full state update follows via event:game_state
     return;

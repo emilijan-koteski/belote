@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 
+import { MOTION } from "@/shared/lib/motion";
 import type { PlayerState, Suit } from "@/shared/types/gameTypes";
 
 import { type SeatTeam, teamColors, teamLabelKey } from "../lib/tableTheme";
@@ -281,7 +282,7 @@ export function PlayerSeat({
               isActive && !isDisconnected
                 ? `0 0 0 1.5px ${TURN_LIME}, 0 0 18px ${TURN_LIME_GLOW}`
                 : "0 2px 8px rgba(0,0,0,0.3)",
-            transition: "box-shadow 300ms ease",
+            transition: `box-shadow ${MOTION.SEAT_RING_TRANSITION}ms ease`,
           }}
         >
           <div
@@ -340,7 +341,7 @@ export function PlayerSeat({
               ? `1px solid ${TURN_LIME}`
               : "1px solid rgba(255,255,255,0.08)",
           boxShadow: isActive && !isDisconnected ? "0 0 12px rgba(0, 229, 160, 0.33)" : undefined,
-          transition: "border-color 300ms ease, box-shadow 300ms ease",
+          transition: `border-color ${MOTION.SEAT_RING_TRANSITION}ms ease, box-shadow ${MOTION.SEAT_RING_TRANSITION}ms ease`,
         }}
         data-testid="player-seat-name-pill"
       >

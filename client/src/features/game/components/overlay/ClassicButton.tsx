@@ -1,5 +1,7 @@
 import { type ButtonHTMLAttributes, forwardRef } from "react";
 
+import { MOTION } from "@/shared/lib/motion";
+
 export type ClassicButtonVariant = "primary" | "ghost";
 
 interface ClassicButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -37,7 +39,7 @@ export const ClassicButton = forwardRef<HTMLButtonElement, ClassicButtonProps>(
       boxShadow: isPrimary
         ? "0 4px 10px rgba(201,168,118,0.4), inset 0 1px 0 rgba(255,255,255,0.3)"
         : "0 2px 6px rgba(0,0,0,0.3)",
-      transition: "transform 120ms, filter 120ms",
+      transition: `transform ${MOTION.BUTTON_HOVER}ms, filter ${MOTION.BUTTON_HOVER}ms`,
       ...style,
     };
 

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
+import { MOTION, motionDuration } from "@/shared/lib/motion";
 import { teamStringForIndex } from "@/shared/types/gameTypes";
 
 interface CapotAnimationProps {
@@ -15,7 +16,11 @@ export function CapotAnimation({ capotTeam, onComplete }: CapotAnimationProps) {
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    const duration = prefersReducedMotion ? 500 : 2500;
+    const duration = motionDuration(
+      prefersReducedMotion,
+      MOTION.CAPOT_BANNER,
+      MOTION.CAPOT_BANNER_REDUCED,
+    );
     const timer = setTimeout(onComplete, duration);
     return () => clearTimeout(timer);
   }, [onComplete, prefersReducedMotion]);

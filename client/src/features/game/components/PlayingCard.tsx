@@ -61,13 +61,13 @@ interface CardDimensions {
 
 const SIZE_DIMENSIONS: Record<CardSize, CardDimensions> = {
   sm: { width: 44, height: 64 },
-  md: { width: 64, height: 92 },
+  md: { width: 72, height: 104 },
   lg: { width: 88, height: 128 },
 };
 
 const SIZE_CLASSES: Record<CardSize, string> = {
   sm: "w-11 h-16",
-  md: "w-16 h-[5.75rem]",
+  md: "w-[4.5rem] h-[6.5rem]",
   lg: "w-[5.5rem] h-32",
 };
 

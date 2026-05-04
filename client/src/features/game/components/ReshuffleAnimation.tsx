@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
+import { MOTION } from "@/shared/lib/motion";
 
 interface ReshuffleAnimationProps {
   onComplete: () => void;
@@ -23,7 +24,7 @@ export function ReshuffleAnimation({ onComplete }: ReshuffleAnimationProps) {
     const timer = setTimeout(() => {
       setPhase("done");
       onComplete();
-    }, 1200);
+    }, MOTION.RESHUFFLE_PULSE);
 
     return () => clearTimeout(timer);
   }, [prefersReducedMotion, onComplete]);
@@ -41,7 +42,7 @@ export function ReshuffleAnimation({ onComplete }: ReshuffleAnimationProps) {
             <div
               key={i}
               className="w-8 h-12 rounded bg-surface-elevated border border-border motion-safe:animate-pulse"
-              style={{ animationDelay: `${i * 100}ms` }}
+              style={{ animationDelay: `${i * MOTION.RESHUFFLE_STAGGER}ms` }}
             />
           ))}
         </div>

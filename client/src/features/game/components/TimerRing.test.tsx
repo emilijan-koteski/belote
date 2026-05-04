@@ -105,14 +105,14 @@ describe("TimerRing", () => {
     expect(ring.className).not.toContain("motion-safe:animate-pulse");
   });
 
-  it("renders 80px svg in seat size variant (matches avatar frame)", () => {
+  it("renders 70px svg in seat size variant (sits inside the 80px avatar frame)", () => {
     const expiry = new Date(Date.now() + 20000);
     const { container } = render(
       <TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />,
     );
     const svg = container.querySelector("svg");
-    expect(svg?.getAttribute("width")).toBe("80");
-    expect(svg?.getAttribute("height")).toBe("80");
+    expect(svg?.getAttribute("width")).toBe("70");
+    expect(svg?.getAttribute("height")).toBe("70");
     expect(screen.getByTestId("timer-ring").getAttribute("data-size")).toBe("seat");
   });
 
