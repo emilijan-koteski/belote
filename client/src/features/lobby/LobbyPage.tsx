@@ -30,7 +30,9 @@ export function LobbyPage() {
     try {
       const result = await quickPlayMutation.mutateAsync(controller.signal);
       if (result.gameStarted) {
-        navigate(`/game/${result.room.id}`);
+        // `fromRoom: true` triggers GamePage's "Game is starting…" splash so the
+        // quick-play auto-start has the same deliberate beat as a normal lobby.
+        navigate(`/game/${result.room.id}`, { state: { fromRoom: true } });
       } else {
         navigate(`/rooms/${result.room.id}`);
       }

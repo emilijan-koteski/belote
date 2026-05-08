@@ -2,9 +2,10 @@ import "@/shared/i18n/i18n";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { BrowserRouter } from "react-router";
+import { BrowserRouter, MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { MOTION } from "@/shared/lib/motion";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useGameStore } from "@/shared/stores/gameStore";
 import type { GameState } from "@/shared/types/gameTypes";
@@ -103,12 +104,29 @@ const mockGameState: GameState = {
   reconnectExpiresAt: null,
 };
 
-function renderGamePage() {
-  return render(
-    <BrowserRouter>
-      <GamePage />
-    </BrowserRouter>,
+// `fromRoom: true` simulates the navigate state RoomLobby / LobbyPage attach
+// when a fresh game starts. Without it, GamePage skips the splash hold —
+// matching the reload / WS-reconnect remount path. `skipSplash` defaults to
+// advancing past the hold so existing table-level assertions are unaffected;
+// pass `false` when the test itself drives timer progression.
+function renderGamePage({ fromRoom = false, skipSplash = true } = {}) {
+  const result = render(
+    fromRoom ? (
+      <MemoryRouter initialEntries={[{ pathname: "/game/1", state: { fromRoom: true } }]}>
+        <GamePage />
+      </MemoryRouter>
+    ) : (
+      <BrowserRouter>
+        <GamePage />
+      </BrowserRouter>
+    ),
   );
+  if (fromRoom && skipSplash) {
+    act(() => {
+      vi.advanceTimersByTime(MOTION.GAME_STARTING_SPLASH);
+    });
+  }
+  return result;
 }
 
 describe("GamePage", () => {
@@ -147,10 +165,111 @@ describe("GamePage", () => {
     vi.useRealTimers();
   });
 
-  it("renders loading state when gameState is null", () => {
+  it("renders loading splash when gameState is null", () => {
     renderGamePage();
 
-    expect(screen.getByText("Connecting to game...")).toBeInTheDocument();
+    expect(screen.getByTestId("game-starting-splash")).toBeInTheDocument();
+  });
+
+  it("uses 'Reconnecting…' copy on refresh / reconnect mounts (no fromRoom flag)", () => {
+    // gameState null + no fromRoom => reload-while-game-in-progress path.
+    renderGamePage();
+
+    expect(screen.getByText("Reconnecting to the game…")).toBeInTheDocument();
+    expect(screen.queryByText("Game is starting…")).not.toBeInTheDocument();
+  });
+
+  it("uses 'Game is starting…' copy when arriving from room lobby", () => {
+    // No gameState yet, but fromRoom flag is set — this is the room→game beat,
+    // not a recovery. Copy reflects that.
+    renderGamePage({ fromRoom: true, skipSplash: false });
+
+    expect(screen.getByText("Game is starting…")).toBeInTheDocument();
+    expect(screen.queryByText("Reconnecting to the game…")).not.toBeInTheDocument();
+  });
+
+  it("holds the splash for GAME_STARTING_SPLASH when arriving from room lobby", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage({ fromRoom: true, skipSplash: false });
+
+    // Splash visible, table not yet mounted — even though state is ready.
+    expect(screen.getByTestId("game-starting-splash")).toBeInTheDocument();
+    expect(screen.queryByTestId("trick-area")).not.toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(MOTION.GAME_STARTING_SPLASH);
+    });
+
+    // After the gate elapses, the table mounts.
+    expect(screen.queryByTestId("game-starting-splash")).not.toBeInTheDocument();
+    expect(screen.getByTestId("trick-area")).toBeInTheDocument();
+  });
+
+  it("uses GAME_STARTING_SPLASH_REDUCED hold when reduced-motion is set", () => {
+    // Override matchMedia just for this test so useReducedMotion reports true.
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage({ fromRoom: true, skipSplash: false });
+
+    expect(screen.getByTestId("game-starting-splash")).toBeInTheDocument();
+
+    // Just before the reduced duration: still visible.
+    act(() => {
+      vi.advanceTimersByTime(MOTION.GAME_STARTING_SPLASH_REDUCED - 50);
+    });
+    expect(screen.getByTestId("game-starting-splash")).toBeInTheDocument();
+
+    // Past the reduced duration but well under the normal one: gone.
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.queryByTestId("game-starting-splash")).not.toBeInTheDocument();
+    expect(screen.getByTestId("trick-area")).toBeInTheDocument();
+  });
+
+  it("skips the splash hold on reload / reconnect mounts (no fromRoom flag)", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    renderGamePage(); // default: fromRoom = false
+
+    // Table is mounted immediately — no artificial hold.
+    expect(screen.queryByTestId("game-starting-splash")).not.toBeInTheDocument();
+    expect(screen.getByTestId("trick-area")).toBeInTheDocument();
+  });
+
+  it("clears the splash timer when unmounted before it elapses", () => {
+    useGameStore.getState().setGameState(mockGameState);
+    useGameStore.getState().setMyPlayerSeat(0);
+
+    const { unmount } = renderGamePage({ fromRoom: true, skipSplash: false });
+    expect(screen.getByTestId("game-starting-splash")).toBeInTheDocument();
+
+    unmount();
+
+    // Advancing past the splash duration after unmount must not fire stale
+    // setState (would trigger a React warning / test failure under strict
+    // detection). The mere absence of console errors here is the assertion.
+    act(() => {
+      vi.advanceTimersByTime(MOTION.GAME_STARTING_SPLASH);
+    });
   });
 
   it("renders 4 PlayerSeat components when gameState is set", () => {

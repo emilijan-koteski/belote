@@ -484,7 +484,7 @@ describe("RoomLobby", () => {
     await user.click(screen.getByTestId("start-game"));
 
     expect(mockStartGame).toHaveBeenCalledWith(1);
-    expect(mockNavigate).toHaveBeenCalledWith("/game/1");
+    expect(mockNavigate).toHaveBeenCalledWith("/game/1", { state: { fromRoom: true } });
   });
 
   it("renders waiting message for non-owner when 4 players seated", async () => {
@@ -730,7 +730,7 @@ describe("RoomLobby", () => {
     await user.click(screen.getByTestId("player-seat-3"));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/game/1");
+      expect(mockNavigate).toHaveBeenCalledWith("/game/1", { state: { fromRoom: true } });
     });
   });
 

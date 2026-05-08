@@ -238,7 +238,8 @@
       "toggleClose": "Zatvori ćaskanje meča"
     },
     "trump": "Adut: {{suit}}",
-    "loading": "Povezivanje na igru...",
+    "starting": "Igra počinje\u2026",
+    "reconnecting": "Ponovno povezivanje na igru\u2026",
     "leaveConfirm": "Napusti igru? Možeš izgubiti napredak.",
     "suits": {
       "spades": "Pik",

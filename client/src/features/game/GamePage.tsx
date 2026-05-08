@@ -1,8 +1,9 @@
 import { HelpCircle, Pause, Settings as SettingsIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 
+import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import { FLAG_LIFETIME, MOTION } from "@/shared/lib/motion";
 import { useWsSendMessage } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
@@ -107,6 +108,30 @@ export function GamePage() {
   const setMatchAbandonedData = useGameStore((s) => s.setMatchAbandonedData);
   const activeEmotes = useGameStore((s) => s.activeEmotes);
   const setActiveEmote = useGameStore((s) => s.setActiveEmote);
+
+  // "Game is starting…" splash gate — holds the themed loading screen for a
+  // deliberate minimum duration when arriving from RoomLobby (or LobbyPage
+  // quick-play auto-start). The triggering navigation passes
+  // `state: { fromRoom: true }`; mounts without that flag (page reload, WS
+  // reconnect, deep-link) skip the artificial hold so reload-to-recover stays
+  // snappy. Reduced-motion users get a shorter beat. Duration is captured at
+  // mount — mid-splash OS motion-preference flips do NOT reset the timer.
+  const location = useLocation();
+  const cameFromRoom = (location.state as { fromRoom?: boolean } | null)?.fromRoom === true;
+  const prefersReducedMotion = useReducedMotion();
+  const [splashElapsed, setSplashElapsed] = useState(!cameFromRoom);
+  useEffect(() => {
+    if (!cameFromRoom) return;
+    const duration = prefersReducedMotion
+      ? MOTION.GAME_STARTING_SPLASH_REDUCED
+      : MOTION.GAME_STARTING_SPLASH;
+    const timer = window.setTimeout(() => setSplashElapsed(true), duration);
+    return () => clearTimeout(timer);
+    // Intentionally exclude `prefersReducedMotion` from deps — the duration
+    // is locked at mount; a mid-splash OS preference flip must not restart
+    // the timer (could double the wait the user experiences).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameFromRoom]);
 
   const [showReshuffle, setShowReshuffle] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
@@ -417,18 +442,25 @@ export function GamePage() {
   // Loading state — themed with the in-game felt + brass palette so the
   // transition into the table doesn't flash a generic dark splash. We can't
   // render the full TableBackdrop (no gameState yet), so this is a slimmed-
-  // down felt gradient + brass spinner using the same tokens.
-  if (!gameState || myPlayerSeat === null) {
+  // down felt gradient + brass spinner using the same tokens. Two copy paths:
+  //   • From room lobby (`cameFromRoom`): "Game is starting…", held for
+  //     `MOTION.GAME_STARTING_SPLASH` even if state is already in hand — the
+  //     deliberate beat masks the room→game transition so dealing / trump
+  //     prompt don't appear in the same instant the page enters.
+  //   • Reload / WS reconnect / deep-link: "Reconnecting to the game…",
+  //     shown only until state arrives, with no artificial floor.
+  if (!splashElapsed || !gameState || myPlayerSeat === null) {
     return (
       <div
         className="game-table h-screen w-screen overflow-hidden flex items-center justify-center"
         data-testid="game-page"
+        data-splash-active="true"
         style={{
           background:
             "radial-gradient(ellipse at 50% 50%, var(--felt-dark) 0%, var(--felt-deep) 60%, var(--felt-bg) 100%)",
         }}
       >
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4" data-testid="game-starting-splash">
           <span
             aria-hidden
             className="inline-block rounded-full motion-safe:animate-spin"
@@ -449,7 +481,7 @@ export function GamePage() {
               opacity: 0.85,
             }}
           >
-            {t("game.loading")}
+            {cameFromRoom ? t("game.starting") : t("game.reconnecting")}
           </span>
         </div>
       </div>

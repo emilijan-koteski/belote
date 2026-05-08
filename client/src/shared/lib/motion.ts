@@ -54,6 +54,20 @@ export const MOTION = {
   RESHUFFLE_PULSE: 1200,
   RESHUFFLE_STAGGER: 100,
 
+  // ─── Game-start splash ───────────────────────────────────────────
+  /** Minimum hold time for the "Game is starting…" splash on GamePage when
+   *  arriving from RoomLobby or from LobbyPage quick-play auto-start. 1500 ms
+   *  is long enough for the brain to register a deliberate scene change
+   *  without feeling like a spinner — slightly longer than
+   *  `TRICK_RESOLVE_PAUSE` so the beat reads as a phase transition, not a
+   *  per-trick interaction. Reload / reconnect mounts skip this hold via the
+   *  `fromRoom` route-state flag. */
+  GAME_STARTING_SPLASH: 1500,
+  /** Reduced-motion variant — short enough to feel near-instant, long enough
+   *  to mask the deal animation's first frame so the splash still serves its
+   *  purpose for users who can perceive the transition. */
+  GAME_STARTING_SPLASH_REDUCED: 400,
+
   // ─── Reveal entrances ────────────────────────────────────────────
   /** Quick zoom-in for input-gating prompts (trump pick, declare,
    *  belot). Mirrors Tailwind `duration-150`. */

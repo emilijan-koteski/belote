@@ -138,11 +138,13 @@ export function RoomLobby() {
     }
   }, [wsState, roomQuery]);
 
-  // Handle game_started from WebSocket — navigate all players to the game page
+  // Handle game_started from WebSocket — navigate all players to the game page.
+  // Pass `fromRoom: true` so GamePage's splash gate triggers (deliberate beat
+  // masking the room→game transition).
   useEffect(() => {
     if (gameStarted && id) {
       hasLeftRef.current = true; // Prevent cleanup leave on navigation
-      navigate(`/game/${id}`);
+      navigate(`/game/${id}`, { state: { fromRoom: true } });
     }
   }, [gameStarted, id, navigate]);
 
@@ -276,7 +278,7 @@ export function RoomLobby() {
       useRoomLobbyStore.getState().setPlayers(data.players);
       if (data.gameStarted) {
         hasLeftRef.current = true;
-        navigate(`/game/${storeRoom.id}`);
+        navigate(`/game/${storeRoom.id}`, { state: { fromRoom: true } });
         return;
       }
     } catch (err) {
@@ -362,7 +364,7 @@ export function RoomLobby() {
     try {
       await startGameMutation.mutateAsync(storeRoom.id);
       hasLeftRef.current = true; // Prevent cleanup leave on navigation
-      navigate(`/game/${storeRoom.id}`);
+      navigate(`/game/${storeRoom.id}`, { state: { fromRoom: true } });
     } catch (err) {
       if (err instanceof FetchError && err.code === "NOT_ROOM_OWNER") {
         toast.error(t("lobby.roomLobby.errors.notOwner"));

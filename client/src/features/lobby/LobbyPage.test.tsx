@@ -156,7 +156,7 @@ describe("LobbyPage", () => {
     await user.click(quickPlayCard);
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/game/77");
+      expect(mockNavigate).toHaveBeenCalledWith("/game/77", { state: { fromRoom: true } });
     });
   });
 
