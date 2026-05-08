@@ -234,28 +234,32 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 			newState.TurnTimeRemaining = 0
 		}
 	} else if newState.Phase == game.PhasePlaying || newState.Phase == game.PhaseBidding {
-		if action.Type == game.ActionSurrenderRequest || action.Type == game.ActionSurrenderDecline {
-			// Story 8.2 AC#1: per-move turn timer keeps running on the active
-			// player. Surrender request/decline never advance the turn — restore
-			// the pre-action expiry and restart the cancelled timer with the
-			// remaining duration so the active player does not gain free time.
-			if session.timerStyle == "per-move" && oldState.TurnExpiresAt != nil {
-				newState.TurnExpiresAt = oldState.TurnExpiresAt
-				newState.TimerDurationSec = oldState.TimerDurationSec
-				remaining := time.Until(*oldState.TurnExpiresAt)
-				if remaining > 0 {
-					// HandleAction's pre-mutation cancelTurnTimer (above) already
-					// bumped timerGeneration; the captured gen is the post-cancel
-					// value. Any future cancel/restart will invalidate it.
-					gen := session.timerGeneration
-					expectedSeat := newState.ActivePlayerSeat
-					session.turnTimer = time.AfterFunc(remaining, func() {
-						m.handleTimerExpiry(session, gen, expectedSeat)
-					})
-				}
+		// Within-turn predicate: when seat and phase are unchanged, the action
+		// resolved a prompt (declare/skip_declare, play_card-into-belot,
+		// surrender request/decline) without advancing the turn. The original
+		// turn deadline must persist so prompts cost the active player the same
+		// budget as a normal play. Otherwise (seat advanced or phase changed)
+		// the turn truly transitioned — issue a fresh expiry for the next seat.
+		preserveTimer := session.timerStyle == "per-move" &&
+			oldState.TurnExpiresAt != nil &&
+			newState.ActivePlayerSeat == oldState.ActivePlayerSeat &&
+			newState.Phase == oldState.Phase
+		if preserveTimer {
+			newState.TurnExpiresAt = oldState.TurnExpiresAt
+			newState.TimerDurationSec = oldState.TimerDurationSec
+			remaining := time.Until(*oldState.TurnExpiresAt)
+			if remaining > 0 {
+				// HandleAction's pre-mutation cancelTurnTimer (above) already
+				// bumped timerGeneration; the captured gen is the post-cancel
+				// value. Any future cancel/restart will invalidate it.
+				gen := session.timerGeneration
+				expectedSeat := newState.ActivePlayerSeat
+				session.turnTimer = time.AfterFunc(remaining, func() {
+					m.handleTimerExpiry(session, gen, expectedSeat)
+				})
 			}
 		} else {
-			// Normal turn — set expiry and start timer
+			// Turn advanced or phase changed — fresh window for the next seat.
 			m.setTurnExpiry(session, newState)
 			m.startTimerLocked(session)
 		}
@@ -994,20 +998,99 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 		newState.Phase = game.PhaseBidding
 	}
 
-	// Set expiry and start timer for next player (inside lock)
-	if newState.Phase == game.PhasePlaying || newState.Phase == game.PhaseBidding {
-		m.setTurnExpiry(session, newState)
+	// Within-turn auto-action chain. The first ApplyAction may leave the same
+	// seat owing a continuation: skip_declare clears the prompt but the player
+	// still owes a card; an auto-played card may itself open a belot prompt
+	// (K/Q of trump while holding both) which keeps the same seat. Without
+	// chaining, setTurnExpiry below would either extend the doomed player's
+	// window (the bug we're fixing) or leave the timer unarmed and stall.
+	//
+	// Loop instead: while seat and phase are still equal to oldState's, pick
+	// the next auto-action structurally based on what's blocking newState
+	// (PendingBelotSeat → skip_belot, AwaitingDeclaration → skip_declare,
+	// otherwise auto-play). Bounded depth as a safety net against pathological
+	// state — in practice the chain resolves in at most three steps
+	// (skip_declare → auto-play → skip_belot if K/Q of trump came out).
+	const maxChainSteps = 3
+	type chainStep struct {
+		action game.Action
+		pre    *game.GameState
+		post   *game.GameState
+	}
+	steps := []chainStep{{action: action, pre: oldState, post: newState}}
+
+	for i := 0; i < maxChainSteps; i++ {
+		cur := steps[len(steps)-1].post
+		// Done if the seat or phase already transitioned vs the timer-firing
+		// state. PhaseMatchEnd / PhasePaused also fall out here.
+		if cur.ActivePlayerSeat != oldState.ActivePlayerSeat || cur.Phase != oldState.Phase {
+			break
+		}
+		if cur.Phase != game.PhasePlaying {
+			break
+		}
+		// Pick the next auto-action structurally — no action-type enumeration.
+		// PendingBelotSeat takes precedence over AwaitingDeclaration in the same
+		// way handleTimerExpiry's initial switch orders them.
+		var next game.Action
+		switch {
+		case cur.PendingBelotSeat != nil && *cur.PendingBelotSeat == cur.ActivePlayerSeat:
+			next = game.Action{Type: game.ActionSkipBelot, PlayerSeat: cur.ActivePlayerSeat}
+		case cur.AwaitingDeclaration:
+			next = game.Action{Type: game.ActionSkipDeclare, PlayerSeat: cur.ActivePlayerSeat}
+		default:
+			cardID, autoErr := game.AutoPlay(cur)
+			if autoErr != nil {
+				slog.Error("session: chain AutoPlay failed", "roomID", session.roomID, "error", autoErr)
+				break
+			}
+			card, parseErr := game.ParseCard(cardID)
+			if parseErr != nil {
+				slog.Error("session: chain ParseCard failed", "roomID", session.roomID, "cardID", cardID, "error", parseErr)
+				break
+			}
+			next = game.Action{Type: game.ActionPlayCard, PlayerSeat: cur.ActivePlayerSeat, Card: &card}
+		}
+		// Empty action.Type means the inner switch hit an error path — break.
+		if next.Type == "" {
+			break
+		}
+		appliedNS, applyErr := game.ApplyAction(cur, next)
+		if applyErr != nil {
+			slog.Error("session: chain ApplyAction failed", "roomID", session.roomID, "error", applyErr)
+			break
+		}
+		if appliedNS.Phase == game.PhaseDealing {
+			appliedNS.Phase = game.PhaseBidding
+		}
+		steps = append(steps, chainStep{action: next, pre: cur, post: appliedNS})
+	}
+
+	finalState := steps[len(steps)-1].post
+
+	// Set expiry and start timer for the next player. Three cases:
+	//  • Seat or phase advanced past oldState — fresh timer for the new turn.
+	//  • Seat unchanged AND phase unchanged AND we exhausted maxChainSteps or
+	//    a chain step errored — defensive fresh timer to prevent the game from
+	//    stalling. The slog.Error in the chain logs the underlying invariant
+	//    violation; arming a fresh timer keeps the game moving while operator
+	//    debugs.
+	//  • Phase is match_end / paused — outer guard skips both.
+	if finalState.Phase == game.PhasePlaying || finalState.Phase == game.PhaseBidding {
+		m.setTurnExpiry(session, finalState)
 		m.startTimerLocked(session)
 	}
 
-	session.gameState = newState
+	session.gameState = finalState
 	playerIDs := session.playerIDs
 	startedAt := session.startedAt
 	session.mu.Unlock()
 
 	// Inform clients that a non-card auto-action just fired so they can surface
-	// a toast naming the timed-out player. Card auto-play uses the existing
-	// AutoPlayed flag on event:card_played and does NOT emit this event.
+	// a toast naming the timed-out player. Only the *first* step emits this —
+	// chained card-play uses the AutoPlayed flag on event:card_played, and
+	// further chained skip_belot is implementation detail (a single timer
+	// expiry should produce a single user-facing notification).
 	if autoType, ok := autoActionTypeFor(action.Type); ok {
 		m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventAutoAction, ws.AutoActionPayload{
 			PlayerSeat: expectedSeat,
@@ -1015,19 +1098,28 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 		}))
 	}
 
-	// Broadcast result
-	isAutoPlayedCard := action.Type == game.ActionPlayCard
-	m.broadcastActionResult(playerIDs, oldState, newState, action, isAutoPlayedCard)
-
-	// Buffer per-hand scoring for persistence at match end
-	m.bufferHandResultIfScored(session, oldState, newState)
+	// Broadcast each step's result in order. Multi-event sequences ride as
+	// separate ordered messages per project-context — never batched. Each
+	// step within a chain represents an auto-action (the player was AFK), so
+	// any step that was an ActionPlayCard rides with autoPlayed=true.
+	for _, step := range steps {
+		isAutoPlayedCard := step.action.Type == game.ActionPlayCard
+		m.broadcastActionResult(playerIDs, step.pre, step.post, step.action, isAutoPlayedCard)
+		m.bufferHandResultIfScored(session, step.pre, step.post)
+	}
 
 	// Check for match completion. Auto-play never produces a surrender (the
 	// per-move timer doesn't auto-resolve a pending proposal — see AC #13),
 	// so surrenderedBy is always nil here.
-	if newState.Phase == game.PhaseMatchEnd {
-		matchEndPayload := buildMatchEndPayload(oldState, newState, action, startedAt)
-		m.handleMatchEnd(session, newState, nil, matchEndPayload)
+	if finalState.Phase == game.PhaseMatchEnd {
+		// The match-ending action is whichever step landed in PhaseMatchEnd —
+		// almost always the last one (steps run sequentially and only the
+		// terminal step transitions the phase).
+		last := steps[len(steps)-1]
+		matchEndAction := last.action
+		matchEndOld := last.pre
+		matchEndPayload := buildMatchEndPayload(matchEndOld, finalState, matchEndAction, startedAt)
+		m.handleMatchEnd(session, finalState, nil, matchEndPayload)
 	}
 }
 

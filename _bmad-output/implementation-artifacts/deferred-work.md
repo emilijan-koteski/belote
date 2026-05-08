@@ -1,5 +1,10 @@
 # Deferred Work
 
+## Deferred from: code review of spec-fix-prompt-timer-no-reset-on-decision (2026-05-08)
+
+- **Action-error path resets the active player's timer to a full duration** — `manager.go:184-188` calls `setTurnExpiry(session, oldState)` when `ApplyAction` errors, granting the active player a fresh `now + timerDurationSec`. Pre-existing pattern. With the new "preserve prompt budget" contract, any erroring action (illegal play, wrong-seat `announce_belot`, exhausted `surrender_request`, etc.) now becomes an asymmetric escape hatch from the doomed-player window. Fix scope: on action error, mirror the within-turn predicate (preserve `oldState.TurnExpiresAt` rather than calling `setTurnExpiry`). Surfaced by edge-case-hunter review. [server/internal/session/manager.go:184-188]
+- **Match-end via auto-action chain carries stale `SurrenderProposerSeat` into the trailing `event:game_state`** — When a surrender request is pending and an auto-action chain ends the match naturally, `finalState.SurrenderProposerSeat` remains non-nil. The `event:match_end` payload is correctly tagged "natural"; the appended `event:game_state` may cause clients to render a stale surrender overlay alongside match-end. Pre-existing pattern (also reachable from non-auto-play match-ends). Fix scope: clear `SurrenderProposerSeat` and related fields on phase transition into `PhaseMatchEnd`, in the rules engine or on broadcast. [server/internal/session/manager.go:1115-1124]
+
 ## Deferred from: code review of 8.5-1-bug-and-race-triage (2026-05-02)
 
 - **`handleReconnectTimeout` (abandonment match-end) violates persist-before-broadcast (D101-class, AC4-adjacent)** — `event:match_abandoned` and the trailing `event:game_state` are broadcast (reconnect.go:342-343) BEFORE `m.matchRepo.CreateWithHands` (line 369). Same antipattern AC4 just closed for `handleMatchEnd`, applied to the abandonment path. Strictly out of scope per AC4's exact wording (`event:match_end` only). [server/internal/session/reconnect.go:280-382]

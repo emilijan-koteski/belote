@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/emilijan/beljot/server/internal/game"
+	"github.com/emilijan/beljot/server/internal/game/testfixtures"
 	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/room"
 	"github.com/emilijan/beljot/server/internal/session"
@@ -964,4 +965,183 @@ func TestRemoveSession_CallsUserRemovedHooks(t *testing.T) {
 
 	assert.ElementsMatch(t, []uint{10, 20, 30, 40}, got, "all 4 playerIDs must be delivered to hook")
 	assert.False(t, mgr.HasSession(900), "session should be removed")
+}
+
+// --- Within-turn prompt timer preservation (declaration / belot) ---
+//
+// The active player's per-move turn timer must persist across declaration and
+// belot prompts — the prompt is part of the same turn budget, not a fresh
+// window. Driver: SetGameStateForTest injects a controlled state with a known
+// TurnExpiresAt; we then issue the prompt action through HandleAction and
+// snapshot the resulting expiry.
+
+// firstTrickStateAt builds an injectable state at trick 1 / phase=playing with
+// a fixed TurnExpiresAt and the given activeSeat. Trump is hearts so seat 0
+// holds Belot (KH+QH) for the play-card-into-belot scenario.
+func firstTrickStateAt(activeSeat int, expiry time.Time, awaitingDeclaration bool) *game.GameState {
+	gs := testfixtures.NewGameFirstTrick(game.SuitHearts)
+	gs.RoomID = 100
+	gs.ActivePlayerSeat = activeSeat
+	gs.AwaitingDeclaration = awaitingDeclaration
+	gs.TurnExpiresAt = &expiry
+	gs.TimerDurationSec = 30
+	return gs
+}
+
+func TestHandleAction_Declare_PreservesTurnExpiry(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 120))
+
+	// Seat 1 holds the JD-QD-KD-AD quarte and is the active player at trick 1.
+	expiry := time.Now().Add(20 * time.Second)
+	mgr.SetGameStateForTest(100, firstTrickStateAt(1, expiry, true))
+
+	mgr.HandleAction(&ws.Client{UserID: 20}, ws.WSMessage{
+		Type:    ws.ActionDeclare,
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	newState := mgr.GetStateSnapshot(100)
+	require.NotNil(t, newState)
+	require.NotNil(t, newState.TurnExpiresAt, "expiry must persist; declare did not advance the turn")
+	assert.True(t, newState.TurnExpiresAt.Equal(expiry),
+		"declare must preserve oldState.TurnExpiresAt — got %v, want %v", newState.TurnExpiresAt, expiry)
+	assert.Equal(t, 1, newState.ActivePlayerSeat, "declare must not advance the seat")
+	assert.False(t, newState.AwaitingDeclaration, "declare clears AwaitingDeclaration")
+}
+
+func TestHandleAction_SkipDeclare_PreservesTurnExpiry(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 120))
+
+	expiry := time.Now().Add(20 * time.Second)
+	mgr.SetGameStateForTest(100, firstTrickStateAt(1, expiry, true))
+
+	mgr.HandleAction(&ws.Client{UserID: 20}, ws.WSMessage{
+		Type:    ws.ActionSkipDeclare,
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	newState := mgr.GetStateSnapshot(100)
+	require.NotNil(t, newState)
+	require.NotNil(t, newState.TurnExpiresAt)
+	assert.True(t, newState.TurnExpiresAt.Equal(expiry),
+		"skip_declare must preserve expiry — got %v, want %v", newState.TurnExpiresAt, expiry)
+	assert.Equal(t, 1, newState.ActivePlayerSeat)
+	assert.False(t, newState.AwaitingDeclaration)
+}
+
+func TestHandleAction_PlayCardTriggeringBelot_PreservesTurnExpiry(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 120))
+
+	// Seat 0 holds KH+QH on hearts trump — playing KH triggers the belot prompt
+	// with PendingBelotSeat=0 and the turn does NOT advance.
+	expiry := time.Now().Add(20 * time.Second)
+	mgr.SetGameStateForTest(100, firstTrickStateAt(0, expiry, false))
+
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    ws.ActionPlayCard,
+		Payload: json.RawMessage(`{"cardId":"KH"}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	newState := mgr.GetStateSnapshot(100)
+	require.NotNil(t, newState)
+	require.NotNil(t, newState.PendingBelotSeat, "play KH on hearts trump must trigger belot prompt")
+	assert.Equal(t, 0, *newState.PendingBelotSeat)
+	require.NotNil(t, newState.TurnExpiresAt)
+	assert.True(t, newState.TurnExpiresAt.Equal(expiry),
+		"play_card-into-belot must preserve expiry — got %v, want %v", newState.TurnExpiresAt, expiry)
+	assert.Equal(t, 0, newState.ActivePlayerSeat, "seat must not advance while belot prompt is open")
+}
+
+func TestHandleAction_AnnounceBelot_RefreshesTurnExpiryForNextSeat(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 120))
+
+	// First, drive seat 0 into the belot prompt by playing KH.
+	oldExpiry := time.Now().Add(20 * time.Second)
+	mgr.SetGameStateForTest(100, firstTrickStateAt(0, oldExpiry, false))
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    ws.ActionPlayCard,
+		Payload: json.RawMessage(`{"cardId":"KH"}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	mid := mgr.GetStateSnapshot(100)
+	require.NotNil(t, mid)
+	require.NotNil(t, mid.PendingBelotSeat, "setup: belot prompt must be open before announcing")
+
+	// Now the player announces — finishCardPlay advances the seat, so the next
+	// player gets a fresh full-duration window.
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    ws.ActionAnnounceBelot,
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	newState := mgr.GetStateSnapshot(100)
+	require.NotNil(t, newState)
+	require.NotNil(t, newState.TurnExpiresAt)
+	assert.True(t, newState.TurnExpiresAt.After(oldExpiry),
+		"announce_belot advances seat — fresh expiry must be > old expiry")
+	assert.NotEqual(t, 0, newState.ActivePlayerSeat, "announce_belot must advance the seat")
+}
+
+func TestHandleAction_SkipBelot_RefreshesTurnExpiryForNextSeat(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 120))
+
+	oldExpiry := time.Now().Add(20 * time.Second)
+	mgr.SetGameStateForTest(100, firstTrickStateAt(0, oldExpiry, false))
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    ws.ActionPlayCard,
+		Payload: json.RawMessage(`{"cardId":"KH"}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	mid := mgr.GetStateSnapshot(100)
+	require.NotNil(t, mid)
+	require.NotNil(t, mid.PendingBelotSeat, "setup: belot prompt must be open before skipping")
+
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    "action:skip_belot",
+		Payload: json.RawMessage(`{}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	newState := mgr.GetStateSnapshot(100)
+	require.NotNil(t, newState)
+	require.NotNil(t, newState.TurnExpiresAt)
+	assert.True(t, newState.TurnExpiresAt.After(oldExpiry),
+		"skip_belot advances seat — fresh expiry must be > old expiry")
+	assert.NotEqual(t, 0, newState.ActivePlayerSeat, "skip_belot must advance the seat")
 }

@@ -1,6 +1,8 @@
 package session
 
 import (
+	"time"
+
 	"github.com/emilijan/beljot/server/internal/game"
 	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/ws"
@@ -52,4 +54,42 @@ func (m *Manager) HandResults(roomID uint) []match.HandResult {
 	out := make([]match.HandResult, len(session.handResults))
 	copy(out, session.handResults)
 	return out
+}
+
+// SetGameStateForTest replaces the session's game state. Used to drive
+// HandleAction through specific mid-game states (declaration prompt, belot
+// prompt) without scripting an entire match. Tests using this helper must
+// call StartGame first to register the session and set timer config.
+func (m *Manager) SetGameStateForTest(roomID uint, gs *game.GameState) {
+	m.mu.RLock()
+	session, ok := m.sessions[roomID]
+	m.mu.RUnlock()
+	if !ok {
+		return
+	}
+	session.mu.Lock()
+	session.gameState = gs
+	session.mu.Unlock()
+}
+
+// TriggerTimerExpiryForTest cancels any pending turn timer and re-arms a
+// short-duration timer for the given expectedSeat, then waits for it to fire.
+// Used by tests that drive the auto-action code path on an injected game state
+// where the StartGame-captured expectedSeat would not match the injected
+// ActivePlayerSeat. The caller should sleep until the auto-action settles
+// before snapshotting state.
+func (m *Manager) TriggerTimerExpiryForTest(roomID uint, expectedSeat int, fireAfter time.Duration) {
+	m.mu.RLock()
+	session, ok := m.sessions[roomID]
+	m.mu.RUnlock()
+	if !ok {
+		return
+	}
+	session.mu.Lock()
+	session.cancelTurnTimer()
+	gen := session.timerGeneration
+	session.turnTimer = time.AfterFunc(fireAfter, func() {
+		m.handleTimerExpiry(session, gen, expectedSeat)
+	})
+	session.mu.Unlock()
 }
