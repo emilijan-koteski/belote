@@ -314,6 +314,7 @@ export function PlayerSeat({
           <TimerRing
             turnExpiresAt={turnExpiresAt ?? null}
             totalDuration={timerDuration ?? 0}
+            secondsLeft={secondsLeft}
             hideLabel
           />
         )}

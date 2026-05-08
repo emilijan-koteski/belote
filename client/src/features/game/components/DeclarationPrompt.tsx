@@ -45,7 +45,7 @@ export function DeclarationPrompt({
   const showRing = isActivePlayer && Boolean(turnExpiresAt) && (timerDurationSec ?? 0) > 0;
 
   return (
-    <div className="absolute inset-0" data-testid="declaration-prompt">
+    <div className="fixed inset-0" data-testid="declaration-prompt">
       <OverlayBackdrop dim={0.5}>
         <div
           ref={promptRef}
@@ -118,10 +118,12 @@ export function DeclarationPrompt({
 
             <div className="flex justify-end items-center gap-3">
               {showRing ? (
+                // Visual countdown only — server-authoritative auto-skip on
+                // expiry. Same reasoning as BelotPrompt: a client onExpire
+                // racing the server's auto-action surfaces a wrong-phase toast.
                 <ButtonTimerRing
                   turnExpiresAt={turnExpiresAt}
                   totalDuration={timerDurationSec ?? 0}
-                  onExpire={onSkip}
                 >
                   <ClassicButton onClick={onSkip} data-testid="declaration-prompt-skip">
                     {t("game.declaration.skip")}

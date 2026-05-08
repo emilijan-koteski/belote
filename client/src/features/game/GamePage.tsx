@@ -108,6 +108,8 @@ export function GamePage() {
   const setMatchAbandonedData = useGameStore((s) => s.setMatchAbandonedData);
   const activeEmotes = useGameStore((s) => s.activeEmotes);
   const setActiveEmote = useGameStore((s) => s.setActiveEmote);
+  const pendingAutoPlayedCard = useGameStore((s) => s.pendingAutoPlayedCard);
+  const setPendingAutoPlayedCard = useGameStore((s) => s.setPendingAutoPlayedCard);
 
   // "Game is starting…" splash gate — holds the themed loading screen for a
   // deliberate minimum duration when arriving from RoomLobby (or LobbyPage
@@ -144,6 +146,23 @@ export function GamePage() {
   // remaining cards by id so HandCards stays stable across the hand-off.
   const [flyingCardId, setFlyingCardId] = useState<string | null>(null);
   const flyingClearTimerRef = useRef<number | null>(null);
+
+  // When the server auto-plays a card for the local player (per-move timer
+  // expired), the dispatcher writes pendingAutoPlayedCard. Mirror it into
+  // flyingCardId so HandCards animates the throw the same way it does for a
+  // manual click — without this, the card just vanishes from the hand.
+  useEffect(() => {
+    if (!pendingAutoPlayedCard) return;
+    setFlyingCardId(pendingAutoPlayedCard.cardId);
+    if (flyingClearTimerRef.current !== null) {
+      clearTimeout(flyingClearTimerRef.current);
+    }
+    flyingClearTimerRef.current = window.setTimeout(() => {
+      setFlyingCardId(null);
+      flyingClearTimerRef.current = null;
+    }, FLAG_LIFETIME.FLYING_CARD);
+    setPendingAutoPlayedCard(null);
+  }, [pendingAutoPlayedCard, setPendingAutoPlayedCard]);
 
   // ScoreReveal needs the trump suit / caller seat from the just-finished
   // hand for its contract-held subtitle. The server pushes the next-hand
@@ -641,7 +660,11 @@ export function GamePage() {
               isActive={isActive}
               seatTeam={seatTeam(player.seat, myPlayerSeat)}
               cardCount={isSelf ? undefined : player.hand.length}
-              turnExpiresAt={isActive ? gameState.turnExpiresAt : null}
+              turnExpiresAt={
+                isActive && (gameState.phase === "playing" || gameState.phase === "bidding")
+                  ? gameState.turnExpiresAt
+                  : null
+              }
               timerDuration={gameState.timerDurationSec}
               isDealer={gameState.dealerSeat === player.seat}
               trumpCallerSuit={isCaller ? gameState.trumpSuit : null}

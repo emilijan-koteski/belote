@@ -109,10 +109,14 @@ export function BelotPrompt({
 
             <div className="flex justify-end items-center gap-3.5">
               {showRing ? (
+                // Visual countdown only — the server runs its own per-move
+                // timer and auto-skips the belot announcement on expiry. The
+                // resulting state push dismisses this prompt, so a client-side
+                // onExpire would race the server and surface a wrong-phase
+                // error toast for an action the user did not take.
                 <ButtonTimerRing
                   turnExpiresAt={turnExpiresAt}
                   totalDuration={timerDurationSec ?? 0}
-                  onExpire={onDecline}
                 >
                   <ClassicButton onClick={onDecline} data-testid="belot-prompt-decline">
                     {t("game.belot.decline")}

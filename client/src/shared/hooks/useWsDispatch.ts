@@ -152,6 +152,7 @@ function dispatchGameEvent(message: WsMessage): void {
       if (!payload.cardId || payload.cardId.length < 2) return;
       const rank = payload.cardId[0];
       const suit = payload.cardId[1];
+      const isLocalAutoPlay = payload.autoPlayed && payload.playerSeat === store.myPlayerSeat;
       store.setGameState({
         ...current,
         currentTrick: [
@@ -164,6 +165,11 @@ function dispatchGameEvent(message: WsMessage): void {
             playerSeat: payload.playerSeat,
           },
         ],
+        // Optimistically clear pendingBelotSeat when the server auto-plays for
+        // the local player while a Belot prompt is open. Without this, a stale
+        // click on Announce/Decline races against the trailing event:game_state
+        // and lands on the server with a wrong-phase error toast.
+        pendingBelotSeat: isLocalAutoPlay ? null : current.pendingBelotSeat,
       });
     }
 
@@ -172,6 +178,12 @@ function dispatchGameEvent(message: WsMessage): void {
       toast.info(i18n.t("game.timer.autoPlayed", { card: payload.cardId }), {
         duration: MOTION.TOAST_INFO,
       });
+      // Signal GamePage to drive the same hand-throw animation that
+      // handlePlayCard runs for a manual click — otherwise the auto-played
+      // card disappears from the local hand without an exit animation.
+      if (payload.playerSeat === store.myPlayerSeat) {
+        store.setPendingAutoPlayedCard(payload.cardId);
+      }
     }
     return;
   }
@@ -180,11 +192,17 @@ function dispatchGameEvent(message: WsMessage): void {
     const payload = message.payload as TrickResolvedPayload;
     const current = store.gameState;
     if (current) {
+      // Clear turnExpiresAt here so the previous active seat's TimerRing stops
+      // ticking the moment the trick resolves. The trailing event:game_state
+      // will set the next turn's deadline; until then, no seat counts down.
+      // Without this, the just-played seat keeps decrementing under the
+      // trick-resolve animation and can flip urgent-red on a slow snapshot.
       store.setGameState({
         ...current,
         currentTrick: [],
         trickNumber: current.trickNumber + 1,
         trickWinnerSeat: payload.winnerSeat,
+        turnExpiresAt: null,
       });
     }
     return;

@@ -22,6 +22,18 @@ export interface ActiveEmote {
 
 export type ActiveEmotesMap = Record<0 | 1 | 2 | 3, ActiveEmote | null>;
 
+// Transient signal that the server auto-played a card for the local player.
+// Dispatcher writes this on EVENT_CARD_PLAYED with autoPlayed=true and
+// payload.playerSeat === myPlayerSeat; GamePage observes it to drive the
+// hand-throw animation that handlePlayCard would have triggered for a manual
+// click. The receivedAt stamp doubles as a remount key so two consecutive
+// auto-plays of the same card (rare but possible across hands) replay the
+// animation cleanly.
+export interface PendingAutoPlayedCard {
+  cardId: string;
+  receivedAt: number;
+}
+
 interface GameStoreState {
   gameState: GameState | null;
   myPlayerSeat: number | null;
@@ -36,6 +48,7 @@ interface GameStoreState {
   matchAbandonedData: MatchAbandonedPayload | null;
   surrenderProposed: SurrenderProposedPayload | null;
   surrenderDeclined: SurrenderDeclinedPayload | null;
+  pendingAutoPlayedCard: PendingAutoPlayedCard | null;
   activeEmotes: ActiveEmotesMap;
   // Monotonic timestamp (performance.now()) of the most recent emote sent
   // from this client. Lifted out of EmotePickerButton's local useState so
@@ -56,6 +69,7 @@ interface GameStoreState {
   setMatchAbandonedData: (data: MatchAbandonedPayload | null) => void;
   setSurrenderProposed: (payload: SurrenderProposedPayload | null) => void;
   setSurrenderDeclined: (payload: SurrenderDeclinedPayload | null) => void;
+  setPendingAutoPlayedCard: (cardId: string | null) => void;
   setActiveEmote: (seat: number, emote: EmoteID | null) => void;
   setLastEmoteSentAt: (value: number) => void;
   clearGame: () => void;
@@ -91,6 +105,7 @@ const initialState = {
   matchAbandonedData: null,
   surrenderProposed: null,
   surrenderDeclined: null,
+  pendingAutoPlayedCard: null,
   activeEmotes: { 0: null, 1: null, 2: null, 3: null } as ActiveEmotesMap,
   lastEmoteSentAt: 0,
 };
@@ -122,6 +137,11 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setSurrenderProposed: (surrenderProposed) => set({ surrenderProposed }),
 
   setSurrenderDeclined: (surrenderDeclined) => set({ surrenderDeclined }),
+
+  setPendingAutoPlayedCard: (cardId) =>
+    set({
+      pendingAutoPlayedCard: cardId === null ? null : { cardId, receivedAt: Date.now() },
+    }),
 
   setActiveEmote: (seat, emote) =>
     set((state) => {

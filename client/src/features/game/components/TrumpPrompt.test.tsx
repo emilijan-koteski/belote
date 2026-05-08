@@ -282,7 +282,7 @@ describe("TrumpPrompt", () => {
       vi.useRealTimers();
     });
 
-    it("calls onPass once when the in-dialog timer ring reaches zero", () => {
+    it("does NOT fire onPass when the in-dialog timer ring reaches zero (server-authoritative auto-pass)", () => {
       const onPass = vi.fn();
       const expiry = new Date(Date.now() + 5000).toISOString();
       render(
@@ -301,7 +301,8 @@ describe("TrumpPrompt", () => {
       act(() => {
         vi.advanceTimersByTime(6000);
       });
-      expect(onPass).toHaveBeenCalledTimes(1);
+      // Server-authoritative: auto-pass arrives via state push, not from the client.
+      expect(onPass).not.toHaveBeenCalled();
     });
   });
 

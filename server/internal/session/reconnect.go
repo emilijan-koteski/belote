@@ -33,12 +33,23 @@ func (m *Manager) HandleDisconnect(userID uint) {
 
 	gs := session.gameState
 
-	// [F3] Only handle disconnect during stable player-facing phases (AC1)
+	// [F3] Only handle disconnect during stable player-facing phases (AC1).
+	// PhaseDisconnected is handled separately below (concurrent disconnect path).
 	switch gs.Phase {
 	case game.PhasePlaying, game.PhaseBidding, game.PhasePaused:
 		// These are valid phases for disconnect handling — proceed
+	case game.PhaseDisconnected:
+		// Concurrent disconnect: another player's reconnect window is already
+		// active. The data model tracks only one DisconnectedSeat / one reconnect
+		// timer, so we cannot start a second independent window — but we MUST
+		// mark this player's Connected=false and broadcast the event, otherwise
+		// the server keeps treating them as present. If the first player
+		// reconnects, HandleReconnect detects the still-disconnected seat and
+		// chains a fresh disconnect transition for them.
+		m.handleConcurrentDisconnectLocked(session, gs, userID)
+		return
 	default:
-		// Transient phases (dealing, trick_resolving, hand_scoring, match_end, disconnected) — skip
+		// Transient phases (dealing, trick_resolving, hand_scoring, match_end) — skip
 		session.mu.Unlock()
 		return
 	}
@@ -181,6 +192,78 @@ func (m *Manager) HandleDisconnect(userID uint) {
 	m.hub.BroadcastToUsers(remainingPlayers, stateMsg)
 }
 
+// handleConcurrentDisconnectLocked is called when a second player disconnects
+// while another player's reconnect window is already active. session.mu MUST
+// be locked on entry; this function unlocks it before returning. The data
+// model tracks only one DisconnectedSeat, so we cannot start a second
+// independent reconnect window — instead, we mark the player Connected=false
+// and broadcast event:player_disconnected so all clients see them gone. The
+// existing reconnect window for the first disconnected player keeps running.
+// If the first player reconnects, HandleReconnect detects any remaining
+// Connected=false seat and chains a fresh disconnect transition for them.
+func (m *Manager) handleConcurrentDisconnectLocked(session *Session, gs *game.GameState, userID uint) {
+	seat := -1
+	for i, uid := range session.playerIDs {
+		if uid == userID {
+			seat = i
+			break
+		}
+	}
+	// Unknown user, the disconnecting seat IS the already-tracked DisconnectedSeat,
+	// or the seat is already marked disconnected — nothing to do.
+	if seat == -1 || seat == gs.DisconnectedSeat || !gs.Players[seat].Connected {
+		session.mu.Unlock()
+		return
+	}
+
+	slog.Info("session: concurrent player disconnected during reconnect window",
+		"roomID", session.roomID, "userID", userID, "seat", seat,
+		"primaryDisconnectedSeat", gs.DisconnectedSeat,
+	)
+
+	gs.Players[seat].Connected = false
+	username := gs.Players[seat].Username
+
+	// Reuse the existing reconnect expiry — the second player has at most until
+	// the first window closes to come back, since match abandonment fires on
+	// first-window expiry regardless.
+	expiresAtStr := ""
+	if gs.ReconnectExpiresAt != nil {
+		expiresAtStr = gs.ReconnectExpiresAt.UTC().Format(time.RFC3339Nano)
+	}
+
+	disconnectPayload := ws.PlayerDisconnectedPayload{
+		PlayerSeat:         seat,
+		Username:           username,
+		ReconnectExpiresAt: expiresAtStr,
+	}
+	disconnectMsg := buildMessage(ws.EventPlayerDisconnected, disconnectPayload)
+	stateMsg := buildMessage(ws.EventGameState, gs)
+
+	playerIDs := session.playerIDs
+	session.mu.Unlock()
+
+	// Broadcast to remaining 3 players (exclude the just-disconnected player)
+	remaining := make([]uint, 0, 3)
+	for i, uid := range playerIDs {
+		if i != seat {
+			remaining = append(remaining, uid)
+		}
+	}
+	m.hub.BroadcastToUsers(remaining, disconnectMsg)
+	m.hub.BroadcastToUsers(remaining, stateMsg)
+}
+
+// hasActivePause reports whether any seat has an active pause flag set.
+func hasActivePause(p [4]bool) bool {
+	for _, v := range p {
+		if v {
+			return true
+		}
+	}
+	return false
+}
+
 // HandleReconnect is called by the hub when a client registers (connects or reconnects).
 // If the user is in an active game session that is in PhaseDisconnected, this restores
 // the game state, cancels the reconnect timer, and broadcasts the reconnection to all players.
@@ -240,8 +323,55 @@ func (m *Manager) HandleReconnect(userID uint) {
 	gs.DisconnectedSeat = -1
 	gs.ReconnectExpiresAt = nil
 
-	// Restore turn timer (same pattern as unpause timer resume in HandleAction)
-	if session.timerStyle == "per-move" && (gs.Phase == game.PhasePlaying || gs.Phase == game.PhaseBidding) {
+	// Concurrent-disconnect chain: if a second player disconnected during this
+	// window (handleConcurrentDisconnectLocked marked them Connected=false but
+	// could not start a second reconnect window), promote them to the primary
+	// DisconnectedSeat now and start a fresh window for them. The reconnecting
+	// player is up; the still-disconnected player gets their own clock.
+	chainedDisconnectSeat := -1
+	for i := 0; i < 4; i++ {
+		if !gs.Players[i].Connected {
+			chainedDisconnectSeat = i
+			break
+		}
+	}
+	if chainedDisconnectSeat >= 0 {
+		// Capture the just-restored phase as the pre-disconnect phase for the
+		// chained transition (do not collapse it into PhasePaused if other
+		// players have active pauses — the pause logic below still applies on
+		// the eventual reconnect).
+		gs.PreviousPhase = gs.Phase
+		gs.Phase = game.PhaseDisconnected
+		gs.DisconnectedSeat = chainedDisconnectSeat
+		// Capture remaining turn time the same way the original disconnect did.
+		if gs.TurnExpiresAt != nil {
+			remaining := time.Until(*gs.TurnExpiresAt)
+			if remaining > 0 {
+				gs.TurnTimeRemaining = remaining.Milliseconds()
+			}
+		}
+		gs.TurnExpiresAt = nil
+		// Start a new reconnect timer for the chained seat.
+		reconnectExpiry := time.Now().Add(time.Duration(session.reconnectWindowSec) * time.Second)
+		gs.ReconnectExpiresAt = &reconnectExpiry
+		session.reconnectGeneration++
+		gen := session.reconnectGeneration
+		session.reconnectTimer = time.AfterFunc(
+			time.Duration(session.reconnectWindowSec)*time.Second,
+			func() {
+				m.handleReconnectTimeout(session, gen)
+			},
+		)
+	} else if hasActivePause(gs.PausedPlayers) {
+		// Active pauses from other players survived the reconnect — the game is
+		// logically still paused. Restore PhasePaused (preserve PreviousPhase as
+		// the just-restored Playing/Bidding) and skip the timer re-arm. Unpause
+		// will recompute TurnExpiresAt from TurnTimeRemaining when the last
+		// pause clears.
+		gs.PreviousPhase = gs.Phase
+		gs.Phase = game.PhasePaused
+	} else if session.timerStyle == "per-move" && (gs.Phase == game.PhasePlaying || gs.Phase == game.PhaseBidding) {
+		// Restore turn timer (same pattern as unpause timer resume in HandleAction)
 		const minResumeMs int64 = 3000
 		remaining := time.Duration(gs.TurnTimeRemaining) * time.Millisecond
 		if gs.TurnTimeRemaining > 0 && gs.TurnTimeRemaining < minResumeMs {

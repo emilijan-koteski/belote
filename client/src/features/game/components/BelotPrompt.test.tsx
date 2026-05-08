@@ -120,7 +120,7 @@ describe("BelotPrompt", () => {
       vi.useRealTimers();
     });
 
-    it("calls onDecline once when the in-dialog timer ring reaches zero", () => {
+    it("does NOT fire onDecline when the in-dialog timer ring reaches zero (server-authoritative auto-skip)", () => {
       const onDecline = vi.fn();
       const expiry = new Date(Date.now() + 5000).toISOString();
       render(
@@ -137,7 +137,10 @@ describe("BelotPrompt", () => {
       act(() => {
         vi.advanceTimersByTime(6000);
       });
-      expect(onDecline).toHaveBeenCalledTimes(1);
+      // Client never fires the action — the server runs its own per-move
+      // timer and pushes auto-skip state, dismissing this prompt. A client
+      // onExpire would race the server and surface a wrong-phase error toast.
+      expect(onDecline).not.toHaveBeenCalled();
     });
   });
 });

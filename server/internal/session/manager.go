@@ -138,7 +138,7 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 		session.mu.Lock()
 		gs.Phase = game.PhaseBidding
 		m.setTurnExpiry(session, gs)
-		m.startTimerLocked(session)
+		m.startTimerLocked(session, gs.ActivePlayerSeat)
 		session.mu.Unlock()
 		m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventGameState, gs))
 	}
@@ -278,8 +278,12 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 			}
 		} else {
 			// Turn advanced or phase changed — fresh window for the next seat.
+			// Pass newState.ActivePlayerSeat explicitly: session.gameState is
+			// reassigned to newState only after this block (see below), so a
+			// state-less startTimerLocked would capture the OLD active seat
+			// and the timer would auto-act for the wrong player.
 			m.setTurnExpiry(session, newState)
-			m.startTimerLocked(session)
+			m.startTimerLocked(session, newState.ActivePlayerSeat)
 		}
 	}
 
@@ -922,7 +926,12 @@ func (m *Manager) setTurnExpiry(session *Session, gs *game.GameState) {
 // startTimerLocked starts the per-move turn timer for the current session.
 // Must be called under session.mu.Lock(). The timer callback will acquire
 // session.mu.Lock() when it fires (safe — fires in a separate goroutine later).
-func (m *Manager) startTimerLocked(session *Session) {
+//
+// expectedSeat is passed explicitly because callers commonly invoke this BEFORE
+// session.gameState has been reassigned to the post-action state. Reading
+// session.gameState here would capture the pre-action seat and the timer would
+// fire for the wrong player.
+func (m *Manager) startTimerLocked(session *Session, expectedSeat int) {
 	if session.timerStyle != "per-move" || session.timerDurationSec <= 0 {
 		return
 	}
@@ -930,7 +939,6 @@ func (m *Manager) startTimerLocked(session *Session) {
 	// post-cancel value, invalidated by any subsequent cancel/restart.
 	session.cancelTurnTimer()
 	gen := session.timerGeneration
-	expectedSeat := session.gameState.ActivePlayerSeat
 
 	duration := time.Duration(session.timerDurationSec) * time.Second
 	session.turnTimer = time.AfterFunc(duration, func() {
@@ -978,15 +986,16 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 		cardID, err := game.AutoPlay(gs)
 		if err != nil {
 			slog.Error("session: auto-play failed", "roomID", session.roomID, "error", err)
-			// Restart timer so the game doesn't stall
-			m.startTimerLocked(session)
+			// Restart timer so the game doesn't stall. The seat that timed out
+			// is still active — re-arm for the same seat.
+			m.startTimerLocked(session, expectedSeat)
 			session.mu.Unlock()
 			return
 		}
 		card, err := game.ParseCard(cardID)
 		if err != nil {
 			slog.Error("session: auto-play card parse failed", "roomID", session.roomID, "cardID", cardID, "error", err)
-			m.startTimerLocked(session)
+			m.startTimerLocked(session, expectedSeat)
 			session.mu.Unlock()
 			return
 		}
@@ -1005,8 +1014,9 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 	newState, err := game.ApplyAction(oldState, action)
 	if err != nil {
 		slog.Error("session: auto-play ApplyAction failed", "roomID", session.roomID, "error", err)
-		// Restart timer so the game doesn't stall permanently
-		m.startTimerLocked(session)
+		// Restart timer so the game doesn't stall permanently. The seat that
+		// timed out is still active — re-arm for the same seat.
+		m.startTimerLocked(session, expectedSeat)
 		session.mu.Unlock()
 		return
 	}
@@ -1095,8 +1105,12 @@ func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expecte
 	//    debugs.
 	//  • Phase is match_end / paused — outer guard skips both.
 	if finalState.Phase == game.PhasePlaying || finalState.Phase == game.PhaseBidding {
+		// Pass finalState.ActivePlayerSeat explicitly: session.gameState is
+		// reassigned to finalState only after this block, so a state-less
+		// startTimerLocked would capture the OLD (timed-out) seat and the next
+		// timer would auto-act for the wrong player.
 		m.setTurnExpiry(session, finalState)
-		m.startTimerLocked(session)
+		m.startTimerLocked(session, finalState.ActivePlayerSeat)
 	}
 
 	session.gameState = finalState

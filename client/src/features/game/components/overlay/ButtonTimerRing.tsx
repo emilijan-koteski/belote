@@ -2,6 +2,8 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "re
 
 import { MOTION } from "@/shared/lib/motion";
 
+import { URGENT_FRACTION } from "../TimerRing";
+
 interface ButtonTimerRingProps {
   /**
    * Either a wall-clock expiry (`turnExpiresAt` ISO string) **or** a
@@ -120,7 +122,7 @@ export function ButtonTimerRing({
   }, []);
 
   const pct = totalDuration > 0 ? Math.max(0, secondsLeft) / totalDuration : 0;
-  const isUrgent = totalDuration > 0 && pct <= 0.125;
+  const isUrgent = totalDuration > 0 && pct <= URGENT_FRACTION;
   // Cream / red palette to match the AutoCloseRing on info-toast X buttons
   // (the avatar's lime/red ring stays the primary turn signal — dialogs use
   // this softer pair so two countdown channels don't compete for attention).

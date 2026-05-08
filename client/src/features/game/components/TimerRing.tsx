@@ -12,6 +12,13 @@ interface TimerRingProps {
    * team label in the name pill) so they don't overlap the avatar initial.
    */
   hideLabel?: boolean;
+  /**
+   * Pre-computed seconds remaining. When provided, TimerRing skips its own
+   * useTurnCountdown subscription and renders against the parent's value.
+   * [PlayerSeat] uses this to share a single ticker between the seat-pill
+   * label and the ring instead of running two parallel intervals.
+   */
+  secondsLeft?: number;
 }
 
 /**
@@ -63,7 +70,9 @@ const SIZE_CONFIG = {
 // Urgency threshold expressed as a fraction of `totalDuration`. When ≤1/8 of
 // the turn timer remains, the ring + label flip from lime to red. The flip is
 // independent of team identity (Gold/Silver carry that channel separately).
-const URGENT_FRACTION = 0.125;
+// Exported so ButtonTimerRing (and any future countdown widget) can stay in
+// lockstep instead of redeclaring 0.125 as a magic literal.
+export const URGENT_FRACTION = 0.125;
 
 const COLOR_LIME = "var(--turn-lime, #00e5a0)";
 const COLOR_URGENT = "var(--turn-urgent, #ef4444)";
@@ -85,8 +94,17 @@ export function TimerRing({
   totalDuration,
   size = "seat",
   hideLabel = false,
+  secondsLeft: secondsLeftProp,
 }: TimerRingProps) {
-  const secondsLeft = useTurnCountdown(turnExpiresAt);
+  // When the parent already runs useTurnCountdown (PlayerSeat does, for the
+  // seat-pill label), accept its value to avoid a second interval. Hooks
+  // can't be conditional, so we always call useTurnCountdown — but ignore its
+  // value when secondsLeftProp is provided. The hook short-circuits cheaply
+  // when turnExpiresAt is null (no interval is started).
+  const internalSecondsLeft = useTurnCountdown(
+    secondsLeftProp === undefined ? turnExpiresAt : null,
+  );
+  const secondsLeft = secondsLeftProp ?? internalSecondsLeft;
 
   if (!turnExpiresAt) {
     return null;

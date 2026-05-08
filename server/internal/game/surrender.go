@@ -40,8 +40,10 @@ func handleSurrenderRequest(state *GameState, action Action) (*GameState, error)
 
 // handleSurrenderAccept processes the partner accepting a pending surrender.
 // Only the proposer's partner (seat = (proposer + 2) % 4) may accept.
-// Transitions the match into PhaseMatchEnd with the opposing team as winner;
-// the per-move turn timer is cancelled (mirrors the natural match-end shape).
+// Transitions the match into PhaseMatchEnd with the opposing team as winner
+// and clears the per-move TurnExpiresAt / TurnTimeRemaining fields on the
+// returned state (rules engine is pure — the actual *time.Timer goroutine is
+// stopped by the session manager's preemptive cancelTurnTimer in HandleAction).
 // SurrenderUsed[proposer] stays true — the attempt has been spent.
 func handleSurrenderAccept(state *GameState, action Action) (*GameState, error) {
 	if state.Phase == PhasePaused {

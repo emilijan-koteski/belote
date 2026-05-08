@@ -199,10 +199,12 @@ export function TrumpPrompt({
             </span>
             <div className="flex items-center gap-3.5">
               {showRing ? (
+                // Visual countdown only — server-authoritative auto-pass on
+                // expiry. A client-side onExpire would race the server's
+                // ActionPassTrump auto-action and surface a wrong-phase toast.
                 <ButtonTimerRing
                   turnExpiresAt={turnExpiresAt}
                   totalDuration={timerDurationSec ?? 0}
-                  onExpire={onPass}
                 >
                   <ClassicButton onClick={onPass} data-testid="trump-prompt-pass">
                     {t("game.trumpPrompt.pass")}

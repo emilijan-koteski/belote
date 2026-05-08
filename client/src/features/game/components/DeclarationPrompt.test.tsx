@@ -161,7 +161,7 @@ describe("DeclarationPrompt", () => {
       vi.useRealTimers();
     });
 
-    it("calls onSkip once when the in-dialog timer ring reaches zero", () => {
+    it("does NOT fire onSkip when the in-dialog timer ring reaches zero (server-authoritative auto-skip)", () => {
       const onSkip = vi.fn();
       const expiry = new Date(Date.now() + 5000).toISOString();
       render(
@@ -178,7 +178,8 @@ describe("DeclarationPrompt", () => {
       act(() => {
         vi.advanceTimersByTime(6000);
       });
-      expect(onSkip).toHaveBeenCalledTimes(1);
+      // Server-authoritative: auto-skip arrives via state push, not from the client.
+      expect(onSkip).not.toHaveBeenCalled();
     });
   });
 });
