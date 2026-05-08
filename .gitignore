@@ -24,7 +24,6 @@ lerna-debug.log*
 # IDE
 .idea/
 .vscode/
-.claude/settings.json
 .claude/settings.local.json
 .claude/design/
 *.swp
