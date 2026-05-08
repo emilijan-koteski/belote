@@ -263,7 +263,7 @@
     "trumpPrompt": {
       "titleRound1": "Uzmi adut ili dalje",
       "titleRound2": "Izaberi bilo koju boju — ili dalje",
-      "subtitleRound1": "Kandidat: {{candidate}} · uzmi ovu boju ili prepusti sledećem igraču.",
+      "subtitleRound1": "Uzmi ovu boju ili prepusti sledećem igraču.",
       "subtitleRound2": "Drugi krug · bilo koja boja osim kandidata.",
       "bodyRound1": "Kandidat karta je okrenuta. Uzmi je kao adut za svoj tim, ili prepusti sledećem igraču.",
       "roundLabel": "Krug {{round}} / 2",
@@ -391,12 +391,14 @@
       "confirm": {
         "title": "Predati meč?",
         "body": "Tvoj saigrač mora da prihvati. Ako odbije, tvoj jedini pokušaj predaje je iskorišćen.",
+        "consumeWarning": "Jednokratna radnja — odbijen predlog troši tvoj jedini pokušaj.",
         "confirm": "Predloži predaju",
         "cancel": "Otkaži"
       },
       "prompt": {
         "title": "Tvoj saigrač želi da preda meč",
         "body": "{{username}} predlaže da predate meč. Ako prihvatiš, meč se završava kao pobeda protivnika.",
+        "consequence": "Prihvatanjem se meč završava u korist protivnika.",
         "accept": "Prihvati predaju",
         "decline": "Odbij"
       },
@@ -443,7 +445,9 @@
     },
     "rules": {
       "title": "Pravila igre",
-      "comingSoon": "Detaljna pravila stižu uskoro — proverite ponovo."
+      "comingSoon": "Detaljna pravila stižu uskoro — proverite ponovo.",
+      "statusHint": "Vodiči za licitaciju, najave i bodovanje stižu sledeći.",
+      "close": "Zatvori"
     }
   },
   "ws": {

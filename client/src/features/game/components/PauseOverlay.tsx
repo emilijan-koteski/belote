@@ -1,3 +1,4 @@
+import { Crown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { PlayerState } from "@/shared/types/gameTypes";
@@ -113,46 +114,50 @@ export function PauseOverlay({
             })}
           </div>
 
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center justify-center gap-3">
-              {hasActivePause ? (
-                <ClassicButton
-                  variant="primary"
-                  onClick={onResume}
-                  data-testid="pause-resume-button"
-                >
-                  {t("game.pause.resume")}
-                </ClassicButton>
-              ) : canStackPause ? (
-                <ClassicButton onClick={onPause} data-testid="pause-stack-button">
-                  {t("game.pause.pauseButton")}
-                </ClassicButton>
-              ) : (
-                <p
-                  className="font-body text-sm italic"
-                  style={{ color: "var(--ink-light, #f5f2e8)", opacity: 0.65 }}
-                  data-testid="pause-waiting"
-                >
-                  {t("game.pause.waitingToResume")}
-                </p>
-              )}
-            </div>
-
-            {isRoomOwner && (
-              <button
-                type="button"
+          {/* Owner-override + primary action share one row, justified to the
+              edges. The override sits on the left in a red-tinted felt ghost
+              variant — it stays in the ClassicButton family (felt + serif)
+              while a Crown glyph and red border flag it as an admin-only
+              action distinct from the player-level Resume on the right. */}
+          <div className="flex items-center justify-between gap-3">
+            {isRoomOwner ? (
+              <ClassicButton
                 onClick={onOwnerResume}
                 data-testid="pause-owner-resume-button"
-                className="font-body text-sm font-semibold rounded-lg px-4 py-1.5 transition-colors hover:bg-red-500/10"
                 style={{
-                  border: "1px solid rgba(239,68,68,0.45)",
-                  color: "rgb(248,113,113)",
-                  background: "transparent",
-                  fontFamily: 'Georgia, "Times New Roman", serif',
+                  border: "1px solid rgba(255,133,133,0.45)",
+                  color: "#ffb1a8",
+                  background: "linear-gradient(180deg, rgba(70,32,32,0.55), rgba(40,18,18,0.45))",
+                  boxShadow: "inset 0 1px 0 rgba(255,133,133,0.18)",
+                  padding: "8px 14px",
+                  fontSize: 13,
                 }}
               >
-                {t("game.pause.resumeAll")}
-              </button>
+                <span className="inline-flex items-center gap-1.5">
+                  <Crown size={13} aria-hidden="true" />
+                  {t("game.pause.resumeAll")}
+                </span>
+              </ClassicButton>
+            ) : (
+              <span aria-hidden />
+            )}
+
+            {hasActivePause ? (
+              <ClassicButton variant="primary" onClick={onResume} data-testid="pause-resume-button">
+                {t("game.pause.resume")}
+              </ClassicButton>
+            ) : canStackPause ? (
+              <ClassicButton onClick={onPause} data-testid="pause-stack-button">
+                {t("game.pause.pauseButton")}
+              </ClassicButton>
+            ) : (
+              <p
+                className="font-body text-sm italic"
+                style={{ color: "var(--ink-light, #f5f2e8)", opacity: 0.65 }}
+                data-testid="pause-waiting"
+              >
+                {t("game.pause.waitingToResume")}
+              </p>
             )}
           </div>
         </ClassicPanel>

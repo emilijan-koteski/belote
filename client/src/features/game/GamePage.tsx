@@ -67,9 +67,9 @@ function compassOffset(seat: number, myPlayerSeat: number): number {
 
 const SEAT_POSITIONS: Record<number, string> = {
   0: "bottom-44 left-1/2 -translate-x-1/2", // South (self) - above the fanned hand
-  1: "right-12 top-1/2 -translate-y-1/2", // East (next player counter-clockwise) - inset off wood rim
-  2: "top-12 left-1/2 -translate-x-1/2", // North (partner) - clears the wordmark
-  3: "left-12 top-1/2 -translate-y-1/2", // West (third player) - inset off wood rim
+  1: "right-16 top-1/2 -translate-y-1/2", // East (next player counter-clockwise) - inset off wood rim
+  2: "top-16 left-1/2 -translate-x-1/2", // North (partner) - clears the wordmark
+  3: "left-16 top-1/2 -translate-y-1/2", // West (third player) - inset off wood rim
 };
 
 const SEAT_ORIENTATIONS: Record<number, SeatOrientation> = {

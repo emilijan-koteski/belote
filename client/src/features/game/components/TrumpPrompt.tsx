@@ -80,16 +80,12 @@ export function TrumpPrompt({
   const title =
     biddingRound === 1 ? t("game.trumpPrompt.titleRound1") : t("game.trumpPrompt.titleRound2");
 
-  // Subtitle mirrors the design: round 1 calls out the candidate's rank+suit
-  // glyph; round 2 reminds the player the candidate suit is locked.
-  const candidateLabel =
-    trumpCandidate !== null ? `${trumpCandidate.rank}${SUIT_SYMBOL[trumpCandidate.suit]}` : "";
+  // Subtitle copy stays generic — the candidate card is already rendered at
+  // 80×116 directly below, so a "Candidate: T♣" prefix would just repeat in
+  // text what the visual already shows.
   const subtitle =
     biddingRound === 1
-      ? t("game.trumpPrompt.subtitleRound1", {
-          candidate: candidateLabel,
-          defaultValue: `Candidate: ${candidateLabel} · adopt this suit, or pass to the next player.`,
-        })
+      ? t("game.trumpPrompt.subtitleRound1")
       : t("game.trumpPrompt.subtitleRound2");
 
   // Round 2: all four suits render so the layout is stable, but the

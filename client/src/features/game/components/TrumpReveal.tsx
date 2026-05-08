@@ -129,9 +129,7 @@ export function TrumpReveal({
             data-testid="trump-reveal-title"
             data-seat={playerSeat}
           >
-            <span className="capitalize">
-              {titleName} · {suitName}
-            </span>
+            {titleName} · {suitName}
           </div>
           {team && teamLabel && (
             <div className="flex items-center gap-2 mt-1">
