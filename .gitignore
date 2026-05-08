@@ -5,9 +5,11 @@ node_modules/
 client/dist/
 client/dist-ssr/
 server/bin/
+*.tsbuildinfo
 
 # Environment
-.env
+.env*
+!.env.example
 *.local
 
 # Logs
