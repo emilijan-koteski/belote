@@ -4,7 +4,7 @@ import { MOTION } from "@/shared/lib/motion";
 import type { PlayerState, Suit } from "@/shared/types/gameTypes";
 
 import { type SeatTeam, teamColors, teamLabelKey } from "../lib/tableTheme";
-import { TimerRing } from "./TimerRing";
+import { isCountdownUrgent, TimerRing, useTurnCountdown } from "./TimerRing";
 
 export type SeatOrientation = "bottom" | "left" | "top" | "right";
 
@@ -58,6 +58,7 @@ const AVATAR_DISC_PX = 64;
 const AVATAR_FRAME_PX = AVATAR_DISC_PX + 16; // 3 px conic frame + 5 px ring lane
 
 const TURN_LIME = "var(--turn-lime, #00e5a0)";
+const COLOR_URGENT = "var(--turn-urgent, #ef4444)";
 // Hard-coded RGBA so the active glow keeps its alpha — `var()` cannot be
 // concatenated with extra hex digits (the CSS parser drops the whole
 // declaration on `var(--x, #fff)99`, which had been silently disabling
@@ -184,6 +185,11 @@ export function PlayerSeat({
   const teamLabel = t(teamLabelKey(seatTeam));
   const teamGradient = teamColors(seatTeam);
 
+  // Hook must run before the empty-seat early return — the seconds drive the
+  // external label rendered inside the name pill (next to the team label).
+  // Returns 0 when there's no expiry, so an empty/inactive seat costs nothing.
+  const secondsLeft = useTurnCountdown(turnExpiresAt ?? null);
+
   if (!player) {
     return (
       <div
@@ -227,6 +233,8 @@ export function PlayerSeat({
     Boolean(turnExpiresAt) &&
     timerDuration !== undefined &&
     timerDuration > 0;
+
+  const secondsUrgent = showRing && isCountdownUrgent(secondsLeft, timerDuration ?? 0);
 
   const callerChipNode = trumpCallerSuit ? (
     <StatusChip
@@ -299,9 +307,15 @@ export function PlayerSeat({
             {initial}
           </div>
         </div>
-        {/* Countdown ring overlay (lime → urgent red ≤25%) */}
+        {/* Countdown ring overlay (lime → urgent red ≤1/8). The numeric label
+            is suppressed here so the avatar initial stays legible — the
+            seconds are rendered in the name pill team-label row instead. */}
         {showRing && (
-          <TimerRing turnExpiresAt={turnExpiresAt ?? null} totalDuration={timerDuration ?? 0} />
+          <TimerRing
+            turnExpiresAt={turnExpiresAt ?? null}
+            totalDuration={timerDuration ?? 0}
+            hideLabel
+          />
         )}
         {/* Stackable status chips: caller occupies the left slot, dealer the
             right (positions kept as before). The caller chip wins the z-order
@@ -365,6 +379,20 @@ export function PlayerSeat({
             aria-hidden
           />
           <span style={{ letterSpacing: 0.6, opacity: 0.7 }}>{teamLabel}</span>
+          {showRing && (
+            <span
+              className="font-body font-semibold tabular-nums"
+              style={{
+                color: secondsUrgent ? COLOR_URGENT : TURN_LIME,
+                transition: `color ${MOTION.RING_COLOR_FLIP}ms ease`,
+                marginLeft: 4,
+              }}
+              data-testid="player-seat-timer-seconds"
+              aria-label={`${secondsLeft} seconds remaining`}
+            >
+              {secondsLeft}s
+            </span>
+          )}
         </span>
       </div>
 

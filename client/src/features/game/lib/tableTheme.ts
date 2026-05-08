@@ -35,7 +35,7 @@ export const TEAM_SILVER = ["#d8dde4", "#8b919a"] as const;
 /** Gradient stops for the universal turn / action signal. */
 export const TURN_LIME = ["#00e5a0", "#00a878"] as const;
 
-/** Gradient stops for the urgent flip on ≤25% timer remaining. */
+/** Gradient stops for the urgent flip on ≤1/8 timer remaining. */
 export const TURN_URGENT = ["#ef4444", "#b91c1c"] as const;
 
 export type TeamGradient = readonly [string, string];

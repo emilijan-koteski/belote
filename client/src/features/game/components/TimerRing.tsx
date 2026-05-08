@@ -6,39 +6,21 @@ interface TimerRingProps {
   turnExpiresAt: string | null;
   totalDuration: number; // total timer duration in seconds (for ring progress)
   size?: "seat" | "button";
+  /**
+   * Suppress the inner seconds label. The ring still renders. Used by
+   * [PlayerSeat] which displays the seconds outside the avatar (next to the
+   * team label in the name pill) so they don't overlap the avatar initial.
+   */
+  hideLabel?: boolean;
 }
 
-const SIZE_CONFIG = {
-  // 70px sits inside the avatar's 80px outer frame (avatar 64 + 16 padding)
-  // so the countdown traces *just inside* the gold/silver team ring rather
-  // than around it. Combined with the active-state outer lime ring on the
-  // frame's box-shadow, this gives a 3-band stack: outer lime · gold ·
-  // inner lime timer.
-  seat: { px: 70, strokeWidth: 2.5, labelClass: "text-xs" },
-  button: { px: 36, strokeWidth: 2, labelClass: "text-[10px]" },
-} as const;
-
-// Urgency threshold expressed as a fraction of `totalDuration`. When ≤25% of
-// the turn timer remains, the ring + label flip from lime to red. The flip is
-// independent of team identity (Gold/Silver carry that channel separately).
-const URGENT_FRACTION = 0.25;
-
-const COLOR_LIME = "var(--turn-lime, #00e5a0)";
-const COLOR_URGENT = "var(--turn-urgent, #ef4444)";
-
 /**
- * SVG countdown ring around the active player's avatar (or wrapped around an
- * action button via `size="button"`).
- *
- * Color channel:
- *  • lime  → plenty of time
- *  • red   → ≤25% of `totalDuration` remains, including 0s (expired)
- *
- * The ring transitions stroke + dashoffset on a 1s linear sweep so the
- * countdown reads continuously rather than ticking. A drop-shadow glow on the
- * progress arc lifts it off the felt without needing a second stroke.
+ * Subscribes to the per-second countdown derived from `turnExpiresAt`. Returns
+ * `0` when `turnExpiresAt` is null or already past. Pulled out so [PlayerSeat]
+ * can render the seconds outside the ring without forcing a second source of
+ * truth — both consumers tick on the same `MOTION.COUNTDOWN_TICK` cadence.
  */
-export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: TimerRingProps) {
+export function useTurnCountdown(turnExpiresAt: string | null): number {
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   useEffect(() => {
@@ -49,8 +31,7 @@ export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: Timer
 
     function computeRemaining() {
       const expiryMs = new Date(turnExpiresAt!).getTime();
-      const remaining = Math.max(0, Math.ceil((expiryMs - Date.now()) / 1000));
-      return remaining;
+      return Math.max(0, Math.ceil((expiryMs - Date.now()) / 1000));
     }
 
     setSecondsLeft(computeRemaining());
@@ -66,6 +47,47 @@ export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: Timer
     return () => clearInterval(interval);
   }, [turnExpiresAt]);
 
+  return secondsLeft;
+}
+
+const SIZE_CONFIG = {
+  // 70px sits inside the avatar's 80px outer frame (avatar 64 + 16 padding)
+  // so the countdown traces *just inside* the gold/silver team ring rather
+  // than around it. Combined with the active-state outer lime ring on the
+  // frame's box-shadow, this gives a 3-band stack: outer lime · gold ·
+  // inner lime timer.
+  seat: { px: 70, strokeWidth: 2.5, labelClass: "text-xs" },
+  button: { px: 36, strokeWidth: 2, labelClass: "text-[10px]" },
+} as const;
+
+// Urgency threshold expressed as a fraction of `totalDuration`. When ≤1/8 of
+// the turn timer remains, the ring + label flip from lime to red. The flip is
+// independent of team identity (Gold/Silver carry that channel separately).
+const URGENT_FRACTION = 0.125;
+
+const COLOR_LIME = "var(--turn-lime, #00e5a0)";
+const COLOR_URGENT = "var(--turn-urgent, #ef4444)";
+
+/**
+ * SVG countdown ring around the active player's avatar (or wrapped around an
+ * action button via `size="button"`).
+ *
+ * Color channel:
+ *  • lime  → plenty of time
+ *  • red   → ≤1/8 of `totalDuration` remains, including 0s (expired)
+ *
+ * The ring transitions stroke + dashoffset on a 1s linear sweep so the
+ * countdown reads continuously rather than ticking. A drop-shadow glow on the
+ * progress arc lifts it off the felt without needing a second stroke.
+ */
+export function TimerRing({
+  turnExpiresAt,
+  totalDuration,
+  size = "seat",
+  hideLabel = false,
+}: TimerRingProps) {
+  const secondsLeft = useTurnCountdown(turnExpiresAt);
+
   if (!turnExpiresAt) {
     return null;
   }
@@ -76,8 +98,8 @@ export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: Timer
   const progress = totalDuration > 0 ? Math.min(1, Math.max(0, secondsLeft / totalDuration)) : 0;
   const dashOffset = circumference * (1 - progress);
 
-  // Single threshold: under URGENT_FRACTION of the original duration the ring
-  // flips to red. 0s remaining still reads as red because progress = 0.
+  // Single threshold: under URGENT_FRACTION (1/8) of the original duration the
+  // ring flips to red. 0s remaining still reads as red because progress = 0.
   const isUrgent = totalDuration > 0 && progress <= URGENT_FRACTION;
   const strokeColor = isUrgent ? COLOR_URGENT : COLOR_LIME;
   // Pulse the ring while urgent so the urgency reads even at a glance. Only
@@ -126,13 +148,26 @@ export function TimerRing({ turnExpiresAt, totalDuration, size = "seat" }: Timer
           className="motion-reduce:transition-none"
         />
       </svg>
-      <span
-        className={`absolute font-body font-semibold tabular-nums ${labelClass}`}
-        style={{ color: strokeColor, transition: `color ${MOTION.RING_COLOR_FLIP}ms ease` }}
-        data-testid="timer-seconds"
-      >
-        {secondsLeft}
-      </span>
+      {!hideLabel && (
+        <span
+          className={`absolute font-body font-semibold tabular-nums ${labelClass}`}
+          style={{ color: strokeColor, transition: `color ${MOTION.RING_COLOR_FLIP}ms ease` }}
+          data-testid="timer-seconds"
+        >
+          {secondsLeft}
+        </span>
+      )}
     </div>
   );
+}
+
+/**
+ * Whether the countdown should read as urgent (≤1/8 of the total duration
+ * remains, including 0). Exported so [PlayerSeat] colors the external label
+ * the same way the ring does.
+ */
+export function isCountdownUrgent(secondsLeft: number, totalDuration: number): boolean {
+  if (totalDuration <= 0) return false;
+  const progress = Math.min(1, Math.max(0, secondsLeft / totalDuration));
+  return progress <= URGENT_FRACTION;
 }

@@ -37,7 +37,7 @@ interface ButtonTimerRingProps {
  *
  * Two channels:
  *   • lime  → plenty of time
- *   • red   → ≤25% remaining (urgent — same threshold as PlayerSeat ring)
+ *   • red   → ≤1/8 remaining (urgent — same threshold as PlayerSeat ring)
  *
  * The wrapper measures the wrapped button via ResizeObserver so the sweep
  * traces the actual button shape regardless of label width / padding.
@@ -120,7 +120,7 @@ export function ButtonTimerRing({
   }, []);
 
   const pct = totalDuration > 0 ? Math.max(0, secondsLeft) / totalDuration : 0;
-  const isUrgent = totalDuration > 0 && pct <= 0.25;
+  const isUrgent = totalDuration > 0 && pct <= 0.125;
   // Cream / red palette to match the AutoCloseRing on info-toast X buttons
   // (the avatar's lime/red ring stays the primary turn signal — dialogs use
   // this softer pair so two countdown channels don't compete for attention).

@@ -106,7 +106,7 @@ body {
    • Gold     → "Us" team identity (viewer-relative)
    • Silver   → "Them" team identity (viewer-relative)
    • Lime     → universal turn / playable / action signal
-   • Urgent   → red flip on ≤25% of turn timer remaining
+   • Urgent   → red flip on ≤1/8 of turn timer remaining
    • Brass    → every chrome edge (borders, filigree, primary buttons)
 
    The lobby/auth/room screens keep the existing Balatro tokens (--color-team-a

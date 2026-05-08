@@ -29,7 +29,7 @@ describe("TimerRing", () => {
     expect(Number(seconds.textContent)).toBeLessThanOrEqual(26);
   });
 
-  it("renders lime color while above the 25% urgency threshold", () => {
+  it("renders lime color while above the 1/8 urgency threshold", () => {
     const now = new Date();
     const expiry = new Date(now.getTime() + 20000); // 20s of 30s = 66.6%
 
@@ -41,9 +41,21 @@ describe("TimerRing", () => {
     expect(ring.dataset.urgent).toBe("false");
   });
 
-  it("flips to urgent red when ≤25% of the turn timer remains", () => {
+  it("stays lime when above 1/8 even though the old 25% rule would flip", () => {
     const now = new Date();
-    const expiry = new Date(now.getTime() + 6000); // 6s of 30s = 20% — urgent
+    const expiry = new Date(now.getTime() + 6000); // 6s of 30s = 20% — above 1/8
+
+    render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
+
+    const seconds = screen.getByTestId("timer-seconds");
+    expect(seconds.style.color).toContain("--turn-lime");
+    const ring = screen.getByTestId("timer-ring");
+    expect(ring.dataset.urgent).toBe("false");
+  });
+
+  it("flips to urgent red when ≤1/8 of the turn timer remains", () => {
+    const now = new Date();
+    const expiry = new Date(now.getTime() + 3000); // 3s of 30s = 10% — urgent
 
     render(<TimerRing turnExpiresAt={expiry.toISOString()} totalDuration={30} />);
 
