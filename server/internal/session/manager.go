@@ -181,10 +181,28 @@ func (m *Manager) HandleAction(client *ws.Client, msg ws.WSMessage) {
 	oldState := session.gameState
 	newState, err := game.ApplyAction(oldState, action)
 	if err != nil {
-		// Restart timer since we cancelled it but the action failed
-		if oldState.Phase != game.PhasePaused {
-			m.setTurnExpiry(session, oldState)
-			m.startTimerLocked(session)
+		// Restart timer since we cancelled it preemptively at line 179, but
+		// restore the ORIGINAL deadline rather than minting a fresh full
+		// window. Two reasons:
+		//   1. We don't broadcast state on error, so all four clients still
+		//      hold the original TurnExpiresAt. A fresh full window would
+		//      silently desync server↔clients: the UI ticks to 0 while the
+		//      server quietly waits another full duration before auto-acting.
+		//      Players see "0s" sit on the screen for several seconds before
+		//      the card finally auto-throws.
+		//   2. Fairness: any player (not just the active one) can hit this
+		//      branch by clicking an illegal card / sending a stale action.
+		//      Resetting to a fresh window would let any client extend the
+		//      active player's turn indefinitely via spam.
+		if oldState.Phase != game.PhasePaused && session.timerStyle == "per-move" && oldState.TurnExpiresAt != nil {
+			// Clamp to ≥ 0 so an already-expired deadline fires the auto-action
+			// immediately rather than tripping AfterFunc's negative-duration path.
+			remaining := max(time.Until(*oldState.TurnExpiresAt), 0)
+			gen := session.timerGeneration
+			expectedSeat := oldState.ActivePlayerSeat
+			session.turnTimer = time.AfterFunc(remaining, func() {
+				m.handleTimerExpiry(session, gen, expectedSeat)
+			})
 		}
 		session.mu.Unlock()
 		m.sendGameError(client.UserID, err)

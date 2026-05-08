@@ -1145,3 +1145,43 @@ func TestHandleAction_SkipBelot_RefreshesTurnExpiryForNextSeat(t *testing.T) {
 		"skip_belot advances seat — fresh expiry must be > old expiry")
 	assert.NotEqual(t, 0, newState.ActivePlayerSeat, "skip_belot must advance the seat")
 }
+
+// TestHandleAction_InvalidAction_PreservesOriginalTurnExpiry guards against the
+// regression where a failing action would silently mint a fresh full-duration
+// turn timer. Reproduces the production symptom: the active player's UI shows
+// "0s" while the server is actually running an extended timer that nobody
+// sees, so the auto-throw fires several seconds late. Any client (not just
+// the active seat) can hit this branch by sending an illegal action, which
+// also opened a fairness loophole — spamming invalid clicks would extend the
+// active player's turn indefinitely. After the fix, an invalid action MUST
+// preserve oldState.TurnExpiresAt so client UIs stay aligned with the
+// server-side deadline.
+func TestHandleAction_InvalidAction_PreservesOriginalTurnExpiry(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	repo := newMockMatchRepo()
+	mgr := session.NewManager(hub, repo)
+	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 120))
+
+	// Inject a known TurnExpiresAt with seat 1 active, then have a non-active
+	// seat (UserID=10 → seat 0) attempt to play a card. ApplyAction returns
+	// ErrNotYourTurn; the timer must NOT be extended.
+	originalExpiry := time.Now().Add(20 * time.Second)
+	mgr.SetGameStateForTest(100, firstTrickStateAt(1, originalExpiry, false))
+
+	mgr.HandleAction(&ws.Client{UserID: 10}, ws.WSMessage{
+		Type:    ws.ActionPlayCard,
+		Payload: json.RawMessage(`{"cardId":"7H"}`),
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	after := mgr.GetStateSnapshot(100)
+	require.NotNil(t, after)
+	require.NotNil(t, after.TurnExpiresAt, "invalid action must not clear the active timer")
+	assert.True(t, after.TurnExpiresAt.Equal(originalExpiry),
+		"invalid action must preserve oldState.TurnExpiresAt — got %v, want %v",
+		after.TurnExpiresAt, originalExpiry)
+	assert.Equal(t, 1, after.ActivePlayerSeat, "invalid action must not advance the seat")
+}
