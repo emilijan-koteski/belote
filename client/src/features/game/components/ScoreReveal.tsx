@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
@@ -7,7 +7,6 @@ import { type Suit, type TeamString, teamStringForIndex } from "@/shared/types/g
 import type { HandScoredPayload } from "@/shared/types/wsEvents";
 
 import { TEAM_GOLD, TEAM_SILVER, type TeamGradient } from "../lib/tableTheme";
-import { ButtonTimerRing } from "./overlay/ButtonTimerRing";
 import { ClassicButton } from "./overlay/ClassicButton";
 import { ClassicPanel } from "./overlay/ClassicPanel";
 import { OverlayBackdrop } from "./overlay/OverlayBackdrop";
@@ -36,8 +35,6 @@ function callerTeamString(seat: number): TeamString {
 }
 
 // Re-exported constants for tests / reads — see `MOTION` for canonical values.
-const AUTO_DISMISS_MS = MOTION.SCORE_REVEAL_DISMISS;
-const AUTO_DISMISS_MS_REDUCED = MOTION.SCORE_REVEAL_DISMISS_REDUCED;
 const ENABLE_DELAY_MS = MOTION.SCORE_REVEAL_ENABLE_DELAY;
 const ENABLE_DELAY_MS_REDUCED = MOTION.SCORE_REVEAL_ENABLE_DELAY_REDUCED;
 
@@ -45,9 +42,10 @@ const ENABLE_DELAY_MS_REDUCED = MOTION.SCORE_REVEAL_ENABLE_DELAY_REDUCED;
  * End-of-hand score reveal — felt-panel breakdown of card points + decls
  * + bonuses, ending in a brass-tinted match-score strip.
  *
- * Continue is disabled for the first 2 s so the player can read the breakdown,
- * then enabled. The whole reveal auto-closes after 8 s — the timer ring
- * around Continue makes that explicit.
+ * Continue is disabled for the first ~2 s so the player has time to read the
+ * breakdown, then enabled. The reveal stays up indefinitely until the player
+ * clicks Continue — same dismissal model as MatchResult, so an AFK player
+ * doesn't miss their own hand recap.
  */
 export function ScoreReveal({
   data,
@@ -66,25 +64,11 @@ export function ScoreReveal({
     ENABLE_DELAY_MS,
     ENABLE_DELAY_MS_REDUCED,
   );
-  const dismissAt = motionDuration(prefersReducedMotion, AUTO_DISMISS_MS, AUTO_DISMISS_MS_REDUCED);
 
   useEffect(() => {
     const t = setTimeout(() => setContinueEnabled(true), enableDelay);
     return () => clearTimeout(t);
   }, [enableDelay]);
-
-  // Auto-dismiss after the reveal window. Hold onContinue in a ref so the
-  // dismiss timer doesn't re-arm if the parent re-creates the callback
-  // mid-reveal (e.g. when event:match_end lands and the parent rebuilds its
-  // continue closure). Tested by the regression-guard test.
-  const onContinueRef = useRef(onContinue);
-  useEffect(() => {
-    onContinueRef.current = onContinue;
-  }, [onContinue]);
-  useEffect(() => {
-    const t = setTimeout(() => onContinueRef.current(), dismissAt);
-    return () => clearTimeout(t);
-  }, [dismissAt]);
 
   const teamAGradient: TeamGradient = viewerTeam === "teamA" ? TEAM_GOLD : TEAM_SILVER;
   const teamBGradient: TeamGradient = viewerTeam === "teamB" ? TEAM_GOLD : TEAM_SILVER;
@@ -204,8 +188,8 @@ export function ScoreReveal({
 
             {/* Match-score brass strip — per design, the strip hosts the
                 "Match score" eyebrow + the {Us · Them / 1001} totals on the
-                left and the Continue button (with its countdown ring) on the
-                right. Combining them keeps the dialog footprint tight. */}
+                left and the Continue button on the right. Combining them
+                keeps the dialog footprint tight. */}
             <div
               className="rounded-lg px-4 py-3 mt-4 flex items-center justify-between gap-4"
               style={{
@@ -237,20 +221,14 @@ export function ScoreReveal({
                   </span>
                 </div>
               </div>
-              <ButtonTimerRing
-                clientCountdown
-                totalDuration={Math.ceil(dismissAt / 1000)}
-                hideRing={prefersReducedMotion}
+              <ClassicButton
+                variant="primary"
+                onClick={onContinue}
+                disabled={!continueEnabled}
+                data-testid="score-reveal-continue"
               >
-                <ClassicButton
-                  variant="primary"
-                  onClick={onContinue}
-                  disabled={!continueEnabled}
-                  data-testid="score-reveal-continue"
-                >
-                  {t("game.scoreReveal.continue")}
-                </ClassicButton>
-              </ButtonTimerRing>
+                {t("game.scoreReveal.continue")}
+              </ClassicButton>
             </div>
           </ClassicPanel>
         </div>

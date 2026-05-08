@@ -121,6 +121,7 @@ export function DeclarationPrompt({
                 <ButtonTimerRing
                   turnExpiresAt={turnExpiresAt}
                   totalDuration={timerDurationSec ?? 0}
+                  onExpire={onSkip}
                 >
                   <ClassicButton onClick={onSkip} data-testid="declaration-prompt-skip">
                     {t("game.declaration.skip")}

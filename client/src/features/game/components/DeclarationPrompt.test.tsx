@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Declaration } from "@/shared/types/gameTypes";
 
@@ -151,5 +151,34 @@ describe("DeclarationPrompt", () => {
       />,
     );
     expect(screen.queryByTestId("button-timer-ring")).not.toBeInTheDocument();
+  });
+
+  describe("auto-skip on timer expiry", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("calls onSkip once when the in-dialog timer ring reaches zero", () => {
+      const onSkip = vi.fn();
+      const expiry = new Date(Date.now() + 5000).toISOString();
+      render(
+        <DeclarationPrompt
+          declarations={mockDeclarations}
+          onDeclare={vi.fn()}
+          onSkip={onSkip}
+          turnExpiresAt={expiry}
+          timerDurationSec={5}
+        />,
+      );
+
+      expect(onSkip).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(6000);
+      });
+      expect(onSkip).toHaveBeenCalledTimes(1);
+    });
   });
 });

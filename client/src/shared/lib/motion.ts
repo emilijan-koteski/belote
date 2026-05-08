@@ -97,10 +97,6 @@ export const MOTION = {
   EMOTE_BUBBLE_REDUCED: 1000,
   /** Chat-rail peek preview when the panel is closed. */
   CHAT_PEEK: 2000,
-  /** Score reveal auto-dismiss — long because players read multiple
-   *  rows of breakdown. */
-  SCORE_REVEAL_DISMISS: 8000,
-  SCORE_REVEAL_DISMISS_REDUCED: 1500,
   /** Delay before the score reveal's "Continue" button becomes enabled —
    *  prevents accidental dismissal mid-animation. */
   SCORE_REVEAL_ENABLE_DELAY: 2000,
