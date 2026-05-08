@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/emilijan/belote/server/internal/room"
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/room"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 // mockRepoForLobby is a minimal mock of RoomRepository for lobby disconnect tests.

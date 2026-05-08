@@ -12,11 +12,11 @@ inputDocuments:
   - ux-design-specification.md
 ---
 
-# belote - Epic Breakdown
+# beljot - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for belote, decomposing the requirements from the PRD, UX Design, and Architecture into implementable stories.
+This document provides the complete epic and story breakdown for beljot, decomposing the requirements from the PRD, UX Design, and Architecture into implementable stories.
 
 ## Requirements Inventory
 
@@ -426,7 +426,7 @@ So that I can begin building features on a solid, consistent development environ
 
 As a new player,
 I want to create an account with my email, username, and password,
-So that I have a persistent identity on the Belote platform.
+So that I have a persistent identity on the Beljot platform.
 
 **Acceptance Criteria:**
 
@@ -1423,7 +1423,7 @@ So that I can review past games and track my performance.
 
 As a player,
 I want my profile to show real stats from my games,
-So that I have a meaningful overview of my Belote career.
+So that I have a meaningful overview of my Beljot career.
 
 **Acceptance Criteria:**
 
@@ -1687,7 +1687,7 @@ So that the in-match experience is coherent before Phase 2 introduces more revea
 [Resolves D107 + D108]
 
 **Given** Serbian-language strings "Tim A", "Tim B", "Mi", "Oni" render in the lobby and in-game
-**When** a native Belote-playing reviewer evaluates them
+**When** a native Beljot-playing reviewer evaluates them
 **Then** the strings are confirmed natural by a native speaker, OR replaced with idiomatic equivalents (e.g. "naša ekipa" / "njihova ekipa")
 **And** the change ships in a single i18n update without code-side renames
 [Resolves D125]
@@ -2264,7 +2264,7 @@ The platform is delivered as a mobile-optimized experience (PWA or native client
 ### Story 15.1: PWA / Mobile Layout & Touch Interaction
 
 As a player,
-I want to access Belote on my phone or tablet,
+I want to access Beljot on my phone or tablet,
 So that I can play on the go.
 
 **Acceptance Criteria:**

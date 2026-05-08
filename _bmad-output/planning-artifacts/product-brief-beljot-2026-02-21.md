@@ -5,13 +5,13 @@ date: 2026-02-21
 author: Emilijan
 ---
 
-# Product Brief: belote
+# Product Brief: beljot
 
 <!-- Content will be appended sequentially through collaborative workflow steps -->
 
 ## Executive Summary
 
-Belote is a dedicated online multiplayer platform for Balkan Belot — the regional card game beloved across Macedonia, Serbia, and Croatia — bringing a modern, competitive-grade experience to a passionate community that has been underserved by outdated, generic card game platforms.
+Beljot is a dedicated online multiplayer platform for Balkan Belot — the regional card game beloved across Macedonia, Serbia, and Croatia — bringing a modern, competitive-grade experience to a passionate community that has been underserved by outdated, generic card game platforms.
 
 The platform targets four-player team-based Belot (Croatian and Bitola variants) on desktop web, offering both casual social play and a full competitive ecosystem with ELO matchmaking, seasonal rankings, and leaderboards — the first of its kind for this community.
 
@@ -293,7 +293,7 @@ The MVP is considered successful when:
 
 ### Future Vision
 
-If Belote succeeds and grows beyond the founding circle:
+If Beljot succeeds and grows beyond the founding circle:
 
 - **Mobile** — Progressive web app or native mobile client
 - **Social layer** — Friend system, friend requests, player search

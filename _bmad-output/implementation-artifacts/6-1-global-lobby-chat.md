@@ -118,8 +118,8 @@ so that I can socialize with other players and find people to play with.
         "strings"
         "time"
 
-        "github.com/emilijan/belote/server/internal/user"
-        "github.com/emilijan/belote/server/internal/ws"
+        "github.com/emilijan/beljot/server/internal/user"
+        "github.com/emilijan/beljot/server/internal/ws"
     )
 
     const (
@@ -263,7 +263,7 @@ so that I can socialize with other players and find people to play with.
         sessionManager.HandleAction(client, msg)
     })
     ```
-  - [x] 5.3 Add the `chat` import: `"github.com/emilijan/belote/server/internal/chat"`.
+  - [x] 5.3 Add the `chat` import: `"github.com/emilijan/beljot/server/internal/chat"`.
 
 - [x] Task 6: Frontend — wire `chatStore` for global messages (AC: #3, #4)
   - [x] 6.1 Replace the placeholder [client/src/shared/stores/chatStore.ts](client/src/shared/stores/chatStore.ts) with a real partitioned store:

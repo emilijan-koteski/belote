@@ -1,4 +1,4 @@
-belote.example.com {
+beljot.example.com {
     root * /srv/client/dist
     file_server
 

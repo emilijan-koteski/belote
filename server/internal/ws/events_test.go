@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 // TestTrumpSelectedPayload_JSONContract locks the wire-format field names so

@@ -13,8 +13,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/emilijan/belote/server/internal/apperr"
-	"github.com/emilijan/belote/server/internal/user"
+	"github.com/emilijan/beljot/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/user"
 )
 
 var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)

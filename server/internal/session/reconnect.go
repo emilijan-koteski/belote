@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/emilijan/belote/server/internal/game"
-	"github.com/emilijan/belote/server/internal/match"
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/game"
+	"github.com/emilijan/beljot/server/internal/match"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 // HandleDisconnect is called by the hub when a client truly disconnects (not replaced).

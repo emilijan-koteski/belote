@@ -700,7 +700,7 @@ And the existing stats query at [server/internal/match/gorm_repo.go:34-74](serve
 - [x] **Task 11: Full-stack smoke + lint gates (run before marking the story `review`)**
   - [x] 11.1 Backend: `cd server && go test ./...` — all packages green. `cd server && go vet ./...` clean.
   - [x] 11.2 Frontend: `cd client && npx vitest run` — all tests green (existing + all new component, dispatch, and GamePage cases).
-  - [x] 11.3 **Lint: `cd client && npx prettier --write . && npx eslint .` — Prettier MUST run before committing** ([feedback memory: `feedback_prettier_before_commit.md`](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-belote\memory\feedback_prettier_before_commit.md); CI has failed repeatedly across Stories 7.1, 7.2, 8.1).
+  - [x] 11.3 **Lint: `cd client && npx prettier --write . && npx eslint .` — Prettier MUST run before committing** ([feedback memory: `feedback_prettier_before_commit.md`](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-beljot\memory\feedback_prettier_before_commit.md); CI has failed repeatedly across Stories 7.1, 7.2, 8.1).
   - [x] 11.4 `make lint` (both stacks) — clean. On Windows shells without `golangci-lint` installed, fall back to `go vet ./...` as the static-analysis gate (matching Stories 7.2 + 8.1 Dev Agent Record practice).
   - [x] 11.5 Migration round-trip: `make migrate` (up) → check schema → `make migrate down` → check schema reverts → `make migrate` (up) again. Verify `surrendered_by` column and index appear/disappear cleanly.
   - [x] 11.6 Manual smoke (document outcomes in Completion Notes):
@@ -827,7 +827,7 @@ The architecturally interesting choice is **typing `MatchEndPayload` as a struct
 - **WS event prefixes** ([\_bmad-output/planning-artifacts/architecture.md#L327-L336](_bmad-output/planning-artifacts/architecture.md#L327-L336)). Game-state events use `event:`, errors use `error:`, client→server uses `action:`. Surrender events fit cleanly: `action:surrender_*`, `event:surrender_*`, `error:surrender_*`.
 - **Same-commit WS contract sync** ([\_bmad-output/project-context.md#L80, #L286](_bmad-output/project-context.md#L80)). [server/internal/ws/events.go](server/internal/ws/events.go) and [client/src/shared/types/wsEvents.ts](client/src/shared/types/wsEvents.ts) MUST be updated together.
 - **Additive JSON-extension discipline**. New `MatchEndPayload` fields are `omitempty` (`outcomeReason`, `surrenderedByPlayer`); new `GameState` fields default to zero values that serialize correctly. No existing client breaks.
-- **`data-testid` over text/Tailwind queries** ([Story 7.1, 7.2, 8.1 reinforced](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-belote\memory\MEMORY.md)). All new components expose stable `data-testid`s. No tests query by Tailwind class or visible string.
+- **`data-testid` over text/Tailwind queries** ([Story 7.1, 7.2, 8.1 reinforced](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-beljot\memory\MEMORY.md)). All new components expose stable `data-testid`s. No tests query by Tailwind class or visible string.
 - **i18n parity is CI-enforced** by [client/src/shared/i18n/i18n.test.ts](client/src/shared/i18n/i18n.test.ts) recursive `flattenKeys` check. Any English key without a Serbian counterpart fails CI.
 - **Server is the authority for game state**; client UI is presentational. The surrender button does not optimistically set `surrenderProposerSeat` — it waits for the WS broadcast (which the proposer also receives, identical to how the pause button works).
 - **No `enum`s in TypeScript** — use union literal types (project-context Go/TS rule). The `outcomeReason` field is typed as `?: "surrender"` (literal), not an enum.
@@ -992,8 +992,8 @@ When the partner clicks Accept: the WS round-trip fires `event:match_end` → `M
 - [Source: client/src/shared/types/gameTypes.ts — extend GameState with new fields; extend ActionType union](client/src/shared/types/gameTypes.ts)
 - [Source: client/src/shared/i18n/en.json + sr.json — game.surrender.\* block to add; matchResult.surrenderNote sub-key](client/src/shared/i18n/en.json)
 - [Source: client/src/shared/i18n/i18n.test.ts — recursive flattenKeys parity check (CI gate)](client/src/shared/i18n/i18n.test.ts)
-- [Source: feedback memory — Prettier before every commit](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-belote\memory\feedback_prettier_before_commit.md)
-- [Source: project memory — Belote uses BMM module](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-belote\memory\project_bmad_module.md)
+- [Source: feedback memory — Prettier before every commit](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-beljot\memory\feedback_prettier_before_commit.md)
+- [Source: project memory — Beljot uses BMM module](C:\Users\Emilijan-LT.claude\projects\d--My-Projects-beljot\memory\project_bmad_module.md)
 
 ## Dev Agent Record
 
@@ -1008,7 +1008,7 @@ claude-opus-4-7 (Opus 4.7, 1M context)
 - `npx tsc --noEmit` clean. ESLint clean across all touched files.
 - `cd client && npx prettier --write …` — only formatting tweaks, applied.
 - `gofmt -l server/` — clean after auto-format.
-- `migrate up/down/up` round-trip on local Postgres (`belote@localhost:5433`) — `10/u add_match_surrendered_by` applied, rolled back, re-applied without errors.
+- `migrate up/down/up` round-trip on local Postgres (`beljot@localhost:5433`) — `10/u add_match_surrendered_by` applied, rolled back, re-applied without errors.
 - `i18n.test.ts flattenKeys` parity check passes for `en.json` ↔ `sr.json` after the new `game.surrender.*` block.
 
 ### Completion Notes List

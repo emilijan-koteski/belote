@@ -1,5 +1,5 @@
 ---
-project_name: "belote"
+project_name: "beljot"
 user_name: "Emilijan"
 date: "2026-04-06"
 sections_completed:
@@ -259,7 +259,7 @@ Every feature must pass all items before it is considered complete — this is a
 **Environment Variables:**
 
 - `SCREAMING_SNAKE_CASE` naming convention
-- App-specific vars prefixed with `BELOTE_`: `BELOTE_DB_URL`, `BELOTE_JWT_SECRET`, `BELOTE_PORT`
+- App-specific vars prefixed with `BELJOT_`: `BELJOT_DB_URL`, `BELJOT_JWT_SECRET`, `BELJOT_PORT`
 - PostgreSQL vars use standard Docker names: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
 - Dev: `.env` loaded by Docker Compose + `go run`
 - Production: Docker env vars in `docker-compose.prod.yml`

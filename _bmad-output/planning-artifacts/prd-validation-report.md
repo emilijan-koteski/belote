@@ -3,7 +3,7 @@ validationTarget: "_bmad-output/planning-artifacts/prd.md"
 validationDate: "2026-02-21"
 inputDocuments:
   - "_bmad-output/planning-artifacts/prd.md"
-  - "_bmad-output/planning-artifacts/product-brief-belote-2026-02-21.md"
+  - "_bmad-output/planning-artifacts/product-brief-beljot-2026-02-21.md"
 validationStepsCompleted:
   - step-v-01-discovery
   - step-v-02-format-detection
@@ -30,7 +30,7 @@ overallStatus: Warning
 ## Input Documents
 
 - **PRD:** `_bmad-output/planning-artifacts/prd.md` ✓
-- **Product Brief:** `_bmad-output/planning-artifacts/product-brief-belote-2026-02-21.md` ✓
+- **Product Brief:** `_bmad-output/planning-artifacts/product-brief-beljot-2026-02-21.md` ✓
 
 ## Validation Findings
 
@@ -77,7 +77,7 @@ overallStatus: Warning
 
 ### Product Brief Coverage
 
-**Product Brief:** `product-brief-belote-2026-02-21.md`
+**Product Brief:** `product-brief-beljot-2026-02-21.md`
 
 #### Coverage Map
 
@@ -465,7 +465,7 @@ This PRD is well above the bar. The domain specificity, narrative authenticity i
 
 **stepsCompleted:** Present ✓ (12 steps listed)
 **classification:** Present ✓ (`projectType: web_app`, `domain: gaming_entertainment`, `complexity: medium`, `projectContext: greenfield`)
-**inputDocuments:** Present ✓ (`product-brief-belote-2026-02-21.md`)
+**inputDocuments:** Present ✓ (`product-brief-beljot-2026-02-21.md`)
 **date / author:** Present ✓ (2026-02-21, Emilijan)
 
 **Frontmatter Completeness:** 4/4

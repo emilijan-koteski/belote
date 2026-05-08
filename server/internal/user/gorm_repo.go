@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 
-	"github.com/emilijan/belote/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/apperr"
 )
 
 type GormUserRepository struct {

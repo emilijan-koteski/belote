@@ -1,4 +1,4 @@
-module github.com/emilijan/belote/server
+module github.com/emilijan/beljot/server
 
 go 1.26
 

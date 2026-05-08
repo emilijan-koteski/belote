@@ -13,7 +13,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 	"github.com/labstack/echo/v4"
 
-	"github.com/emilijan/belote/server/internal/auth"
+	"github.com/emilijan/beljot/server/internal/auth"
 )
 
 const authTimeout = 10 * time.Second

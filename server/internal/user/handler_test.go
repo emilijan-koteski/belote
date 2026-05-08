@@ -16,10 +16,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/emilijan/belote/server/internal/apperr"
-	"github.com/emilijan/belote/server/internal/auth"
-	"github.com/emilijan/belote/server/internal/match"
-	"github.com/emilijan/belote/server/internal/user"
+	"github.com/emilijan/beljot/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/auth"
+	"github.com/emilijan/beljot/server/internal/match"
+	"github.com/emilijan/beljot/server/internal/user"
 )
 
 // --- Mock Match Repository (for user handler tests) ---

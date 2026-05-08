@@ -58,7 +58,7 @@ describe("AppLayout", () => {
     renderWithRouter("/lobby");
 
     expect(screen.getByTestId("app-nav")).toBeInTheDocument();
-    expect(screen.getByTestId("app-name")).toHaveTextContent("Belote");
+    expect(screen.getByTestId("app-name")).toHaveTextContent("Beljot");
     expect(screen.getByTestId("nav-play")).toHaveTextContent("Play");
     expect(screen.getByTestId("nav-leaderboard")).toHaveTextContent("Leaderboard");
     expect(screen.getByTestId("nav-profile")).toHaveTextContent("Profile");

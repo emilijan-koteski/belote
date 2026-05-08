@@ -23,7 +23,7 @@ lint:
 	cd server && golangci-lint run ./...
 
 migrate:
-	migrate -path server/migrations -database "$(BELOTE_DB_URL)" up
+	migrate -path server/migrations -database "$(BELJOT_DB_URL)" up
 
 seed:
 	@echo "Seed script not yet implemented"

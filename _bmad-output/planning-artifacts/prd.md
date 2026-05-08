@@ -17,7 +17,7 @@ stepsCompleted:
     "step-11-polish",
     "step-12-complete",
   ]
-inputDocuments: ["product-brief-belote-2026-02-21.md"]
+inputDocuments: ["product-brief-beljot-2026-02-21.md"]
 documentCounts:
   briefs: 1
   research: 0
@@ -31,20 +31,20 @@ classification:
 workflowType: "prd"
 ---
 
-# Product Requirements Document - belote
+# Product Requirements Document - beljot
 
 **Author:** Emilijan
 **Date:** 2026-02-21
 
 ## Executive Summary
 
-Belote is a purpose-built desktop web platform for Balkan Belot — the team-based card game deeply embedded in the culture of Macedonia, Serbia, and Croatia. Despite a large, passionate, multigenerational player base, no dedicated online platform exists that implements authentic regional rule variants or provides competitive infrastructure. Belote fills this gap with a modern multiplayer experience supporting both Croatian and Bitola trump variants, a full account and progression system, CIV 6-style lobby matchmaking, and the first-ever competitive ecosystem for Balkan Belot: ELO-based ranked play, an 8-tier ranking system, quarterly seasons, and leaderboards.
+Beljot is a purpose-built desktop web platform for Balkan Belot — the team-based card game deeply embedded in the culture of Macedonia, Serbia, and Croatia. Despite a large, passionate, multigenerational player base, no dedicated online platform exists that implements authentic regional rule variants or provides competitive infrastructure. Beljot fills this gap with a modern multiplayer experience supporting both Croatian and Bitola trump variants, a full account and progression system, CIV 6-style lobby matchmaking, and the first-ever competitive ecosystem for Balkan Belot: ELO-based ranked play, an 8-tier ranking system, quarterly seasons, and leaderboards.
 
 The platform targets three core user profiles: competitive regulars seeking ranked progression, casual/social players recreating the kitchen-table experience with friends online, and diaspora players reconnecting with family across borders through the game. Launch supports English and Serbian (Latin script), with 1001-point matches for competitive play and both 1001/501 modes for casual rooms.
 
 ### What Makes This Special
 
-Belote is the only platform built specifically for the Balkan Belot community — by someone from that community, for players within it. Every existing alternative (VIP Games, Playok, generic card platforms) treats Belot as an afterthought: wrong rules, no regional variants, no competitive features, dated interfaces. Belote is the first to offer authentic Croatian and Bitola variant support alongside a full competitive ladder. The core insight is straightforward: a game with dedicated, skilled players — including those at a professional competitive level — has had zero online infrastructure. The community exists and the demand exists; this is the platform they've been waiting for.
+Beljot is the only platform built specifically for the Balkan Belot community — by someone from that community, for players within it. Every existing alternative (VIP Games, Playok, generic card platforms) treats Belot as an afterthought: wrong rules, no regional variants, no competitive features, dated interfaces. Beljot is the first to offer authentic Croatian and Bitola variant support alongside a full competitive ladder. The core insight is straightforward: a game with dedicated, skilled players — including those at a professional competitive level — has had zero online infrastructure. The community exists and the demand exists; this is the platform they've been waiting for.
 
 ## Project Classification
 

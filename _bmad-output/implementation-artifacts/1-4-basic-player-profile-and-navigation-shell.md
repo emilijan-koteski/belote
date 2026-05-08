@@ -115,7 +115,7 @@ So that I can access different sections and manage my language preference.
 - Tabs: Play / Leaderboard / Profile / Rules — use Inter Medium 16px
 - Active tab: `accent` (#00e5a0) bottom border — 2px solid
 - Inactive tabs: `text-secondary` (#8888a0) color, no bottom border
-- Logo/app name on the left — "Belote" in Space Grotesk
+- Logo/app name on the left — "Beljot" in Space Grotesk
 - Language selector on the right
 - Nav is NOT visible during active game (handled by routing structure)
 

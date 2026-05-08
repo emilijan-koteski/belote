@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 // rateLimitWindow is the per-user cooldown between accepted emotes. The

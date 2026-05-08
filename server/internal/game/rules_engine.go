@@ -1,6 +1,6 @@
 package game
 
-import "github.com/emilijan/belote/server/internal/apperr"
+import "github.com/emilijan/beljot/server/internal/apperr"
 
 // ApplyAction is the pure function entry point for the rules engine.
 // It takes the current game state and a player action, and returns

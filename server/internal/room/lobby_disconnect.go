@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 const lobbyDisconnectTimeout = 10 * time.Second

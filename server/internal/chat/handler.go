@@ -7,8 +7,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/emilijan/belote/server/internal/user"
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/user"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 const (

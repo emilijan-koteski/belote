@@ -260,7 +260,7 @@ For this story: implement the basic match-end check (`TeamScores >= target → P
 **Test pattern** (from `declarations_test.go`, `playing_test.go`):
 
 - Package: `package game_test` (external test package)
-- Import: `game "github.com/emilijan/belote/server/internal/game"` and `testfixtures "github.com/emilijan/belote/server/internal/game/testfixtures"`
+- Import: `game "github.com/emilijan/beljot/server/internal/game"` and `testfixtures "github.com/emilijan/beljot/server/internal/game/testfixtures"`
 - Use table-driven tests: `[]struct{ name string; ... }` with `t.Run`
 - Test through `game.ApplyAction` — never call internal functions directly
 - Use `testfixtures` factory functions exclusively — no raw `GameState{}` struct literals
@@ -335,7 +335,7 @@ server/internal/apperr/
 - Use Go table-driven test pattern (`[]struct{ name string; ... }` with `t.Run`)
 - Tests co-located: `scoring_test.go` next to `scoring.go`
 - Package: `package game_test` (external test package)
-- Import testfixtures via `"github.com/emilijan/belote/server/internal/game/testfixtures"`
+- Import testfixtures via `"github.com/emilijan/beljot/server/internal/game/testfixtures"`
 - To test hand scoring, play the 8th trick by calling `ApplyAction` with `play_card` actions on a `NewGameLastTrick()` or `NewGameCapotInProgress()` state
 - After the 4th card of trick 8, the returned state should reflect completed scoring (Phase = PhaseBidding or PhaseMatchEnd)
 

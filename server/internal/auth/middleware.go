@@ -8,7 +8,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/emilijan/belote/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/apperr"
 )
 
 func AuthMiddleware(jwtSecret string) echo.MiddlewareFunc {

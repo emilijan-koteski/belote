@@ -4,12 +4,12 @@ lastStep: 8
 status: "complete"
 completedAt: "2026-04-05"
 inputDocuments:
-  - product-brief-belote-2026-02-21.md
+  - product-brief-beljot-2026-02-21.md
   - prd.md
   - prd-validation-report.md
   - ux-design-specification.md
 workflowType: "architecture"
-project_name: "belote"
+project_name: "beljot"
 user_name: "Emilijan"
 date: "2026-04-05"
 ---
@@ -122,7 +122,7 @@ cd client && npx shadcn@latest init
 
 # Backend
 mkdir -p server/cmd/api server/internal
-cd server && go mod init github.com/yourusername/belote/server
+cd server && go mod init github.com/yourusername/beljot/server
 go get github.com/labstack/echo/v4
 go get gorm.io/gorm gorm.io/driver/postgres
 go get nhooyr.io/websocket
@@ -589,7 +589,7 @@ Every new feature, every agent, every time:
 ### Complete Project Directory Structure
 
 ```
-belote/
+beljot/
 ├── Makefile                          # Build orchestration: dev, build, test, lint, migrate, seed, deploy
 ├── Caddyfile                         # Caddy reverse proxy config (production TLS + WS proxy)
 ├── docker-compose.yml                # Local dev: PostgreSQL only (Go runs natively for hot reload)
@@ -939,7 +939,7 @@ Client clicks card
 **`make build`** — production build:
 
 - `cd client && npm run build` → `client/dist/` (static files)
-- `cd server && docker build -t belote-server .` (multi-stage Dockerfile → minimal image)
+- `cd server && docker build -t beljot-server .` (multi-stage Dockerfile → minimal image)
 
 **`make test`** — both stacks:
 
@@ -963,9 +963,9 @@ Client clicks card
 
 | Context    | Source                                       | DB_URL Example                                                    |
 | ---------- | -------------------------------------------- | ----------------------------------------------------------------- |
-| Dev        | `.env` loaded by Docker Compose + `go run`   | `postgres://belote:dev@localhost:5432/belote?sslmode=disable`     |
-| Production | Docker env vars in `docker-compose.prod.yml` | `postgres://belote:$PROD_PW@postgres:5432/belote?sslmode=disable` |
-| CI         | GitHub Actions secrets                       | `postgres://test:test@localhost:5432/belote_test?sslmode=disable` |
+| Dev        | `.env` loaded by Docker Compose + `go run`   | `postgres://beljot:dev@localhost:5432/beljot?sslmode=disable`     |
+| Production | Docker env vars in `docker-compose.prod.yml` | `postgres://beljot:$PROD_PW@postgres:5432/beljot?sslmode=disable` |
+| CI         | GitHub Actions secrets                       | `postgres://test:test@localhost:5432/beljot_test?sslmode=disable` |
 | Migrate    | Same `.env` or `$DB_URL` env var             | (matches current context)                                         |
 
 ## Architecture Validation Results

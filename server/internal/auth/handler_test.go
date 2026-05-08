@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/emilijan/belote/server/internal/apperr"
-	"github.com/emilijan/belote/server/internal/user"
+	"github.com/emilijan/beljot/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/user"
 )
 
 func generateExpiredRefreshToken(userID uint, secret string) (string, error) {

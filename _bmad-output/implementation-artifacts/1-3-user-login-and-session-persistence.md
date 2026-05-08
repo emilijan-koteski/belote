@@ -91,7 +91,7 @@ so that I don't need to re-enter my credentials every time I visit the platform.
   - [x] Maintain middleware order: CORS → Logging → Error Handler → routes (auth middleware applied per-group, not globally)
 
 - [x] **Task 7: Make refresh cookie Secure flag environment-aware** (AC: 3, fixes D5)
-  - [x] Add `Environment` field to `config.Config` struct — read from `BELOTE_ENV` env var, default `"development"`
+  - [x] Add `Environment` field to `config.Config` struct — read from `BELJOT_ENV` env var, default `"development"`
   - [x] Create a helper method on `AuthHandler`: `setRefreshCookie(c echo.Context, token string)` and `clearRefreshCookie(c echo.Context)`
   - [x] Set `Secure: true` only when `Environment != "development"` — allows HTTP in local dev
   - [x] Update the Register handler to use the same `setRefreshCookie` helper (DRY up the existing cookie-setting code)
@@ -355,7 +355,7 @@ The `ProtectedRoute` component:
 | --- | ---------------------------------------- | ----------------------------------------------------------------------- |
 | D1  | Token lost on page refresh               | Session restore via `useAuthInit()` → `POST /auth/refresh` on app mount |
 | D2  | fetchClient hard redirect breaks SPA     | `setAuthRedirect` callback using React Router navigate                  |
-| D5  | Refresh cookie Secure:true hardcoded     | Environment-aware via `BELOTE_ENV` config                               |
+| D5  | Refresh cookie Secure:true hardcoded     | Environment-aware via `BELJOT_ENV` config                               |
 | W1  | fetchClient 401 lacks refresh-then-retry | Full refresh cycle with concurrent deduplication                        |
 
 ### Deferred Items NOT Addressed (Out of Scope)

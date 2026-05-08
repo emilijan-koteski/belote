@@ -14,22 +14,22 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: belote
-          POSTGRES_PASSWORD: belote_test_password
-          POSTGRES_DB: belote_test
+          POSTGRES_USER: beljot
+          POSTGRES_PASSWORD: beljot_test_password
+          POSTGRES_DB: beljot_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U belote"
+          --health-cmd="pg_isready -U beljot"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      BELOTE_DB_URL: postgres://belote:belote_test_password@localhost:5432/belote_test?sslmode=disable
-      BELOTE_JWT_SECRET: test-secret
-      BELOTE_PORT: 8080
+      BELJOT_DB_URL: postgres://beljot:beljot_test_password@localhost:5432/beljot_test?sslmode=disable
+      BELJOT_JWT_SECRET: test-secret
+      BELJOT_PORT: 8080
 
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
         run: cd client && npm ci
 
       - name: Run database migrations
-        run: migrate -path server/migrations -database "$BELOTE_DB_URL" up
+        run: migrate -path server/migrations -database "$BELJOT_DB_URL" up
 
       - name: Lockfile — forbidden old team tokens
         run: bash scripts/lockfile-old-team-tokens.sh

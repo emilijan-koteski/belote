@@ -1,6 +1,6 @@
 package game
 
-import "github.com/emilijan/belote/server/internal/apperr"
+import "github.com/emilijan/beljot/server/internal/apperr"
 
 // handlePause processes a pause action from a player.
 // Valid from PhasePlaying or PhaseBidding. Each player gets 1 pause per game.

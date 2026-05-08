@@ -17,16 +17,16 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	"github.com/emilijan/belote/server/internal/apperr"
-	"github.com/emilijan/belote/server/internal/auth"
-	"github.com/emilijan/belote/server/internal/chat"
-	"github.com/emilijan/belote/server/internal/config"
-	"github.com/emilijan/belote/server/internal/emote"
-	"github.com/emilijan/belote/server/internal/match"
-	"github.com/emilijan/belote/server/internal/room"
-	"github.com/emilijan/belote/server/internal/session"
-	"github.com/emilijan/belote/server/internal/user"
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/auth"
+	"github.com/emilijan/beljot/server/internal/chat"
+	"github.com/emilijan/beljot/server/internal/config"
+	"github.com/emilijan/beljot/server/internal/emote"
+	"github.com/emilijan/beljot/server/internal/match"
+	"github.com/emilijan/beljot/server/internal/room"
+	"github.com/emilijan/beljot/server/internal/session"
+	"github.com/emilijan/beljot/server/internal/user"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 func main() {

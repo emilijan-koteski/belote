@@ -1,11 +1,11 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 inputDocuments:
-  - product-brief-belote-2026-02-21.md
+  - product-brief-beljot-2026-02-21.md
   - prd.md
 ---
 
-# UX Design Specification belote
+# UX Design Specification beljot
 
 **Author:** Emilijan
 **Date:** 2026-03-22
@@ -16,7 +16,7 @@ inputDocuments:
 
 ### Project Vision
 
-Belote is a purpose-built desktop web multiplayer platform for Balkan Belot — the team-based card game central to the culture of Macedonia, Serbia, and Croatia. No dedicated online platform exists that implements authentic regional rule variants or offers competitive infrastructure. Belote fills that gap with a modern multiplayer experience: Bitola and Croatian trump variants, casual social play via private rooms, and the first competitive ecosystem for this community — ELO matchmaking, an 8-tier rank system, quarterly seasons, and leaderboards.
+Beljot is a purpose-built desktop web multiplayer platform for Balkan Belot — the team-based card game central to the culture of Macedonia, Serbia, and Croatia. No dedicated online platform exists that implements authentic regional rule variants or offers competitive infrastructure. Beljot fills that gap with a modern multiplayer experience: Bitola and Croatian trump variants, casual social play via private rooms, and the first competitive ecosystem for this community — ELO matchmaking, an 8-tier rank system, quarterly seasons, and leaderboards.
 
 The UX vision: a cinematic, Balatro-inspired card game platform that feels built specifically for Balkan Belot players — modern, dramatic, and culturally resonant. A premium experience that makes every existing competitor look dated on first glance.
 
@@ -138,7 +138,7 @@ The core action is playing a hand of Belot at a real-time table with three other
 
 **Navigation & Layout:**
 
-- Spatial four-player table layout — universally understood from poker and Facebook card games; adopt directly for Belote's game view
+- Spatial four-player table layout — universally understood from poker and Facebook card games; adopt directly for Beljot's game view
 - Tab-based lobby entry points at equal weight — Quick Play / Browse Rooms / Create Room as peers, no hierarchy
 
 **Interaction Patterns:**
@@ -154,10 +154,10 @@ The core action is playing a hand of Belot at a real-time table with three other
 
 ### Anti-Patterns to Avoid
 
-- **Social prompt injection** — notifications or engagement nudges during active gameplay; Belote has no social layer in MVP, nothing interrupts the table
+- **Social prompt injection** — notifications or engagement nudges during active gameplay; Beljot has no social layer in MVP, nothing interrupts the table
 - **Cluttered persistent UI** — information overload at the table; every visible element must be needed for the current hand
 - **Ambiguous action labels** — generic "OK / Cancel" on game-critical prompts creates hesitation at the worst moment
-- **Static, lifeless table** — a flat table with no ambient energy; Belote should feel occupied and alive even between turns
+- **Static, lifeless table** — a flat table with no ambient energy; Beljot should feel occupied and alive even between turns
 
 ### Design Inspiration Strategy
 
@@ -167,7 +167,7 @@ The core action is playing a hand of Belot at a real-time table with three other
 - Always-visible game state (score, trick, trump) anchored to the table
 - Single-click card play with immediate visual feedback
 
-**Adapt for Belote:**
+**Adapt for Beljot:**
 
 - Balatro's dramatic moment treatment → applied to Belot-specific events: Capot, declaration wins, trump selection reveal, end-of-hand scoring
 - Facebook poker's active player highlight → adapted for counter-clockwise turn order with clear directional cue
@@ -212,7 +212,7 @@ The core action is playing a hand of Belot at a real-time table with three other
 
 > **"Play a hand of Belot with three real people, in real time, where every card counts."**
 
-Belote's defining experience is the card hand — from deal to score. Every feature in the product exists to get four players to this moment and make it feel real, sharp, and alive. If the hand feels right, everything else is forgiven. If it doesn't, nothing else matters.
+Beljot's defining experience is the card hand — from deal to score. Every feature in the product exists to get four players to this moment and make it feel real, sharp, and alive. If the hand feels right, everything else is forgiven. If it doesn't, nothing else matters.
 
 ### User Mental Model
 
@@ -633,9 +633,9 @@ UX notes:
 
 ### Design System Components (shadcn/ui + Tailwind)
 
-These components are available from shadcn/ui and will be themed to the Belote visual system — no custom logic required, only visual theming:
+These components are available from shadcn/ui and will be themed to the Beljot visual system — no custom logic required, only visual theming:
 
-| Component          | Usage in Belote                                                |
+| Component          | Usage in Beljot                                                |
 | ------------------ | -------------------------------------------------------------- |
 | `Button`           | All CTAs — Quick Play, Join, Create, PICK, PASS, DECLARE, SKIP |
 | `Dialog` / `Modal` | Room config, rank reveal, placement modal, score reveal        |
@@ -649,7 +649,7 @@ These components are available from shadcn/ui and will be themed to the Belote v
 | `Avatar`           | Player seat representation in lobby and table                  |
 | `Separator`        | Section dividers in score panel, room list                     |
 
-All shadcn/ui components will be customised with Belote's token set: `background` surface, `accent` interactive states, `text-primary`/`text-secondary` hierarchy.
+All shadcn/ui components will be customised with Beljot's token set: `background` surface, `accent` interactive states, `text-primary`/`text-secondary` hierarchy.
 
 ### Custom Components
 

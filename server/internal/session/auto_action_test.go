@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/emilijan/belote/server/internal/game"
-	"github.com/emilijan/belote/server/internal/session"
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/game"
+	"github.com/emilijan/beljot/server/internal/session"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 // TestAutoActionTypeFor locks the wire-format mapping that drives

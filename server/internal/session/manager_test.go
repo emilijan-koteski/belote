@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/emilijan/belote/server/internal/game"
-	"github.com/emilijan/belote/server/internal/match"
-	"github.com/emilijan/belote/server/internal/room"
-	"github.com/emilijan/belote/server/internal/session"
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/game"
+	"github.com/emilijan/beljot/server/internal/match"
+	"github.com/emilijan/beljot/server/internal/room"
+	"github.com/emilijan/beljot/server/internal/session"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 // --- Mock Match Repository ---

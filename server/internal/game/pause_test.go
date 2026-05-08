@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/emilijan/belote/server/internal/apperr"
-	"github.com/emilijan/belote/server/internal/game"
-	"github.com/emilijan/belote/server/internal/game/testfixtures"
+	"github.com/emilijan/beljot/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/game"
+	"github.com/emilijan/beljot/server/internal/game/testfixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

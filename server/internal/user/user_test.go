@@ -13,9 +13,9 @@ import (
 func getTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
-	dsn := os.Getenv("BELOTE_DB_URL")
+	dsn := os.Getenv("BELJOT_DB_URL")
 	if dsn == "" {
-		dsn = "postgres://belote:belote_dev_password@localhost:5433/belote?sslmode=disable"
+		dsn = "postgres://beljot:beljot_dev_password@localhost:5433/beljot?sslmode=disable"
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})

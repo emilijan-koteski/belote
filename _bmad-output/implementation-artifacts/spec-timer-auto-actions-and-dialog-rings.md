@@ -103,10 +103,10 @@ context:
 ## Verification
 
 **Commands:**
-- `cd "d:/My Projects/belote/server" && go test ./internal/session/... ./internal/ws/...` — all pass
-- `cd "d:/My Projects/belote/client" && npx vitest run` — all pass
-- `cd "d:/My Projects/belote" && make lint` — clean
-- `cd "d:/My Projects/belote/client" && npx prettier --write .` — clean diff
+- `cd "d:/My Projects/beljot/server" && go test ./internal/session/... ./internal/ws/...` — all pass
+- `cd "d:/My Projects/beljot/client" && npx vitest run` — all pass
+- `cd "d:/My Projects/beljot" && make lint` — clean
+- `cd "d:/My Projects/beljot/client" && npx prettier --write .` — clean diff
 
 **Manual checks:**
 - In a per-move room (short duration like 10s), reach a TrumpPrompt and let it expire — toast on all 4 clients, modal unmounts.

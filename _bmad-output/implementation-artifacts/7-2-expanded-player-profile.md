@@ -8,7 +8,7 @@ Status: done
 
 As a player,
 I want my profile to show real aggregate stats derived from my games,
-so that I have a meaningful overview of my Belote career alongside my match history.
+so that I have a meaningful overview of my Beljot career alongside my match history.
 
 ## Acceptance Criteria
 

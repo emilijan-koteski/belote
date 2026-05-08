@@ -227,7 +227,7 @@ Note: Since the standard deck has exactly 8 cards per suit, holding 8 cards of t
 - **Use `testfixtures` factory functions** exclusively — no raw `GameState{}` struct literals
 - **Table-driven tests**: `[]struct{ name string; ... }` with `t.Run`
 - **External test package**: `package game_test`
-- **Imports**: `game "github.com/emilijan/belote/server/internal/game"` and `testfixtures "github.com/emilijan/belote/server/internal/game/testfixtures"`
+- **Imports**: `game "github.com/emilijan/beljot/server/internal/game"` and `testfixtures "github.com/emilijan/beljot/server/internal/game/testfixtures"`
 - **Assertions**: `testify/assert`
 - **Test instant-win through `NewGame`**: Create a test that constructs specific player IDs, then verify the returned state has `Phase == PhaseMatchEnd` — but since `NewGame` shuffles randomly, instant-win tests for `startNewHand` should use `NewGameNearEnd` with scores just below target, play out the hand to trigger `startNewHand`, then verify the new hand's state
 - **For instant-win unit testing**: Consider adding a deterministic variant of the fixture or testing `checkInstantWin` through a carefully set up `NewGameNearEnd` where the next hand triggers the condition

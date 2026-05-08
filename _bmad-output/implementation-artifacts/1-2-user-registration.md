@@ -6,7 +6,7 @@ Status: done
 
 As a new player,
 I want to create an account with my email, username, and password,
-so that I have a persistent identity on the Belote platform.
+so that I have a persistent identity on the Beljot platform.
 
 ## Acceptance Criteria
 

@@ -3,9 +3,9 @@ package game_test
 import (
 	"testing"
 
-	"github.com/emilijan/belote/server/internal/apperr"
-	"github.com/emilijan/belote/server/internal/game"
-	"github.com/emilijan/belote/server/internal/game/testfixtures"
+	"github.com/emilijan/beljot/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/game"
+	"github.com/emilijan/beljot/server/internal/game/testfixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -248,7 +248,7 @@ func TestDeclarationResolution(t *testing.T) {
 		assert.NotEmpty(t, state.Players[2].Declarations, "Team A seat 2 declarations preserved")
 	})
 
-	// Regression: per Belote rules, declaration comparison uses each team's
+	// Regression: per Beljot rules, declaration comparison uses each team's
 	// SINGLE strongest meld, never the team sum. Team A's two 100-pt Kares
 	// (sum=200) lose to Team B's lone 150-pt Kare-of-9.
 	t.Run("strongest single meld wins over higher team sum (Q+K vs 9)", func(t *testing.T) {

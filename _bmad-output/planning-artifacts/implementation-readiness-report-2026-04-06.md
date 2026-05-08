@@ -17,7 +17,7 @@ documents:
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-04-06
-**Project:** belote
+**Project:** beljot
 
 ## Document Inventory
 
@@ -393,4 +393,4 @@ This assessment identified 4 issues across 2 severity categories (1 major, 3 min
 
 **Assessed by:** Implementation Readiness Workflow
 **Date:** 2026-04-06
-**Project:** belote
+**Project:** beljot

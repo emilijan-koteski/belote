@@ -244,7 +244,7 @@ So that the in-match experience is coherent before Phase 2 introduces more revea
 [Resolves D107 + D108]
 
 **Given** Serbian-language strings "Tim A", "Tim B", "Mi", "Oni" render in the lobby and in-game
-**When** a native Belote-playing reviewer evaluates them
+**When** a native Beljot-playing reviewer evaluates them
 **Then** the strings are confirmed natural by a native speaker, OR replaced with idiomatic equivalents (e.g. "naša ekipa" / "njihova ekipa")
 **And** the change ships in a single i18n update without code-side renames
 [Resolves D125]

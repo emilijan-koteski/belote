@@ -3,7 +3,7 @@ package game
 import (
 	"slices"
 
-	"github.com/emilijan/belote/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/apperr"
 )
 
 // handleBidding processes trump bidding actions (pick_trump, pass_trump) during

@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/emilijan/belote/server/internal/apperr"
-	"github.com/emilijan/belote/server/internal/game"
-	"github.com/emilijan/belote/server/internal/match"
-	"github.com/emilijan/belote/server/internal/room"
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/game"
+	"github.com/emilijan/beljot/server/internal/match"
+	"github.com/emilijan/beljot/server/internal/room"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 // Session holds the live game state and player mapping for one active game.

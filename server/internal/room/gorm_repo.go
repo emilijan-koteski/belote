@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/emilijan/belote/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/apperr"
 )
 
 // roomPlayerRow is a scan-target struct without gorm:"-" on Username,

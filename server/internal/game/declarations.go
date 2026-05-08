@@ -3,7 +3,7 @@ package game
 import (
 	"sort"
 
-	"github.com/emilijan/belote/server/internal/apperr"
+	"github.com/emilijan/beljot/server/internal/apperr"
 )
 
 // Natural rank order for sequences: 7 < 8 < 9 < T < J < Q < K < A.

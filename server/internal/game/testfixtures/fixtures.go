@@ -3,7 +3,7 @@ package testfixtures
 import (
 	"time"
 
-	"github.com/emilijan/belote/server/internal/game"
+	"github.com/emilijan/beljot/server/internal/game"
 )
 
 // NewGameJustDealt returns a valid GameState in the BIDDING phase after a

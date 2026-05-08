@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Belote",
+    "appName": "Beljot",
     "close": "Close"
   },
   "team": {
@@ -14,7 +14,7 @@
     "leaderboard": "Leaderboard",
     "profile": "Profile",
     "rules": "Rules",
-    "appName": "Belote",
+    "appName": "Beljot",
     "logout": "Log out"
   },
   "profile": {

@@ -3,7 +3,7 @@ package game_test
 import (
 	"testing"
 
-	"github.com/emilijan/belote/server/internal/game"
+	"github.com/emilijan/beljot/server/internal/game"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -20,12 +20,12 @@ function flattenKeys(obj: unknown, prefix = ""): string[] {
 
 describe("i18n", () => {
   it("returns English translation by default", () => {
-    expect(i18n.t("common.appName")).toBe("Belote");
+    expect(i18n.t("common.appName")).toBe("Beljot");
   });
 
   it("returns Serbian translation when language is changed", async () => {
     await i18n.changeLanguage("sr");
-    expect(i18n.t("common.appName")).toBe("Belote");
+    expect(i18n.t("common.appName")).toBe("Beljot");
     await i18n.changeLanguage("en");
   });
 

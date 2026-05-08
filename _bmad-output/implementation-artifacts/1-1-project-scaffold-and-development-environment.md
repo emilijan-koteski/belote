@@ -52,7 +52,7 @@ so that I can begin building features on a solid, consistent development environ
 
 - [x] **Task 1: Initialize monorepo root** (AC: 2, 3)
   - [x] Create root `Makefile` with targets: `dev`, `build`, `test`, `lint`, `migrate`, `seed`, `deploy`, `backup`
-  - [x] Create `.env.example` with all env vars (`BELOTE_DB_URL`, `BELOTE_JWT_SECRET`, `BELOTE_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) and placeholder values
+  - [x] Create `.env.example` with all env vars (`BELJOT_DB_URL`, `BELJOT_JWT_SECRET`, `BELJOT_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) and placeholder values
   - [x] Create `.gitignore` (node_modules, dist, .env, Go binaries, IDE files)
   - [x] Create `docker-compose.yml` for local dev: PostgreSQL only on port 5432
   - [x] Create `docker-compose.prod.yml` skeleton for production: Go app + PostgreSQL containers
@@ -110,13 +110,13 @@ so that I can begin building features on a solid, consistent development environ
 
 - [x] **Task 7: Set up i18n** (AC: 6)
   - [x] Create `shared/i18n/i18n.ts` configuration file initializing i18next with `initReactI18next`
-  - [x] Create `shared/i18n/en.json` with skeleton keys: `{ "common": { "appName": "Belote" } }`
-  - [x] Create `shared/i18n/sr.json` with matching skeleton keys: `{ "common": { "appName": "Belote" } }`
+  - [x] Create `shared/i18n/en.json` with skeleton keys: `{ "common": { "appName": "Beljot" } }`
+  - [x] Create `shared/i18n/sr.json` with matching skeleton keys: `{ "common": { "appName": "Beljot" } }`
   - [x] Import i18n configuration in `main.tsx`
   - [x] Verify `useTranslation` hook works — i18n test confirms EN and SR translations
 
 - [x] **Task 8: Initialize backend (`server/`)** (AC: 1, 3)
-  - [x] Run `go mod init github.com/emilijan/belote/server`
+  - [x] Run `go mod init github.com/emilijan/beljot/server`
   - [x] Install dependencies: Echo v4, GORM, postgres driver, nhooyr.io/websocket, testify, bcrypt
   - [x] Create directory structure with all placeholder packages
 
@@ -127,7 +127,7 @@ so that I can begin building features on a solid, consistent development environ
   - [x] Create Echo error handler that maps `AppError` to structured JSON
 
 - [x] **Task 10: Set up database and migrations** (AC: 8)
-  - [x] Configure GORM connection in `main.go` using `BELOTE_DB_URL`
+  - [x] Configure GORM connection in `main.go` using `BELJOT_DB_URL`
   - [x] Create first migration `server/migrations/000001_init.up.sql`
   - [x] Create `server/migrations/000001_init.down.sql`
   - [x] Add `make migrate` target in Makefile
@@ -155,7 +155,7 @@ so that I can begin building features on a solid, consistent development environ
 - **No shared type generation** between frontend/backend — manual sync via `wsEvents.ts` + `events.go`
 - **Docker Compose for dev**: PostgreSQL ONLY in Docker; Go server and Vite run natively on host for hot reload
 - **Production topology**: Host Caddy -> Docker Go container -> Docker PostgreSQL container. Go server does NOT serve static files in production
-- **Environment variables**: `SCREAMING_SNAKE_CASE`, app vars prefixed `BELOTE_`, loaded once at startup into `config.Config` struct — no `os.Getenv()` elsewhere
+- **Environment variables**: `SCREAMING_SNAKE_CASE`, app vars prefixed `BELJOT_`, loaded once at startup into `config.Config` struct — no `os.Getenv()` elsewhere
 
 ### Technical Stack Versions (Verified April 2026)
 
@@ -264,7 +264,7 @@ Registration order in `main.go` is critical: **CORS -> Logging -> Error Handler 
 Alignment with the architecture's complete directory structure:
 
 ```
-belote/
+beljot/
   Makefile
   Caddyfile
   docker-compose.yml

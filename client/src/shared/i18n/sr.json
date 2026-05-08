@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Belote",
+    "appName": "Beljot",
     "close": "Zatvori"
   },
   "team": {
@@ -14,7 +14,7 @@
     "leaderboard": "Rang lista",
     "profile": "Profil",
     "rules": "Pravila",
-    "appName": "Belote",
+    "appName": "Beljot",
     "logout": "Odjavi se"
   },
   "profile": {

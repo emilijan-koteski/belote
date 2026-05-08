@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/emilijan/belote/server/internal/chat"
-	"github.com/emilijan/belote/server/internal/user"
-	"github.com/emilijan/belote/server/internal/ws"
+	"github.com/emilijan/beljot/server/internal/chat"
+	"github.com/emilijan/beljot/server/internal/user"
+	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 // --- Fakes ---

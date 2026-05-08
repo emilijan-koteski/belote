@@ -74,7 +74,7 @@ export function DeclarationReveal({
   const totalAwarded = payload.declarations.reduce((acc, d) => acc + d.value, 0);
 
   // Tiebreaker line: only render when there's more than one meld in play. The
-  // highest-value meld is what tipped the team-result decision per Belote
+  // highest-value meld is what tipped the team-result decision per Beljot
   // rules ("highest meld at the table wins all declarations"); naming it +
   // its declarer makes the win-reason explicit instead of leaving the
   // viewer to infer it from the rows.

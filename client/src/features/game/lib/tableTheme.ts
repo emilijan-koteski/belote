@@ -18,7 +18,7 @@ export type SeatTeam = "gold" | "silver";
 /**
  * Decide the viewer-relative team color identity for a given seat.
  *
- * Belote partners sit across the table (`seat % 2`), so any two seats with the
+ * Beljot partners sit across the table (`seat % 2`), so any two seats with the
  * same parity belong to the same team. The viewer is always Gold; their
  * partner therefore is also Gold. Both opponents are Silver.
  */

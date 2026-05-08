@@ -1,6 +1,6 @@
 package game
 
-import "github.com/emilijan/belote/server/internal/apperr"
+import "github.com/emilijan/beljot/server/internal/apperr"
 
 // handleSurrenderRequest processes a player's request to surrender the match.
 // Valid only from PhasePlaying or PhaseBidding. Each player may initiate at

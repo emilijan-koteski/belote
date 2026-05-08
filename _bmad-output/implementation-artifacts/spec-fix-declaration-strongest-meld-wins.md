@@ -12,7 +12,7 @@ context:
 
 ## Intent
 
-**Problem:** The declaration-round winner must be decided by each team's _strongest single_ meld (per Belote rules), not by the sum of each team's melds. Today the only test that exercises the user-reported scenario (Team A: 4 Queens 100 + 4 Kings 100 = 200; Team B: 4 Nines 150) does not actually call the resolution function — it only asserts on input fixture values. So whether `resolveDeclarations` produces the wrong answer is unverified, and the user reports observing the wrong team awarded.
+**Problem:** The declaration-round winner must be decided by each team's _strongest single_ meld (per Beljot rules), not by the sum of each team's melds. Today the only test that exercises the user-reported scenario (Team A: 4 Queens 100 + 4 Kings 100 = 200; Team B: 4 Nines 150) does not actually call the resolution function — it only asserts on input fixture values. So whether `resolveDeclarations` produces the wrong answer is unverified, and the user reports observing the wrong team awarded.
 
 **Approach:** Lock in the rule with a regression test that drives the full trick-1 flow for the canonical scenario and asserts Team B wins with exactly 150 points and Team A gets 0. If the test fails, fix the comparison logic in `resolveDeclarations` so it picks each team's strongest individual declaration first, then sums _only the winning team's_ declarations. Belot remains excluded (it never enters `Players[*].Declarations`; it is awarded directly to `HandPoints` on announcement).
 
@@ -64,7 +64,7 @@ context:
 - [x] `server/internal/game/declarations_test.go` -- Added `TestDeclarationResolution / strongest single meld wins over higher team sum (Q+K vs 9)` driving the full trick-1 flow with Team A seats 0/2 = Kare-Q/Kare-K (sum 200), Team B seat 1 = Kare-9 (150). Asserts `DeclarationPoints == [0, 150]`, Team A declarations cleared, Team B preserved. Reused `NewGameWithDeclarations` + new `completeTrick1` helper; `BelotAnnounced = true` skips the K/Q-trump prompt fixture-side. Note: seat 3 must play TD (not 7D) due to the Bitola must-overplay-led-suit rule.
 - [x] `server/internal/game/declarations_test.go` -- Strengthened `only winning team declarations scored`: now drives the resolution flow via `completeTrick1` and asserts on `state.DeclarationPoints` (Team A 0 / Team B 50) and per-player declaration retention. Old assertion (`decls[2].Value == 50`) was a no-op.
 - [x] `server/internal/game/declarations.go` -- Tests pass against current logic. The bug as described ("comparing team sums") is **not** present in `resolveDeclarations`; it already picks each team's strongest meld via `declarationBeats` and only sums the winning team's. No code change to the comparison was needed; the regression tests now lock the behavior in.
-- [x] `server/internal/game/declarations.go:162-180` -- Updated the doc comment on `resolveDeclarations` to state explicitly that the winner is the team holding the single strongest declaration (never the team with the larger sum) and that Belot is awarded separately. Rule list now numbered 1-6 mirroring the canonical Belote ordering.
+- [x] `server/internal/game/declarations.go:162-180` -- Updated the doc comment on `resolveDeclarations` to state explicitly that the winner is the team holding the single strongest declaration (never the team with the larger sum) and that Belot is awarded separately. Rule list now numbered 1-6 mirroring the canonical Beljot ordering.
 
 **Acceptance Criteria:**
 

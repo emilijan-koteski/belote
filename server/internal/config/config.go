@@ -16,19 +16,19 @@ type Config struct {
 
 func Load() *Config {
 	cfg := &Config{
-		DatabaseURL: getEnv("BELOTE_DB_URL", "postgres://belote:belote_dev_password@localhost:5433/belote?sslmode=disable"),
-		JWTSecret:   getEnv("BELOTE_JWT_SECRET", "change-me-in-production"),
-		Port:        getEnv("BELOTE_PORT", "8080"),
-		CORSOrigins: parseOrigins(getEnv("BELOTE_CORS_ORIGINS", "http://localhost:5173")),
-		Environment: getEnv("BELOTE_ENV", "development"),
+		DatabaseURL: getEnv("BELJOT_DB_URL", "postgres://beljot:beljot_dev_password@localhost:5433/beljot?sslmode=disable"),
+		JWTSecret:   getEnv("BELJOT_JWT_SECRET", "change-me-in-production"),
+		Port:        getEnv("BELJOT_PORT", "8080"),
+		CORSOrigins: parseOrigins(getEnv("BELJOT_CORS_ORIGINS", "http://localhost:5173")),
+		Environment: getEnv("BELJOT_ENV", "development"),
 	}
 
 	if cfg.JWTSecret == "" || cfg.JWTSecret == "change-me-in-production" {
 		if cfg.Environment != "development" {
-			slog.Error("BELOTE_JWT_SECRET must be set to a secure value in non-development environments")
+			slog.Error("BELJOT_JWT_SECRET must be set to a secure value in non-development environments")
 			os.Exit(1)
 		}
-		slog.Warn("BELOTE_JWT_SECRET is not set or uses the default value — do not deploy to production without changing it")
+		slog.Warn("BELJOT_JWT_SECRET is not set or uses the default value — do not deploy to production without changing it")
 	}
 
 	return cfg

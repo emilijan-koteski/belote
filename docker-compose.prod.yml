@@ -6,10 +6,10 @@ services:
     expose:
       - "8080"
     environment:
-      BELOTE_DB_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
-      BELOTE_JWT_SECRET: ${BELOTE_JWT_SECRET}
-      BELOTE_PORT: 8080
-      BELOTE_CORS_ORIGINS: ${BELOTE_CORS_ORIGINS}
+      BELJOT_DB_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      BELJOT_JWT_SECRET: ${BELJOT_JWT_SECRET}
+      BELJOT_PORT: 8080
+      BELJOT_CORS_ORIGINS: ${BELJOT_CORS_ORIGINS}
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,7 +24,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-belote}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beljot}"]
       interval: 10s
       timeout: 5s
       retries: 5
