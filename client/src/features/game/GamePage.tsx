@@ -414,14 +414,44 @@ export function GamePage() {
     navigate("/lobby");
   }, [clearGame, navigate, setMatchAbandonedData]);
 
-  // Loading state
+  // Loading state — themed with the in-game felt + brass palette so the
+  // transition into the table doesn't flash a generic dark splash. We can't
+  // render the full TableBackdrop (no gameState yet), so this is a slimmed-
+  // down felt gradient + brass spinner using the same tokens.
   if (!gameState || myPlayerSeat === null) {
     return (
       <div
-        className="game-table h-screen w-screen overflow-hidden bg-background flex items-center justify-center"
+        className="game-table h-screen w-screen overflow-hidden flex items-center justify-center"
         data-testid="game-page"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 50%, var(--felt-dark) 0%, var(--felt-deep) 60%, var(--felt-bg) 100%)",
+        }}
       >
-        <span className="text-text-secondary font-body text-lg">{t("game.loading")}</span>
+        <div className="flex flex-col items-center gap-4">
+          <span
+            aria-hidden
+            className="inline-block rounded-full motion-safe:animate-spin"
+            style={{
+              width: 36,
+              height: 36,
+              border: "2px solid rgba(201,168,118,0.18)",
+              borderTopColor: "var(--brass, #c9a876)",
+              animationDuration: "0.9s",
+            }}
+          />
+          <span
+            className="font-body text-base"
+            style={{
+              color: "var(--ink-light, #f5f2e8)",
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              letterSpacing: 0.3,
+              opacity: 0.85,
+            }}
+          >
+            {t("game.loading")}
+          </span>
+        </div>
       </div>
     );
   }
@@ -598,8 +628,16 @@ export function GamePage() {
         />
       </div>
 
-      {/* Hand cards - bottom center */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+      {/* Hand cards - bottom center. While a personal action prompt is up
+          (trump bidding, belot announcement, declaration) the hand is
+          elevated to z-50 so it sits between the OverlayBackdrop dim (z-40)
+          and the panel itself (z-60) — the player can read their cards
+          unblurred while everything else stays dimmed. */}
+      <div
+        className={`absolute bottom-4 left-1/2 -translate-x-1/2 ${
+          isActiveBidder || showBelotPrompt || showDeclarationPrompt ? "z-50" : ""
+        }`}
+      >
         <HandCards
           hand={myHand}
           isMyTurn={isMyTurn}
@@ -672,11 +710,19 @@ export function GamePage() {
         />
       )}
 
-      {/* Surrender opponent banner — non-modal status strip. Same overlay
+      {/* Surrender opponent banner — non-modal status strip anchored to the
+          proposer's seat (same per-seat pattern as EmoteBubble). Same overlay
           gate as the prompt. */}
-      {isOpponentOfProposer && matchEndData === null && matchAbandonedData === null && (
-        <SurrenderOpponentBanner proposerUsername={proposerUsername} />
-      )}
+      {isOpponentOfProposer &&
+        myPlayerSeat !== null &&
+        surrenderProposerSeat !== null &&
+        matchEndData === null &&
+        matchAbandonedData === null && (
+          <SurrenderOpponentBanner
+            proposerUsername={proposerUsername}
+            compassPosition={compassOffset(surrenderProposerSeat, myPlayerSeat) as 0 | 1 | 2 | 3}
+          />
+        )}
 
       {/* Pause overlay */}
       {isPaused && (
