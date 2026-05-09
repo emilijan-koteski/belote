@@ -437,6 +437,7 @@
       "playerReconnected": "{{player}} reconnected",
       "reconnecting": "Reconnecting...",
       "waitingMessage": "The game is on hold while we wait for {{player}} to reconnect.",
+      "waitingMessageMany": "The game is on hold while we wait for {{count}} players to reconnect.",
       "countdownLabel": "Time remaining",
       "reconnected": "You have reconnected",
       "reconnectFailed": "Reconnection failed \u2014 the match may have ended",

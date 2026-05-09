@@ -181,6 +181,104 @@ func TestHandleReconnect_RejectsWrongUser(t *testing.T) {
 	assert.False(t, state.Players[0].Connected)
 }
 
+// Per-seat windows: each disconnect gets its own `reconnectWindowSec` from
+// its drop time. PlayerReconnectExpiresAt[seat] holds that seat's expiry; the
+// legacy single-pointer ReconnectExpiresAt + DisconnectedSeat are recomputed
+// to point at whichever seat closes soonest.
+func TestHandleConcurrentDisconnect_AssignsIndependentPerSeatWindows(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	mgr, _ := setupDisconnectedGame(t, hub, 0)
+
+	state := mgr.GetStateSnapshot(100)
+	require.NotNil(t, state.PlayerReconnectExpiresAt[0], "primary seat has its own expiry")
+	primaryExpiry := *state.PlayerReconnectExpiresAt[0]
+	for i := 1; i < 4; i++ {
+		assert.Nil(t, state.PlayerReconnectExpiresAt[i], "online seats have nil expiry")
+	}
+
+	// Delay so the second drop's window is meaningfully later than the first.
+	time.Sleep(50 * time.Millisecond)
+	secondaryUserID := state.Players[1].UserID
+	mgr.HandleDisconnect(secondaryUserID)
+	time.Sleep(100 * time.Millisecond)
+
+	state = mgr.GetStateSnapshot(100)
+	require.NotNil(t, state.PlayerReconnectExpiresAt[0], "primary expiry survives secondary drop")
+	require.NotNil(t, state.PlayerReconnectExpiresAt[1], "secondary gets its own expiry")
+	secondaryExpiry := *state.PlayerReconnectExpiresAt[1]
+
+	// Secondary's window must be later than primary's — they got their own
+	// `reconnectWindowSec` from their own drop, not the leftover of primary's.
+	assert.True(t, secondaryExpiry.After(primaryExpiry),
+		"secondary expiry %v should be after primary expiry %v", secondaryExpiry, primaryExpiry)
+
+	// The earliest-expiry derivation (ReconnectExpiresAt + DisconnectedSeat)
+	// points at the *primary* seat — the one whose clock fires first.
+	assert.Equal(t, 0, state.DisconnectedSeat, "earliest-expiry pointer = primary seat")
+	require.NotNil(t, state.ReconnectExpiresAt)
+	assert.True(t, state.ReconnectExpiresAt.Equal(primaryExpiry),
+		"ReconnectExpiresAt mirrors primary expiry")
+}
+
+// Concurrent-disconnect path: when a second player drops while the first
+// player's reconnect window is already running, both seats are flagged
+// Connected=false. Each must be able to rejoin in any order — earlier the
+// `playerIDs[seat] != userID` guard silently swallowed the secondary's
+// reconnect, leaving their client stuck on the splash until the no-active-
+// session fallback bounced them to /lobby. With per-seat timers, secondary
+// rejoin flips their Connected back to true while primary's window keeps
+// running.
+func TestHandleReconnect_SecondaryReconnectsBeforePrimary(t *testing.T) {
+	hub := ws.NewHub()
+	go hub.Run()
+	defer hub.Shutdown()
+
+	mgr, primaryUserID := setupDisconnectedGame(t, hub, 0)
+
+	// Drop a second player (seat 1). Concurrent disconnect path: marks them
+	// Connected=false and reuses the primary's reconnect expiry.
+	state := mgr.GetStateSnapshot(100)
+	require.Equal(t, game.PhaseDisconnected, state.Phase)
+	require.Equal(t, 0, state.DisconnectedSeat)
+	secondaryUserID := state.Players[1].UserID
+	mgr.HandleDisconnect(secondaryUserID)
+	time.Sleep(100 * time.Millisecond)
+
+	state = mgr.GetStateSnapshot(100)
+	require.Equal(t, game.PhaseDisconnected, state.Phase, "phase still disconnected after second drop")
+	require.Equal(t, 0, state.DisconnectedSeat, "primary seat unchanged")
+	require.False(t, state.Players[0].Connected, "primary still offline")
+	require.False(t, state.Players[1].Connected, "secondary marked offline")
+
+	// Reconnect the SECONDARY first — earlier this was a silent no-op.
+	mgr.HandleReconnect(secondaryUserID)
+	time.Sleep(100 * time.Millisecond)
+
+	state = mgr.GetStateSnapshot(100)
+	// Phase stays disconnected — primary hasn't returned yet.
+	assert.Equal(t, game.PhaseDisconnected, state.Phase, "phase remains disconnected")
+	assert.Equal(t, 0, state.DisconnectedSeat, "primary seat unchanged")
+	assert.NotNil(t, state.ReconnectExpiresAt, "primary reconnect window still running")
+	// Secondary is now back online; primary still offline.
+	assert.True(t, state.Players[1].Connected, "secondary restored")
+	assert.False(t, state.Players[0].Connected, "primary still offline")
+
+	// Now reconnect the primary — chained logic should NOT promote anyone
+	// (no remaining offline seats), so the game returns to playing.
+	mgr.HandleReconnect(primaryUserID)
+	time.Sleep(100 * time.Millisecond)
+
+	state = mgr.GetStateSnapshot(100)
+	assert.Equal(t, game.PhasePlaying, state.Phase, "back to playing once both reconnect")
+	assert.Equal(t, -1, state.DisconnectedSeat)
+	assert.Nil(t, state.ReconnectExpiresAt)
+	assert.True(t, state.Players[0].Connected)
+	assert.True(t, state.Players[1].Connected)
+}
+
 func TestHandleReconnect_NoOpForNonGameUser(t *testing.T) {
 	hub := ws.NewHub()
 	go hub.Run()

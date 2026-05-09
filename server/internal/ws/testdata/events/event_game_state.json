@@ -122,5 +122,11 @@
     false
   ],
   "disconnectedSeat": -1,
-  "reconnectExpiresAt": null
+  "reconnectExpiresAt": null,
+  "playerReconnectExpiresAt": [
+    null,
+    null,
+    null,
+    null
+  ]
 }

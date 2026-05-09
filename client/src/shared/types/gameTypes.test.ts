@@ -145,6 +145,12 @@ describe("gameTypes", () => {
         ownerSeat: 0,
         disconnectedSeat: -1,
         reconnectExpiresAt: null,
+        playerReconnectExpiresAt: [null, null, null, null] as [
+          string | null,
+          string | null,
+          string | null,
+          string | null,
+        ],
       };
 
       expect(state.phase).toBe("bidding");

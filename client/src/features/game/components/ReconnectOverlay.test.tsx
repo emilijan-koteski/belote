@@ -184,12 +184,16 @@ describe("ReconnectOverlay", () => {
   });
 
   it("renders one chip per disconnected player when multiple are offline", () => {
-    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const earliest = new Date(Date.now() + 60_000).toISOString();
+    const later = new Date(Date.now() + 120_000).toISOString();
     render(
       <ReconnectOverlay
         disconnectedPlayerName="Alice"
-        disconnectedPlayerNames={["Alice", "Bob"]}
-        reconnectExpiresAt={expiresAt}
+        disconnectedPlayers={[
+          { name: "Alice", expiresAt: earliest },
+          { name: "Bob", expiresAt: later },
+        ]}
+        reconnectExpiresAt={earliest}
       />,
     );
 
@@ -198,12 +202,32 @@ describe("ReconnectOverlay", () => {
     expect(chipContainer).toHaveTextContent("Bob");
   });
 
-  it("falls back to a single chip when disconnectedPlayerNames is omitted", () => {
+  it("falls back to a single chip when disconnectedPlayers is omitted", () => {
     const expiresAt = new Date(Date.now() + 60_000).toISOString();
     render(<ReconnectOverlay disconnectedPlayerName="Solo" reconnectExpiresAt={expiresAt} />);
 
     const chipContainer = screen.getByTestId("reconnect-player-name");
     expect(chipContainer).toHaveTextContent("Solo");
+  });
+
+  it("renders independent per-row countdowns derived from each player's own expiry", () => {
+    const earliest = new Date(Date.now() + 30_000).toISOString(); // 30 s
+    const later = new Date(Date.now() + 90_000).toISOString(); // 1:30
+    render(
+      <ReconnectOverlay
+        disconnectedPlayerName="Alice"
+        disconnectedPlayers={[
+          { name: "Alice", expiresAt: earliest },
+          { name: "Bob", expiresAt: later },
+        ]}
+        reconnectExpiresAt={earliest}
+      />,
+    );
+
+    expect(screen.getByTestId("reconnect-row-countdown-Alice").textContent).toBe("0:30");
+    expect(screen.getByTestId("reconnect-row-countdown-Bob").textContent).toBe("1:30");
+    // Center ring tracks the earliest (Alice's 0:30), not Bob's later expiry.
+    expect(screen.getByTestId("reconnect-countdown").textContent).toBe("0:30");
   });
 
   it("does not auto-redirect without abandonedData", () => {

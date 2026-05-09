@@ -112,6 +112,16 @@ func main() {
 	sessionManager := session.NewManager(hub, matchRepo)
 	sessionManager.SetRoomUpdater(&room.RoomStatusAdapter{Repo: roomRepo})
 
+	// Reconcile rooms left in status="playing" by a previous process. Sessions
+	// live only in process memory, so any "playing" row at boot has no live
+	// session — its players would be stranded by FindPlayerRoom (which gates
+	// quick-play / create-room on "no active room"). Best-effort: log + keep
+	// going if reconciliation fails so a transient DB hiccup doesn't block
+	// boot entirely.
+	if err := sessionManager.ReconcileStaleRooms(roomRepo); err != nil {
+		slog.Error("startup reconciliation failed", "error", err)
+	}
+
 	// Chat handler — composed with sessionManager.HandleAction so a single
 	// hub action handler can route both game actions and chat messages.
 	// roomMembership is an inline adapter that resolves room recipients

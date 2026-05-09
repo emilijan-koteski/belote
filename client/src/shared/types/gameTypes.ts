@@ -134,4 +134,9 @@ export interface GameState {
   surrenderUsed: [boolean, boolean, boolean, boolean];
   disconnectedSeat: number;
   reconnectExpiresAt: string | null;
+  /** Per-seat reconnect window expiry (RFC3339, nullable per seat). The
+   *  server tracks one window per disconnected player so concurrent drops
+   *  don't share a clock — `disconnectedSeat` / `reconnectExpiresAt` above
+   *  remain the legacy view of whichever seat closes soonest. */
+  playerReconnectExpiresAt: [string | null, string | null, string | null, string | null];
 }

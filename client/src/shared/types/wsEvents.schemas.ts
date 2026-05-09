@@ -139,6 +139,12 @@ export const EventGameStateSchema = z.strictObject({
   surrenderUsed: z.tuple([z.boolean(), z.boolean(), z.boolean(), z.boolean()]),
   disconnectedSeat: z.number(),
   reconnectExpiresAt: z.string().nullable(),
+  playerReconnectExpiresAt: z.tuple([
+    z.string().nullable(),
+    z.string().nullable(),
+    z.string().nullable(),
+    z.string().nullable(),
+  ]),
 });
 
 // --- Action / state event payloads ---

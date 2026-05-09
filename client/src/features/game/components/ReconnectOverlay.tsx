@@ -9,18 +9,29 @@ import { TEAM_GOLD, TEAM_SILVER, type TeamGradient } from "../lib/tableTheme";
 import { ClassicPanel } from "./overlay/ClassicPanel";
 import { OverlayBackdrop } from "./overlay/OverlayBackdrop";
 
+interface DisconnectedPlayerInfo {
+  /** Display name for the chip. */
+  name: string;
+  /** RFC3339 absolute timestamp when this seat's individual reconnect window
+   *  closes. Drives the per-row countdown shown next to the chip. */
+  expiresAt: string;
+}
+
 interface ReconnectOverlayProps {
-  /** Name of the primary disconnected player (the one whose reconnect timer is
-   *  active). Used for the abandoned-state title and for the countdown subtitle
-   *  copy. Also used as a fallback chip name when `disconnectedPlayerNames` is
-   *  not provided. */
+  /** Name of the abandoned-state title player. Used only when `abandonedData`
+   *  is supplied. For the countdown view, `disconnectedPlayers` drives the
+   *  chip text — set this to the seat that's about to abandon (the earliest
+   *  expiry) when you have it, otherwise any disconnected name is fine. */
   disconnectedPlayerName: string;
-  /** Names of every currently-disconnected player to render as chips during
-   *  the countdown. The server tracks only one active reconnect timer, but
-   *  multiple seats can be flagged Connected=false in the concurrent-disconnect
-   *  edge case (handleConcurrentDisconnectLocked). When omitted, falls back to
-   *  a single chip for `disconnectedPlayerName`. */
-  disconnectedPlayerNames?: string[];
+  /** Per-seat disconnect info — one entry per offline player, each with its
+   *  own expiry. The center ring counts down to the *earliest* expiry; each
+   *  player row counts down to its own. When omitted, the overlay falls back
+   *  to a single chip driven by `disconnectedPlayerName` + `reconnectExpiresAt`. */
+  disconnectedPlayers?: DisconnectedPlayerInfo[];
+  /** Earliest expiry among all offline seats (typically a duplicate of the
+   *  minimum of `disconnectedPlayers[*].expiresAt`). Drives the center ring.
+   *  Required because some call sites still source it from `gameState.reconnectExpiresAt`
+   *  (the server's legacy single-pointer derivation). */
   reconnectExpiresAt: string;
   abandonedData?: MatchAbandonedPayload | null;
   // Viewer team — required whenever `abandonedData` is supplied so the
@@ -54,37 +65,50 @@ function formatCountdown(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+/**
+ * Wallclock-driven countdown. Returns whole seconds remaining until
+ * `expiresAt`, ticking every `MOTION.COUNTDOWN_TICK` ms, clamped at 0.
+ * Re-anchors when `expiresAt` changes so a fresh window applied mid-overlay
+ * (e.g. the chained-disconnect promotion before the per-seat-window rewrite)
+ * doesn't keep counting against the old expiry.
+ */
+function useCountdownSeconds(expiresAt: string): number {
+  const [remainingSeconds, setRemainingSeconds] = useState(() => {
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / 1000));
+  });
+
+  useEffect(() => {
+    const tick = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      setRemainingSeconds(Math.max(0, Math.ceil(diff / 1000)));
+    };
+    tick();
+    const interval = setInterval(tick, MOTION.COUNTDOWN_TICK);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return remainingSeconds;
+}
+
 export function ReconnectOverlay({
   disconnectedPlayerName,
-  disconnectedPlayerNames,
+  disconnectedPlayers,
   reconnectExpiresAt,
   abandonedData,
   viewerTeam = null,
   onReturnToLobby,
   totalSeconds = RECONNECT_TOTAL_SECONDS_DEFAULT,
 }: ReconnectOverlayProps) {
-  const chipNames =
-    disconnectedPlayerNames && disconnectedPlayerNames.length > 0
-      ? disconnectedPlayerNames
-      : [disconnectedPlayerName];
+  const chipPlayers: DisconnectedPlayerInfo[] =
+    disconnectedPlayers && disconnectedPlayers.length > 0
+      ? disconnectedPlayers
+      : [{ name: disconnectedPlayerName, expiresAt: reconnectExpiresAt }];
   const { t } = useTranslation();
-  const [remainingSeconds, setRemainingSeconds] = useState(() => {
-    const diff = new Date(reconnectExpiresAt).getTime() - Date.now();
-    return Math.max(0, Math.ceil(diff / 1000));
-  });
-
-  useEffect(() => {
-    if (abandonedData) return; // Stop countdown when abandoned
-    const tick = () => {
-      const diff = new Date(reconnectExpiresAt).getTime() - Date.now();
-      const seconds = Math.max(0, Math.ceil(diff / 1000));
-      setRemainingSeconds(seconds);
-    };
-
-    tick();
-    const interval = setInterval(tick, MOTION.COUNTDOWN_TICK);
-    return () => clearInterval(interval);
-  }, [reconnectExpiresAt, abandonedData]);
+  // Center ring tracks the *earliest* expiry — the seat that drives abandon.
+  // Per-row countdowns inside `DisconnectedPlayerRow` track each seat's own
+  // expiry independently.
+  const remainingSeconds = useCountdownSeconds(reconnectExpiresAt);
 
   // Auto-redirect to lobby after match abandonment
   useEffect(() => {
@@ -250,56 +274,30 @@ export function ReconnectOverlay({
         <ClassicPanel
           width={440}
           title={t("game.disconnect.reconnecting")}
-          subtitle={t("game.disconnect.waitingMessage", {
-            player: disconnectedPlayerName,
-          })}
+          subtitle={
+            chipPlayers.length > 1
+              ? t("game.disconnect.waitingMessageMany", { count: chipPlayers.length })
+              : t("game.disconnect.waitingMessage", {
+                  player: chipPlayers[0]?.name ?? disconnectedPlayerName,
+                })
+          }
         >
-          <div className="flex flex-col items-center gap-4">
-            {/* Disconnected player chip(s) — pulsing red status dot + brass
-                name. Renders one chip per offline player so the concurrent-
-                disconnect path (handleConcurrentDisconnectLocked) names every
-                seat we're waiting on, not just the primary timer holder. */}
+          <div className="flex flex-col items-center gap-5">
+            {/* Per-seat rows — each player has their own `expiresAt` so the
+                row countdown reflects that seat's clock specifically, not the
+                center ring's "soonest abandon" view. When the earliest seat
+                returns, the center ring jumps to the next-earliest, but each
+                row keeps counting on its own. */}
             <div
-              className="flex flex-wrap items-center justify-center gap-2"
+              className="flex flex-col gap-2 w-full"
               data-testid="reconnect-player-name"
             >
-              {chipNames.map((name, idx) => (
-                <div
-                  key={`${idx}-${name}`}
-                  className="flex items-center gap-3 px-4 py-2 rounded-full"
-                  style={{
-                    background: "rgba(232,90,90,0.14)",
-                    border: `1px solid ${RING_DANGER}55`,
-                    boxShadow: "inset 0 1px 0 rgba(232,90,90,0.18)",
-                  }}
-                >
-                  <span
-                    aria-hidden
-                    className="rounded-full animate-pulse"
-                    style={{
-                      width: 8,
-                      height: 8,
-                      background: RING_DANGER,
-                      boxShadow: `0 0 8px ${RING_DANGER}cc`,
-                    }}
-                  />
-                  <span
-                    className="font-display font-semibold"
-                    style={{
-                      fontSize: 16,
-                      letterSpacing: 0.2,
-                      color: "var(--brass, #c9a876)",
-                    }}
-                  >
-                    {name}
-                  </span>
-                  <span
-                    className="font-body text-[11px] uppercase tracking-[0.18em]"
-                    style={{ color: RING_DANGER, opacity: 0.85 }}
-                  >
-                    {t("game.disconnect.statusBadge", { defaultValue: "disconnected" })}
-                  </span>
-                </div>
+              {chipPlayers.map((p, idx) => (
+                <DisconnectedPlayerRow
+                  key={`${idx}-${p.name}`}
+                  name={p.name}
+                  expiresAt={p.expiresAt}
+                />
               ))}
             </div>
 
@@ -365,6 +363,109 @@ export function ReconnectOverlay({
           </div>
         </ClassicPanel>
       </OverlayBackdrop>
+    </div>
+  );
+}
+
+/**
+ * Single offline-player row inside the reconnect dialog. Avatar disc on the
+ * left (PlayerSeat-style brass-frame + felt fill + initial), name in the
+ * middle, individual countdown on the right showing this seat's own
+ * `expiresAt`. Pulsing red dot on the avatar's bottom-right corner as the
+ * offline signal. Felt background + brass border keep the row visually inside
+ * the ClassicPanel family — no shout-y all-red pill.
+ *
+ * Each row's countdown is independent of the center ring: the center shows
+ * the soonest abandon, but each player has their own clock. When the earliest
+ * seat returns, the center jumps to the next-earliest while the still-offline
+ * rows keep counting from their own expiries.
+ */
+function DisconnectedPlayerRow({ name, expiresAt }: { name: string; expiresAt: string }) {
+  const initial = (name || "?").charAt(0).toUpperCase();
+  const AVATAR = 36;
+  const remainingSeconds = useCountdownSeconds(expiresAt);
+  const rowUrgent = remainingSeconds <= 30;
+  return (
+    <div
+      className="flex items-center gap-3 px-3 py-2 rounded-xl"
+      style={{
+        background: "rgba(0,0,0,0.22)",
+        border: "1px solid rgba(201,168,118,0.32)",
+        boxShadow: "inset 0 1px 0 rgba(201,168,118,0.12)",
+      }}
+    >
+      <div
+        className="relative shrink-0"
+        style={{ width: AVATAR, height: AVATAR }}
+        aria-hidden
+      >
+        <div
+          className="rounded-full"
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "conic-gradient(from 0deg, rgba(201,168,118,0.85), rgba(156,125,78,0.85), rgba(201,168,118,0.85))",
+            padding: 2,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+          }}
+        >
+          <div
+            className="rounded-full flex items-center justify-center font-display font-semibold"
+            style={{
+              width: "100%",
+              height: "100%",
+              background: "var(--avatar-inner, #1f2e23)",
+              color: "var(--ink-light, #f5f2e8)",
+              fontSize: AVATAR * 0.46,
+              letterSpacing: 0.2,
+            }}
+          >
+            {initial}
+          </div>
+        </div>
+        {/* Offline indicator — pulsing red dot tucked into the avatar's
+            bottom-right corner. Replaces the loud "DISCONNECTED" text badge
+            from the previous design; the dot + dialog title already convey
+            the state without crowding the row. */}
+        <span
+          className="rounded-full animate-pulse absolute"
+          style={{
+            right: -1,
+            bottom: -1,
+            width: 12,
+            height: 12,
+            background: RING_DANGER,
+            border: "2px solid var(--avatar-inner, #1f2e23)",
+            boxShadow: `0 0 8px ${RING_DANGER}aa`,
+          }}
+        />
+      </div>
+      <span
+        className="font-display font-semibold flex-1"
+        style={{
+          fontSize: 16,
+          letterSpacing: 0.2,
+          color: "var(--ink-light, #f5f2e8)",
+        }}
+      >
+        {name}
+      </span>
+      <span
+        className="font-display font-semibold tabular-nums"
+        style={{
+          fontSize: 14,
+          letterSpacing: 0.4,
+          color: rowUrgent ? RING_DANGER : "var(--ink-light, #f5f2e8)",
+          opacity: rowUrgent ? 1 : 0.75,
+          transition: `color ${MOTION.RING_COLOR_FLIP}ms ease-out, opacity ${MOTION.RING_COLOR_FLIP}ms ease-out`,
+          minWidth: 40,
+          textAlign: "right",
+        }}
+        data-testid={`reconnect-row-countdown-${name}`}
+      >
+        {formatCountdown(remainingSeconds)}
+      </span>
     </div>
   );
 }

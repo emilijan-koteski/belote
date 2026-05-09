@@ -88,6 +88,7 @@ function makeState(args: {
     turnTimeRemaining: 30,
     disconnectedSeat: -1,
     reconnectExpiresAt: null,
+    playerReconnectExpiresAt: [null, null, null, null],
   };
 }
 

@@ -102,6 +102,12 @@ const mockGameState: GameState = {
   ownerSeat: 0,
   disconnectedSeat: -1,
   reconnectExpiresAt: null,
+  playerReconnectExpiresAt: [null, null, null, null] as [
+    string | null,
+    string | null,
+    string | null,
+    string | null,
+  ],
 };
 
 // `fromRoom: true` simulates the navigate state RoomLobby / LobbyPage attach

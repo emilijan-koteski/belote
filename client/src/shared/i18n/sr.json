@@ -437,6 +437,7 @@
       "playerReconnected": "{{player}} se ponovo povezao",
       "reconnecting": "Ponovno povezivanje...",
       "waitingMessage": "Igra je pauzirana dok čekamo da se {{player}} vrati.",
+      "waitingMessageMany": "Igra je pauzirana dok čekamo da se {{count}} igrača vrate.",
       "countdownLabel": "Preostalo vreme",
       "reconnected": "Ponovo ste povezani",
       "reconnectFailed": "Ponovno povezivanje nije uspelo — meč je možda završen",

@@ -106,8 +106,17 @@ type GameState struct {
 	SurrenderUsed         [4]bool `json:"surrenderUsed"`         // each seat may initiate a surrender at most once per match
 
 	// Disconnect state
-	DisconnectedSeat   int        `json:"disconnectedSeat"`   // Seat index of disconnected player (-1 if none)
-	ReconnectExpiresAt *time.Time `json:"reconnectExpiresAt"` // Absolute timestamp when reconnect window closes
+	//
+	// `PlayerReconnectExpiresAt` holds a per-seat window so concurrent
+	// disconnects don't share a single clock — each player gets their own
+	// `reconnectWindowSec` from their own drop. `DisconnectedSeat` and
+	// `ReconnectExpiresAt` are derived views: the seat whose window closes
+	// soonest (drives the abandon timer + the dialog's center countdown) and
+	// that seat's expiry, respectively. They stay populated for backwards
+	// compat with clients that pre-date the per-seat array.
+	DisconnectedSeat         int           `json:"disconnectedSeat"`         // -1 when nobody is disconnected, otherwise seat with the earliest expiry
+	ReconnectExpiresAt       *time.Time    `json:"reconnectExpiresAt"`       // earliest of PlayerReconnectExpiresAt — when match abandons if no one returns
+	PlayerReconnectExpiresAt [4]*time.Time `json:"playerReconnectExpiresAt"` // per-seat reconnect window expiry; nil when seat is online
 }
 
 // TeamA is the index for Team A (seats 0, 2) in score arrays.

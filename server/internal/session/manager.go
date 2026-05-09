@@ -21,14 +21,14 @@ type Session struct {
 	playerIDs           [4]uint // index = seat
 	roomID              uint
 	startedAt           time.Time
-	timerStyle          string      // "relaxed" or "per-move"
-	timerDurationSec    int         // seconds per move (only used when timerStyle == "per-move")
-	turnTimer           *time.Timer // current per-move timer (nil when inactive)
-	timerGeneration     uint64      // incremented on each turn; timer callback checks staleness
-	reconnectWindowSec  int         // seconds to wait for disconnected player (default 120)
-	reconnectTimer      *time.Timer // reconnect countdown timer (nil when inactive)
-	reconnectGeneration uint64      // incremented on each disconnect; timer callback checks staleness
-	closed              bool        // set when session is being removed
+	timerStyle               string         // "relaxed" or "per-move"
+	timerDurationSec         int            // seconds per move (only used when timerStyle == "per-move")
+	turnTimer                *time.Timer    // current per-move timer (nil when inactive)
+	timerGeneration          uint64         // incremented on each turn; timer callback checks staleness
+	reconnectWindowSec       int            // seconds to wait for disconnected player (default 120)
+	seatReconnectTimers      [4]*time.Timer // per-seat reconnect countdown timers; nil when seat is online
+	seatReconnectGenerations [4]uint64      // per-seat staleness counters — bumped on cancel + start
+	closed                   bool           // set when session is being removed
 	// handResults buffers per-hand scoring rows during the match. Flushed via
 	// matchRepo.CreateWithHands when the match completes (normal end) or is
 	// abandoned. Mutated only under session.mu.Lock.
@@ -340,7 +340,7 @@ func (m *Manager) RemoveSession(roomID uint) {
 		session.mu.Lock()
 		session.closed = true
 		session.cancelTurnTimer()
-		session.cancelReconnectTimer()
+		session.cancelAllReconnectTimers()
 		session.mu.Unlock()
 		for _, uid := range session.playerIDs {
 			delete(m.userToRoom, uid)

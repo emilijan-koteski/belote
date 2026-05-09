@@ -107,6 +107,12 @@ const minimalGameState: GameState = {
   previousPhase: "",
   disconnectedSeat: -1,
   reconnectExpiresAt: null,
+  playerReconnectExpiresAt: [null, null, null, null] as [
+    string | null,
+    string | null,
+    string | null,
+    string | null,
+  ],
 };
 
 describe("useReconnectionRedirect", () => {

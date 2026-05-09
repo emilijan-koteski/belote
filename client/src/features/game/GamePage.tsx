@@ -878,10 +878,11 @@ export function GamePage() {
       )}
 
       {/* Reconnect overlay — shown during disconnect countdown OR abandonment.
-          `disconnectedPlayerNames` covers the concurrent-disconnect edge case
-          (handleConcurrentDisconnectLocked on the server) where multiple seats
-          are flagged Connected=false while only one reconnect timer is
-          active — every offline seat shows up as a chip in the dialog. */}
+          `disconnectedPlayers` carries each offline seat's individual
+          reconnect expiry so the per-row countdowns can run independently of
+          the center ring. The center ring counts down to whichever seat
+          closes soonest (the same value the server publishes via
+          `gameState.reconnectExpiresAt`). */}
       {((gameState.phase === "disconnected" &&
         gameState.disconnectedSeat !== -1 &&
         gameState.reconnectExpiresAt) ||
@@ -894,9 +895,16 @@ export function GamePage() {
               : (gameState.players[gameState.disconnectedSeat]?.username ??
                 `Player ${gameState.disconnectedSeat + 1}`)
           }
-          disconnectedPlayerNames={gameState.players
-            .filter((p) => !p.connected)
-            .map((p) => p.username || `Player ${p.seat + 1}`)}
+          disconnectedPlayers={gameState.players
+            .map((p) => {
+              const expiry = gameState.playerReconnectExpiresAt[p.seat];
+              if (p.connected || !expiry) return null;
+              return {
+                name: p.username || `Player ${p.seat + 1}`,
+                expiresAt: expiry,
+              };
+            })
+            .filter((entry): entry is { name: string; expiresAt: string } => entry !== null)}
           reconnectExpiresAt={gameState.reconnectExpiresAt ?? ""}
           abandonedData={matchAbandonedData}
           viewerTeam={viewerTeam}
