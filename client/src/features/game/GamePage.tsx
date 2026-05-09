@@ -1005,6 +1005,7 @@ export function GamePage() {
           playerSeat={trumpReveal.playerSeat}
           myPlayerSeat={myPlayerSeat}
           cardId={trumpReveal.cardId}
+          trumpSuit={trumpReveal.trumpSuit as Suit}
           players={gameState.players}
           onComplete={handleTrumpRevealComplete}
         />

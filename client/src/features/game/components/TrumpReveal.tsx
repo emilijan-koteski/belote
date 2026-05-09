@@ -16,6 +16,9 @@ interface TrumpRevealProps {
    *  fallback. */
   myPlayerSeat: number | null;
   cardId: string;
+  /** The actually-chosen trump suit. Differs from `cardId`'s suit only in
+   *  Bitola round-2 free-suit picks; round 1 always has them equal. */
+  trumpSuit: Suit;
   players: readonly PlayerState[];
   onComplete: () => void;
 }
@@ -27,8 +30,62 @@ const SUIT_NAME: Record<Suit, string> = {
   C: "Clubs",
 };
 
+const SUIT_GLYPH: Record<Suit, string> = {
+  S: "♠",
+  H: "♥",
+  D: "♦",
+  C: "♣",
+};
+
+const RANK_NAME: Record<Rank, string> = {
+  "7": "Seven",
+  "8": "Eight",
+  "9": "Nine",
+  T: "Ten",
+  J: "Jack",
+  Q: "Queen",
+  K: "King",
+  A: "Ace",
+};
+
 function parseCardId(id: string) {
   return { rank: id[0] as Rank, suit: id[1] as Suit };
+}
+
+function suitNameKey(suit: Suit): "spades" | "hearts" | "diamonds" | "clubs" {
+  switch (suit) {
+    case "S":
+      return "spades";
+    case "H":
+      return "hearts";
+    case "D":
+      return "diamonds";
+    case "C":
+      return "clubs";
+  }
+}
+
+function rankNameKey(
+  rank: Rank,
+): "seven" | "eight" | "nine" | "ten" | "jack" | "queen" | "king" | "ace" {
+  switch (rank) {
+    case "7":
+      return "seven";
+    case "8":
+      return "eight";
+    case "9":
+      return "nine";
+    case "T":
+      return "ten";
+    case "J":
+      return "jack";
+    case "Q":
+      return "queen";
+    case "K":
+      return "king";
+    case "A":
+      return "ace";
+  }
 }
 
 /**
@@ -41,6 +98,7 @@ export function TrumpReveal({
   playerSeat,
   myPlayerSeat,
   cardId,
+  trumpSuit,
   players,
   onComplete,
 }: TrumpRevealProps) {
@@ -72,9 +130,33 @@ export function TrumpReveal({
 
   const picker = players.find((p) => p.seat === playerSeat);
   const card = parseCardId(cardId);
-  const suitName = t(`game.suits.${suitNameKey(card.suit)}`, {
+  // The captioned suit is the *chosen* trump, never the candidate's suit.
+  // In Bitola round-2 free picks they differ; round 1 they are equal.
+  const suitName = t(`game.suits.${suitNameKey(trumpSuit)}`, {
+    defaultValue: SUIT_NAME[trumpSuit],
+  });
+
+  // Free-pick (round 2) is detected purely by the wire fields — no extra
+  // payload needed. When the picker absorbed the candidate's suit (round 1)
+  // we render the original PlayingCard; when they chose a different suit
+  // (round 2) we swap to a suit-orb of the chosen trump plus a small
+  // localized full-name caption naming the candidate, so other seats still
+  // see what was on the table.
+  const isFreePick = card.suit !== trumpSuit;
+  const candidateRankName = t(`game.ranks.${rankNameKey(card.rank)}`, {
+    defaultValue: RANK_NAME[card.rank],
+  });
+  const candidateSuitName = t(`game.suits.${suitNameKey(card.suit)}`, {
     defaultValue: SUIT_NAME[card.suit],
   });
+  const candidateLabel = t("game.trumpReveal.candidateLabel", {
+    rank: candidateRankName,
+    suit: candidateSuitName,
+    defaultValue: `candidate: ${RANK_NAME[card.rank]} of ${SUIT_NAME[card.suit]}`,
+  });
+  const eyebrow = isFreePick
+    ? t("game.trumpReveal.eyebrowFreeChoice", { defaultValue: "Trump taken · free pick" })
+    : t("game.trumpReveal.eyebrow", { defaultValue: "Trump taken" });
 
   // Viewer-relative team color for the glow + the Us/Them chip. When the
   // viewer's seat hasn't resolved yet we fall back to brass so the toast still
@@ -108,8 +190,50 @@ export function TrumpReveal({
         }}
         data-team={team ?? undefined}
       >
-        {/* Card on the left */}
-        <PlayingCard card={card} state="default" size="md" withTransition={false} />
+        {/* Visual on the left:
+            • round 1 (candidate suit = chosen suit) → full PlayingCard, as before.
+            • round 2 free pick (suits differ)      → suit-orb of the chosen
+              trump (mirrors TrumpIndicator's parchment+halo) so the visual
+              matches the captioned suit. The original face-up candidate is
+              still surfaced as a localized full-name caption below the title. */}
+        {isFreePick ? (
+          <div className="flex flex-col items-center gap-1.5 shrink-0">
+            <div
+              className="rounded-full flex items-center justify-center shrink-0"
+              style={{
+                width: 64,
+                height: 64,
+                background: `radial-gradient(circle, ${
+                  trumpSuit === "H" || trumpSuit === "D" ? "#c6282822" : "#1a1a1a22"
+                }, transparent 70%), linear-gradient(180deg, #fdfaf0, #f0e8d0)`,
+                border: `2px solid ${
+                  trumpSuit === "H" || trumpSuit === "D" ? "#c62828" : "#1a1a1a"
+                }`,
+                boxShadow: `0 0 16px ${
+                  trumpSuit === "H" || trumpSuit === "D" ? "#c6282877" : "#1a1a1a55"
+                }, inset 0 1px 0 rgba(255,255,255,0.6)`,
+              }}
+              data-testid="trump-reveal-suit-chip"
+              data-suit={trumpSuit}
+              aria-label={suitName}
+            >
+              <span
+                className="font-display font-semibold leading-none"
+                style={{
+                  color:
+                    trumpSuit === "H" || trumpSuit === "D"
+                      ? "var(--suit-red, #c62828)"
+                      : "var(--suit-black, #1a1a1a)",
+                  fontSize: 34,
+                }}
+              >
+                {SUIT_GLYPH[trumpSuit]}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <PlayingCard card={card} state="default" size="md" withTransition={false} />
+        )}
 
         {/* Main copy */}
         <div className="flex flex-col gap-1 min-w-50">
@@ -117,7 +241,7 @@ export function TrumpReveal({
             className="text-[10px] uppercase tracking-[0.18em]"
             style={{ color: "var(--brass, #c9a876)", fontFamily: "Georgia, serif" }}
           >
-            {t("game.trumpReveal.eyebrow", { defaultValue: "Trump taken" })}
+            {eyebrow}
           </div>
           <div
             className="font-semibold leading-tight"
@@ -131,6 +255,15 @@ export function TrumpReveal({
           >
             {titleName} · {suitName}
           </div>
+          {isFreePick && (
+            <div
+              className="text-[11px] mt-0.5"
+              style={{ color: "var(--ink-light, #f5f2e8)", opacity: 0.75 }}
+              data-testid="trump-reveal-candidate"
+            >
+              {candidateLabel}
+            </div>
+          )}
           {team && teamLabel && (
             <div className="flex items-center gap-2 mt-1">
               <span
@@ -165,17 +298,4 @@ export function TrumpReveal({
       </div>
     </div>
   );
-}
-
-function suitNameKey(suit: Suit): "spades" | "hearts" | "diamonds" | "clubs" {
-  switch (suit) {
-    case "S":
-      return "spades";
-    case "H":
-      return "hearts";
-    case "D":
-      return "diamonds";
-    case "C":
-      return "clubs";
-  }
 }

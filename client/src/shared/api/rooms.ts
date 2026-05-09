@@ -40,10 +40,7 @@ export function leaveSeat(roomId: number): Promise<{ players: RoomPlayer[] }> {
   return axiosClient.post(`/rooms/${roomId}/leave-seat`);
 }
 
-export function transferOwnership(
-  roomId: number,
-  userId: number,
-): Promise<{ ownerId: number }> {
+export function transferOwnership(roomId: number, userId: number): Promise<{ ownerId: number }> {
   return axiosClient.post(`/rooms/${roomId}/transfer-ownership`, { userId });
 }
 

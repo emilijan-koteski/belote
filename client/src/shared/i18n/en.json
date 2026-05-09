@@ -324,6 +324,16 @@
       "diamonds": "Diamonds",
       "clubs": "Clubs"
     },
+    "ranks": {
+      "seven": "Seven",
+      "eight": "Eight",
+      "nine": "Nine",
+      "ten": "Ten",
+      "jack": "Jack",
+      "queen": "Queen",
+      "king": "King",
+      "ace": "Ace"
+    },
     "trumpIndicator": {
       "trump": "Trump",
       "label": "Trump suit: {{suit}}",
@@ -332,7 +342,12 @@
     },
     "trumpReveal": {
       "title": "{{name}} took trump",
-      "unknownPlayer": "Trump taken"
+      "unknownPlayer": "Trump taken",
+      "eyebrow": "Trump taken",
+      "eyebrowFreeChoice": "Trump taken · free pick",
+      "subtitle": "trump for this hand",
+      "candidateLabel": "candidate: {{rank}} of {{suit}}",
+      "dismiss": "Dismiss"
     },
     "dealerIndicator": {
       "dealer": "Dealer",
@@ -496,6 +511,9 @@
       "resume": "Resume",
       "pauseButton": "Pause",
       "pauseUsed": "Pause Used",
+      "pausedNow": "paused now",
+      "pauseAvailable": "pause available",
+      "pauseUsedRow": "pause used",
       "resumeAll": "Resume All",
       "ownerResumedToast": "Room owner resumed the game"
     },

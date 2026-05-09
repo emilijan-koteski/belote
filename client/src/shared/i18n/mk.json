@@ -256,7 +256,7 @@
       "playerLeft": "{{username}} ја напушти собата",
       "startGame": "Започни игра",
       "startGameDisabled": "Сите 4 играчи мора да седнат",
-      "waitingForOwner": "Се чека {{owner}} да започне игра…",
+      "waitingForOwner": "Се чека {{owner}} да ја започне играта…",
       "seatTaken": "Тоа место е зафатено",
       "seatUpdated": "Местото е ажурирано",
       "gameStarting": "Играта започнува…",
@@ -284,7 +284,7 @@
       "errors": {
         "seatFailed": "Не можеше да се избере местото — обиди се повторно",
         "startFailed": "Стартувањето не успеа — обиди се повторно",
-        "notOwner": "Само сопственикот на собата може да започне игра",
+        "notOwner": "Само сопственикот на собата може да ја започне играта",
         "notOwnerAction": "Тоа може само сопственикот на собата",
         "notAllSeated": "Сите 4 играчи мора да седнат за да започне",
         "roomStarted": "Играта веќе започна — исфрлање и замена на места повеќе не се достапни.",
@@ -324,6 +324,16 @@
       "diamonds": "Каро",
       "clubs": "Спато"
     },
+    "ranks": {
+      "seven": "Седмица",
+      "eight": "Осмица",
+      "nine": "Деветка",
+      "ten": "Десетка",
+      "jack": "Жандар",
+      "queen": "Дама",
+      "king": "Крал",
+      "ace": "Ас"
+    },
     "trumpIndicator": {
       "trump": "Адут",
       "label": "Адут: {{suit}}",
@@ -332,7 +342,12 @@
     },
     "trumpReveal": {
       "title": "{{name}} зеде адут",
-      "unknownPlayer": "Адутот е земен"
+      "unknownPlayer": "Адутот е земен",
+      "eyebrow": "Адутот е земен",
+      "eyebrowFreeChoice": "Адутот е земен · слободен избор",
+      "subtitle": "адут за ова делење",
+      "candidateLabel": "кандидат: {{rank}} {{suit}}",
+      "dismiss": "Затвори"
     },
     "dealerIndicator": {
       "dealer": "Дилер",
@@ -496,6 +511,9 @@
       "resume": "Продолжи",
       "pauseButton": "Пауза",
       "pauseUsed": "Паузата искористена",
+      "pausedNow": "паузира сега",
+      "pauseAvailable": "пауза достапна",
+      "pauseUsedRow": "паузата искористена",
       "resumeAll": "Продолжи сите",
       "ownerResumedToast": "Сопственикот на собата ја продолжи играта"
     },

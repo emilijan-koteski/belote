@@ -308,11 +308,7 @@ export function RoomLobby() {
     const targetPlayer = getPlayerAtSeat(players, targetSeat);
     const isCurrentUser =
       targetPlayer !== undefined && currentUser !== null && targetPlayer.userId === currentUser.id;
-    if (
-      targetSeat === swapSourceSeat ||
-      isCurrentUser ||
-      swapSeatsMutation.isPending
-    ) {
+    if (targetSeat === swapSourceSeat || isCurrentUser || swapSeatsMutation.isPending) {
       setSwapSourceSeat(null);
       return;
     }
@@ -579,16 +575,14 @@ export function RoomLobby() {
                           const isYou = currentUser?.id === p.userId;
                           const isRoomOwner = p.userId === room.ownerId;
                           const isWaiting = room.status === "waiting";
-                          const ownerCanActOnRow =
-                            isOwner && isWaiting && !isRoomOwner && !isYou;
+                          const ownerCanActOnRow = isOwner && isWaiting && !isRoomOwner && !isYou;
                           // Owner-only actions land in the dropdown so the
                           // owner can also reach unseated members (the diamond
                           // tiles only render seated players). Promote is
                           // restricted to seated targets — see
                           // ErrCannotPromoteUnseated.
                           const ownerCanKickRow = ownerCanActOnRow;
-                          const ownerCanPromoteRow =
-                            ownerCanActOnRow && p.seat !== null;
+                          const ownerCanPromoteRow = ownerCanActOnRow && p.seat !== null;
                           const seatLabel =
                             p.seat !== null
                               ? t("lobby.roomLobby.inRoomList.seated", { seat: p.seat + 1 })
@@ -780,8 +774,7 @@ export function RoomLobby() {
                   swapSeatsMutation.isPending &&
                   (swapSeatsMutation.variables?.seatA === seatIndex ||
                     swapSeatsMutation.variables?.seatB === seatIndex);
-                const leaveSeatPendingForThisSeat =
-                  leaveSeatMutation.isPending && isCurrentUser;
+                const leaveSeatPendingForThisSeat = leaveSeatMutation.isPending && isCurrentUser;
                 const isPendingForThisSeat =
                   kickPendingForThisSeat || swapPendingForThisSeat || leaveSeatPendingForThisSeat;
 

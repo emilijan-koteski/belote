@@ -324,6 +324,16 @@
       "diamonds": "Karo",
       "clubs": "Tref"
     },
+    "ranks": {
+      "seven": "Sedmica",
+      "eight": "Osmica",
+      "nine": "Devetka",
+      "ten": "Desetka",
+      "jack": "Dečko",
+      "queen": "Dama",
+      "king": "Kralj",
+      "ace": "As"
+    },
     "trumpIndicator": {
       "trump": "Adut",
       "label": "Adut: {{suit}}",
@@ -332,7 +342,12 @@
     },
     "trumpReveal": {
       "title": "{{name}} je uzeo aduta",
-      "unknownPlayer": "Adut uzet"
+      "unknownPlayer": "Adut uzet",
+      "eyebrow": "Adut uzet",
+      "eyebrowFreeChoice": "Adut uzet · slobodan izbor",
+      "subtitle": "adut za ovo dijeljenje",
+      "candidateLabel": "kandidat: {{rank}} {{suit}}",
+      "dismiss": "Zatvori"
     },
     "dealerIndicator": {
       "dealer": "Djelitelj",
@@ -496,6 +511,9 @@
       "resume": "Nastavi",
       "pauseButton": "Pauza",
       "pauseUsed": "Pauza iskorištena",
+      "pausedNow": "pauzira sada",
+      "pauseAvailable": "pauza dostupna",
+      "pauseUsedRow": "pauza iskorištena",
       "resumeAll": "Nastavi sve",
       "ownerResumedToast": "Vlasnik sobe je nastavio igru"
     },
