@@ -26,15 +26,15 @@
       "wins": "Wins",
       "losses": "Losses",
       "winRate": "Win rate",
-      "winRateEmpty": "\u2014",
-      "error": "Could not load stats \u2014 try again"
+      "winRateEmpty": "—",
+      "error": "Could not load stats — try again"
     },
     "matchHistory": {
       "title": "Match History",
-      "empty": "No games yet \u2014 Quick Play to get started",
+      "empty": "No games yet — Quick Play to get started",
       "emptyCta": "Go to lobby",
-      "loading": "Loading matches\u2026",
-      "error": "Could not load match history \u2014 try again",
+      "loading": "Loading matches…",
+      "error": "Could not load match history — try again",
       "loadMore": "Load more",
       "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
       "durationHms": "{{h}}:{{m}}:{{s}}",
@@ -75,11 +75,11 @@
   },
   "chat": {
     "title": "Lobby Chat",
-    "placeholder": "Say hi\u2026",
-    "placeholderAfterFirst": "Message\u2026",
-    "placeholderDisabled": "Reconnecting\u2026",
+    "placeholder": "Say hi…",
+    "placeholderAfterFirst": "Message…",
+    "placeholderDisabled": "Reconnecting…",
     "send": "Send",
-    "empty": "No messages yet \u2014 say hi.",
+    "empty": "No messages yet — say hi.",
     "tooLong": "Messages must be 500 characters or fewer.",
     "clearAriaLabel": "Clear chat",
     "clearTooltip": "Clear chat (or type /cc)"
@@ -87,11 +87,11 @@
   "room": {
     "chat": {
       "title": "Room Chat",
-      "placeholder": "Chat with the table\u2026"
+      "placeholder": "Chat with the table…"
     },
     "errors": {
       "gameStartFailed": "Failed to start the game. Please try again.",
-      "alreadyStarted": "The game has already started \u2014 you can't leave now."
+      "alreadyStarted": "The game has already started — you can't leave now."
     }
   },
   "rules": {
@@ -133,15 +133,15 @@
       "activeRatioValue": "{{active}} / {{registered}}"
     },
     "matchmaking": {
-      "finding": "Finding match...",
+      "finding": "Finding match…",
       "cancel": "Cancel",
-      "failed": "Could not find a match \u2014 try again",
-      "alreadyInRoom": "You're already in a room \u2014 leave it first"
+      "failed": "Could not find a match — try again",
+      "alreadyInRoom": "You're already in a room — leave it first"
     },
     "createRoomModal": {
       "title": "Create a Game Room",
       "roomName": "Room Name",
-      "roomNamePlaceholder": "Enter room name...",
+      "roomNamePlaceholder": "Enter room name…",
       "variant": "Game Variant",
       "variantBitola": "Bitola",
       "matchMode": "Match Mode",
@@ -163,7 +163,7 @@
       "notSeated": "Not seated"
     },
     "roomList": {
-      "searchPlaceholder": "Search rooms by name or code...",
+      "searchPlaceholder": "Search rooms by name or code…",
       "backToOptions": "Back",
       "variant": "Variant",
       "variantBitola": "Bitola",
@@ -173,33 +173,33 @@
       "timerRelaxed": "Relaxed",
       "timerPerMove": "{{seconds}}s timer",
       "join": "Join",
-      "loading": "Loading rooms...",
-      "emptyNoRooms": "No open rooms \u2014 Create one or try Quick Play",
-      "emptyNoMatch": "No rooms match '{{query}}' \u2014",
+      "loading": "Loading rooms…",
+      "emptyNoRooms": "No open rooms — Create one or try Quick Play",
+      "emptyNoMatch": "No rooms match '{{query}}' —",
       "clearSearch": "Clear search",
       "errors": {
-        "roomFull": "Room is full \u2014 try another",
+        "roomFull": "Room is full — try another",
         "alreadyInRoom": "You're already in a room",
-        "joinFailed": "Failed to join room \u2014 try again"
+        "joinFailed": "Failed to join room — try again"
       }
     },
     "joinByCode": {
       "label": "Have a room code?",
-      "placeholder": "Enter code...",
+      "placeholder": "Enter code…",
       "join": "Join",
-      "notFound": "Room not found \u2014 check the code and try again"
+      "notFound": "Room not found — check the code and try again"
     },
     "roomLobby": {
-      "waitingForPlayers": "Waiting for players...",
+      "waitingForPlayers": "Waiting for players…",
       "backToLobby": "Back to Lobby",
       "copyLink": "Copy Link",
       "copyLinkAriaLabel": "Copy room code {{code}}",
       "copyLinkSuccess": "Room code copied!",
-      "copyLinkFailed": "Failed to copy \u2014 code: {{code}}",
+      "copyLinkFailed": "Failed to copy — code: {{code}}",
       "codeLabel": "Code",
       "copied": "Copied!",
       "leaveRoom": "Leave Room",
-      "seatEmpty": "Waiting...",
+      "seatEmpty": "Waiting…",
       "seatYou": "You",
       "seatOwner": "Owner",
       "ownerLine": "Hosted by {{owner}}",
@@ -213,7 +213,7 @@
         "notSeated": "Not seated"
       },
       "yourSeat": "Your seat",
-      "loading": "Loading room...",
+      "loading": "Loading room…",
       "notFound": "Room not found",
       "notFoundAction": "Back to Lobby",
       "roomClosed": "This room is closed.",
@@ -222,12 +222,12 @@
       "playerLeft": "{{username}} left the room",
       "startGame": "Start Game",
       "startGameDisabled": "All 4 players must be seated",
-      "waitingForOwner": "Waiting for {{owner}} to start the game...",
+      "waitingForOwner": "Waiting for {{owner}} to start the game…",
       "seatTaken": "That seat is already taken",
       "seatUpdated": "Seat updated",
-      "gameStarting": "Game starting...",
+      "gameStarting": "Game starting…",
       "autoStartMessage": "Game starts automatically when all players are seated",
-      "autoStarting": "Starting game...",
+      "autoStarting": "Starting game…",
       "kickIconLabel": "Kick {{username}}",
       "kickConfirm": {
         "title": "Kick player?",
@@ -254,21 +254,21 @@
   },
   "game": {
     "seat": {
-      "waiting": "Waiting...",
+      "waiting": "Waiting…",
       "you": "You"
     },
     "chat": {
       "title": "Match Chat",
-      "placeholder": "Message your table\u2026",
+      "placeholder": "Message your table…",
       "toggleOpen": "Open match chat",
       "toggleClose": "Close match chat"
     },
     "trump": "Trump: {{suit}}",
-    "starting": "Game is starting\u2026",
-    "reconnecting": "Reconnecting to the game\u2026",
-    "noActiveSession": "Match no longer active. Returning to lobby\u2026",
-    "notMember": "You're not a player in this match. Returning to lobby\u2026",
-    "roomNotFound": "Game room not found. Returning to lobby\u2026",
+    "starting": "Game is starting…",
+    "reconnecting": "Reconnecting to the game…",
+    "noActiveSession": "Match no longer active. Returning to lobby…",
+    "notMember": "You're not a player in this match. Returning to lobby…",
+    "roomNotFound": "Game room not found. Returning to lobby…",
     "leaveConfirm": "Leave the game? You may lose your progress.",
     "suits": {
       "spades": "Spades",
@@ -299,13 +299,13 @@
       "roundLabel": "Round {{round}} / 2",
       "pick": "Take",
       "pass": "Pass",
-      "waiting": "Waiting for bidder..."
+      "waiting": "Waiting for bidder…"
     },
     "deal": {
-      "dealing": "Dealing cards..."
+      "dealing": "Dealing cards…"
     },
     "reshuffle": {
-      "message": "Reshuffling deck..."
+      "message": "Reshuffling deck…"
     },
     "declaration": {
       "title": "You have declarations!",
@@ -444,7 +444,7 @@
     "pause": {
       "title": "Game Paused",
       "pausedBy": "{{player}} paused the game",
-      "waitingToResume": "Waiting for players to resume...",
+      "waitingToResume": "Waiting for players to resume…",
       "resume": "Resume",
       "pauseButton": "Pause",
       "pauseUsed": "Pause Used",
@@ -454,15 +454,15 @@
     "disconnect": {
       "playerDisconnected": "{{player}} disconnected",
       "playerReconnected": "{{player}} reconnected",
-      "reconnecting": "Reconnecting...",
+      "reconnecting": "Reconnecting…",
       "waitingMessage": "The game is on hold while we wait for {{player}} to reconnect.",
       "waitingMessageMany": "The game is on hold while we wait for {{count}} players to reconnect.",
       "countdownLabel": "Time remaining",
       "reconnected": "You have reconnected",
-      "reconnectFailed": "Reconnection failed \u2014 the match may have ended",
-      "matchAbandoned": "{{player}} disconnected \u2014 match ended",
+      "reconnectFailed": "Reconnection failed — the match may have ended",
+      "matchAbandoned": "{{player}} disconnected — match ended",
       "matchAbandonedScores": "Final: Us {{us}} : Them {{them}}",
-      "returningToLobby": "Returning to lobby...",
+      "returningToLobby": "Returning to lobby…",
       "statusBadge": "disconnected",
       "matchEnded": "Match has ended"
     },
@@ -478,17 +478,17 @@
     },
     "rules": {
       "title": "Game rules",
-      "comingSoon": "Detailed rules are on the way \u2014 check back soon.",
+      "comingSoon": "Detailed rules are on the way — check back soon.",
       "statusHint": "Bidding, declarations, and scoring guides land here next.",
       "close": "Close"
     }
   },
   "ws": {
-    "connecting": "Connecting...",
-    "authenticating": "Authenticating...",
+    "connecting": "Connecting…",
+    "authenticating": "Authenticating…",
     "connected": "Connected",
     "disconnected": "Disconnected",
-    "reconnecting": "Reconnecting...",
+    "reconnecting": "Reconnecting…",
     "authFailed": "Connection authentication failed"
   },
   "auth": {
@@ -499,7 +499,7 @@
       "passwordLabel": "Password",
       "passwordPlaceholder": "Enter your password",
       "submitButton": "Log In",
-      "submitting": "Logging in...",
+      "submitting": "Logging in…",
       "registerLink": "Don't have an account? Create one",
       "errors": {
         "emailRequired": "Email is required",
@@ -518,7 +518,7 @@
       "passwordLabel": "Password",
       "passwordPlaceholder": "Minimum 8 characters",
       "submitButton": "Create Account",
-      "submitting": "Creating...",
+      "submitting": "Creating…",
       "loginLink": "Already have an account? Log in",
       "consent": {
         "prefix": "I agree to the ",
