@@ -142,6 +142,27 @@ export function RoomLobby() {
     }
   }, [gameStarted, id, navigate]);
 
+  // Closed-room auto-redirect — once a match ends (or the room is cancelled)
+  // the row flips to a terminal status but the URL still resolves. Without
+  // this guard, deep-linking to a finished room rendered the seat grid and
+  // "waiting for owner to start" copy as if the room were live. We surface a
+  // "Room is closed" message for a beat, then navigate to /lobby. Note that
+  // "playing" is *not* terminal — the room is live and existing in-room logic
+  // (kick gating, gameStarted handler) already covers that path.
+  const currentRoomStatus = storeRoom?.status ?? roomQuery.data?.room.status ?? null;
+  const isRoomClosed =
+    currentRoomStatus === "completed" ||
+    currentRoomStatus === "cancelled" ||
+    currentRoomStatus === "finished";
+  useEffect(() => {
+    if (!isRoomClosed || gameStarted) return;
+    hasLeftRef.current = true; // Don't fire the cleanup-leave on the way out
+    const timer = setTimeout(() => {
+      navigate("/lobby", { replace: true });
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [isRoomClosed, gameStarted, navigate]);
+
   // Handle system:room_kicked — toast + redirect kicked user back to /lobby.
   // Suppress the unmount auto-leave: the server has already removed us, so
   // the cleanup `/leave` would 404; setting hasLeftRef before navigate keeps
@@ -375,6 +396,22 @@ export function RoomLobby() {
         <Button variant="ghost" onClick={() => navigate("/lobby")} data-testid="back-to-lobby">
           {t("lobby.roomLobby.notFoundAction")}
         </Button>
+      </div>
+    );
+  }
+
+  if (isRoomClosed && !gameStarted) {
+    return (
+      <div
+        className="mx-auto max-w-2xl px-8 py-8 text-center"
+        data-testid="room-lobby-closed"
+      >
+        <p className="mb-2 text-text-primary font-display text-lg">
+          {t("lobby.roomLobby.roomClosed")}
+        </p>
+        <p className="text-text-secondary text-sm animate-pulse">
+          {t("lobby.roomLobby.returningToLobby")}
+        </p>
       </div>
     );
   }

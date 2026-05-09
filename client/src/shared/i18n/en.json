@@ -197,6 +197,8 @@
       "loading": "Loading room...",
       "notFound": "Room not found",
       "notFoundAction": "Back to Lobby",
+      "roomClosed": "This room is closed.",
+      "returningToLobby": "Returning to lobby…",
       "playerJoined": "{{username}} joined the room",
       "playerLeft": "{{username}} left the room",
       "startGame": "Start Game",
@@ -245,6 +247,9 @@
     "trump": "Trump: {{suit}}",
     "starting": "Game is starting\u2026",
     "reconnecting": "Reconnecting to the game\u2026",
+    "noActiveSession": "Match no longer active. Returning to lobby\u2026",
+    "notMember": "You're not a player in this match. Returning to lobby\u2026",
+    "roomNotFound": "Game room not found. Returning to lobby\u2026",
     "leaveConfirm": "Leave the game? You may lose your progress.",
     "suits": {
       "spades": "Spades",
@@ -437,7 +442,9 @@
       "reconnectFailed": "Reconnection failed \u2014 the match may have ended",
       "matchAbandoned": "{{player}} disconnected \u2014 match ended",
       "matchAbandonedScores": "Final: Us {{us}} : Them {{them}}",
-      "returningToLobby": "Returning to lobby..."
+      "returningToLobby": "Returning to lobby...",
+      "statusBadge": "disconnected",
+      "matchEnded": "Match has ended"
     },
     "hud": {
       "pause": "Pause",

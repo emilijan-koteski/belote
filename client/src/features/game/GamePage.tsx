@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router";
 
+import { getRoom } from "@/shared/api/rooms";
 import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
 import { FLAG_LIFETIME, MOTION } from "@/shared/lib/motion";
-import { useWsSendMessage } from "@/shared/providers/WebSocketContext";
+import { useWsConnectionState, useWsSendMessage } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useChatStore } from "@/shared/stores/chatStore";
 import { useGameStore } from "@/shared/stores/gameStore";
@@ -83,7 +84,12 @@ const SEAT_ORIENTATIONS: Record<number, SeatOrientation> = {
 export function GamePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  useParams<{ roomId: string }>();
+  const { roomId: roomIdParam } = useParams<{ roomId: string }>();
+  const parsedRoomId = roomIdParam ? Number(roomIdParam) : null;
+  const roomIdNum =
+    parsedRoomId !== null && Number.isFinite(parsedRoomId) && parsedRoomId > 0
+      ? parsedRoomId
+      : null;
 
   const sendMessage = useWsSendMessage();
 
@@ -243,6 +249,75 @@ export function GamePage() {
       navigate("/lobby", { replace: true });
     }
   }, [gameState, matchEndData, matchAbandonedData, clearGame, navigate]);
+
+  // Splash-state classifier — when the user lands on /game/:id we need to
+  // distinguish between (a) they belong here and we're just waiting for the
+  // WS push, (b) the room exists but the match already finished, (c) the
+  // room exists but they were never seated in it, (d) the room id doesn't
+  // resolve at all. Without this guard, deep-linking to a stale/abandoned
+  // room left the splash showing "Reconnecting to the game…" forever.
+  //
+  // Source priority:
+  //   1. HTTP GET /api/rooms/:id — authoritative source of room status +
+  //      seat-membership. Fires on mount.
+  //   2. WS-fallback — if the HTTP check passes but the server still doesn't
+  //      push game_state within a short window (e.g. session torn down after
+  //      the room status was checked), classify as "noActiveSession" too.
+  type SplashIssue = "noActiveSession" | "notMember" | "invalid";
+  const wsConnectionState = useWsConnectionState();
+  const [splashIssue, setSplashIssue] = useState<SplashIssue | null>(null);
+
+  useEffect(() => {
+    if (!roomIdNum || !user) return;
+    let cancelled = false;
+    getRoom(roomIdNum)
+      .then((detail) => {
+        if (cancelled) return;
+        const isPlayer = detail.players.some((p) => p.userId === user.id);
+        if (!isPlayer) {
+          setSplashIssue("notMember");
+          return;
+        }
+        // Server room status is one of "waiting" | "in_progress" | "completed"
+        // | "cancelled". Only "waiting" / "in_progress" expect a live session;
+        // anything else means the match wrapped up and the session is gone.
+        if (detail.room.status !== "waiting" && detail.room.status !== "in_progress") {
+          setSplashIssue("noActiveSession");
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSplashIssue("invalid");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [roomIdNum, user]);
+
+  useEffect(() => {
+    if (gameState) {
+      // Game state arrived after we declared an issue (rare race: HTTP check
+      // returned "completed" but a fresh session started a moment later).
+      // Cancel the redirect so we don't yank the user out of a real game.
+      if (splashIssue === "noActiveSession") setSplashIssue(null);
+      return;
+    }
+    if (splashIssue !== null) return;
+    if (wsConnectionState !== "connected") return;
+    const detectTimer = window.setTimeout(() => {
+      setSplashIssue("noActiveSession");
+    }, 2500);
+    return () => clearTimeout(detectTimer);
+  }, [gameState, wsConnectionState, splashIssue]);
+
+  useEffect(() => {
+    if (splashIssue === null || gameState) return;
+    const redirectTimer = window.setTimeout(() => {
+      clearGame();
+      navigate("/lobby", { replace: true });
+    }, 2000);
+    return () => clearTimeout(redirectTimer);
+  }, [splashIssue, gameState, clearGame, navigate]);
 
   // Transition to match result after score reveal is dismissed (if match ended)
   useEffect(() => {
@@ -499,8 +574,17 @@ export function GamePage() {
               letterSpacing: 0.3,
               opacity: 0.85,
             }}
+            data-testid="splash-text"
           >
-            {cameFromRoom ? t("game.starting") : t("game.reconnecting")}
+            {splashIssue === "invalid"
+              ? t("game.roomNotFound")
+              : splashIssue === "notMember"
+                ? t("game.notMember")
+                : splashIssue === "noActiveSession"
+                  ? t("game.noActiveSession")
+                  : cameFromRoom
+                    ? t("game.starting")
+                    : t("game.reconnecting")}
           </span>
         </div>
       </div>
@@ -793,7 +877,11 @@ export function GamePage() {
         />
       )}
 
-      {/* Reconnect overlay — shown during disconnect countdown OR abandonment */}
+      {/* Reconnect overlay — shown during disconnect countdown OR abandonment.
+          `disconnectedPlayerNames` covers the concurrent-disconnect edge case
+          (handleConcurrentDisconnectLocked on the server) where multiple seats
+          are flagged Connected=false while only one reconnect timer is
+          active — every offline seat shows up as a chip in the dialog. */}
       {((gameState.phase === "disconnected" &&
         gameState.disconnectedSeat !== -1 &&
         gameState.reconnectExpiresAt) ||
@@ -806,6 +894,9 @@ export function GamePage() {
               : (gameState.players[gameState.disconnectedSeat]?.username ??
                 `Player ${gameState.disconnectedSeat + 1}`)
           }
+          disconnectedPlayerNames={gameState.players
+            .filter((p) => !p.connected)
+            .map((p) => p.username || `Player ${p.seat + 1}`)}
           reconnectExpiresAt={gameState.reconnectExpiresAt ?? ""}
           abandonedData={matchAbandonedData}
           viewerTeam={viewerTeam}

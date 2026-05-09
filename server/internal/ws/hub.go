@@ -4,7 +4,15 @@ import (
 	"encoding/json"
 	"log/slog"
 	"sync"
+
+	"github.com/coder/websocket"
 )
+
+// CloseCodeReplaced signals a kicked-by-newer-connection close. Sits in the
+// app-defined 4000-4999 range so it can't collide with RFC 6455 reserved codes.
+// The client uses this to skip its auto-reconnect path so two tabs as the same
+// user don't enter a kick → reconnect loop.
+const CloseCodeReplaced websocket.StatusCode = 4001
 
 // IncomingMessage pairs a raw message with the client that sent it.
 type IncomingMessage struct {
@@ -87,7 +95,13 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			if existing, ok := h.clients[client.UserID]; ok {
 				existing.markClosed()
-				_ = existing.conn.CloseNow()
+				// Send a clean close frame with the app-specific "replaced"
+				// status so the kicked client knows not to auto-reconnect —
+				// otherwise two tabs/devices as the same user enter a tight
+				// reconnect/replace loop. Falls back to CloseNow on error.
+				if err := existing.conn.Close(CloseCodeReplaced, "replaced by newer connection"); err != nil {
+					_ = existing.conn.CloseNow()
+				}
 				slog.Info("ws: replaced existing connection", "userID", client.UserID)
 			}
 			h.clients[client.UserID] = client

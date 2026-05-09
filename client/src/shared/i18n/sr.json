@@ -197,6 +197,8 @@
       "loading": "Učitavanje sobe...",
       "notFound": "Soba nije pronađena",
       "notFoundAction": "Nazad u lobi",
+      "roomClosed": "Ova soba je zatvorena.",
+      "returningToLobby": "Povratak u lobi…",
       "playerJoined": "{{username}} se pridružio sobi",
       "playerLeft": "{{username}} je napustio sobu",
       "startGame": "Započni igru",
@@ -245,6 +247,9 @@
     "trump": "Adut: {{suit}}",
     "starting": "Igra počinje\u2026",
     "reconnecting": "Ponovno povezivanje na igru\u2026",
+    "noActiveSession": "Me\u010d vi\u0161e nije aktivan. Povratak u lobi\u2026",
+    "notMember": "Niste igra\u010d u ovom me\u010du. Povratak u lobi\u2026",
+    "roomNotFound": "Soba za igru nije prona\u0111ena. Povratak u lobi\u2026",
     "leaveConfirm": "Napusti igru? Možeš izgubiti napredak.",
     "suits": {
       "spades": "Pik",
@@ -437,7 +442,9 @@
       "reconnectFailed": "Ponovno povezivanje nije uspelo — meč je možda završen",
       "matchAbandoned": "{{player}} je prekinuo vezu — meč završen",
       "matchAbandonedScores": "Rezultat: Mi {{us}} : Oni {{them}}",
-      "returningToLobby": "Povratak u lobi..."
+      "returningToLobby": "Povratak u lobi...",
+      "statusBadge": "veza prekinuta",
+      "matchEnded": "Meč je završen"
     },
     "hud": {
       "pause": "Pauza",

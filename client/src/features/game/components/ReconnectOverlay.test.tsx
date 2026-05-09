@@ -11,6 +11,11 @@ vi.mock("react-i18next", () => ({
         "game.disconnect.reconnecting": "Reconnecting...",
         "game.disconnect.countdownLabel": "Time remaining",
         "game.disconnect.returningToLobby": "Returning to lobby...",
+        "game.disconnect.matchEnded": "Match has ended",
+        "game.disconnect.reconnectFailed": "Reconnection failed — the match may have ended",
+        "game.matchResult.title": "Match Complete",
+        "team.us": "Us",
+        "team.them": "Them",
       };
       if (key === "game.disconnect.waitingMessage" && opts?.player) {
         return `The game is on hold while we wait for ${opts.player} to reconnect.`;
@@ -60,11 +65,36 @@ describe("ReconnectOverlay", () => {
     expect(screen.getByTestId("reconnect-countdown").textContent).toBe("0:55");
   });
 
-  it("countdown stops at zero", () => {
+  it("falls back to a 'match ended' panel when the window expired without an abandon event", () => {
     const expiresAt = new Date(Date.now() - 5000).toISOString(); // already expired
     render(<ReconnectOverlay disconnectedPlayerName="Carol" reconnectExpiresAt={expiresAt} />);
 
-    expect(screen.getByTestId("reconnect-countdown").textContent).toBe("0:00");
+    // Countdown is replaced by the match-ended fallback view, so the user
+    // isn't stuck on a 0:00 timer when the server already tore down the
+    // session and the abandon broadcast never reached this client.
+    expect(screen.queryByTestId("reconnect-countdown")).not.toBeInTheDocument();
+    expect(screen.getByTestId("match-ended-title")).toBeInTheDocument();
+    expect(screen.getByText("Returning to lobby...")).toBeInTheDocument();
+  });
+
+  it("auto-redirects to lobby when the reconnect window expires without an abandon event", () => {
+    const onReturnToLobby = vi.fn();
+    const expiresAt = new Date(Date.now() - 5000).toISOString();
+    render(
+      <ReconnectOverlay
+        disconnectedPlayerName="Henry"
+        reconnectExpiresAt={expiresAt}
+        onReturnToLobby={onReturnToLobby}
+      />,
+    );
+
+    expect(onReturnToLobby).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(onReturnToLobby).toHaveBeenCalledOnce();
   });
 
   it("has correct accessibility attributes", () => {
@@ -151,6 +181,29 @@ describe("ReconnectOverlay", () => {
     });
 
     expect(onReturnToLobby).toHaveBeenCalledOnce();
+  });
+
+  it("renders one chip per disconnected player when multiple are offline", () => {
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    render(
+      <ReconnectOverlay
+        disconnectedPlayerName="Alice"
+        disconnectedPlayerNames={["Alice", "Bob"]}
+        reconnectExpiresAt={expiresAt}
+      />,
+    );
+
+    const chipContainer = screen.getByTestId("reconnect-player-name");
+    expect(chipContainer).toHaveTextContent("Alice");
+    expect(chipContainer).toHaveTextContent("Bob");
+  });
+
+  it("falls back to a single chip when disconnectedPlayerNames is omitted", () => {
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    render(<ReconnectOverlay disconnectedPlayerName="Solo" reconnectExpiresAt={expiresAt} />);
+
+    const chipContainer = screen.getByTestId("reconnect-player-name");
+    expect(chipContainer).toHaveTextContent("Solo");
   });
 
   it("does not auto-redirect without abandonedData", () => {

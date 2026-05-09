@@ -351,6 +351,12 @@ func (m *Manager) HandleReconnect(userID uint) {
 			}
 		}
 		gs.TurnExpiresAt = nil
+		// [F4] Stop any in-flight turn timer and bump timerGeneration before
+		// rearming the chained reconnect window. Symmetric with the original
+		// HandleDisconnect path (line 116) — without this a stale callback
+		// stuck on session.mu past time.AfterFunc could fire against the
+		// now-PhaseDisconnected state.
+		session.cancelTurnTimer()
 		// Start a new reconnect timer for the chained seat.
 		reconnectExpiry := time.Now().Add(time.Duration(session.reconnectWindowSec) * time.Second)
 		gs.ReconnectExpiresAt = &reconnectExpiry

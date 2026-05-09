@@ -9,7 +9,21 @@ import {
   SYSTEM_AUTHENTICATED,
 } from "@/shared/types/wsEvents";
 
-export type WsConnectionState = "disconnected" | "connecting" | "authenticating" | "connected";
+export type WsConnectionState =
+  | "disconnected"
+  | "connecting"
+  | "authenticating"
+  | "connected"
+  | "replaced";
+
+/**
+ * App-specific WS close code matching the server's `CloseCodeReplaced`
+ * (`server/internal/ws/hub.go`). Sent when a newer connection for the same
+ * user joins and kicks this one. The client must NOT auto-reconnect on this
+ * code — otherwise two tabs as the same user enter a tight kick/reconnect
+ * loop that floods the server with auth churn.
+ */
+const CLOSE_CODE_REPLACED = 4001;
 
 interface UseWebSocketOptions {
   onMessage: (message: WsMessage) => void;
@@ -107,9 +121,17 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
       onMessageRef.current(message);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event: CloseEvent) => {
       if (!mountedRef.current || wsRef.current !== ws) return;
       wsRef.current = null;
+      // The server sends CLOSE_CODE_REPLACED when another tab/device for the
+      // same user took over the slot. Auto-reconnecting here would just kick
+      // the newer connection back, so we park in a terminal "replaced" state
+      // until the user explicitly takes action (refresh, re-login, logout).
+      if (event.code === CLOSE_CODE_REPLACED) {
+        updateState("replaced");
+        return;
+      }
       updateState("disconnected");
       scheduleReconnect();
     };
