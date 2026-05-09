@@ -36,6 +36,17 @@ export function selectSeat(roomId: number, seat: number): Promise<SelectSeatResp
   return axiosClient.post(`/rooms/${roomId}/seat`, { seat });
 }
 
+export function leaveSeat(roomId: number): Promise<{ players: RoomPlayer[] }> {
+  return axiosClient.post(`/rooms/${roomId}/leave-seat`);
+}
+
+export function transferOwnership(
+  roomId: number,
+  userId: number,
+): Promise<{ ownerId: number }> {
+  return axiosClient.post(`/rooms/${roomId}/transfer-ownership`, { userId });
+}
+
 export function startGame(roomId: number): Promise<Room> {
   return axiosClient.post(`/rooms/${roomId}/start`);
 }

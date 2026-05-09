@@ -16,10 +16,11 @@ interface RoomLobbyState {
   removePlayer: (userId: number, playerCount: number, newOwnerId?: number) => void;
   updatePlayerSeat: (
     userId: number,
-    seat: number,
-    team: string,
+    seat: number | null,
+    team: string | null,
     previousSeat: number | null,
   ) => void;
+  setRoomOwner: (newOwnerId: number) => void;
   setGameStarted: (started: boolean) => void;
   setKickedFromRoom: (roomId: number | null) => void;
   reset: () => void;
@@ -65,6 +66,11 @@ export const useRoomLobbyStore = create<RoomLobbyState>((set) => ({
   updatePlayerSeat: (userId, seat, team, _previousSeat) =>
     set((state) => ({
       players: state.players.map((p) => (p.userId === userId ? { ...p, seat, team } : p)),
+    })),
+
+  setRoomOwner: (newOwnerId) =>
+    set((state) => ({
+      room: state.room ? { ...state.room, ownerId: newOwnerId } : state.room,
     })),
 
   setGameStarted: (gameStarted) => set({ gameStarted }),

@@ -241,6 +241,14 @@ func (h *RoomHandler) CreateRoom(c echo.Context) error {
 			if err := tx.AddPlayer(rp); err != nil {
 				return fmt.Errorf("adding creator to room players: %w", err)
 			}
+			// Auto-seat the creator at seat 0. With the 4-player room cap an
+			// unseated owner could be locked out if 3 invitees took the open
+			// seats first; combined with the owner-cannot-leave-seat rule
+			// this guarantees the room is always startable from creation.
+			ownerSeat := 0
+			if err := tx.UpdatePlayerSeat(room.ID, userID, ownerSeat, teamForSeat(ownerSeat)); err != nil {
+				return fmt.Errorf("auto-seating creator: %w", err)
+			}
 			return nil
 		})
 		if createErr == nil {
@@ -984,6 +992,111 @@ func (h *RoomHandler) KickPlayer(c echo.Context) error {
 	})
 }
 
+type TransferOwnershipRequest struct {
+	UserID uint `json:"userId"`
+}
+
+// TransferOwnership reassigns room ownership from the current owner to a
+// seated room member. Restricted to non-self seated targets; an unseated
+// promotion would let the new owner immediately get stuck (4-seat cap with
+// no spot to take). All clients converge on the new owner via a single
+// system:room_owner_changed broadcast plus the lobby system:room_updated.
+func (h *RoomHandler) TransferOwnership(c echo.Context) error {
+	ownerID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	var req TransferOwnershipRequest
+	if err := c.Bind(&req); err != nil {
+		return apperr.ErrBadRequest
+	}
+	if req.UserID == 0 {
+		return apperr.ErrBadRequest
+	}
+	if req.UserID == ownerID {
+		return apperr.ErrCannotTransferToSelf
+	}
+
+	var (
+		postRoom        *Room
+		newOwnerName    string
+		previousOwnerID uint
+	)
+
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		r, err := tx.FindByID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("finding room: %w", err)
+		}
+		if r == nil {
+			return apperr.ErrRoomNotFound
+		}
+		if r.Status != "waiting" {
+			return apperr.ErrRoomNotWaiting
+		}
+		if r.OwnerID != ownerID {
+			return apperr.ErrNotRoomOwner
+		}
+
+		target, err := tx.FindPlayerRoom(req.UserID)
+		if err != nil {
+			return fmt.Errorf("finding target player room: %w", err)
+		}
+		if target == nil || target.RoomID != uint(roomID) {
+			return apperr.ErrNotInRoom
+		}
+		if target.Seat == nil {
+			return apperr.ErrCannotPromoteUnseated
+		}
+
+		previousOwnerID = r.OwnerID
+		r.OwnerID = req.UserID
+		if err := tx.Update(r); err != nil {
+			return fmt.Errorf("updating room owner: %w", err)
+		}
+		newOwnerName = target.Username
+		postRoom = r
+		return nil
+	}); err != nil {
+		if errors.Is(err, apperr.ErrRoomNotFound) ||
+			errors.Is(err, apperr.ErrRoomNotWaiting) ||
+			errors.Is(err, apperr.ErrNotRoomOwner) ||
+			errors.Is(err, apperr.ErrNotInRoom) ||
+			errors.Is(err, apperr.ErrCannotPromoteUnseated) ||
+			errors.Is(err, apperr.ErrCannotTransferToSelf) {
+			return err
+		}
+		return fmt.Errorf("transferring ownership: %w", err)
+	}
+
+	if postRoom == nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	// Broadcast: every room member converges on the new owner. Lobby browse
+	// page also gets system:room_updated so the room card's "Hosted by …"
+	// stays accurate.
+	h.broadcastToRoom(uint(roomID), ws.SystemRoomOwnerChanged, map[string]interface{}{
+		"roomId":           roomID,
+		"newOwnerId":       postRoom.OwnerID,
+		"newOwnerUsername": newOwnerName,
+		"previousOwnerId":  previousOwnerID,
+	})
+	h.broadcastRoomUpdated(postRoom)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": map[string]interface{}{
+			"ownerId": postRoom.OwnerID,
+		},
+	})
+}
+
 type SwapSeatsRequest struct {
 	SeatA *int `json:"seatA"`
 	SeatB *int `json:"seatB"`
@@ -1021,6 +1134,10 @@ func (h *RoomHandler) SwapSeats(c echo.Context) error {
 		previousSeat int
 	}
 	var swapA, swapB swapped
+	// moveOnly is set when one of the two seats is empty: the owner is moving
+	// the seated player into the empty seat rather than swapping two players.
+	// Only one seat_updated broadcast is sent in that case.
+	var moveOnly bool
 
 	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
 		r, err := tx.FindByID(uint(roomID))
@@ -1045,8 +1162,31 @@ func (h *RoomHandler) SwapSeats(c echo.Context) error {
 		if err != nil {
 			return fmt.Errorf("finding player at seatB: %w", err)
 		}
-		if pA == nil || pB == nil {
+		if pA == nil && pB == nil {
 			return apperr.ErrSeatNotOccupied
+		}
+
+		if pA == nil || pB == nil {
+			moveOnly = true
+			var mover *RoomPlayer
+			var fromSeat, toSeat int
+			if pA == nil {
+				mover, fromSeat, toSeat = pB, seatB, seatA
+			} else {
+				mover, fromSeat, toSeat = pA, seatA, seatB
+			}
+			newTeam := teamForSeat(toSeat)
+			if err := tx.UpdatePlayerSeat(uint(roomID), mover.UserID, toSeat, newTeam); err != nil {
+				return fmt.Errorf("moving player to empty seat: %w", err)
+			}
+			swapA = swapped{
+				userID:       mover.UserID,
+				username:     mover.Username,
+				seat:         toSeat,
+				team:         newTeam,
+				previousSeat: fromSeat,
+			}
+			return nil
 		}
 
 		newSeatA := seatB
@@ -1092,8 +1232,9 @@ func (h *RoomHandler) SwapSeats(c echo.Context) error {
 		return fmt.Errorf("fetching players after swap: %w", err)
 	}
 
-	// Broadcast TWO ordered system:seat_updated events to every room member.
-	// Multi-event sequences are sent as separate messages, never batched.
+	// Broadcast system:seat_updated events to every room member. A swap emits
+	// two ordered events; a move-to-empty emits one. Multi-event sequences are
+	// sent as separate messages, never batched.
 	h.broadcastToRoom(uint(roomID), ws.SystemSeatUpdated, map[string]interface{}{
 		"roomId":       roomID,
 		"userId":       swapA.userID,
@@ -1102,13 +1243,108 @@ func (h *RoomHandler) SwapSeats(c echo.Context) error {
 		"team":         swapA.team,
 		"previousSeat": swapA.previousSeat,
 	})
+	if !moveOnly {
+		h.broadcastToRoom(uint(roomID), ws.SystemSeatUpdated, map[string]interface{}{
+			"roomId":       roomID,
+			"userId":       swapB.userID,
+			"username":     swapB.username,
+			"seat":         swapB.seat,
+			"team":         swapB.team,
+			"previousSeat": swapB.previousSeat,
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": PlayersResponse{Players: players},
+	})
+}
+
+// LeaveSeat clears the calling player's seat without removing them from the
+// room. It is the inverse of SelectSeat for the seated state — the player
+// stays a room member (player_count unchanged) but is no longer in a seat.
+// Disallowed in quick-play rooms, where the seating loop is meant to fill
+// instantly and start a game; seated players must instead leave the room.
+func (h *RoomHandler) LeaveSeat(c echo.Context) error {
+	userID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	var (
+		username     string
+		previousSeat int
+	)
+
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		r, err := tx.FindByID(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("finding room: %w", err)
+		}
+		if r == nil {
+			return apperr.ErrRoomNotFound
+		}
+		if r.Status != "waiting" {
+			return apperr.ErrRoomNotWaiting
+		}
+		if r.IsQuickPlay {
+			return apperr.ErrQuickPlayLeaveSeatBlocked
+		}
+		// Owner stays seated by design: with the 4-player room cap, an unseated
+		// owner could be locked out of re-seating once others fill the seats.
+		// Owners that want to leave the table use LeaveRoom (which transfers
+		// ownership) instead.
+		if r.OwnerID == userID {
+			return apperr.ErrOwnerCannotLeaveSeat
+		}
+
+		player, err := tx.FindPlayerRoom(userID)
+		if err != nil {
+			return fmt.Errorf("finding player room: %w", err)
+		}
+		if player == nil || player.RoomID != uint(roomID) {
+			return apperr.ErrNotInRoom
+		}
+		if player.Seat == nil {
+			return apperr.ErrNotSeated
+		}
+
+		previousSeat = *player.Seat
+		username = player.Username
+		if err := tx.ClearPlayerSeat(uint(roomID), userID); err != nil {
+			return fmt.Errorf("clearing seat: %w", err)
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, apperr.ErrRoomNotFound) ||
+			errors.Is(err, apperr.ErrRoomNotWaiting) ||
+			errors.Is(err, apperr.ErrQuickPlayLeaveSeatBlocked) ||
+			errors.Is(err, apperr.ErrOwnerCannotLeaveSeat) ||
+			errors.Is(err, apperr.ErrNotInRoom) ||
+			errors.Is(err, apperr.ErrNotSeated) {
+			return err
+		}
+		return fmt.Errorf("leaving seat: %w", err)
+	}
+
+	players, err := h.repo.FindPlayersByRoomID(uint(roomID))
+	if err != nil {
+		return fmt.Errorf("fetching players after leave-seat: %w", err)
+	}
+
+	// Broadcast a system:seat_updated with seat=null/team=null so other clients
+	// remove the player from the seat tile but keep them in the room roster.
 	h.broadcastToRoom(uint(roomID), ws.SystemSeatUpdated, map[string]interface{}{
 		"roomId":       roomID,
-		"userId":       swapB.userID,
-		"username":     swapB.username,
-		"seat":         swapB.seat,
-		"team":         swapB.team,
-		"previousSeat": swapB.previousSeat,
+		"userId":       userID,
+		"username":     username,
+		"seat":         nil,
+		"team":         nil,
+		"previousSeat": previousSeat,
 	})
 
 	return c.JSON(http.StatusOK, map[string]interface{}{

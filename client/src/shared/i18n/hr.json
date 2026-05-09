@@ -273,6 +273,14 @@
       "swapMode": {
         "enter": "Odaberi mjesto za zamjenu"
       },
+      "leaveSeatLabel": "Napusti mjesto (ostani u sobi)",
+      "promoteIconLabel": "Postavi {{username}} za vlasnika sobe",
+      "transferConfirm": {
+        "title": "Prenijeti vlasništvo nad sobom?",
+        "body": "{{username}} postaje novi vlasnik sobe. Izgubit ćeš kontrole vlasnika.",
+        "confirm": "Prenesi vlasništvo",
+        "cancel": "Odustani"
+      },
       "errors": {
         "seatFailed": "Odabir mjesta nije uspio — pokušaj ponovno",
         "startFailed": "Pokretanje nije uspjelo — pokušaj ponovno",
@@ -282,7 +290,13 @@
         "roomStarted": "Igra je već počela — izbacivanje i zamjena mjesta više nisu dostupni.",
         "seatNotOccupied": "Odaberi dva zauzeta mjesta za zamjenu.",
         "kickFailed": "Izbacivanje igrača nije uspjelo — pokušaj ponovno",
-        "swapFailed": "Zamjena mjesta nije uspjela — pokušaj ponovno"
+        "swapFailed": "Zamjena mjesta nije uspjela — pokušaj ponovno",
+        "leaveSeatFailed": "Napuštanje mjesta nije uspjelo — pokušaj ponovno",
+        "leaveSeatQuickPlay": "Ne možeš napustiti mjesto u brzoj igri — napusti sobu.",
+        "leaveSeatOwner": "Vlasnik sobe ne može napustiti mjesto — napusti sobu.",
+        "transferFailed": "Prijenos vlasništva nije uspio — pokušaj ponovno",
+        "promoteUnseated": "Novi vlasnik mora biti smješten na mjesto.",
+        "promoteNotInRoom": "Taj igrač više nije u sobi."
       }
     }
   },

@@ -273,6 +273,14 @@
       "swapMode": {
         "enter": "Pick a seat to swap with"
       },
+      "leaveSeatLabel": "Leave seat (stay in room)",
+      "promoteIconLabel": "Make {{username}} the room owner",
+      "transferConfirm": {
+        "title": "Transfer room ownership?",
+        "body": "{{username}} will become the new room owner. You will lose owner controls.",
+        "confirm": "Transfer ownership",
+        "cancel": "Cancel"
+      },
       "errors": {
         "seatFailed": "Failed to select seat — try again",
         "startFailed": "Failed to start game — try again",
@@ -282,7 +290,13 @@
         "roomStarted": "The game has already started — kick and seat-swap are no longer available.",
         "seatNotOccupied": "Pick two seated players to swap.",
         "kickFailed": "Failed to remove player — try again",
-        "swapFailed": "Failed to swap seats — try again"
+        "swapFailed": "Failed to swap seats — try again",
+        "leaveSeatFailed": "Failed to leave seat — try again",
+        "leaveSeatQuickPlay": "You can't leave your seat in quick play — leave the room instead.",
+        "leaveSeatOwner": "The room owner can't leave their seat — leave the room instead.",
+        "transferFailed": "Failed to transfer ownership — try again",
+        "promoteUnseated": "The new owner must be seated.",
+        "promoteNotInRoom": "That player is no longer in the room."
       }
     }
   },

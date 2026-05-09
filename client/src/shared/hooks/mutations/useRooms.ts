@@ -7,10 +7,12 @@ import {
   joinRoom,
   kickPlayer,
   leaveRoom,
+  leaveSeat,
   quickPlay,
   selectSeat,
   startGame,
   swapSeats,
+  transferOwnership,
 } from "@/shared/api/rooms";
 import type {
   CreateRoomRequest,
@@ -52,6 +54,18 @@ export function useLeaveRoomMutation() {
 export function useSelectSeatMutation() {
   return useMutation<SelectSeatResponse, Error, { roomId: number; seat: number }>({
     mutationFn: ({ roomId, seat }) => selectSeat(roomId, seat),
+  });
+}
+
+export function useLeaveSeatMutation() {
+  return useMutation<{ players: RoomPlayer[] }, Error, { roomId: number }>({
+    mutationFn: ({ roomId }) => leaveSeat(roomId),
+  });
+}
+
+export function useTransferOwnershipMutation() {
+  return useMutation<{ ownerId: number }, Error, { roomId: number; userId: number }>({
+    mutationFn: ({ roomId, userId }) => transferOwnership(roomId, userId),
   });
 }
 

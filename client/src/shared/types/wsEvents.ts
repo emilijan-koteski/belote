@@ -297,12 +297,24 @@ export interface PlayerLeftPayload {
 export const SYSTEM_SEAT_UPDATED = "system:seat_updated" as const;
 export const SYSTEM_GAME_STARTED = "system:game_started" as const;
 
+export const SYSTEM_ROOM_OWNER_CHANGED = "system:room_owner_changed" as const;
+
+export interface RoomOwnerChangedPayload {
+  roomId: number;
+  newOwnerId: number;
+  newOwnerUsername: string;
+  previousOwnerId: number;
+}
+
 export interface SeatUpdatedPayload {
   roomId: number;
   userId: number;
   username: string;
-  seat: number;
-  team: string;
+  // seat/team are null when a player vacates their seat (LeaveSeat) but
+  // remains in the room. previousSeat is null only for the initial seat
+  // selection from an unseated state.
+  seat: number | null;
+  team: string | null;
   previousSeat: number | null;
 }
 

@@ -198,6 +198,7 @@ const SystemRoomUpdated = "system:room_updated"
 const SystemPlayerJoined = "system:player_joined"
 const SystemPlayerLeft = "system:player_left"
 const SystemRoomKicked = "system:room_kicked"
+const SystemRoomOwnerChanged = "system:room_owner_changed"
 
 // RoomKickedPayload is the typed payload for SystemRoomKicked events,
 // sent only to the kicked user's WebSocket connection.

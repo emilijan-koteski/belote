@@ -31,6 +31,8 @@ vi.mock("@/shared/api/rooms", () => ({
   startGame: vi.fn(),
   kickPlayer: vi.fn(),
   swapSeats: vi.fn(),
+  leaveSeat: vi.fn(),
+  transferOwnership: vi.fn(),
 }));
 
 // Mock WebSocket connection state + sendMessage hook (ChatPanel pulls both)
@@ -53,9 +55,11 @@ import {
   getRoom,
   kickPlayer,
   leaveRoom,
+  leaveSeat,
   selectSeat,
   startGame,
   swapSeats,
+  transferOwnership,
 } from "@/shared/api/rooms";
 
 const mockGetRoom = vi.mocked(getRoom);
@@ -64,6 +68,8 @@ const mockSelectSeat = vi.mocked(selectSeat);
 const mockStartGame = vi.mocked(startGame);
 const mockKickPlayer = vi.mocked(kickPlayer);
 const mockSwapSeats = vi.mocked(swapSeats);
+const mockLeaveSeat = vi.mocked(leaveSeat);
+const mockTransferOwnership = vi.mocked(transferOwnership);
 
 function renderRoomLobby() {
   render(
@@ -886,6 +892,46 @@ describe("RoomLobby", () => {
     expect(mockSwapSeats).toHaveBeenCalledWith(1, 1, 3);
   });
 
+  it("fires the swap when target seat is empty (move-to-empty)", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+    // Owner alice at seat 0, bob at seat 1, seats 2 & 3 empty.
+    const partial = {
+      room: { ...defaultRoom, ownerId: 10, playerCount: 2 },
+      players: [
+        {
+          id: 1,
+          roomId: 1,
+          userId: 10,
+          username: "alice",
+          seat: 0,
+          team: "teamA",
+          createdAt: "",
+        },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+      ],
+    };
+    mockGetRoom.mockResolvedValue(partial);
+    mockSwapSeats.mockResolvedValue({ players: partial.players });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("player-seat-1")).toBeInTheDocument();
+    });
+
+    // First click on seat 1 (bob, non-owner) — enter swap mode
+    await user.click(screen.getByTestId("player-seat-1"));
+    await waitFor(() => {
+      expect(screen.getByText("Pick a seat to swap with")).toBeInTheDocument();
+    });
+
+    // Click empty seat 2 — should fire swap (move bob into seat 2)
+    await user.click(screen.getByTestId("player-seat-2"));
+
+    expect(mockSwapSeats).toHaveBeenCalledWith(1, 1, 2);
+  });
+
   it("cancels swap mode when clicking the source tile again", async () => {
     const user = userEvent.setup();
     useAuthStore.setState({ user: defaultUser, token: "tok" });
@@ -907,6 +953,211 @@ describe("RoomLobby", () => {
     await user.click(screen.getByTestId("player-seat-1"));
 
     expect(mockSwapSeats).not.toHaveBeenCalled();
+  });
+
+  it("non-owner clicking their own seat leaves the seat (non-quick-play)", async () => {
+    const user = userEvent.setup();
+    // Sign in as bob (user 20), who sits at seat 1 in fourSeatedRoomQuery and is NOT the owner.
+    useAuthStore.setState({
+      user: { ...defaultUser, id: 20, username: "bob" },
+      token: "tok",
+    });
+    mockGetRoom.mockResolvedValue(fourSeatedRoomQuery());
+    mockLeaveSeat.mockResolvedValue({ players: fourSeatedRoomQuery().players });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("player-seat-1")).toBeInTheDocument();
+    });
+
+    // Clicking the own seat tile fires leaveSeat(roomId).
+    await user.click(screen.getByTestId("player-seat-1"));
+
+    expect(mockLeaveSeat).toHaveBeenCalledWith(1);
+    // Self-click must NOT also fire selectSeat for the same seat.
+    expect(mockSelectSeat).not.toHaveBeenCalled();
+  });
+
+  it("owner clicking their own seat does not unseat them", async () => {
+    // alice is the owner at seat 0. The owner cannot unseat themselves —
+    // their only exit is leave-room. Clicking the own tile must be a no-op.
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+    mockGetRoom.mockResolvedValue(fourSeatedRoomQuery());
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByText("alice")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId("player-seat-0"));
+    expect(mockLeaveSeat).not.toHaveBeenCalled();
+  });
+
+  it("clicking own seat in quick play does not unseat", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({
+      user: { ...defaultUser, id: 20, username: "bob" },
+      token: "tok",
+    });
+    const quickPlay = fourSeatedRoomQuery();
+    quickPlay.room = { ...quickPlay.room, isQuickPlay: true };
+    mockGetRoom.mockResolvedValue(quickPlay);
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("player-seat-1")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId("player-seat-1"));
+    expect(mockLeaveSeat).not.toHaveBeenCalled();
+  });
+
+  it("shows error toast on 409 OWNER_CANNOT_LEAVE_SEAT from leave-seat", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({
+      user: { ...defaultUser, id: 20, username: "bob" },
+      token: "tok",
+    });
+    mockGetRoom.mockResolvedValue(fourSeatedRoomQuery());
+    mockLeaveSeat.mockRejectedValue(
+      new FetchError(409, "OWNER_CANNOT_LEAVE_SEAT", "owner cannot leave seat"),
+    );
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("player-seat-1")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId("player-seat-1"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("room owner"));
+    });
+  });
+
+  // --- In-room dropdown owner controls (kick from list, transfer ownership) ---
+
+  function partialRoomQuery() {
+    // alice (owner, seat 0), bob (seat 1), carol (in room but unseated).
+    // Used to exercise the kick-from-list path on an unseated player.
+    return {
+      room: { ...defaultRoom, ownerId: 10, playerCount: 3 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
+        { id: 3, roomId: 1, userId: 30, username: "carol", seat: null, team: null, createdAt: "" },
+      ],
+    };
+  }
+
+  it("owner can kick an unseated player from the in-room dropdown", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+    mockGetRoom.mockResolvedValue(partialRoomQuery());
+    mockKickPlayer.mockResolvedValue({ playerCount: 2 });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("in-room-count")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId("in-room-count"));
+
+    // Carol is unseated, so she has no diamond tile — only the dropdown row
+    // can host the kick affordance for her.
+    const kickFromList = await screen.findByTestId("kick-list-30");
+    await user.click(kickFromList);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("kick-confirm")).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId("kick-confirm"));
+
+    expect(mockKickPlayer).toHaveBeenCalledWith(1, 30);
+  });
+
+  it("hides kick-from-list affordance for non-owner viewers", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({
+      user: { ...defaultUser, id: 20, username: "bob" },
+      token: "tok",
+    });
+    mockGetRoom.mockResolvedValue(partialRoomQuery());
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("in-room-count")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId("in-room-count"));
+
+    // Bob is not the owner — no kick affordance on any list row.
+    expect(screen.queryByTestId("kick-list-30")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("kick-list-10")).not.toBeInTheDocument();
+  });
+
+  it("transfer-ownership confirm fires the API", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+    mockGetRoom.mockResolvedValue(fourSeatedRoomQuery());
+    mockTransferOwnership.mockResolvedValue({ ownerId: 20 });
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("in-room-count")).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId("in-room-count"));
+
+    // Bob is seated and not the owner — the promote affordance must render.
+    await user.click(await screen.findByTestId("promote-player-20"));
+    await user.click(await screen.findByTestId("transfer-confirm"));
+
+    expect(mockTransferOwnership).toHaveBeenCalledWith(1, 20);
+  });
+
+  it("transfer-ownership cancel closes the dialog without firing the API", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+    mockGetRoom.mockResolvedValue(fourSeatedRoomQuery());
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("in-room-count")).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId("in-room-count"));
+
+    await user.click(await screen.findByTestId("promote-player-20"));
+    await user.click(await screen.findByTestId("transfer-cancel"));
+
+    expect(mockTransferOwnership).not.toHaveBeenCalled();
+  });
+
+  it("does not render promote affordance for unseated targets", async () => {
+    const user = userEvent.setup();
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+    mockGetRoom.mockResolvedValue(partialRoomQuery());
+
+    renderRoomLobby();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("in-room-count")).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId("in-room-count"));
+
+    // Bob is seated — affordance renders.
+    expect(await screen.findByTestId("promote-player-20")).toBeInTheDocument();
+    // Carol is unseated — affordance hidden so the owner can't try a server
+    // round-trip that the backend would reject with CANNOT_PROMOTE_UNSEATED.
+    expect(screen.queryByTestId("promote-player-30")).not.toBeInTheDocument();
   });
 
   it("shows error toast on 409 ROOM_NOT_WAITING from kick", async () => {

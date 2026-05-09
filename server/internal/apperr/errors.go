@@ -75,6 +75,11 @@ var (
 	ErrRoomNotWaiting            = NewAppError("ROOM_NOT_WAITING", "this action is only available before the game starts", http.StatusConflict)
 	ErrCannotKickSelf            = NewAppError("CANNOT_KICK_SELF", "the room owner cannot kick themselves", http.StatusBadRequest)
 	ErrSeatNotOccupied           = NewAppError("SEAT_NOT_OCCUPIED", "seat must be occupied to be swapped", http.StatusConflict)
+	ErrNotSeated                 = NewAppError("NOT_SEATED", "player has no seat to leave", http.StatusConflict)
+	ErrQuickPlayLeaveSeatBlocked = NewAppError("QUICK_PLAY_LEAVE_SEAT_BLOCKED", "leaving a seat is not allowed in quick play rooms", http.StatusConflict)
+	ErrOwnerCannotLeaveSeat      = NewAppError("OWNER_CANNOT_LEAVE_SEAT", "the room owner cannot leave their seat — leave the room instead", http.StatusConflict)
+	ErrCannotTransferToSelf      = NewAppError("CANNOT_TRANSFER_TO_SELF", "ownership cannot be transferred to yourself", http.StatusBadRequest)
+	ErrCannotPromoteUnseated     = NewAppError("CANNOT_PROMOTE_UNSEATED", "the new owner must be seated", http.StatusConflict)
 	ErrGameAlreadyStarted        = NewAppError("GAME_ALREADY_STARTED", "the game has already started", http.StatusConflict)
 
 	// Game domain errors

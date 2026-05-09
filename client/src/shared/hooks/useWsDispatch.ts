@@ -25,6 +25,7 @@ import type {
   PlayerLeftPayload,
   PlayerReconnectedPayload,
   RoomKickedPayload,
+  RoomOwnerChangedPayload,
   SeatUpdatedPayload,
   SurrenderDeclinedPayload,
   SurrenderProposedPayload,
@@ -69,6 +70,7 @@ import {
   SYSTEM_PLAYER_LEFT,
   SYSTEM_ROOM_CREATED,
   SYSTEM_ROOM_KICKED,
+  SYSTEM_ROOM_OWNER_CHANGED,
   SYSTEM_ROOM_UPDATED,
   SYSTEM_SEAT_UPDATED,
 } from "@/shared/types/wsEvents";
@@ -421,6 +423,14 @@ function dispatchSystemEvent(message: WsMessage): void {
     const store = useRoomLobbyStore.getState();
     if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
     store.setGameStarted(true);
+    return;
+  }
+
+  if (type === SYSTEM_ROOM_OWNER_CHANGED) {
+    const payload = message.payload as RoomOwnerChangedPayload;
+    const store = useRoomLobbyStore.getState();
+    if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
+    store.setRoomOwner(payload.newOwnerId);
     return;
   }
 

@@ -299,9 +299,11 @@ func setupTest() (*echo.Echo, *mockRoomRepo) {
 	api.POST("/rooms/:id/join", handler.JoinRoom)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
+	api.POST("/rooms/:id/leave-seat", handler.LeaveSeat)
 	api.POST("/rooms/:id/start", handler.StartGame)
 	api.POST("/rooms/:id/kick", handler.KickPlayer)
 	api.POST("/rooms/:id/swap-seats", handler.SwapSeats)
+	api.POST("/rooms/:id/transfer-ownership", handler.TransferOwnership)
 
 	return e, repo
 }
@@ -322,9 +324,11 @@ func setupTestWithBroadcast() (*echo.Echo, *mockRoomRepo, *mockBroadcaster) {
 	api.POST("/rooms/:id/join", handler.JoinRoom)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
+	api.POST("/rooms/:id/leave-seat", handler.LeaveSeat)
 	api.POST("/rooms/:id/start", handler.StartGame)
 	api.POST("/rooms/:id/kick", handler.KickPlayer)
 	api.POST("/rooms/:id/swap-seats", handler.SwapSeats)
+	api.POST("/rooms/:id/transfer-ownership", handler.TransferOwnership)
 
 	return e, repo, broadcaster
 }
@@ -372,6 +376,28 @@ func TestCreateRoom_Success(t *testing.T) {
 	assert.Equal(t, "waiting", data.Status)
 	assert.Equal(t, 1, data.PlayerCount)
 	assert.Len(t, data.Code, 6)
+}
+
+func TestCreateRoom_AutoSeatsCreator(t *testing.T) {
+	// The creator is auto-seated at seat 0 / teamA so the room is startable
+	// from creation: with the 4-player cap an unseated owner could otherwise
+	// get locked out by 3 invitees taking the open seats. Mirrors the QuickPlay
+	// auto-seat path.
+	e, repo := setupTest()
+	token := validToken(7)
+
+	body := `{"name":"Auto Seated","variant":"bitola","matchMode":"1001","timerStyle":"relaxed"}`
+	rec := doCreateRoom(e, body, token)
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	players, err := repo.FindPlayersByRoomID(1)
+	require.NoError(t, err)
+	require.Len(t, players, 1)
+	require.NotNil(t, players[0].Seat)
+	assert.Equal(t, 0, *players[0].Seat)
+	require.NotNil(t, players[0].Team)
+	assert.Equal(t, "teamA", *players[0].Team)
+	assert.Equal(t, uint(7), players[0].UserID)
 }
 
 func TestCreateRoom_WithDefaults(t *testing.T) {
@@ -1856,6 +1882,7 @@ func setupTestWithStarter(starter room.GameStarter, broadcaster room.Broadcaster
 	api.POST("/rooms/:id/join", handler.JoinRoom)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
+	api.POST("/rooms/:id/leave-seat", handler.LeaveSeat)
 	api.POST("/rooms/:id/start", handler.StartGame)
 	return e, repo
 }
@@ -2882,7 +2909,58 @@ func TestSwapSeats_InvalidSeat(t *testing.T) {
 	}
 }
 
-func TestSwapSeats_SeatNotOccupied(t *testing.T) {
+func TestSwapSeats_MoveToEmptySeat(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+
+	r := &room.Room{Name: "Move Empty", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	require.NoError(t, repo.Create(r))
+	seat0 := 0
+	seat1 := 1
+	teamA := "teamA"
+	teamB := "teamB"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner", Seat: &seat0, Team: &teamA}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2", Seat: &seat1, Team: &teamB}))
+
+	token := validToken(100)
+	// seatA=2 is empty, seatB=1 is P2 → P2 moves to seat 2 (team A)
+	rec := doSwapSeats(e, "1", `{"seatA": 2, "seatB": 1}`, token)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	players, _ := repo.FindPlayersByRoomID(r.ID)
+	for _, p := range players {
+		switch p.UserID {
+		case 100:
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 0, *p.Seat)
+			assert.Equal(t, "teamA", *p.Team)
+		case 200:
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 2, *p.Seat)
+			require.NotNil(t, p.Team)
+			assert.Equal(t, "teamA", *p.Team)
+		}
+	}
+
+	// A move-to-empty emits exactly ONE seat_updated broadcast.
+	require.Len(t, broadcaster.calls, 1, "expected exactly one BroadcastToUsers call for move-to-empty")
+	assert.Empty(t, broadcaster.allCalls, "move must NOT trigger room_updated lobby-wide broadcast")
+	assert.Equal(t, "system:seat_updated", msgTypeOf(t, broadcaster.calls[0].msg))
+	assert.ElementsMatch(t, []uint{100, 200}, broadcaster.calls[0].userIDs)
+
+	var msg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.calls[0].msg, &msg))
+	var p map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msg["payload"], &p))
+	var userID, seat, prevSeat float64
+	require.NoError(t, json.Unmarshal(p["userId"], &userID))
+	require.NoError(t, json.Unmarshal(p["seat"], &seat))
+	require.NoError(t, json.Unmarshal(p["previousSeat"], &prevSeat))
+	assert.Equal(t, float64(200), userID)
+	assert.Equal(t, float64(2), seat)
+	assert.Equal(t, float64(1), prevSeat)
+}
+
+func TestSwapSeats_BothSeatsEmpty(t *testing.T) {
 	e, repo := setupTest()
 
 	r := &room.Room{Name: "Swap Empty", OwnerID: 100, Status: "waiting", PlayerCount: 2}
@@ -2894,7 +2972,8 @@ func TestSwapSeats_SeatNotOccupied(t *testing.T) {
 	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
 
 	token := validToken(100)
-	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 1}`, token)
+	// Both seat 1 and seat 2 are empty → SEAT_NOT_OCCUPIED.
+	rec := doSwapSeats(e, "1", `{"seatA": 1, "seatB": 2}`, token)
 	assert.Equal(t, http.StatusConflict, rec.Code)
 
 	var errResp map[string]map[string]string
@@ -2905,5 +2984,280 @@ func TestSwapSeats_SeatNotOccupied(t *testing.T) {
 func TestSwapSeats_Unauthorized(t *testing.T) {
 	e, _ := setupTest()
 	rec := doSwapSeats(e, "1", `{"seatA": 0, "seatB": 1}`, "")
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// --- LeaveSeat Tests ---
+
+func doLeaveSeat(e *echo.Echo, id string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/leave-seat", nil)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+// seedRoomWithSeatedNonOwner seeds a non-quick-play waiting room with the
+// owner at seat 0 and a non-owner at seat 1. Used by the LeaveSeat tests
+// since the owner is forbidden from unseating themselves.
+func seedRoomWithSeatedNonOwner(t *testing.T, repo *mockRoomRepo) *room.Room {
+	t.Helper()
+	r := &room.Room{Name: "Leave Seat", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	require.NoError(t, repo.Create(r))
+	seat0, seat1 := 0, 1
+	teamA, teamB := "teamA", "teamB"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner", Seat: &seat0, Team: &teamA}))
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2", Seat: &seat1, Team: &teamB}))
+	return r
+}
+
+func TestLeaveSeat_Success(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+	r := seedRoomWithSeatedNonOwner(t, repo)
+
+	token := validToken(200)
+	rec := doLeaveSeat(e, "1", token)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	// Player 200 should now be unseated; owner unchanged.
+	players, _ := repo.FindPlayersByRoomID(r.ID)
+	for _, p := range players {
+		switch p.UserID {
+		case 100:
+			require.NotNil(t, p.Seat)
+			assert.Equal(t, 0, *p.Seat)
+		case 200:
+			assert.Nil(t, p.Seat)
+			assert.Nil(t, p.Team)
+		}
+	}
+
+	// Exactly one seat_updated broadcast with seat=null/team=null/previousSeat=1.
+	require.Len(t, broadcaster.calls, 1)
+	assert.Equal(t, "system:seat_updated", msgTypeOf(t, broadcaster.calls[0].msg))
+	assert.ElementsMatch(t, []uint{100, 200}, broadcaster.calls[0].userIDs)
+
+	var msg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.calls[0].msg, &msg))
+	var p map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msg["payload"], &p))
+	assert.Equal(t, "null", string(p["seat"]))
+	assert.Equal(t, "null", string(p["team"]))
+	var prevSeat float64
+	require.NoError(t, json.Unmarshal(p["previousSeat"], &prevSeat))
+	assert.Equal(t, float64(1), prevSeat)
+	var userID float64
+	require.NoError(t, json.Unmarshal(p["userId"], &userID))
+	assert.Equal(t, float64(200), userID)
+}
+
+func TestLeaveSeat_OwnerForbidden(t *testing.T) {
+	e, repo := setupTest()
+	seedRoomWithSeatedNonOwner(t, repo)
+
+	token := validToken(100) // owner
+	rec := doLeaveSeat(e, "1", token)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "OWNER_CANNOT_LEAVE_SEAT", errResp["error"]["code"])
+}
+
+func TestLeaveSeat_QuickPlayBlocked(t *testing.T) {
+	e, repo := setupTest()
+	r := seedRoomWithSeatedNonOwner(t, repo)
+	r.IsQuickPlay = true
+
+	token := validToken(200)
+	rec := doLeaveSeat(e, "1", token)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "QUICK_PLAY_LEAVE_SEAT_BLOCKED", errResp["error"]["code"])
+}
+
+func TestLeaveSeat_RoomNotWaiting(t *testing.T) {
+	e, repo := setupTest()
+	r := seedRoomWithSeatedNonOwner(t, repo)
+	r.Status = "playing"
+
+	token := validToken(200)
+	rec := doLeaveSeat(e, "1", token)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "ROOM_NOT_WAITING", errResp["error"]["code"])
+}
+
+func TestLeaveSeat_NotInRoom(t *testing.T) {
+	e, repo := setupTest()
+	seedRoomWithSeatedNonOwner(t, repo)
+
+	// User 999 is not a member of room 1.
+	token := validToken(999)
+	rec := doLeaveSeat(e, "1", token)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_IN_ROOM", errResp["error"]["code"])
+}
+
+func TestLeaveSeat_NotSeated(t *testing.T) {
+	e, repo := setupTest()
+	r := &room.Room{Name: "Unseated", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	require.NoError(t, repo.Create(r))
+	seat0 := 0
+	teamA := "teamA"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner", Seat: &seat0, Team: &teamA}))
+	// Player 200 is in the room but has no seat.
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
+
+	token := validToken(200)
+	rec := doLeaveSeat(e, "1", token)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_SEATED", errResp["error"]["code"])
+}
+
+func TestLeaveSeat_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+	rec := doLeaveSeat(e, "1", "")
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// --- TransferOwnership Tests ---
+
+func doTransferOwnership(e *echo.Echo, id string, body string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/transfer-ownership", strings.NewReader(body))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestTransferOwnership_Success(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+	r := seedSeatedRoom(t, repo) // owner=100 seat 0, P2=200 seat 1, P3=300 seat 2, P4=400 seat 3
+
+	token := validToken(100)
+	rec := doTransferOwnership(e, "1", `{"userId": 200}`, token)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	// Owner has flipped to user 200.
+	updated, _ := repo.FindByID(r.ID)
+	require.NotNil(t, updated)
+	assert.Equal(t, uint(200), updated.OwnerID)
+
+	// system:room_owner_changed broadcast to all 4 members.
+	require.Len(t, broadcaster.calls, 1, "expected one room broadcast")
+	assert.Equal(t, "system:room_owner_changed", msgTypeOf(t, broadcaster.calls[0].msg))
+	assert.ElementsMatch(t, []uint{100, 200, 300, 400}, broadcaster.calls[0].userIDs)
+
+	var msg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(broadcaster.calls[0].msg, &msg))
+	var p map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(msg["payload"], &p))
+	var newOwnerID, prevOwnerID float64
+	require.NoError(t, json.Unmarshal(p["newOwnerId"], &newOwnerID))
+	require.NoError(t, json.Unmarshal(p["previousOwnerId"], &prevOwnerID))
+	assert.Equal(t, float64(200), newOwnerID)
+	assert.Equal(t, float64(100), prevOwnerID)
+
+	// And one lobby-wide system:room_updated broadcast.
+	require.Len(t, broadcaster.allCalls, 1)
+}
+
+func TestTransferOwnership_NotOwner(t *testing.T) {
+	e, repo := setupTest()
+	seedSeatedRoom(t, repo)
+
+	token := validToken(200) // not the current owner
+	rec := doTransferOwnership(e, "1", `{"userId": 300}`, token)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_ROOM_OWNER", errResp["error"]["code"])
+}
+
+func TestTransferOwnership_RoomNotWaiting(t *testing.T) {
+	e, repo := setupTest()
+	r := seedSeatedRoom(t, repo)
+	r.Status = "playing"
+
+	token := validToken(100)
+	rec := doTransferOwnership(e, "1", `{"userId": 200}`, token)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "ROOM_NOT_WAITING", errResp["error"]["code"])
+}
+
+func TestTransferOwnership_NotInRoom(t *testing.T) {
+	e, repo := setupTest()
+	seedSeatedRoom(t, repo)
+
+	token := validToken(100)
+	rec := doTransferOwnership(e, "1", `{"userId": 999}`, token)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "NOT_IN_ROOM", errResp["error"]["code"])
+}
+
+func TestTransferOwnership_CannotPromoteUnseated(t *testing.T) {
+	e, repo := setupTest()
+
+	r := &room.Room{Name: "Promote Unseated", OwnerID: 100, Status: "waiting", PlayerCount: 2}
+	require.NoError(t, repo.Create(r))
+	seat0 := 0
+	teamA := "teamA"
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 100, Username: "Owner", Seat: &seat0, Team: &teamA}))
+	// Player 200 in room but unseated — cannot be promoted.
+	require.NoError(t, repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: 200, Username: "P2"}))
+
+	token := validToken(100)
+	rec := doTransferOwnership(e, "1", `{"userId": 200}`, token)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "CANNOT_PROMOTE_UNSEATED", errResp["error"]["code"])
+
+	// Owner unchanged.
+	updated, _ := repo.FindByID(r.ID)
+	assert.Equal(t, uint(100), updated.OwnerID)
+}
+
+func TestTransferOwnership_CannotTransferToSelf(t *testing.T) {
+	e, repo := setupTest()
+	seedSeatedRoom(t, repo)
+
+	token := validToken(100)
+	rec := doTransferOwnership(e, "1", `{"userId": 100}`, token)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var errResp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Equal(t, "CANNOT_TRANSFER_TO_SELF", errResp["error"]["code"])
+}
+
+func TestTransferOwnership_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+	rec := doTransferOwnership(e, "1", `{"userId": 200}`, "")
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
