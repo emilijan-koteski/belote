@@ -121,6 +121,17 @@
     "createRoom": "Napravi sobu",
     "createRoomDesc": "Podesi igru po svom",
     "leaderboardPlaceholder": "Rang lista uskoro",
+    "stats": {
+      "title": "Igrači",
+      "loading": "Učitavanje…",
+      "inLobby": "U lobiju",
+      "inRoom": "U sobi",
+      "inGame": "U igri",
+      "totalActive": "Ukupno online",
+      "registered": "Registrovanih",
+      "activeRatio": "Online / Registrovani",
+      "activeRatioValue": "{{active}} / {{registered}}"
+    },
     "matchmaking": {
       "finding": "Traženje meča...",
       "cancel": "Otkaži",
@@ -193,6 +204,14 @@
       "seatOwner": "Vlasnik",
       "ownerLine": "Domaćin: {{owner}}",
       "seatedCount": "{{current}} / {{max}} sedi",
+      "inRoomCount": "{{count}} u sobi",
+      "inRoomList": {
+        "ariaLabel": "Prikaži igrače u sobi",
+        "title": "Igrači u sobi",
+        "empty": "Još nema igrača",
+        "seated": "Mesto {{seat}}",
+        "notSeated": "Ne sedi"
+      },
       "yourSeat": "Tvoje mesto",
       "loading": "Učitavanje sobe...",
       "notFound": "Soba nije pronađena",

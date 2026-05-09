@@ -16,6 +16,11 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
+import {
   useKickPlayerMutation,
   useLeaveRoomMutation,
   useSelectSeatMutation,
@@ -490,9 +495,73 @@ export function RoomLobby() {
               >
                 {room.name}
               </h1>
-              <span className="text-sm text-text-secondary" data-testid="seated-count">
-                <Users className="mr-1 inline h-4 w-4" />
-                {t("lobby.roomLobby.seatedCount", { current: seatedCount, max: 4 })}
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 outline-none transition-colors hover:bg-surface-elevated focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label={t("lobby.roomLobby.inRoomList.ariaLabel")}
+                    data-testid="in-room-count"
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>
+                      {t("lobby.roomLobby.inRoomCount", { count: players.length })}
+                    </span>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="min-w-48 bg-surface-elevated"
+                    data-testid="in-room-list"
+                  >
+                    <div className="px-1.5 py-1 text-xs font-medium text-text-secondary">
+                      {t("lobby.roomLobby.inRoomList.title")}
+                    </div>
+                    {players.length === 0 ? (
+                      <p className="px-1.5 py-1 text-xs text-text-secondary">
+                        {t("lobby.roomLobby.inRoomList.empty")}
+                      </p>
+                    ) : (
+                      <ul className="flex flex-col">
+                        {players.map((p) => {
+                          const isYou = currentUser?.id === p.userId;
+                          const isRoomOwner = p.userId === room.ownerId;
+                          const seatLabel =
+                            p.seat !== null
+                              ? t("lobby.roomLobby.inRoomList.seated", { seat: p.seat + 1 })
+                              : t("lobby.roomLobby.inRoomList.notSeated");
+                          return (
+                            <li
+                              key={p.userId}
+                              className="flex items-center justify-between gap-2 px-1.5 py-1 text-sm"
+                              data-testid={`in-room-list-item-${p.userId}`}
+                            >
+                              <span className="flex items-center gap-1.5 text-text-primary">
+                                {isRoomOwner && (
+                                  <Crown className="h-3 w-3 text-warning" aria-hidden />
+                                )}
+                                <span className="truncate">{p.username}</span>
+                                {isYou && (
+                                  <span className="text-xs font-medium text-success">
+                                    ({t("lobby.roomLobby.seatYou")})
+                                  </span>
+                                )}
+                              </span>
+                              <span
+                                className={`shrink-0 text-xs ${
+                                  p.seat !== null ? "text-success" : "text-text-secondary"
+                                }`}
+                              >
+                                {seatLabel}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <span data-testid="seated-count">
+                  {t("lobby.roomLobby.seatedCount", { current: seatedCount, max: 4 })}
+                </span>
               </span>
             </div>
             <div className="mt-3 flex flex-wrap gap-2" data-testid="room-info-badges">

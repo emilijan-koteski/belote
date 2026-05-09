@@ -377,6 +377,19 @@ func (m *Manager) IsUserInGame(userID uint) bool {
 	return ok
 }
 
+// InGameUserIDs returns a snapshot of every userID currently mapped to an
+// active game session. Used by the lobby stats endpoint to bucket connected
+// users into "in game" vs other states. Order is unspecified.
+func (m *Manager) InGameUserIDs() []uint {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	ids := make([]uint, 0, len(m.userToRoom))
+	for uid := range m.userToRoom {
+		ids = append(ids, uid)
+	}
+	return ids
+}
+
 // MatchParticipants returns the four player userIDs for an active session
 // keyed by roomID (the matchID in the chat wire format). Returns
 // (zero-value, false) when no session exists for that roomID.

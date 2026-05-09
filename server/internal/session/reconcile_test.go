@@ -84,6 +84,7 @@ func (s *stubRoomRepo) FindQuickPlayRoomExcluding(map[uint]bool) (*room.Room, er
 func (s *stubRoomRepo) RunInTransaction(func(room.RoomRepository) error) error {
 	panic("unused")
 }
+func (s *stubRoomRepo) FindUserIDsByRoomStatus(string) ([]uint, error) { panic("unused") }
 
 func intp(i int) *int { return &i }
 

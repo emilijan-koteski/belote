@@ -233,6 +233,19 @@ func (r *GormRepository) FindQuickPlayRoomExcluding(excludedRoomIDs map[uint]boo
 	return &room, nil
 }
 
+func (r *GormRepository) FindUserIDsByRoomStatus(status string) ([]uint, error) {
+	var ids []uint
+	err := r.db.Table("room_players").
+		Select("room_players.user_id").
+		Joins("JOIN rooms ON rooms.id = room_players.room_id").
+		Where("rooms.status = ? AND rooms.deleted_at IS NULL", status).
+		Pluck("room_players.user_id", &ids).Error
+	if err != nil {
+		return nil, fmt.Errorf("finding user ids by room status %q: %w", status, err)
+	}
+	return ids, nil
+}
+
 func (r *GormRepository) RunInTransaction(fn func(RoomRepository) error) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		txRepo := &GormRepository{db: tx}

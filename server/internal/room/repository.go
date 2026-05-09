@@ -28,5 +28,9 @@ type RoomRepository interface {
 	// or fall through to the create-new-room branch.
 	FindQuickPlayRoomExcluding(excludedRoomIDs map[uint]bool) (*Room, error)
 	UpdateStatus(roomID uint, status string) error
+	// FindUserIDsByRoomStatus returns the user IDs of every player currently
+	// seated in a room whose status matches the provided value. Used by lobby
+	// stats to bucket connected users into "in waiting room" vs "in game".
+	FindUserIDsByRoomStatus(status string) ([]uint, error)
 	RunInTransaction(fn func(RoomRepository) error) error
 }

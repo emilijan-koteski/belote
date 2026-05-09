@@ -22,6 +22,7 @@ import (
 	"github.com/emilijan/beljot/server/internal/chat"
 	"github.com/emilijan/beljot/server/internal/config"
 	"github.com/emilijan/beljot/server/internal/emote"
+	"github.com/emilijan/beljot/server/internal/lobby"
 	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/room"
 	"github.com/emilijan/beljot/server/internal/session"
@@ -97,6 +98,9 @@ func main() {
 	api.GET("/users/:id/matches", userHandler.ListMatches)
 	api.PATCH("/users/:id/preferences", userHandler.UpdatePreferences)
 
+	// Lobby stats — wired after hub + sessionManager + roomRepo so the handler
+	// can read the four data sources it bucket-counts.
+
 	// WebSocket hub and endpoint
 	hub := ws.NewHub()
 	go hub.Run()
@@ -170,6 +174,11 @@ func main() {
 	api.POST("/rooms/:id/start", roomHandler.StartGame)
 	api.POST("/rooms/:id/kick", roomHandler.KickPlayer)
 	api.POST("/rooms/:id/swap-seats", roomHandler.SwapSeats)
+
+	// Lobby stats endpoint — bucket-counts connected users into in-lobby /
+	// in-room / in-game and reports registered totals.
+	lobbyHandler := lobby.NewHandler(hub, sessionManager, roomRepo, userRepo)
+	api.GET("/lobby/stats", lobbyHandler.GetStats)
 
 	// Graceful shutdown
 	go func() {

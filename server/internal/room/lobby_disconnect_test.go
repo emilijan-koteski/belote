@@ -86,6 +86,7 @@ func (r *mockRepoForLobby) FindQuickPlayRoomExcluding(_ map[uint]bool) (*room.Ro
 	return nil, nil
 }
 func (r *mockRepoForLobby) UpdateStatus(_ uint, _ string) error                      { return nil }
+func (r *mockRepoForLobby) FindUserIDsByRoomStatus(_ string) ([]uint, error)         { return nil, nil }
 
 func setupLobbyTest() (*mockRepoForLobby, *room.LobbyDisconnectHandler) {
 	repo := newMockRepoForLobby()

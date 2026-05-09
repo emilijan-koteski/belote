@@ -9,5 +9,7 @@ type UserRepository interface {
 	// arbitrary order. Returns an empty slice (no DB round-trip) when ids is
 	// empty. Soft-deleted users are excluded via GORM's default scope.
 	FindManyByIDs(ids []uint) ([]User, error)
+	// Count returns the total number of registered (non-soft-deleted) users.
+	Count() (int64, error)
 	UpdateLanguagePreference(id uint, lang string) error
 }

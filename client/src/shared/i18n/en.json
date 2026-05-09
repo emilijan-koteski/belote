@@ -121,6 +121,17 @@
     "createRoom": "Create Room",
     "createRoomDesc": "Set up a game your way",
     "leaderboardPlaceholder": "Leaderboard coming soon",
+    "stats": {
+      "title": "Players",
+      "loading": "Loading…",
+      "inLobby": "In lobby",
+      "inRoom": "In a room",
+      "inGame": "In a game",
+      "totalActive": "Total online",
+      "registered": "Registered",
+      "activeRatio": "Online / Registered",
+      "activeRatioValue": "{{active}} / {{registered}}"
+    },
     "matchmaking": {
       "finding": "Finding match...",
       "cancel": "Cancel",
@@ -193,6 +204,14 @@
       "seatOwner": "Owner",
       "ownerLine": "Hosted by {{owner}}",
       "seatedCount": "{{current}} / {{max}} seated",
+      "inRoomCount": "{{count}} in room",
+      "inRoomList": {
+        "ariaLabel": "Show players in room",
+        "title": "Players in room",
+        "empty": "No players yet",
+        "seated": "Seat {{seat}}",
+        "notSeated": "Not seated"
+      },
       "yourSeat": "Your seat",
       "loading": "Loading room...",
       "notFound": "Room not found",

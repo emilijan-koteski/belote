@@ -204,6 +204,22 @@ func (m *mockRoomRepo) FindQuickPlayRoomExcluding(excluded map[uint]bool) (*room
 	return nil, nil
 }
 
+func (m *mockRoomRepo) FindUserIDsByRoomStatus(status string) ([]uint, error) {
+	matchingRooms := make(map[uint]bool)
+	for _, r := range m.rooms {
+		if r.Status == status {
+			matchingRooms[r.ID] = true
+		}
+	}
+	out := make([]uint, 0)
+	for _, p := range m.players {
+		if matchingRooms[p.RoomID] {
+			out = append(out, p.UserID)
+		}
+	}
+	return out, nil
+}
+
 func (m *mockRoomRepo) UpdateStatus(roomID uint, status string) error {
 	for _, r := range m.rooms {
 		if r.ID == roomID {

@@ -102,6 +102,10 @@ func (m *mockUserRepo) FindManyByIDs(ids []uint) ([]user.User, error) {
 	return out, nil
 }
 
+func (m *mockUserRepo) Count() (int64, error) {
+	return int64(len(m.users)), nil
+}
+
 func testErrorHandler(err error, c echo.Context) {
 	if c.Response().Committed {
 		return

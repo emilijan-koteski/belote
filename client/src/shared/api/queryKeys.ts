@@ -11,4 +11,7 @@ export const queryKeys = {
   matches: {
     byUser: (userId: number) => ["matches", "byUser", userId] as const,
   },
+  lobby: {
+    stats: ["lobby", "stats"] as const,
+  },
 } as const;
