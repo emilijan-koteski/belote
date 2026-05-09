@@ -407,10 +407,7 @@ export function RoomLobby() {
 
   if (isRoomClosed && !gameStarted) {
     return (
-      <div
-        className="mx-auto max-w-2xl px-8 py-8 text-center"
-        data-testid="room-lobby-closed"
-      >
+      <div className="mx-auto max-w-2xl px-8 py-8 text-center" data-testid="room-lobby-closed">
         <p className="mb-2 text-text-primary font-display text-lg">
           {t("lobby.roomLobby.roomClosed")}
         </p>
@@ -503,9 +500,7 @@ export function RoomLobby() {
                     data-testid="in-room-count"
                   >
                     <Users className="h-4 w-4" />
-                    <span>
-                      {t("lobby.roomLobby.inRoomCount", { count: players.length })}
-                    </span>
+                    <span>{t("lobby.roomLobby.inRoomCount", { count: players.length })}</span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"

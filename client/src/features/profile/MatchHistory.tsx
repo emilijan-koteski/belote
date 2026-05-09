@@ -1,9 +1,11 @@
+import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { MatchHandView, MatchListItem, MatchOutcome } from "@/shared/api/matches";
 import { useUserMatchesInfiniteQuery } from "@/shared/hooks/queries/useMatches";
+import { formatLocalizedDate } from "@/shared/lib/formatDate";
 import type { TeamString } from "@/shared/types/gameTypes";
 
 interface MatchHistoryProps {
@@ -33,23 +35,6 @@ function formatDuration(
     return t("profile.matchHistory.durationHms", { h: pad(h), m: pad(m), s: pad(s) });
   }
   return t("profile.matchHistory.durationMs", { m: pad(m), s: pad(s) });
-}
-
-function formatDate(iso: string, lang: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return iso;
-  }
-  try {
-    const locale = lang === "sr" ? "sr-Latn" : lang;
-    return new Intl.DateTimeFormat(locale, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }).format(date);
-  } catch {
-    return iso;
-  }
 }
 
 function OutcomeBadge({ outcome }: { outcome: MatchOutcome }) {
@@ -84,7 +69,11 @@ interface HandResultsTableProps {
 function HandResultsTable({ hands, viewerTeam, viewerTeamIndex }: HandResultsTableProps) {
   const { t } = useTranslation();
   if (hands.length === 0) {
-    return null;
+    return (
+      <p className="mt-1 text-sm italic text-text-secondary" data-testid="match-history-no-hands">
+        {t("profile.matchHistory.noHandDetails")}
+      </p>
+    );
   }
 
   // Order columns viewer-first: Us is always first, Them second.
@@ -246,14 +235,14 @@ function MatchRow({ match, isOpen, onToggle }: MatchRowProps) {
 
   return (
     <li
-      className="rounded-lg border border-border bg-surface p-4"
+      className="rounded-lg border border-border bg-surface p-4 transition-colors hover:bg-surface-elevated"
       data-testid="match-history-row"
       data-match-id={match.id}
     >
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full flex-col gap-2 text-left"
+        className="flex w-full cursor-pointer flex-col gap-2 text-left"
         aria-expanded={isOpen}
         aria-controls={detailId}
         aria-label={
@@ -263,7 +252,7 @@ function MatchRow({ match, isOpen, onToggle }: MatchRowProps) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col">
             <span className="text-sm text-text-secondary">
-              {formatDate(match.completedAt, i18n.language)}
+              {formatLocalizedDate(match.completedAt, t, "short")}
             </span>
             <span className="text-xs text-text-secondary">
               {variantLabel} {"·"} {modeLabel} {"·"}{" "}
@@ -297,6 +286,19 @@ function MatchRow({ match, isOpen, onToggle }: MatchRowProps) {
               {themScore}
             </span>
           </div>
+        </div>
+
+        <div
+          className="mt-1 flex items-center justify-end gap-1 text-xs text-text-secondary"
+          data-testid="match-history-toggle-hint"
+        >
+          <span>
+            {isOpen ? t("profile.matchHistory.collapseRow") : t("profile.matchHistory.expandRow")}
+          </span>
+          <ChevronDown
+            className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          />
         </div>
       </button>
 

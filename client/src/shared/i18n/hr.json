@@ -1,0 +1,581 @@
+{
+  "common": {
+    "appName": "Beljot",
+    "close": "Zatvori"
+  },
+  "team": {
+    "us": "Mi",
+    "them": "Oni",
+    "a": "Tim A",
+    "b": "Tim B"
+  },
+  "nav": {
+    "play": "Igraj",
+    "leaderboard": "Rang ljestvica",
+    "profile": "Profil",
+    "rules": "Pravila",
+    "appName": "Beljot",
+    "logout": "Odjavi se"
+  },
+  "profile": {
+    "title": "Profil",
+    "memberSince": "Član od {{date}}",
+    "statsHeading": "Statistika",
+    "stats": {
+      "totalGamesPlayed": "Odigrane partije",
+      "wins": "Pobjede",
+      "losses": "Porazi",
+      "winRate": "Postotak pobjeda",
+      "winRateEmpty": "—",
+      "error": "Učitavanje statistike nije uspjelo — pokušaj ponovno"
+    },
+    "matchHistory": {
+      "title": "Povijest mečeva",
+      "empty": "Nema mečeva — pokreni Brzu igru",
+      "emptyCta": "U lobi",
+      "loading": "Učitavanje mečeva…",
+      "error": "Učitavanje povijesti nije uspjelo — pokušaj ponovno",
+      "loadMore": "Učitaj više",
+      "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
+      "durationHms": "{{h}}:{{m}}:{{s}}",
+      "durationMs": "{{m}}:{{s}}",
+      "vs": "&",
+      "teammate": "Suigrač",
+      "opponents": "Protivnici",
+      "noHandDetails": "Nema detalja o dijeljenjima za ovaj meč",
+      "outcomeWin": "Pobjeda",
+      "outcomeLoss": "Poraz",
+      "outcomeAbandoned": "Prekinut",
+      "expandRow": "Prikaži detalje dijeljenja",
+      "collapseRow": "Sakrij detalje dijeljenja",
+      "variant": {
+        "bitola": "Bitola"
+      },
+      "mode": {
+        "1001": "1001 bodova"
+      },
+      "hand": {
+        "number": "Dijeljenje {{number}}",
+        "cardPoints": "Bodovi iz karata",
+        "declarationPoints": "Zvanja",
+        "lastTrickBonus": "Posljednji štih",
+        "capot": "Kapot",
+        "failedContract": "Pao",
+        "handTotal": "Ukupno dijeljenje"
+      }
+    }
+  },
+  "language": {
+    "label": "Jezik",
+    "en": "English",
+    "sr": "Srpski",
+    "mk": "Македонски",
+    "hr": "Hrvatski"
+  },
+  "date": {
+    "format": "{{day}}. {{month}} {{year}}.",
+    "monthLong": {
+      "jan": "siječnja",
+      "feb": "veljače",
+      "mar": "ožujka",
+      "apr": "travnja",
+      "may": "svibnja",
+      "jun": "lipnja",
+      "jul": "srpnja",
+      "aug": "kolovoza",
+      "sep": "rujna",
+      "oct": "listopada",
+      "nov": "studenog",
+      "dec": "prosinca"
+    },
+    "monthShort": {
+      "jan": "sij.",
+      "feb": "velj.",
+      "mar": "ožu.",
+      "apr": "tra.",
+      "may": "svi.",
+      "jun": "lip.",
+      "jul": "srp.",
+      "aug": "kol.",
+      "sep": "ruj.",
+      "oct": "lis.",
+      "nov": "stu.",
+      "dec": "pro."
+    }
+  },
+  "leaderboard": {
+    "title": "Rang ljestvica",
+    "comingSoon": "Rang ljestvica uskoro stiže"
+  },
+  "chat": {
+    "title": "Chat lobija",
+    "placeholder": "Pozdravi…",
+    "placeholderAfterFirst": "Poruka…",
+    "placeholderDisabled": "Ponovno povezivanje…",
+    "send": "Pošalji",
+    "empty": "Još nema poruka — pozdravi.",
+    "tooLong": "Poruke moraju imati 500 znakova ili manje.",
+    "clearAriaLabel": "Obriši chat",
+    "clearTooltip": "Obriši chat (ili upiši /cc)"
+  },
+  "room": {
+    "chat": {
+      "title": "Chat sobe",
+      "placeholder": "Razgovaraj sa stolom…"
+    },
+    "errors": {
+      "gameStartFailed": "Pokretanje partije nije uspjelo. Pokušaj ponovno.",
+      "alreadyStarted": "Partija je već počela — ne možeš sada izaći."
+    }
+  },
+  "rules": {
+    "title": "Pravila",
+    "comingSoon": "Pravila uskoro stižu"
+  },
+  "legal": {
+    "wipBadge": "U izradi",
+    "back": "Natrag",
+    "terms": {
+      "title": "Uvjeti korištenja",
+      "wipNotice": "Ovo je aplikacija u izradi koja se koristi samo za testiranje.",
+      "comingSoon": "Puni Uvjeti korištenja se pripremaju i bit će objavljeni ovdje uskoro."
+    },
+    "privacy": {
+      "title": "Pravila privatnosti",
+      "wipNotice": "Ovo je aplikacija u izradi koja se koristi samo za testiranje.",
+      "comingSoon": "Puna Pravila privatnosti se pripremaju i bit će objavljena ovdje uskoro."
+    }
+  },
+  "lobby": {
+    "title": "Lobi",
+    "quickPlay": "Brza igra",
+    "quickPlayDesc": "Odmah uskoči u igru",
+    "browseRooms": "Pregledaj sobe",
+    "browseRoomsDesc": "Pronađi otvorenu igru",
+    "createRoom": "Stvori sobu",
+    "createRoomDesc": "Postavi igru po svome",
+    "leaderboardPlaceholder": "Rang ljestvica uskoro",
+    "stats": {
+      "title": "Igrači",
+      "loading": "Učitavanje…",
+      "inLobby": "U lobiju",
+      "inRoom": "U sobi",
+      "inGame": "U igri",
+      "totalActive": "Ukupno online",
+      "registered": "Registriranih",
+      "activeRatio": "Online / Registrirani",
+      "activeRatioValue": "{{active}} / {{registered}}"
+    },
+    "matchmaking": {
+      "finding": "Traženje meča…",
+      "cancel": "Odustani",
+      "failed": "Nije moguće pronaći meč — pokušaj ponovno",
+      "alreadyInRoom": "Već si u sobi — prvo je napusti"
+    },
+    "createRoomModal": {
+      "title": "Stvori sobu za igru",
+      "roomName": "Ime sobe",
+      "roomNamePlaceholder": "Unesi ime sobe…",
+      "variant": "Varijanta igre",
+      "variantBitola": "Bitola",
+      "matchMode": "Način meča",
+      "matchMode1001": "1001 bodova",
+      "timerStyle": "Stil tajmera",
+      "timerRelaxed": "Opušteno (bez tajmera)",
+      "timerPerMove": "Tajmer po potezu",
+      "timerDuration": "Trajanje tajmera (sekunde)",
+      "create": "Stvori sobu",
+      "cancel": "Odustani",
+      "errors": {
+        "nameRequired": "Ime sobe je obavezno",
+        "nameTaken": "Soba s ovim imenom već postoji",
+        "unexpected": "Došlo je do neočekivane greške"
+      }
+    },
+    "roomDetail": {
+      "emptySlot": "Prazno",
+      "notSeated": "Nije sjeo"
+    },
+    "roomList": {
+      "searchPlaceholder": "Pretraži sobe po imenu ili kodu…",
+      "backToOptions": "Natrag",
+      "variant": "Varijanta",
+      "variantBitola": "Bitola",
+      "mode": "Način",
+      "matchMode1001": "1001 bodova",
+      "players": "{{current}}/{{max}}",
+      "timerRelaxed": "Opušteno",
+      "timerPerMove": "{{seconds}}s tajmer",
+      "join": "Pridruži se",
+      "loading": "Učitavanje soba…",
+      "emptyNoRooms": "Nema otvorenih soba — Stvori sobu ili probaj Brzu igru",
+      "emptyNoMatch": "Nijedna soba ne odgovara '{{query}}' —",
+      "clearSearch": "Obriši pretragu",
+      "errors": {
+        "roomFull": "Soba je puna — probaj drugu",
+        "alreadyInRoom": "Već si u sobi",
+        "joinFailed": "Pridruživanje nije uspjelo — pokušaj ponovno"
+      }
+    },
+    "joinByCode": {
+      "label": "Imaš kod sobe?",
+      "placeholder": "Unesi kod…",
+      "join": "Pridruži se",
+      "notFound": "Soba nije pronađena — provjeri kod i pokušaj ponovno"
+    },
+    "roomLobby": {
+      "waitingForPlayers": "Čekanje igrača…",
+      "backToLobby": "Natrag u lobi",
+      "copyLink": "Kopiraj poveznicu",
+      "copyLinkAriaLabel": "Kopiraj kod sobe {{code}}",
+      "copyLinkSuccess": "Kod sobe kopiran!",
+      "copyLinkFailed": "Kopiranje nije uspjelo — kod: {{code}}",
+      "codeLabel": "Kod",
+      "copied": "Kopirano!",
+      "leaveRoom": "Napusti sobu",
+      "seatEmpty": "Čekanje…",
+      "seatYou": "Ti",
+      "seatOwner": "Vlasnik",
+      "ownerLine": "Domaćin: {{owner}}",
+      "seatedCount": "{{current}} / {{max}} sjedi",
+      "inRoomCount": "{{count}} u sobi",
+      "inRoomList": {
+        "ariaLabel": "Prikaži igrače u sobi",
+        "title": "Igrači u sobi",
+        "empty": "Još nema igrača",
+        "seated": "Mjesto {{seat}}",
+        "notSeated": "Ne sjedi"
+      },
+      "yourSeat": "Tvoje mjesto",
+      "loading": "Učitavanje sobe…",
+      "notFound": "Soba nije pronađena",
+      "notFoundAction": "Natrag u lobi",
+      "roomClosed": "Ova soba je zatvorena.",
+      "returningToLobby": "Povratak u lobi…",
+      "playerJoined": "{{username}} se pridružio sobi",
+      "playerLeft": "{{username}} je napustio sobu",
+      "startGame": "Pokreni igru",
+      "startGameDisabled": "Sva 4 igrača moraju sjesti",
+      "waitingForOwner": "Čekanje da {{owner}} pokrene igru…",
+      "seatTaken": "To mjesto je zauzeto",
+      "seatUpdated": "Mjesto ažurirano",
+      "gameStarting": "Igra počinje…",
+      "autoStartMessage": "Igra počinje automatski kada svi igrači sjednu",
+      "autoStarting": "Pokretanje igre…",
+      "kickIconLabel": "Izbaci {{username}}",
+      "kickConfirm": {
+        "title": "Izbaciti igrača?",
+        "body": "Izbaciti {{username}} iz sobe?",
+        "confirm": "Izbaci",
+        "cancel": "Odustani"
+      },
+      "kickedToast": "Izbačen si iz sobe {{name}}",
+      "swapMode": {
+        "enter": "Odaberi mjesto za zamjenu"
+      },
+      "errors": {
+        "seatFailed": "Odabir mjesta nije uspio — pokušaj ponovno",
+        "startFailed": "Pokretanje nije uspjelo — pokušaj ponovno",
+        "notOwner": "Samo vlasnik sobe može pokrenuti igru",
+        "notOwnerAction": "To može samo vlasnik sobe",
+        "notAllSeated": "Sva 4 igrača moraju sjesti da bi počelo",
+        "roomStarted": "Igra je već počela — izbacivanje i zamjena mjesta više nisu dostupni.",
+        "seatNotOccupied": "Odaberi dva zauzeta mjesta za zamjenu.",
+        "kickFailed": "Izbacivanje igrača nije uspjelo — pokušaj ponovno",
+        "swapFailed": "Zamjena mjesta nije uspjela — pokušaj ponovno"
+      }
+    }
+  },
+  "game": {
+    "seat": {
+      "waiting": "Čeka se…",
+      "you": "Ti"
+    },
+    "chat": {
+      "title": "Chat meča",
+      "placeholder": "Poruči stolu…",
+      "toggleOpen": "Otvori chat meča",
+      "toggleClose": "Zatvori chat meča"
+    },
+    "trump": "Adut: {{suit}}",
+    "starting": "Igra počinje…",
+    "reconnecting": "Ponovno povezivanje na igru…",
+    "noActiveSession": "Meč više nije aktivan. Povratak u lobi…",
+    "notMember": "Nisi igrač u ovom meču. Povratak u lobi…",
+    "roomNotFound": "Soba za igru nije pronađena. Povratak u lobi…",
+    "leaveConfirm": "Napustiti igru? Možeš izgubiti napredak.",
+    "suits": {
+      "spades": "Pik",
+      "hearts": "Herc",
+      "diamonds": "Karo",
+      "clubs": "Tref"
+    },
+    "trumpIndicator": {
+      "trump": "Adut",
+      "label": "Adut: {{suit}}",
+      "labelWithTeam": "Adut: {{suit}} · {{team}}",
+      "labelWithCaller": "Adut: {{suit}} · {{team}} — {{name}}"
+    },
+    "trumpReveal": {
+      "title": "{{name}} je uzeo aduta",
+      "unknownPlayer": "Adut uzet"
+    },
+    "dealerIndicator": {
+      "dealer": "Djelitelj",
+      "label": "Djelitelj: {{name}}"
+    },
+    "trumpPrompt": {
+      "titleRound1": "Uzmi aduta ili dalje",
+      "titleRound2": "Odaberi bilo koju boju — ili dalje",
+      "subtitleRound1": "Prihvati ovu boju ili prepusti sljedećem igraču.",
+      "subtitleRound2": "Drugi krug · bilo koja boja osim kandidata.",
+      "bodyRound1": "Karta kandidat je okrenuta. Uzmi je kao aduta za svoj tim, ili prepusti sljedećem igraču.",
+      "roundLabel": "Krug {{round}} / 2",
+      "pick": "Uzmi",
+      "pass": "Dalje",
+      "waiting": "Čekanje na licitatora…"
+    },
+    "deal": {
+      "dealing": "Dijeljenje karata…"
+    },
+    "reshuffle": {
+      "message": "Ponovno miješanje špila…"
+    },
+    "declaration": {
+      "title": "Imaš zvanja!",
+      "declare": "Zovi",
+      "skip": "Preskoči",
+      "pts": "bodova",
+      "total": "Ukupno",
+      "sequence": "Niz od {{count}} — {{points}} bodova",
+      "fourOfAKind": "Četvorka — {{points}} bodova",
+      "sequenceShort": "Niz od {{count}}",
+      "fourOfAKindShort": "Četvorka",
+      "resolved": "Zvanja",
+      "teamDeclared": "Zvanje — {{team}}",
+      "headline": "{{team}} su osvojili zvanja",
+      "tiebreaker": "{{player}} — {{label}} · najviše zvanje za stolom",
+      "byPlayer": "od {{name}}",
+      "awardedTo": "Pripada {{team}}",
+      "addedToHand": "Dodano na rezultat ovog dijeljenja",
+      "dismiss": "Zatvori"
+    },
+    "belot": {
+      "titleBelot": "Najavi belot?",
+      "titleRebelot": "Najavi re-belot?",
+      "description": "Imaš kralja i damu aduta (+20 bodova)",
+      "subtitleBelot": "Imaš K i Q aduta. Najavom sada dobivaš +20. Dama je karta za ovaj štih.",
+      "subtitleRebelot": "Imaš K i Q aduta. Najavom sada dobivaš +20. Kralj je karta za ovaj štih.",
+      "accentStripBelot": "Najava belota je tvoj potez — +20 bodova za tim.",
+      "accentStripRebelot": "Najava re-belota je tvoj potez — +20 bodova za tim.",
+      "announceBelot": "Najavi belot +20",
+      "announceRebelot": "Najavi re-belot +20",
+      "decline": "Preskoči",
+      "reveal": {
+        "belot": "Belot!",
+        "rebelot": "Re-belot!",
+        "titleBelot": "{{name}} je najavio belot",
+        "titleRebelot": "{{name}} je najavio re-belot",
+        "bonus": "+20 bodova za tim",
+        "dismiss": "Zatvori"
+      }
+    },
+    "errors": {
+      "wrongPhase": "Akcija nije dostupna u ovoj fazi",
+      "notYourTurn": "Nije tvoj red",
+      "invalidAction": "Nevažeća akcija",
+      "illegalPlay": "Ta karta se ne može odigrati",
+      "pauseExhausted": "Već si iskoristio pauzu",
+      "noActivePause": "Nemaš aktivnu pauzu",
+      "notRoomOwner": "Samo vlasnik sobe može ovo učiniti",
+      "playerDisconnected": "Igrač je prekinuo vezu"
+    },
+    "timer": {
+      "autoPlayed": "Automatski odigrano: {{card}}",
+      "autoPassed": "{{player}} — vrijeme isteklo, automatski pas",
+      "autoSkippedDeclare": "{{player}} — vrijeme isteklo, najava preskočena",
+      "autoSkippedBelot": "{{player}} — vrijeme isteklo, belot odbijen"
+    },
+    "score": {
+      "heading": "Rezultat",
+      "tricks": "štihovi",
+      "trick": "štih",
+      "lastTrickBonus": "+{{amount}}",
+      "thisHand": "ovo dijeljenje",
+      "handLabel": "Dijeljenje {{hand}}",
+      "handVariant": "Dijeljenje {{hand}} · {{variant}}"
+    },
+    "variants": {
+      "bitola": "Bitola"
+    },
+    "scoreReveal": {
+      "title": "Rezultat dijeljenja",
+      "titleWithHand": "Dijeljenje {{hand}} — rezultat",
+      "subtitleHeldYour": "Ugovor održan · tvoj tim je zvao {{suit}}",
+      "subtitleHeldTheir": "Ugovor održan · njihov tim je zvao {{suit}}",
+      "subtitleFailed": "Ugovor pao · svi bodovi za {{team}}",
+      "cardPoints": "Bodovi karata",
+      "declarationPoints": "Zvanja",
+      "lastTrickBonus": "Bonus posljednjeg štiha",
+      "capotBonus": "Kapot bonus",
+      "failedContract": "Pao ugovor",
+      "failedContractDesc": "{{team}} pao — svi bodovi za {{otherTeam}}",
+      "handTotal": "Ukupno dijeljenje",
+      "matchTotal": "Rezultat meča",
+      "continue": "Nastavi"
+    },
+    "capot": {
+      "title": "KAPOT!"
+    },
+    "matchResult": {
+      "title": "Meč završen",
+      "winner": "{{team}} pobjeđuje!",
+      "duration": "Trajanje meča",
+      "returnToLobby": "Natrag u lobi",
+      "surrenderNote": "{{username}} je predao meč"
+    },
+    "emote": {
+      "button": "Pošalji emotikon",
+      "picker": {
+        "title": "Odaberi emotikon"
+      },
+      "names": {
+        "thumbsUp": "Palac gore",
+        "clap": "Pljesak",
+        "laugh": "Smijeh",
+        "thinking": "Razmišljanje",
+        "facepalm": "Glavom u ruke",
+        "heart": "Srce"
+      }
+    },
+    "surrender": {
+      "requestButton": "Predaja",
+      "exhausted": "Predaja iskorištena",
+      "pending": "Predaja na čekanju…",
+      "confirm": {
+        "title": "Predati meč?",
+        "body": "Tvoj suigrač mora prihvatiti. Ako odbije, tvoj jedini pokušaj predaje je iskorišten.",
+        "consumeWarning": "Jednokratna radnja — odbijeni prijedlozi troše tvoj jedini pokušaj.",
+        "confirm": "Predloži predaju",
+        "cancel": "Odustani"
+      },
+      "prompt": {
+        "title": "Tvoj suigrač želi predati",
+        "body": "{{username}} predlaže da predate meč. Ako prihvatiš, meč završava kao pobjeda za protivnike.",
+        "consequence": "Prihvaćanjem meč završava u korist protivnika.",
+        "accept": "Prihvati predaju",
+        "decline": "Odbij"
+      },
+      "opponentBanner": "{{username}} predlaže predaju",
+      "declinedToast": "Predaja odbijena — igra se nastavlja",
+      "errors": {
+        "exhausted": "Već si iskoristio svoju predaju za ovaj meč.",
+        "actionRequired": "Prvo riješi prijedlog predaje koji je u tijeku.",
+        "wrongPhase": "Predaja je dostupna samo tijekom žive ruke."
+      },
+      "unknownProposer": "protivnik"
+    },
+    "pause": {
+      "title": "Igra pauzirana",
+      "pausedBy": "{{player}} je pauzirao igru",
+      "waitingToResume": "Čekanje da igrači nastave…",
+      "resume": "Nastavi",
+      "pauseButton": "Pauza",
+      "pauseUsed": "Pauza iskorištena",
+      "resumeAll": "Nastavi sve",
+      "ownerResumedToast": "Vlasnik sobe je nastavio igru"
+    },
+    "disconnect": {
+      "playerDisconnected": "{{player}} je prekinuo vezu",
+      "playerReconnected": "{{player}} se ponovno povezao",
+      "reconnecting": "Ponovno povezivanje…",
+      "waitingMessage": "Igra je na čekanju dok čekamo da se {{player}} vrati.",
+      "waitingMessageMany": "Igra je na čekanju dok čekamo da se {{count}} igrača vrate.",
+      "countdownLabel": "Preostalo vrijeme",
+      "reconnected": "Ponovno si povezan",
+      "reconnectFailed": "Ponovno povezivanje nije uspjelo — meč je možda završio",
+      "matchAbandoned": "{{player}} je prekinuo vezu — meč završio",
+      "matchAbandonedScores": "Konačno: Mi {{us}} : Oni {{them}}",
+      "returningToLobby": "Povratak u lobi…",
+      "statusBadge": "veza prekinuta",
+      "matchEnded": "Meč je završio"
+    },
+    "hud": {
+      "pause": "Pauza",
+      "rules": "Pravila",
+      "settings": "Postavke"
+    },
+    "settings": {
+      "title": "Postavke",
+      "languageHeading": "Jezik",
+      "close": "Zatvori"
+    },
+    "rules": {
+      "title": "Pravila igre",
+      "comingSoon": "Detaljna pravila uskoro stižu — provjeri ponovno.",
+      "statusHint": "Vodiči za licitaciju, najave i bodovanje stižu sljedeći.",
+      "close": "Zatvori"
+    }
+  },
+  "ws": {
+    "connecting": "Povezivanje…",
+    "authenticating": "Autentifikacija…",
+    "connected": "Povezano",
+    "disconnected": "Veza prekinuta",
+    "reconnecting": "Ponovno povezivanje…",
+    "authFailed": "Autentifikacija veze nije uspjela"
+  },
+  "auth": {
+    "login": {
+      "title": "Prijavi se",
+      "emailLabel": "Email",
+      "emailPlaceholder": "ime@primjer.com",
+      "passwordLabel": "Lozinka",
+      "passwordPlaceholder": "Unesi lozinku",
+      "submitButton": "Prijavi se",
+      "submitting": "Prijavljivanje…",
+      "registerLink": "Nemaš račun? Stvori jedan",
+      "errors": {
+        "emailRequired": "Email je obavezan",
+        "emailInvalid": "Unesi valjanu email adresu",
+        "passwordRequired": "Lozinka je obavezna",
+        "invalidCredentials": "Pogrešan email ili lozinka",
+        "loginFailed": "Prijava nije uspjela. Pokušaj ponovno."
+      }
+    },
+    "register": {
+      "title": "Stvori račun",
+      "emailLabel": "Email",
+      "emailPlaceholder": "ime@primjer.com",
+      "usernameLabel": "Korisničko ime",
+      "usernamePlaceholder": "Odaberi korisničko ime",
+      "passwordLabel": "Lozinka",
+      "passwordPlaceholder": "Najmanje 8 znakova",
+      "submitButton": "Stvori račun",
+      "submitting": "Stvaranje…",
+      "loginLink": "Već imaš račun? Prijavi se",
+      "consent": {
+        "prefix": "Prihvaćam ",
+        "termsLink": "Uvjete korištenja",
+        "and": " i ",
+        "privacyLink": "Pravila privatnosti",
+        "suffix": "."
+      },
+      "errors": {
+        "emailRequired": "Email je obavezan",
+        "emailInvalid": "Unesi valjanu email adresu",
+        "emailTaken": "Ovaj email je već registriran",
+        "usernameRequired": "Korisničko ime je obavezno",
+        "usernameTooShort": "Korisničko ime mora imati najmanje 3 znaka",
+        "usernameTooLong": "Korisničko ime može imati najviše 20 znakova",
+        "usernameInvalidChars": "Samo slova, brojevi i podvlake",
+        "usernameTaken": "Ovo korisničko ime je već zauzeto",
+        "passwordRequired": "Lozinka je obavezna",
+        "passwordTooShort": "Lozinka mora imati najmanje 8 znakova",
+        "passwordTooLong": "Lozinka može imati najviše 72 znaka",
+        "consentRequired": "Moraš prihvatiti Uvjete korištenja i Pravila privatnosti",
+        "registrationFailed": "Registracija nije uspjela. Pokušaj ponovno."
+      }
+    }
+  }
+}

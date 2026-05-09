@@ -21,10 +21,10 @@ function makePlayer(overrides: Partial<PlayerState> = {}): PlayerState {
 }
 
 describe("PlayerSeat", () => {
-  it("renders empty seat with 'Waiting...' text when player is null", () => {
+  it("renders empty seat with 'Waiting…' text when player is null", () => {
     render(<PlayerSeat player={null} isSelf={false} isActive={false} seatTeam="gold" />);
 
-    expect(screen.getByText("Waiting...")).toBeInTheDocument();
+    expect(screen.getByText("Waiting…")).toBeInTheDocument();
     expect(screen.getByTestId("player-seat-empty")).toHaveAttribute("data-seat-team", "gold");
   });
 

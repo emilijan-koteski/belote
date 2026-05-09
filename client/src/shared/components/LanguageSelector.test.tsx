@@ -2,7 +2,7 @@ import "@/shared/i18n/i18n";
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { i18n } from "@/shared/i18n/i18n";
 import { useAuthStore } from "@/shared/stores/authStore";
@@ -40,10 +40,29 @@ describe("LanguageSelector", () => {
     mockUpdatePreferences.mockResolvedValue({ languagePreference: "sr" });
   });
 
+  afterEach(async () => {
+    // Reset i18n so test order can't leak language state into other suites.
+    await i18n.changeLanguage("en");
+  });
+
   it("renders current language", () => {
     renderLanguageSelector();
 
     expect(screen.getByTestId("language-selector")).toHaveTextContent("EN");
+  });
+
+  it("renders all four supported language options when opened", async () => {
+    const user = userEvent.setup();
+    renderLanguageSelector();
+
+    await user.click(screen.getByTestId("language-selector"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("language-option-en")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("language-option-sr")).toBeInTheDocument();
+    expect(screen.getByTestId("language-option-mk")).toBeInTheDocument();
+    expect(screen.getByTestId("language-option-hr")).toBeInTheDocument();
   });
 
   it("calls i18n.changeLanguage on selection", async () => {
@@ -97,5 +116,28 @@ describe("LanguageSelector", () => {
     await waitFor(() => {
       expect(useAuthStore.getState().user?.languagePreference).toBe("sr");
     });
+  });
+
+  it("selects Macedonian and persists preference", async () => {
+    mockUpdatePreferences.mockResolvedValue({ languagePreference: "mk" });
+
+    const user = userEvent.setup();
+    renderLanguageSelector();
+
+    await user.click(screen.getByTestId("language-selector"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("language-option-mk")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId("language-option-mk"));
+
+    await waitFor(() => {
+      expect(i18n.language).toBe("mk");
+    });
+    expect(mockUpdatePreferences).toHaveBeenCalledWith(1, {
+      languagePreference: "mk",
+    });
+    expect(useAuthStore.getState().user?.languagePreference).toBe("mk");
   });
 });

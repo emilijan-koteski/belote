@@ -39,9 +39,10 @@
       "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
       "durationHms": "{{h}}:{{m}}:{{s}}",
       "durationMs": "{{m}}:{{s}}",
-      "vs": "vs",
+      "vs": "&",
       "teammate": "Saigrač",
       "opponents": "Protivnici",
+      "noHandDetails": "Nema detalja o deljenjima za ovaj meč",
       "outcomeWin": "Pobeda",
       "outcomeLoss": "Poraz",
       "outcomeAbandoned": "Prekinut",
@@ -67,7 +68,40 @@
   "language": {
     "label": "Jezik",
     "en": "English",
-    "sr": "Srpski"
+    "sr": "Srpski",
+    "mk": "Македонски",
+    "hr": "Hrvatski"
+  },
+  "date": {
+    "format": "{{day}}. {{month}} {{year}}.",
+    "monthLong": {
+      "jan": "januar",
+      "feb": "februar",
+      "mar": "mart",
+      "apr": "april",
+      "may": "maj",
+      "jun": "jun",
+      "jul": "jul",
+      "aug": "avgust",
+      "sep": "septembar",
+      "oct": "oktobar",
+      "nov": "novembar",
+      "dec": "decembar"
+    },
+    "monthShort": {
+      "jan": "jan.",
+      "feb": "feb.",
+      "mar": "mar.",
+      "apr": "apr.",
+      "may": "maj.",
+      "jun": "jun.",
+      "jul": "jul.",
+      "aug": "avg.",
+      "sep": "sep.",
+      "oct": "okt.",
+      "nov": "nov.",
+      "dec": "dec."
+    }
   },
   "leaderboard": {
     "title": "Rang lista",
@@ -279,8 +313,8 @@
     "trumpIndicator": {
       "trump": "Adut",
       "label": "Adut: {{suit}}",
-      "labelWithTeam": "Adut: {{suit}}, zvao {{team}} tim",
-      "labelWithCaller": "Adut: {{suit}}, zvao {{team}} tim ({{name}})"
+      "labelWithTeam": "Adut: {{suit}} · {{team}}",
+      "labelWithCaller": "Adut: {{suit}} · {{team}} — {{name}}"
     },
     "trumpReveal": {
       "title": "{{name}} je uzeo aduta",

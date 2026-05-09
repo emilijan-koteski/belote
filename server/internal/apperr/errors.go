@@ -49,7 +49,7 @@ var (
 
 	// User domain errors
 	ErrUserNotFound    = NewAppError("USER_NOT_FOUND", "user not found", http.StatusNotFound)
-	ErrInvalidLanguage = NewAppError("INVALID_LANGUAGE", "language must be 'en' or 'sr'", http.StatusBadRequest)
+	ErrInvalidLanguage = NewAppError("INVALID_LANGUAGE", "language must be one of: en, sr, mk, hr", http.StatusBadRequest)
 
 	// Room domain errors
 	ErrRoomNameRequired          = NewAppError("ROOM_NAME_REQUIRED", "room name is required", http.StatusBadRequest)

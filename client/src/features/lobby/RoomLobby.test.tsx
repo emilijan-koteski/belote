@@ -182,7 +182,7 @@ describe("RoomLobby", () => {
       expect(screen.getByText("alice")).toBeInTheDocument();
     });
 
-    const waitingTexts = screen.getAllByText("Waiting...");
+    const waitingTexts = screen.getAllByText("Waiting…");
     expect(waitingTexts).toHaveLength(3);
   });
 

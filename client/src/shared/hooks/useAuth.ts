@@ -34,7 +34,7 @@ export function useAuthInit(): void {
     const abortController = new AbortController();
 
     refresh(abortController.signal)
-      .then((res) => {
+      .then(async (res) => {
         if (abortController.signal.aborted) return;
         useAuthStore.getState().setToken(res.token);
         useAuthStore.getState().setUser({
@@ -44,7 +44,10 @@ export function useAuthInit(): void {
           languagePreference: res.languagePreference,
           createdAt: res.createdAt,
         });
-        i18n.changeLanguage(res.languagePreference);
+        // Await the language switch so the first paint after `setLoading(false)`
+        // already renders in the saved locale — prevents an English flash on
+        // bootstrap when the user's preference is mk/hr/sr (AC #4 of story 10.1).
+        await i18n.changeLanguage(res.languagePreference);
       })
       .catch(() => {
         if (abortController.signal.aborted) return;

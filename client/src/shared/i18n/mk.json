@@ -1,0 +1,581 @@
+{
+  "common": {
+    "appName": "Beljot",
+    "close": "Затвори"
+  },
+  "team": {
+    "us": "Ние",
+    "them": "Тие",
+    "a": "Тим А",
+    "b": "Тим Б"
+  },
+  "nav": {
+    "play": "Играј",
+    "leaderboard": "Ранг листа",
+    "profile": "Профил",
+    "rules": "Правила",
+    "appName": "Beljot",
+    "logout": "Одјави се"
+  },
+  "profile": {
+    "title": "Профил",
+    "memberSince": "Член од {{date}}",
+    "statsHeading": "Статистика",
+    "stats": {
+      "totalGamesPlayed": "Одиграни партии",
+      "wins": "Победи",
+      "losses": "Порази",
+      "winRate": "Процент на победи",
+      "winRateEmpty": "—",
+      "error": "Не успеа да се вчитаат статистиките — обиди се повторно"
+    },
+    "matchHistory": {
+      "title": "Историја на мечеви",
+      "empty": "Сè уште нема мечеви — пушти Брза игра",
+      "emptyCta": "Во лоби",
+      "loading": "Се вчитуваат мечеви…",
+      "error": "Не успеа да се вчита историјата — обиди се повторно",
+      "loadMore": "Вчитај повеќе",
+      "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
+      "durationHms": "{{h}}:{{m}}:{{s}}",
+      "durationMs": "{{m}}:{{s}}",
+      "vs": "&",
+      "teammate": "Соиграч",
+      "opponents": "Противници",
+      "noHandDetails": "Нема детали за делењата на овој меч",
+      "outcomeWin": "Победа",
+      "outcomeLoss": "Пораз",
+      "outcomeAbandoned": "Прекинат",
+      "expandRow": "Прикажи детали за делењата",
+      "collapseRow": "Сокриј детали за делењата",
+      "variant": {
+        "bitola": "Битола"
+      },
+      "mode": {
+        "1001": "1001 поени"
+      },
+      "hand": {
+        "number": "Делење {{number}}",
+        "cardPoints": "Поени од карти",
+        "declarationPoints": "Најави",
+        "lastTrickBonus": "Последен штих",
+        "capot": "Капот",
+        "failedContract": "Падна",
+        "handTotal": "Вкупно делење"
+      }
+    }
+  },
+  "language": {
+    "label": "Јазик",
+    "en": "English",
+    "sr": "Srpski",
+    "mk": "Македонски",
+    "hr": "Hrvatski"
+  },
+  "date": {
+    "format": "{{day}} {{month}} {{year}}",
+    "monthLong": {
+      "jan": "јануари",
+      "feb": "февруари",
+      "mar": "март",
+      "apr": "април",
+      "may": "мај",
+      "jun": "јуни",
+      "jul": "јули",
+      "aug": "август",
+      "sep": "септември",
+      "oct": "октомври",
+      "nov": "ноември",
+      "dec": "декември"
+    },
+    "monthShort": {
+      "jan": "јан",
+      "feb": "фев",
+      "mar": "мар",
+      "apr": "апр",
+      "may": "мај",
+      "jun": "јун",
+      "jul": "јул",
+      "aug": "авг",
+      "sep": "сеп",
+      "oct": "окт",
+      "nov": "ное",
+      "dec": "дек"
+    }
+  },
+  "leaderboard": {
+    "title": "Ранг листа",
+    "comingSoon": "Ранг листата наскоро доаѓа"
+  },
+  "chat": {
+    "title": "Лоби чет",
+    "placeholder": "Поздрави…",
+    "placeholderAfterFirst": "Порака…",
+    "placeholderDisabled": "Повторно поврзување…",
+    "send": "Испрати",
+    "empty": "Сè уште нема пораки — поздрави.",
+    "tooLong": "Пораките мора да имаат 500 знаци или помалку.",
+    "clearAriaLabel": "Избриши чет",
+    "clearTooltip": "Избриши чет (или напиши /cc)"
+  },
+  "room": {
+    "chat": {
+      "title": "Чет на собата",
+      "placeholder": "Разговарај со масата…"
+    },
+    "errors": {
+      "gameStartFailed": "Стартувањето на партијата не успеа. Обиди се повторно.",
+      "alreadyStarted": "Партијата веќе започна — не можеш да излезеш сега."
+    }
+  },
+  "rules": {
+    "title": "Правила",
+    "comingSoon": "Правилата наскоро доаѓаат"
+  },
+  "legal": {
+    "wipBadge": "Во изработка",
+    "back": "Назад",
+    "terms": {
+      "title": "Услови за користење",
+      "wipNotice": "Ова е апликација во изработка која се користи само за тестирање.",
+      "comingSoon": "Целосните услови за користење се пишуваат и наскоро ќе бидат објавени тука."
+    },
+    "privacy": {
+      "title": "Политика за приватност",
+      "wipNotice": "Ова е апликација во изработка која се користи само за тестирање.",
+      "comingSoon": "Целосната политика за приватност се пишува и наскоро ќе биде објавена тука."
+    }
+  },
+  "lobby": {
+    "title": "Лоби",
+    "quickPlay": "Брза игра",
+    "quickPlayDesc": "Веднаш скокни во игра",
+    "browseRooms": "Прелистај соби",
+    "browseRoomsDesc": "Најди отворена партија",
+    "createRoom": "Направи соба",
+    "createRoomDesc": "Подеси игра по свој вкус",
+    "leaderboardPlaceholder": "Ранг листа наскоро",
+    "stats": {
+      "title": "Играчи",
+      "loading": "Се вчитува…",
+      "inLobby": "Во лоби",
+      "inRoom": "Во соба",
+      "inGame": "Во игра",
+      "totalActive": "Вкупно онлајн",
+      "registered": "Регистрирани",
+      "activeRatio": "Онлајн / Регистрирани",
+      "activeRatioValue": "{{active}} / {{registered}}"
+    },
+    "matchmaking": {
+      "finding": "Пребарување меч…",
+      "cancel": "Откажи",
+      "failed": "Не може да се најде меч — обиди се повторно",
+      "alreadyInRoom": "Веќе си во соба — прво излези"
+    },
+    "createRoomModal": {
+      "title": "Направи соба за игра",
+      "roomName": "Име на соба",
+      "roomNamePlaceholder": "Внеси име на соба…",
+      "variant": "Варијанта на игра",
+      "variantBitola": "Битола",
+      "matchMode": "Режим на меч",
+      "matchMode1001": "1001 поени",
+      "timerStyle": "Стил на тајмер",
+      "timerRelaxed": "Опуштено (без тајмер)",
+      "timerPerMove": "Тајмер по потег",
+      "timerDuration": "Траење на тајмер (секунди)",
+      "create": "Направи соба",
+      "cancel": "Откажи",
+      "errors": {
+        "nameRequired": "Името на собата е задолжително",
+        "nameTaken": "Соба со ова име веќе постои",
+        "unexpected": "Се случи неочекувана грешка"
+      }
+    },
+    "roomDetail": {
+      "emptySlot": "Празно",
+      "notSeated": "Не седи"
+    },
+    "roomList": {
+      "searchPlaceholder": "Пребарај соби по име или код…",
+      "backToOptions": "Назад",
+      "variant": "Варијанта",
+      "variantBitola": "Битола",
+      "mode": "Режим",
+      "matchMode1001": "1001 поени",
+      "players": "{{current}}/{{max}}",
+      "timerRelaxed": "Опуштено",
+      "timerPerMove": "{{seconds}}s тајмер",
+      "join": "Приклучи се",
+      "loading": "Се вчитуваат соби…",
+      "emptyNoRooms": "Нема отворени соби — Направи соба или пробај Брза игра",
+      "emptyNoMatch": "Ниедна соба не одговара на '{{query}}' —",
+      "clearSearch": "Избриши пребарување",
+      "errors": {
+        "roomFull": "Собата е полна — пробај друга",
+        "alreadyInRoom": "Веќе си во соба",
+        "joinFailed": "Приклучувањето не успеа — обиди се повторно"
+      }
+    },
+    "joinByCode": {
+      "label": "Имаш код за соба?",
+      "placeholder": "Внеси код…",
+      "join": "Приклучи се",
+      "notFound": "Собата не е најдена — провери го кодот и обиди се повторно"
+    },
+    "roomLobby": {
+      "waitingForPlayers": "Се чекаат играчи…",
+      "backToLobby": "Назад во лоби",
+      "copyLink": "Копирај линк",
+      "copyLinkAriaLabel": "Копирај код на соба {{code}}",
+      "copyLinkSuccess": "Кодот на собата е копиран!",
+      "copyLinkFailed": "Копирањето не успеа — код: {{code}}",
+      "codeLabel": "Код",
+      "copied": "Копирано!",
+      "leaveRoom": "Напушти соба",
+      "seatEmpty": "Се чека…",
+      "seatYou": "Ти",
+      "seatOwner": "Сопственик",
+      "ownerLine": "Домаќин: {{owner}}",
+      "seatedCount": "{{current}} / {{max}} седат",
+      "inRoomCount": "{{count}} во собата",
+      "inRoomList": {
+        "ariaLabel": "Прикажи играчи во собата",
+        "title": "Играчи во собата",
+        "empty": "Сè уште нема играчи",
+        "seated": "Место {{seat}}",
+        "notSeated": "Не седи"
+      },
+      "yourSeat": "Твое место",
+      "loading": "Се вчитува собата…",
+      "notFound": "Собата не е најдена",
+      "notFoundAction": "Назад во лоби",
+      "roomClosed": "Оваа соба е затворена.",
+      "returningToLobby": "Враќање во лоби…",
+      "playerJoined": "{{username}} се приклучи на собата",
+      "playerLeft": "{{username}} ја напушти собата",
+      "startGame": "Започни игра",
+      "startGameDisabled": "Сите 4 играчи мора да седнат",
+      "waitingForOwner": "Се чека {{owner}} да започне игра…",
+      "seatTaken": "Тоа место е зафатено",
+      "seatUpdated": "Местото е ажурирано",
+      "gameStarting": "Играта започнува…",
+      "autoStartMessage": "Играта започнува автоматски кога сите играчи ќе седнат",
+      "autoStarting": "Започнување игра…",
+      "kickIconLabel": "Исфрли {{username}}",
+      "kickConfirm": {
+        "title": "Да го исфрлам играчот?",
+        "body": "Да го исфрлам {{username}} од собата?",
+        "confirm": "Исфрли",
+        "cancel": "Откажи"
+      },
+      "kickedToast": "Беше исфрлен од собата {{name}}",
+      "swapMode": {
+        "enter": "Избери место за замена"
+      },
+      "errors": {
+        "seatFailed": "Не можеше да се избере местото — обиди се повторно",
+        "startFailed": "Стартувањето не успеа — обиди се повторно",
+        "notOwner": "Само сопственикот на собата може да започне игра",
+        "notOwnerAction": "Тоа може само сопственикот на собата",
+        "notAllSeated": "Сите 4 играчи мора да седнат за да започне",
+        "roomStarted": "Играта веќе започна — исфрлање и замена на места повеќе не се достапни.",
+        "seatNotOccupied": "Избери две зафатени места за замена.",
+        "kickFailed": "Исфрлањето на играчот не успеа — обиди се повторно",
+        "swapFailed": "Замената на места не успеа — обиди се повторно"
+      }
+    }
+  },
+  "game": {
+    "seat": {
+      "waiting": "Се чека…",
+      "you": "Ти"
+    },
+    "chat": {
+      "title": "Чет во меч",
+      "placeholder": "Разговарај за масата…",
+      "toggleOpen": "Отвори чет на меч",
+      "toggleClose": "Затвори чет на меч"
+    },
+    "trump": "Адут: {{suit}}",
+    "starting": "Играта започнува…",
+    "reconnecting": "Повторно поврзување на играта…",
+    "noActiveSession": "Мечот повеќе не е активен. Враќање во лоби…",
+    "notMember": "Не си играч во овој меч. Враќање во лоби…",
+    "roomNotFound": "Собата за игра не е најдена. Враќање во лоби…",
+    "leaveConfirm": "Да ја напуштиш играта? Може да го изгубиш напредокот.",
+    "suits": {
+      "spades": "Пик",
+      "hearts": "Херц",
+      "diamonds": "Каро",
+      "clubs": "Спато"
+    },
+    "trumpIndicator": {
+      "trump": "Адут",
+      "label": "Адут: {{suit}}",
+      "labelWithTeam": "Адут: {{suit}} · {{team}}",
+      "labelWithCaller": "Адут: {{suit}} · {{team}} — {{name}}"
+    },
+    "trumpReveal": {
+      "title": "{{name}} зеде адут",
+      "unknownPlayer": "Адутот е земен"
+    },
+    "dealerIndicator": {
+      "dealer": "Дилер",
+      "label": "Дилер: {{name}}"
+    },
+    "trumpPrompt": {
+      "titleRound1": "Земи адут или пас",
+      "titleRound2": "Избери било која боја — или пас",
+      "subtitleRound1": "Прифати ја оваа боја или препушти на следниот играч.",
+      "subtitleRound2": "Втор круг · било која боја освен кандидатот.",
+      "bodyRound1": "Картата кандидат е свртена со лицето нагоре. Земи ја како адут за твојот тим, или препушти на следниот играч.",
+      "roundLabel": "Круг {{round}} / 2",
+      "pick": "Земи",
+      "pass": "Пас",
+      "waiting": "Се чека наддавачот…"
+    },
+    "deal": {
+      "dealing": "Делење на карти…"
+    },
+    "reshuffle": {
+      "message": "Повторно мешање на шпил…"
+    },
+    "declaration": {
+      "title": "Имаш најави!",
+      "declare": "Најави",
+      "skip": "Прескокни",
+      "pts": "поени",
+      "total": "Вкупно",
+      "sequence": "Низ од {{count}} — {{points}} поени",
+      "fourOfAKind": "Четворка — {{points}} поени",
+      "sequenceShort": "Низ од {{count}}",
+      "fourOfAKindShort": "Четворка",
+      "resolved": "Најави",
+      "teamDeclared": "Најава — {{team}}",
+      "headline": "{{team}} ги освоија најавите",
+      "tiebreaker": "{{player}} — {{label}} · највисока најава на масата",
+      "byPlayer": "од {{name}}",
+      "awardedTo": "Му припаѓа на {{team}}",
+      "addedToHand": "Додадено на резултатот од ова делење",
+      "dismiss": "Затвори"
+    },
+    "belot": {
+      "titleBelot": "Објави белот?",
+      "titleRebelot": "Објави ре-белот?",
+      "description": "Имаш крал и кралица од адутот (+20 поени)",
+      "subtitleBelot": "Имаш К и Q од адутот. Со објавувањето сега добиваш +20. Кралицата е картата за овој штих.",
+      "subtitleRebelot": "Имаш К и Q од адутот. Со објавувањето сега добиваш +20. Кралот е картата за овој штих.",
+      "accentStripBelot": "Објавување белот е твој потег — +20 за тимот.",
+      "accentStripRebelot": "Објавување ре-белот е твој потег — +20 за тимот.",
+      "announceBelot": "Објави белот +20",
+      "announceRebelot": "Објави ре-белот +20",
+      "decline": "Прескокни",
+      "reveal": {
+        "belot": "Белот!",
+        "rebelot": "Ре-белот!",
+        "titleBelot": "{{name}} објави белот",
+        "titleRebelot": "{{name}} објави ре-белот",
+        "bonus": "+20 поени за тимот",
+        "dismiss": "Затвори"
+      }
+    },
+    "errors": {
+      "wrongPhase": "Дејството не е достапно во оваа фаза",
+      "notYourTurn": "Не е твој ред",
+      "invalidAction": "Невалидно дејство",
+      "illegalPlay": "Таа карта не може да се одигра",
+      "pauseExhausted": "Веќе ја искористи паузата",
+      "noActivePause": "Немаш активна пауза",
+      "notRoomOwner": "Само сопственикот на собата може да го направи ова",
+      "playerDisconnected": "Играч ја прекина врската"
+    },
+    "timer": {
+      "autoPlayed": "Автоматски одиграно: {{card}}",
+      "autoPassed": "{{player}} — времето истече, автоматски пас",
+      "autoSkippedDeclare": "{{player}} — времето истече, прескокната најава",
+      "autoSkippedBelot": "{{player}} — времето истече, белот одбиен"
+    },
+    "score": {
+      "heading": "Резултат",
+      "tricks": "штихови",
+      "trick": "штих",
+      "lastTrickBonus": "+{{amount}}",
+      "thisHand": "ова делење",
+      "handLabel": "Делење {{hand}}",
+      "handVariant": "Делење {{hand}} · {{variant}}"
+    },
+    "variants": {
+      "bitola": "Битола"
+    },
+    "scoreReveal": {
+      "title": "Резултат на делењето",
+      "titleWithHand": "Делење {{hand}} — резултат",
+      "subtitleHeldYour": "Договорот држи · твојот тим повика {{suit}}",
+      "subtitleHeldTheir": "Договорот држи · нивниот тим повика {{suit}}",
+      "subtitleFailed": "Договорот падна · сите поени за {{team}}",
+      "cardPoints": "Поени од карти",
+      "declarationPoints": "Најави",
+      "lastTrickBonus": "Бонус за последен штих",
+      "capotBonus": "Капот бонус",
+      "failedContract": "Падна договорот",
+      "failedContractDesc": "{{team}} падна — сите поени за {{otherTeam}}",
+      "handTotal": "Вкупно делење",
+      "matchTotal": "Резултат на меч",
+      "continue": "Продолжи"
+    },
+    "capot": {
+      "title": "КАПОТ!"
+    },
+    "matchResult": {
+      "title": "Мечот завршен",
+      "winner": "{{team}} победува!",
+      "duration": "Траење на меч",
+      "returnToLobby": "Назад во лоби",
+      "surrenderNote": "{{username}} се предаде во мечот"
+    },
+    "emote": {
+      "button": "Прати емотикон",
+      "picker": {
+        "title": "Избери емотикон"
+      },
+      "names": {
+        "thumbsUp": "Палец нагоре",
+        "clap": "Аплауз",
+        "laugh": "Смеа",
+        "thinking": "Размислување",
+        "facepalm": "Со глава во раце",
+        "heart": "Срце"
+      }
+    },
+    "surrender": {
+      "requestButton": "Предај се",
+      "exhausted": "Предавањето искористено",
+      "pending": "Предавањето на чекање…",
+      "confirm": {
+        "title": "Да го предадеш мечот?",
+        "body": "Твојот соиграч мора да прифати. Ако одбие, твојот единствен обид за предавање е искористен.",
+        "consumeWarning": "Еднократно дејство — одбиените предлози го трошат твојот единствен обид.",
+        "confirm": "Предложи предавање",
+        "cancel": "Откажи"
+      },
+      "prompt": {
+        "title": "Твојот соиграч сака да се предаде",
+        "body": "{{username}} предлага да го предадете мечот. Ако прифатиш, мечот завршува како победа за противниците.",
+        "consequence": "Со прифаќање, мечот завршува во корист на противниците.",
+        "accept": "Прифати предавање",
+        "decline": "Одбиј"
+      },
+      "opponentBanner": "{{username}} предлага предавање",
+      "declinedToast": "Предавањето е одбиено — играта продолжува",
+      "errors": {
+        "exhausted": "Веќе го искористи предавањето за овој меч.",
+        "actionRequired": "Прво разреши го предлогот за предавање во тек.",
+        "wrongPhase": "Предавањето е достапно само за време на жива рака."
+      },
+      "unknownProposer": "противник"
+    },
+    "pause": {
+      "title": "Играта е паузирана",
+      "pausedBy": "{{player}} ја паузираше играта",
+      "waitingToResume": "Се чека играчите да продолжат…",
+      "resume": "Продолжи",
+      "pauseButton": "Пауза",
+      "pauseUsed": "Паузата искористена",
+      "resumeAll": "Продолжи сите",
+      "ownerResumedToast": "Сопственикот на собата ја продолжи играта"
+    },
+    "disconnect": {
+      "playerDisconnected": "{{player}} ја прекина врската",
+      "playerReconnected": "{{player}} се поврза повторно",
+      "reconnecting": "Повторно поврзување…",
+      "waitingMessage": "Играта е на чекање додека чекаме {{player}} да се поврзе повторно.",
+      "waitingMessageMany": "Играта е на чекање додека чекаме {{count}} играчи да се поврзат повторно.",
+      "countdownLabel": "Преостанато време",
+      "reconnected": "Повторно си поврзан",
+      "reconnectFailed": "Повторното поврзување не успеа — мечот можеби заврши",
+      "matchAbandoned": "{{player}} ја прекина врската — мечот заврши",
+      "matchAbandonedScores": "Финале: Ние {{us}} : Тие {{them}}",
+      "returningToLobby": "Враќање во лоби…",
+      "statusBadge": "врска прекината",
+      "matchEnded": "Мечот заврши"
+    },
+    "hud": {
+      "pause": "Пауза",
+      "rules": "Правила",
+      "settings": "Поставки"
+    },
+    "settings": {
+      "title": "Поставки",
+      "languageHeading": "Јазик",
+      "close": "Затвори"
+    },
+    "rules": {
+      "title": "Правила на играта",
+      "comingSoon": "Деталните правила доаѓаат наскоро — провери повторно.",
+      "statusHint": "Водичите за наддавање, зови и бодување следат.",
+      "close": "Затвори"
+    }
+  },
+  "ws": {
+    "connecting": "Поврзување…",
+    "authenticating": "Автентификација…",
+    "connected": "Поврзано",
+    "disconnected": "Врската е прекината",
+    "reconnecting": "Повторно поврзување…",
+    "authFailed": "Автентификацијата на врската не успеа"
+  },
+  "auth": {
+    "login": {
+      "title": "Најави се",
+      "emailLabel": "Email",
+      "emailPlaceholder": "ime@primer.com",
+      "passwordLabel": "Лозинка",
+      "passwordPlaceholder": "Внеси ја лозинката",
+      "submitButton": "Најави се",
+      "submitting": "Најавување…",
+      "registerLink": "Немаш сметка? Креирај една",
+      "errors": {
+        "emailRequired": "Email е задолжителен",
+        "emailInvalid": "Внеси валидна email адреса",
+        "passwordRequired": "Лозинката е задолжителна",
+        "invalidCredentials": "Погрешен email или лозинка",
+        "loginFailed": "Најавата не успеа. Обиди се повторно."
+      }
+    },
+    "register": {
+      "title": "Креирај сметка",
+      "emailLabel": "Email",
+      "emailPlaceholder": "ime@primer.com",
+      "usernameLabel": "Корисничко име",
+      "usernamePlaceholder": "Избери корисничко име",
+      "passwordLabel": "Лозинка",
+      "passwordPlaceholder": "Најмалку 8 знаци",
+      "submitButton": "Креирај сметка",
+      "submitting": "Креирање…",
+      "loginLink": "Веќе имаш сметка? Најави се",
+      "consent": {
+        "prefix": "Се согласувам со ",
+        "termsLink": "Условите за користење",
+        "and": " и ",
+        "privacyLink": "Политиката за приватност",
+        "suffix": "."
+      },
+      "errors": {
+        "emailRequired": "Email е задолжителен",
+        "emailInvalid": "Внеси валидна email адреса",
+        "emailTaken": "Овој email е веќе регистриран",
+        "usernameRequired": "Корисничкото име е задолжително",
+        "usernameTooShort": "Корисничкото име мора да има најмалку 3 знаци",
+        "usernameTooLong": "Корисничкото име може да има најмногу 20 знаци",
+        "usernameInvalidChars": "Само букви, броеви и долни црти",
+        "usernameTaken": "Ова корисничко име е веќе зафатено",
+        "passwordRequired": "Лозинката е задолжителна",
+        "passwordTooShort": "Лозинката мора да има најмалку 8 знаци",
+        "passwordTooLong": "Лозинката може да има најмногу 72 знаци",
+        "consentRequired": "Мора да ги прифатиш Условите за користење и Политиката за приватност",
+        "registrationFailed": "Регистрацијата не успеа. Обиди се повторно."
+      }
+    }
+  }
+}

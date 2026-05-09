@@ -15,9 +15,15 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Order: Latin-script entries sorted ASC by native name (English, Hrvatski,
+// Srpski) then Cyrillic-script entries sorted ASC (Македонски). Mirrors the
+// order used in the lobby nav LanguageSelector so users see the same list
+// regardless of where they switch language.
 const LANGUAGES = [
   { code: "en", labelKey: "language.en" },
+  { code: "hr", labelKey: "language.hr" },
   { code: "sr", labelKey: "language.sr" },
+  { code: "mk", labelKey: "language.mk" },
 ] as const;
 
 const BRASS = "#c9a876";
@@ -40,17 +46,26 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { t, i18n } = useTranslation();
   const dialogRef = useFocusTrap<HTMLDivElement>({ onEscape: () => onOpenChange(false) });
 
-  function handleLanguageChange(lang: string) {
+  async function handleLanguageChange(lang: string) {
     if (lang === i18n.language) return;
 
-    i18n.changeLanguage(lang);
+    await i18n.changeLanguage(lang);
 
     const user = useAuthStore.getState().user;
-    if (user) {
-      updatePreferences(user.id, { languagePreference: lang }).catch(() => {
-        // fire-and-forget — revert isn't worth a toast for a settings flip.
-      });
-      useAuthStore.getState().setUser({ ...user, languagePreference: lang });
+    if (!user) return;
+
+    const previousPreference = user.languagePreference;
+    useAuthStore.getState().setUser({ ...user, languagePreference: lang });
+
+    try {
+      await updatePreferences(user.id, { languagePreference: lang });
+    } catch {
+      // Revert the optimistic auth-store update so it stays in sync with the
+      // server (mirrors LanguageSelector). UI locale stays put.
+      const current = useAuthStore.getState().user;
+      if (current?.id === user.id) {
+        useAuthStore.getState().setUser({ ...current, languagePreference: previousPreference });
+      }
     }
   }
 

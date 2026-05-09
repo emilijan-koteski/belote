@@ -1,5 +1,5 @@
-import { Activity, Coffee, DoorOpen, Gamepad2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Activity, Coffee, DoorOpen, Gamepad2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useLobbyStatsQuery } from "@/shared/hooks/queries/useLobbyStats";
@@ -14,9 +14,7 @@ interface StatBadgeProps {
 
 function StatBadge({ icon: Icon, label, value, testId, tone = "default" }: StatBadgeProps) {
   const toneClass =
-    tone === "accent"
-      ? "bg-accent-glow text-accent"
-      : "bg-surface-elevated text-text-primary";
+    tone === "accent" ? "bg-accent-glow text-accent" : "bg-surface-elevated text-text-primary";
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${toneClass}`}
@@ -35,10 +33,7 @@ export function LobbyStats() {
   const { data, isLoading } = useLobbyStatsQuery();
 
   return (
-    <div
-      className="rounded-lg border border-border bg-surface p-3"
-      data-testid="lobby-stats-panel"
-    >
+    <div className="rounded-lg border border-border bg-surface p-3" data-testid="lobby-stats-panel">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
         {t("lobby.stats.title")}
       </h3>

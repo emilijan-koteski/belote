@@ -39,9 +39,10 @@
       "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
       "durationHms": "{{h}}:{{m}}:{{s}}",
       "durationMs": "{{m}}:{{s}}",
-      "vs": "vs",
+      "vs": "&",
       "teammate": "Teammate",
       "opponents": "Opponents",
+      "noHandDetails": "No hand details for this match",
       "outcomeWin": "Win",
       "outcomeLoss": "Loss",
       "outcomeAbandoned": "Abandoned",
@@ -67,7 +68,40 @@
   "language": {
     "label": "Language",
     "en": "English",
-    "sr": "Srpski"
+    "sr": "Srpski",
+    "mk": "Македонски",
+    "hr": "Hrvatski"
+  },
+  "date": {
+    "format": "{{month}} {{day}}, {{year}}",
+    "monthLong": {
+      "jan": "January",
+      "feb": "February",
+      "mar": "March",
+      "apr": "April",
+      "may": "May",
+      "jun": "June",
+      "jul": "July",
+      "aug": "August",
+      "sep": "September",
+      "oct": "October",
+      "nov": "November",
+      "dec": "December"
+    },
+    "monthShort": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    }
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -279,8 +313,8 @@
     "trumpIndicator": {
       "trump": "Trump",
       "label": "Trump suit: {{suit}}",
-      "labelWithTeam": "Trump suit: {{suit}}, called by {{team}} team",
-      "labelWithCaller": "Trump suit: {{suit}}, called by {{team}} team ({{name}})"
+      "labelWithTeam": "Trump suit: {{suit}} · {{team}}",
+      "labelWithCaller": "Trump suit: {{suit}} · {{team}} — {{name}}"
     },
     "trumpReveal": {
       "title": "{{name}} took trump",

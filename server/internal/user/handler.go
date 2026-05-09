@@ -27,6 +27,13 @@ type UpdatePreferencesRequest struct {
 	LanguagePreference string `json:"languagePreference"`
 }
 
+var supportedLanguages = map[string]struct{}{
+	"en": {},
+	"sr": {},
+	"mk": {},
+	"hr": {},
+}
+
 // MatchPlayer is the per-seat participant embedded in a match list item.
 type MatchPlayer struct {
 	Seat     int    `json:"seat"`
@@ -161,7 +168,7 @@ func (h *UserHandler) UpdatePreferences(c echo.Context) error {
 		return apperr.ErrBadRequest
 	}
 
-	if req.LanguagePreference != "en" && req.LanguagePreference != "sr" {
+	if _, ok := supportedLanguages[req.LanguagePreference]; !ok {
 		return apperr.ErrInvalidLanguage
 	}
 

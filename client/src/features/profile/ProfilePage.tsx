@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { useProfileQuery } from "@/shared/hooks/queries/useProfile";
+import { formatLocalizedDate } from "@/shared/lib/formatDate";
 import { useAuthStore } from "@/shared/stores/authStore";
 
 import { MatchHistory } from "./MatchHistory";
@@ -33,7 +34,7 @@ function StatTile({
 }
 
 export function ProfilePage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { data: profile, isPending, isError } = useProfileQuery(user?.id);
 
@@ -48,19 +49,7 @@ export function ProfilePage() {
 
   const displayName = profile?.username ?? user?.username ?? "";
   const createdAt = profile?.createdAt ?? user?.createdAt ?? "";
-  let formattedDate = "";
-  if (createdAt) {
-    try {
-      const dateLocale = i18n.language === "sr" ? "sr-Latn" : i18n.language;
-      formattedDate = new Intl.DateTimeFormat(dateLocale, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }).format(new Date(createdAt));
-    } catch {
-      // malformed date string — leave empty
-    }
-  }
+  const formattedDate = createdAt ? formatLocalizedDate(createdAt, t, "long") : "";
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-8" data-testid="profile-page">

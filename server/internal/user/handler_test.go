@@ -333,20 +333,35 @@ func TestGetProfile_MissingAuth(t *testing.T) {
 }
 
 func TestUpdatePreferences_Success(t *testing.T) {
-	repo, e := setupUserHandler()
-	u := repo.addUser("testuser", "test@example.com", "en")
+	cases := []struct {
+		name string
+		lang string
+	}{
+		{name: "english", lang: "en"},
+		{name: "serbian", lang: "sr"},
+		{name: "macedonian", lang: "mk"},
+		{name: "croatian", lang: "hr"},
+	}
 
-	token, err := auth.GenerateAccessToken(u.ID, testJWTSecret)
-	require.NoError(t, err)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, e := setupUserHandler()
+			u := repo.addUser("testuser", "test@example.com", "en")
 
-	rec := doUpdatePreferences(e, "1", `{"languagePreference":"sr"}`, token)
-	assert.Equal(t, http.StatusOK, rec.Code)
+			token, err := auth.GenerateAccessToken(u.ID, testJWTSecret)
+			require.NoError(t, err)
 
-	var resp map[string]map[string]string
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Equal(t, "sr", resp["data"]["languagePreference"])
+			body := `{"languagePreference":"` + tc.lang + `"}`
+			rec := doUpdatePreferences(e, "1", body, token)
+			assert.Equal(t, http.StatusOK, rec.Code)
 
-	assert.Equal(t, "sr", repo.users[0].LanguagePreference)
+			var resp map[string]map[string]string
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+			assert.Equal(t, tc.lang, resp["data"]["languagePreference"])
+
+			assert.Equal(t, tc.lang, repo.users[0].LanguagePreference)
+		})
+	}
 }
 
 func TestUpdatePreferences_InvalidLanguage(t *testing.T) {
