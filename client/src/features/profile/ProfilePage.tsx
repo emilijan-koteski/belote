@@ -39,7 +39,7 @@ export function ProfilePage() {
 
   if (isPending) {
     return (
-      <div className="p-6" data-testid="profile-loading">
+      <div className="mx-auto max-w-5xl px-4 py-8 md:px-8" data-testid="profile-loading">
         <div className="h-8 w-48 animate-pulse rounded bg-surface" />
         <div className="mt-4 h-5 w-32 animate-pulse rounded bg-surface" />
       </div>
@@ -63,7 +63,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="p-6" data-testid="profile-page">
+    <div className="mx-auto max-w-5xl px-4 py-8 md:px-8" data-testid="profile-page">
       <h1
         className="font-display text-2xl font-semibold text-text-primary"
         data-testid="profile-username"
