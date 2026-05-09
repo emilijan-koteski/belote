@@ -8,6 +8,7 @@ import type { MatchAbandonedPayload } from "@/shared/types/wsEvents";
 import { TEAM_GOLD, TEAM_SILVER, type TeamGradient } from "../lib/tableTheme";
 import { ClassicPanel } from "./overlay/ClassicPanel";
 import { OverlayBackdrop } from "./overlay/OverlayBackdrop";
+import { isCountdownUrgent, URGENT_FRACTION } from "./TimerRing";
 
 interface DisconnectedPlayerInfo {
   /** Display name for the chip. */
@@ -51,9 +52,10 @@ const RECONNECT_TOTAL_SECONDS_DEFAULT = 120;
 // Color tokens lifted from the design's classic-states.jsx countdown rings.
 const RING_PARCHMENT = "#d4d0c4";
 const RING_DANGER = "#e85a5a";
-// Switch the ring + countdown text to the urgent color when ≤25% of the
-// reconnect window remains — mirrors the threshold used by ButtonTimerRing.
-const URGENT_PCT_THRESHOLD = 0.25;
+// The ring + countdown text flip to the urgent palette at the same threshold
+// the in-game TimerRing uses (URGENT_FRACTION = 1/8 of the original window).
+// Re-using the shared helper keeps the per-move ring and the reconnect ring
+// in lockstep — tweaking one place updates both.
 // Felt panel background tokens — mirrors ClassicPanel internal gradient so the
 // ring track sits on a matching field instead of a default surface.
 const FELT_DARK = "#0e2818";
@@ -258,7 +260,7 @@ export function ReconnectOverlay({
   // window; both the ring stroke and the countdown text flip to the urgent
   // red palette when ≤25% of the window remains.
   const pct = Math.max(0, Math.min(1, remainingSeconds / totalSeconds));
-  const isUrgent = pct <= URGENT_PCT_THRESHOLD;
+  const isUrgent = pct <= URGENT_FRACTION;
   const ringColor = isUrgent ? RING_DANGER : RING_PARCHMENT;
   const ringSize = 132;
   const ringRadius = (ringSize - 4) / 2; // 2 px stroke inset on each side
@@ -297,6 +299,7 @@ export function ReconnectOverlay({
                   key={`${idx}-${p.name}`}
                   name={p.name}
                   expiresAt={p.expiresAt}
+                  totalSeconds={totalSeconds}
                 />
               ))}
             </div>
@@ -380,11 +383,28 @@ export function ReconnectOverlay({
  * seat returns, the center jumps to the next-earliest while the still-offline
  * rows keep counting from their own expiries.
  */
-function DisconnectedPlayerRow({ name, expiresAt }: { name: string; expiresAt: string }) {
+function DisconnectedPlayerRow({
+  name,
+  expiresAt,
+  totalSeconds,
+}: {
+  name: string;
+  expiresAt: string;
+  totalSeconds: number;
+}) {
   const initial = (name || "?").charAt(0).toUpperCase();
-  const AVATAR = 36;
+  // Match PlayerSeat's avatar recipe so the initial sits in the same place as
+  // the table seat avatars: a `disc` size + a 2 px conic frame around it
+  // (frame = disc + 4). fontSize is derived from the inner disc radius (the
+  // `* 0.5` ratio PlayerSeat uses), no letter-spacing tweak — letter-spacing
+  // shifts the bbox and is what was nudging the "C" off-center here.
+  const AVATAR_DISC = 32;
+  const AVATAR_FRAME = AVATAR_DISC + 4;
   const remainingSeconds = useCountdownSeconds(expiresAt);
-  const rowUrgent = remainingSeconds <= 30;
+  // Use the shared `isCountdownUrgent` so per-row coloring flips at the
+  // same 1/8-of-window threshold as the center ring (and the in-game
+  // per-move TimerRing). For a 120 s reconnect window that's 15 s.
+  const rowUrgent = isCountdownUrgent(remainingSeconds, totalSeconds);
   return (
     <div
       className="flex items-center gap-3 px-3 py-2 rounded-xl"
@@ -396,7 +416,7 @@ function DisconnectedPlayerRow({ name, expiresAt }: { name: string; expiresAt: s
     >
       <div
         className="relative shrink-0"
-        style={{ width: AVATAR, height: AVATAR }}
+        style={{ width: AVATAR_FRAME, height: AVATAR_FRAME }}
         aria-hidden
       >
         <div
@@ -417,8 +437,7 @@ function DisconnectedPlayerRow({ name, expiresAt }: { name: string; expiresAt: s
               height: "100%",
               background: "var(--avatar-inner, #1f2e23)",
               color: "var(--ink-light, #f5f2e8)",
-              fontSize: AVATAR * 0.46,
-              letterSpacing: 0.2,
+              fontSize: AVATAR_DISC * 0.5,
             }}
           >
             {initial}
