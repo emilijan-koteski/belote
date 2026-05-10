@@ -446,6 +446,68 @@ describe("useWsDispatch", () => {
     expect(state.gameState?.currentTrick[0]!.playerSeat).toBe(1);
   });
 
+  it("snapshots the full trick into pendingResolvedTrick on event:trick_resolved", () => {
+    // Reproduces the production race: event:card_played for the 4th card
+    // arrives, then event:trick_resolved arrives in the same tick. The
+    // dispatcher must snapshot all four cards into pendingResolvedTrick
+    // BEFORE clearing currentTrick, otherwise the collect animation can't
+    // run because TrickArea sees currentTrick jump 3 → 0.
+    useGameStore.getState().setGameState(mockGameState);
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    // Simulate four card_played events filling the trick.
+    dispatch({
+      type: "event:card_played",
+      payload: { playerSeat: 0, cardId: "KS", autoPlayed: false },
+    });
+    dispatch({
+      type: "event:card_played",
+      payload: { playerSeat: 1, cardId: "7H", autoPlayed: false },
+    });
+    dispatch({
+      type: "event:card_played",
+      payload: { playerSeat: 2, cardId: "AD", autoPlayed: false },
+    });
+    dispatch({
+      type: "event:card_played",
+      payload: { playerSeat: 3, cardId: "9C", autoPlayed: false },
+    });
+    expect(useGameStore.getState().gameState?.currentTrick).toHaveLength(4);
+
+    // Now the resolve event clears the trick.
+    dispatch({
+      type: "event:trick_resolved",
+      payload: { winnerSeat: 2, winnerTeam: 0, cards: ["KS", "7H", "AD", "9C"] },
+    });
+
+    const state = useGameStore.getState();
+    // Live trick zeroed (server cleared it).
+    expect(state.gameState?.currentTrick).toHaveLength(0);
+    // Snapshot has all four cards + winner — drives the collect flight.
+    expect(state.pendingResolvedTrick).not.toBeNull();
+    expect(state.pendingResolvedTrick?.trick).toHaveLength(4);
+    expect(state.pendingResolvedTrick?.winnerSeat).toBe(2);
+  });
+
+  it("does not snapshot when event:trick_resolved arrives with an already-empty trick", () => {
+    // Reconnect-style edge case: the snapshot should only fire when there's
+    // actually a trick to capture. An empty currentTrick means we'd render
+    // nothing in the collect animation, so we don't bother.
+    useGameStore.getState().setGameState(mockGameState);
+
+    const { result } = renderHook(() => useWsDispatch());
+    const dispatch = result.current;
+
+    dispatch({
+      type: "event:trick_resolved",
+      payload: { winnerSeat: 1, winnerTeam: 1, cards: [] },
+    });
+
+    expect(useGameStore.getState().pendingResolvedTrick).toBeNull();
+  });
+
   it("dispatches event:hand_scored to gameStore and sets scoreRevealData", () => {
     useGameStore.getState().setGameState(mockGameState);
 

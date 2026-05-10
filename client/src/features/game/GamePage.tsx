@@ -1,5 +1,5 @@
 import { HelpCircle, Pause, Settings as SettingsIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router";
 
@@ -32,6 +32,7 @@ import {
 import { BelotPrompt } from "./components/BelotPrompt";
 import { BelotReveal } from "./components/BelotReveal";
 import { CapotAnimation } from "./components/CapotAnimation";
+import { CardFlight, type CardFlightDescriptor, type FlightRect } from "./components/CardFlight";
 import { DealAnimation } from "./components/DealAnimation";
 import { DeclarationPrompt } from "./components/DeclarationPrompt";
 import { DeclarationReveal } from "./components/DeclarationReveal";
@@ -54,7 +55,13 @@ import { SurrenderOpponentBanner } from "./components/SurrenderOpponentBanner";
 import { SurrenderPrompt } from "./components/SurrenderPrompt";
 import { TableAmbience } from "./components/TableAmbience";
 import { TableBackdrop } from "./components/TableBackdrop";
-import { TrickArea } from "./components/TrickArea";
+import {
+  compassOffset,
+  SLOT_POSITIONS,
+  TRICK_SLOT_H,
+  TRICK_SLOT_W,
+  TrickArea,
+} from "./components/TrickArea";
 import { TrumpIndicator } from "./components/TrumpIndicator";
 import { TrumpPrompt } from "./components/TrumpPrompt";
 import { TrumpReveal } from "./components/TrumpReveal";
@@ -63,8 +70,105 @@ import { detectDeclarations } from "./lib/declarations";
 import { legalCardIds } from "./lib/legalCards";
 import { seatTeam } from "./lib/tableTheme";
 
-function compassOffset(seat: number, myPlayerSeat: number): number {
-  return (seat - myPlayerSeat + 4) % 4;
+function rectFrom(el: Element | null): FlightRect | null {
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 && r.height === 0) return null;
+  return { left: r.left, top: r.top, width: r.width, height: r.height };
+}
+
+function measureTrickSlotRect(compass: 0 | 1 | 2 | 3): FlightRect | null {
+  // Prefer the dedicated slot anchor — TrickArea always renders a
+  // `data-testid="trick-slot-{compass}"` element at each slot position so
+  // the overlay can measure the real DOM rect (the spec's "Always" rule).
+  const slotEl = document.querySelector(`[data-testid="trick-slot-${compass}"]`);
+  const slotRect = rectFrom(slotEl);
+  if (slotRect) return slotRect;
+
+  // Fallback: trick-area rect + relative slot offsets. Used when the slot
+  // anchor isn't laid out yet (initial render race) or in tests where
+  // jsdom doesn't compute layout.
+  const ta = document.querySelector('[data-testid="trick-area"]');
+  const r = rectFrom(ta);
+  if (!r) return null;
+  const slot = SLOT_POSITIONS[compass];
+  const cx = r.left + r.width / 2 + slot.offsetX;
+  const cy = r.top + r.height / 2 + slot.offsetY;
+  return {
+    left: cx - TRICK_SLOT_W / 2,
+    top: cy - TRICK_SLOT_H / 2,
+    width: TRICK_SLOT_W,
+    height: TRICK_SLOT_H,
+  };
+}
+
+function viewportBottomCenterRect(): FlightRect {
+  // Mid-flight waypoint for the self throw — the card visibly arcs through
+  // viewport bottom-center before continuing up to the south slot. Width
+  // matches `md` so the size morph stays continuous through the waypoint.
+  const w = TRICK_SLOT_W;
+  const h = TRICK_SLOT_H;
+  return {
+    left: window.innerWidth / 2 - w / 2,
+    top: window.innerHeight - h / 2,
+    width: w,
+    height: h,
+  };
+}
+
+/**
+ * Final rect for a trick-collect flight. Returns a TRICK_SLOT-sized rect
+ * (no scaling — pure translate-and-fade) anchored to the winner's compass
+ * position in viewport coords.
+ *
+ * Why compass + viewport, not DOM measurement: DOM measurement here turned
+ * out to be flaky (deck stack visibility-toggling on the last trick of a
+ * hand, and a recurring "always lands at the same seat" race when the
+ * effect captured a stale rect). The seat positions in `SEAT_POSITIONS`
+ * are hard-anchored to the four edges of the viewport via CSS
+ * `bottom-44 / right-16 / top-16 / left-16`, so we can compute the
+ * destination directly from the compass without consulting the DOM at
+ * collect time.
+ */
+function winnerCollectRect(winner: number, myPlayerSeat: number): FlightRect {
+  const compass = compassOffset(winner, myPlayerSeat);
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  let cx: number;
+  let cy: number;
+  switch (compass) {
+    case 0:
+      // Self → bottom-center landing zone above the viewport edge. Cards
+      // slide down from the trick area and fade — the gesture the user
+      // asked for: "simple slide to the bottom center and fade them away".
+      cx = vw / 2;
+      cy = vh - TRICK_SLOT_H / 2 - 24;
+      break;
+    case 1:
+      // East opponent. Tucked in from the wood rim (right-16 = 64 px) by
+      // about a card width.
+      cx = vw - 120;
+      cy = vh / 2;
+      break;
+    case 2:
+      // Teammate / north. Just below the top wood rim (top-16 = 64 px).
+      cx = vw / 2;
+      cy = 120;
+      break;
+    case 3:
+      // West opponent. Mirror of east.
+      cx = 120;
+      cy = vh / 2;
+      break;
+  }
+
+  return {
+    left: cx - TRICK_SLOT_W / 2,
+    top: cy - TRICK_SLOT_H / 2,
+    width: TRICK_SLOT_W,
+    height: TRICK_SLOT_H,
+  };
 }
 
 const SEAT_POSITIONS: Record<number, string> = {
@@ -116,6 +220,8 @@ export function GamePage() {
   const setActiveEmote = useGameStore((s) => s.setActiveEmote);
   const pendingAutoPlayedCard = useGameStore((s) => s.pendingAutoPlayedCard);
   const setPendingAutoPlayedCard = useGameStore((s) => s.setPendingAutoPlayedCard);
+  const pendingResolvedTrick = useGameStore((s) => s.pendingResolvedTrick);
+  const setPendingResolvedTrick = useGameStore((s) => s.setPendingResolvedTrick);
 
   // "Game is starting…" splash gate — holds the themed loading screen for a
   // deliberate minimum duration when arriving from RoomLobby (or LobbyPage
@@ -147,11 +253,26 @@ export function GamePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   // Local card-throw animation: set on play_card dispatch, cleared shortly
-  // after so HandCards animates the played card down + fades it. The actual
-  // hand removal arrives via the next gameState push, which keys the
-  // remaining cards by id so HandCards stays stable across the hand-off.
+  // after so HandCards hides the played card via visibility:hidden while the
+  // CardFlight overlay paints the motion. The actual hand removal arrives via
+  // the next gameState push, which keys the remaining cards by id so HandCards
+  // stays stable across the hand-off.
   const [flyingCardId, setFlyingCardId] = useState<string | null>(null);
   const flyingClearTimerRef = useRef<number | null>(null);
+
+  // CardFlight overlay state — viewport-fixed flying cards that handle all
+  // throw and collect motion in one continuous element per card. While a
+  // cardId is in flight, both HandCards (source) and TrickArea (slot) hide
+  // their static rendering of that card so the overlay is the only painter.
+  const [activeFlights, setActiveFlights] = useState<CardFlightDescriptor[]>([]);
+  const flightingCardIds = useMemo(
+    () => new Set(activeFlights.map((f) => `${f.card.rank}${f.card.suit}`)),
+    [activeFlights],
+  );
+  // Tracks the last currentTrick length we processed so opponent-throw flights
+  // fire exactly once per growth event (and not on, e.g., a reconnect that
+  // shrinks the trick).
+  const prevTrickLenRef = useRef(0);
 
   // When the server auto-plays a card for the local player (per-move timer
   // expired), the dispatcher writes pendingAutoPlayedCard. Mirror it into
@@ -167,8 +288,192 @@ export function GamePage() {
       setFlyingCardId(null);
       flyingClearTimerRef.current = null;
     }, FLAG_LIFETIME.FLYING_CARD);
+    // Auto-played throw flight: measure the hand card + south slot rects and
+    // push a self-throw flight, mirroring handlePlayCard's overlay wiring.
+    // Defer rect reads via rAF so React's commit + the browser's layout pass
+    // settle before we measure (the hand card may be in a freshly-committed
+    // render).
+    if (myPlayerSeat !== null && !prefersReducedMotion) {
+      const cardId = pendingAutoPlayedCard.cardId;
+      const receivedAt = pendingAutoPlayedCard.receivedAt;
+      const rafId = requestAnimationFrame(() => {
+        const myPlayer = useGameStore
+          .getState()
+          .gameState?.players.find((p) => p.seat === myPlayerSeat);
+        const card = myPlayer?.hand.find((c) => `${c.rank}${c.suit}` === cardId);
+        const sourceRect = rectFrom(document.querySelector(`[data-testid="hand-card-${cardId}"]`));
+        const destRect = measureTrickSlotRect(0);
+        if (card && sourceRect && destRect) {
+          setActiveFlights((prev) => [
+            ...prev,
+            {
+              id: `throw-self-${cardId}-${receivedAt}`,
+              card,
+              fromRect: sourceRect,
+              toRect: destRect,
+              waypointRect: viewportBottomCenterRect(),
+              durationMs: MOTION.CARD_FLIGHT_SELF_THROW,
+            },
+          ]);
+        }
+      });
+      setPendingAutoPlayedCard(null);
+      return () => cancelAnimationFrame(rafId);
+    }
     setPendingAutoPlayedCard(null);
-  }, [pendingAutoPlayedCard, setPendingAutoPlayedCard]);
+  }, [pendingAutoPlayedCard, setPendingAutoPlayedCard, myPlayerSeat, prefersReducedMotion]);
+
+  // Opponent throw — when currentTrick grows by one card and the newest card
+  // was played by a non-local seat, push a CardFlight from that seat's deck
+  // stack to their compass slot. The legacy trickLand keyframe in TrickArea
+  // is gone, so without this the opponent's card would simply pop into the
+  // slot with no flight.
+  const currentTrick = gameState?.currentTrick;
+  useEffect(() => {
+    const trick = currentTrick ?? [];
+    const prev = prevTrickLenRef.current;
+    if (prefersReducedMotion) {
+      prevTrickLenRef.current = trick.length;
+      return;
+    }
+    if (myPlayerSeat === null) {
+      prevTrickLenRef.current = trick.length;
+      return;
+    }
+    let rafId: number | null = null;
+    if (trick.length > prev && trick.length > 0) {
+      const newest = trick[trick.length - 1];
+      if (newest && newest.playerSeat !== myPlayerSeat) {
+        const compass = compassOffset(newest.playerSeat, myPlayerSeat);
+        const card = newest.card;
+        const playerSeat = newest.playerSeat;
+        // rAF-defer the rect reads: the new currentTrick state was just
+        // committed; we measure after the layout pass that the commit
+        // schedules so the trick-slot anchor reflects the post-commit DOM.
+        rafId = requestAnimationFrame(() => {
+          const sourceRect = rectFrom(document.querySelector(`[data-seat-deck="${playerSeat}"]`));
+          const destRect = measureTrickSlotRect(compass);
+          if (sourceRect && destRect) {
+            const cardId = `${card.rank}${card.suit}`;
+            setActiveFlights((prevFlights) => [
+              ...prevFlights,
+              {
+                id: `throw-opp-${playerSeat}-${cardId}-${Date.now()}`,
+                card,
+                fromRect: sourceRect,
+                toRect: destRect,
+                durationMs: MOTION.CARD_FLIGHT_OPPONENT_THROW,
+              },
+            ]);
+          }
+        });
+      }
+    }
+    prevTrickLenRef.current = trick.length;
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [currentTrick, myPlayerSeat, prefersReducedMotion]);
+
+  // Trick-collect orchestration. When pendingResolvedTrick is captured by
+  // the WS dispatcher, hold it for TRICK_RESOLVE_PAUSE so the winner glow
+  // reads, then measure the four slot rects + the winner destination rect
+  // and push four collect flights. Reduced-motion users skip the flights and
+  // see the snapshot vanish after a short hold (preserving the glow).
+  useEffect(() => {
+    if (!pendingResolvedTrick) return;
+    if (myPlayerSeat === null) return;
+
+    if (prefersReducedMotion) {
+      // Hold the snapshot long enough for the user to register the winner
+      // glow — match the full-motion glow phase so reduced-motion users
+      // don't get a sub-second flash they can't process. No flights run.
+      const reducedTimer = window.setTimeout(() => {
+        setPendingResolvedTrick(null);
+      }, MOTION.TRICK_RESOLVE_PAUSE);
+      return () => clearTimeout(reducedTimer);
+    }
+
+    // Fallback safety clear: if the overlay's `animationend` doesn't fire
+    // (component unmount / WS reconnect mid-collect / browser timer
+    // throttling) the snapshot would otherwise stick and superimpose the
+    // resolved trick over the next hand. Schedule a guaranteed clear
+    // slightly past the natural collect animation end. handleFlightComplete
+    // clears via the same setter on the happy path, and clearing twice is
+    // a no-op.
+    const FALLBACK_CLEAR_MS = MOTION.TRICK_RESOLVE_PAUSE + MOTION.CARD_FLIGHT_COLLECT + 400;
+    const fallbackClearTimer = window.setTimeout(() => {
+      setPendingResolvedTrick(null);
+    }, FALLBACK_CLEAR_MS);
+
+    const winner = pendingResolvedTrick.winnerSeat;
+    const snapshot = pendingResolvedTrick.trick;
+    const receivedAt = pendingResolvedTrick.receivedAt;
+    // Distinguish back-to-back tricks that contain the same card id: the
+    // trickNumber from the live state at capture time is a stable, unique
+    // suffix (server increments it on each resolve).
+    const trickKey = gameState?.trickNumber ?? 0;
+
+    const glowTimer = window.setTimeout(() => {
+      // Winner destination — compass-anchored to the viewport, no DOM read.
+      // (See `winnerCollectRect` for the rationale.)
+      const destRect = winnerCollectRect(winner, myPlayerSeat);
+
+      const newFlights: CardFlightDescriptor[] = [];
+      for (const tc of snapshot) {
+        const compass = compassOffset(tc.playerSeat, myPlayerSeat);
+        const fromRect = measureTrickSlotRect(compass);
+        if (!fromRect) continue;
+        const cardId = `${tc.card.rank}${tc.card.suit}`;
+        newFlights.push({
+          id: `collect-${trickKey}-${cardId}-${receivedAt}`,
+          card: tc.card,
+          fromRect,
+          toRect: destRect,
+          durationMs: MOTION.CARD_FLIGHT_COLLECT,
+          // Cards fade as they reach the winner's pile.
+          endOpacity: 0,
+        });
+      }
+
+      if (newFlights.length === 0) {
+        setPendingResolvedTrick(null);
+        return;
+      }
+      setActiveFlights((prev) => [...prev, ...newFlights]);
+    }, MOTION.TRICK_RESOLVE_PAUSE);
+
+    return () => {
+      clearTimeout(glowTimer);
+      clearTimeout(fallbackClearTimer);
+    };
+  }, [
+    pendingResolvedTrick,
+    myPlayerSeat,
+    prefersReducedMotion,
+    setPendingResolvedTrick,
+    gameState?.trickNumber,
+  ]);
+
+  // Flight completion — remove the flight; if it was the last collect flight,
+  // also clear pendingResolvedTrick so the snapshot disappears in the same
+  // render as the last flight unmounts (no slot-card flicker). React 18+
+  // automatically batches the two state setters when both run inside the
+  // same handler, so we don't need queueMicrotask trickery.
+  const handleFlightComplete = useCallback(
+    (flightId: string) => {
+      let clearSnapshot = false;
+      setActiveFlights((prev) => {
+        const next = prev.filter((f) => f.id !== flightId);
+        const wasCollect = flightId.startsWith("collect-");
+        const stillCollecting = next.some((f) => f.id.startsWith("collect-"));
+        if (wasCollect && !stillCollecting) clearSnapshot = true;
+        return next;
+      });
+      if (clearSnapshot) setPendingResolvedTrick(null);
+    },
+    [setPendingResolvedTrick],
+  );
 
   // ScoreReveal needs the trump suit / caller seat from the just-finished
   // hand for its contract-held subtitle. The server pushes the next-hand
@@ -414,11 +719,42 @@ export function GamePage() {
   // --- Action handlers ---
   const handlePlayCard = useCallback(
     (cardId: string) => {
-      // Trigger the hand-throw animation immediately so the gesture starts
+      // Measure the source (hand card) and destination (south trick slot)
+      // BEFORE we hide the card via flyingCardId. Read the hand from the
+      // live store (not the closed-over `gameState`) so a concurrent WS
+      // update between render and click can't leave us with a stale lookup.
+      let flight: CardFlightDescriptor | null = null;
+      if (!prefersReducedMotion && myPlayerSeat !== null) {
+        const liveGameState = useGameStore.getState().gameState;
+        const myPlayer = liveGameState?.players.find((p) => p.seat === myPlayerSeat);
+        const card = myPlayer?.hand.find((c) => `${c.rank}${c.suit}` === cardId);
+        const sourceRect = rectFrom(document.querySelector(`[data-testid="hand-card-${cardId}"]`));
+        const destRect = measureTrickSlotRect(0);
+        if (card && sourceRect && destRect) {
+          flight = {
+            id: `throw-self-${cardId}-${Date.now()}`,
+            card,
+            fromRect: sourceRect,
+            toRect: destRect,
+            // Self throw arcs through viewport bottom-center so the card
+            // visibly travels down to the screen lip and back up to the
+            // table — matches the motion the user described.
+            waypointRect: viewportBottomCenterRect(),
+            durationMs: MOTION.CARD_FLIGHT_SELF_THROW,
+          };
+        }
+      }
+
+      // Trigger the hand-throw flight immediately so the gesture starts
       // before the WS round-trip completes. The card is cleared from the
       // local hand by the next gameState push (server removes it from
-      // `players[seat].hand`); this state just controls the exit animation.
+      // `players[seat].hand`); flyingCardId controls the source-side
+      // visibility:hidden so the overlay's flying card is the only painter.
       setFlyingCardId(cardId);
+      const flightToPush = flight;
+      if (flightToPush) {
+        setActiveFlights((prev) => [...prev, flightToPush]);
+      }
       if (flyingClearTimerRef.current !== null) {
         clearTimeout(flyingClearTimerRef.current);
       }
@@ -428,7 +764,7 @@ export function GamePage() {
       }, FLAG_LIFETIME.FLYING_CARD);
       sendMessage(ACTION_PLAY_CARD, { cardId });
     },
-    [sendMessage],
+    [sendMessage, prefersReducedMotion, myPlayerSeat],
   );
 
   const handlePickTrump = useCallback(
@@ -764,6 +1100,8 @@ export function GamePage() {
           trick={gameState.currentTrick}
           winnerSeat={gameState.trickWinnerSeat}
           myPlayerSeat={myPlayerSeat}
+          pendingResolvedTrick={pendingResolvedTrick}
+          suppressedCardIds={flightingCardIds}
         />
       </div>
 
@@ -1063,6 +1401,12 @@ export function GamePage() {
           surrenderedByUsername={surrenderedByUsername}
         />
       )}
+
+      {/* CardFlight overlay — viewport-fixed layer that paints all in-flight
+          cards (self throw, opponent throw, take-collect). Mounted last so
+          its z-index sits above the table and any other game chrome but
+          below modal dialogs / score reveal (which set their own z-index). */}
+      <CardFlight flights={activeFlights} onComplete={handleFlightComplete} />
 
       {/* Settings + rules dialogs — driven by the bottom-right HUD buttons */}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

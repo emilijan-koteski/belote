@@ -112,18 +112,44 @@ function StatusChip({
 /** Fanned face-down card-back pile shown next to non-self avatars, with a
  *  trailing `×N` count so a glance reveals exactly how many cards the seat
  *  still holds (5 in trump-bidding, 8 once dealing finishes, then drops as
- *  cards are played). */
-function CardBackStack({ count, isHorizontal }: { count: number; isHorizontal: boolean }) {
+ *  cards are played).
+ *
+ *  Doubles as the geometric anchor for the CardFlight overlay — opponent
+ *  throws launch from this rect and trick-collect flights converge here when
+ *  this seat wins. The outer `data-testid="player-seat-deck-{seat}"` exposes
+ *  it for `getBoundingClientRect()` lookups. */
+function CardBackStack({
+  count,
+  isHorizontal,
+  seat,
+}: {
+  count: number;
+  isHorizontal: boolean;
+  seat: number;
+}) {
   const visible = Math.min(count, 5);
-  if (visible <= 0) return null;
+  // Render the wrapper div even when count === 0 so the CardFlight overlay
+  // can always measure this seat's deck rect (used as the destination on a
+  // collect flight that converges on this seat as winner). Without this,
+  // the last trick of a hand — where every player has zero cards left —
+  // would have no anchor and the collect animation would silently bail.
   return (
     <div
       className="flex items-center"
       style={{
         marginLeft: isHorizontal ? 8 : 0,
         marginTop: isHorizontal ? 0 : 4,
+        // Reserve enough box for the card-back fan + count badge so the rect
+        // measurement returns a non-zero size even with no cards visible.
+        minWidth: 56,
+        minHeight: 38,
+        // When there are no cards to show, hide the children visually but
+        // keep the box (and its rect) addressable.
+        visibility: visible > 0 ? "visible" : "hidden",
       }}
       data-testid="player-seat-card-stack"
+      data-seat-deck={seat}
+      id={`player-seat-deck-${seat}`}
     >
       {Array.from({ length: visible }).map((_, i) => (
         <div
@@ -397,9 +423,11 @@ export function PlayerSeat({
         </span>
       </div>
 
-      {/* Card-back stack — opponents only */}
-      {!isSelf && cardCount !== undefined && cardCount > 0 && (
-        <CardBackStack count={cardCount} isHorizontal={isHorizontal} />
+      {/* Card-back stack — opponents only. Rendered even when `cardCount === 0`
+          (last trick of a hand) so the CardFlight overlay can always measure
+          this seat's deck rect; the inner stack hides itself when empty. */}
+      {!isSelf && cardCount !== undefined && (
+        <CardBackStack count={cardCount} isHorizontal={isHorizontal} seat={player.seat} />
       )}
 
       {/* sr-live region for assistive tech — same wording as before so existing

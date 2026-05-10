@@ -1,6 +1,3 @@
-import { useId } from "react";
-
-import { MOTION } from "@/shared/lib/motion";
 import type { Card, Rank, Suit } from "@/shared/types/gameTypes";
 
 import type { CardState } from "./PlayingCard";
@@ -12,10 +9,11 @@ interface HandCardsProps {
   playableCardIds: string[];
   onPlayCard: (cardId: string) => void;
   /**
-   * Card id (e.g. `"KS"`) currently being thrown into the trick. Drives the
-   * hand-throw animation: the matching card translates downward + scales
-   * down + fades out so the gesture reads as one continuous "pickup → trick"
-   * with the receiving TrickArea slot's incoming-card animation.
+   * Card id (e.g. `"KS"`) currently being thrown into the trick. Hides the
+   * matching card via `visibility: hidden` so the `CardFlight` overlay is
+   * the only painter of the in-flight card. The card stays laid out (so the
+   * rest of the fan doesn't reflow mid-flight) and the source rect we
+   * measured at click time stays valid.
    */
   flyingId?: string | null;
 }
@@ -69,12 +67,6 @@ function sortHand(hand: Card[]): Card[] {
  *  • `default`    — when it's not my turn, every card renders in default state
  *                   so the legality hint never bleeds across turns.
  */
-// Hand-throw animation for the played card — short downward slide + fade
-// that pairs with TrickArea's incoming-card animation for the same card. The
-// card is unmounted from the hand by the WS gameState push (server clears it
-// from `players[seat].hand`), so we only need the exit animation here.
-const HAND_THROW_MS = MOTION.CARD_THROW;
-
 export function HandCards({
   hand,
   isMyTurn,
@@ -82,10 +74,6 @@ export function HandCards({
   onPlayCard,
   flyingId = null,
 }: HandCardsProps) {
-  // Stable id used to namespace the per-card hand-throw keyframes so multiple
-  // hand instances on the same DOM (Strict-mode double-mount) don't collide.
-  const animScope = useId().replace(/:/g, "");
-
   if (hand.length === 0) {
     return <div className="relative h-36 w-px" data-testid="hand-cards" />;
   }
@@ -115,32 +103,26 @@ export function HandCards({
           state = playableCardIds.includes(id) ? "playable" : "unplayable";
         }
 
-        // Per-card keyframe — the rotation has to be baked in so the
-        // animation doesn't reset to 0 deg for a single frame.
-        const flyKeyframes = isFlying
-          ? `@keyframes handThrow_${animScope}_${index} {
-              0%   { transform: rotate(${rotateDeg}deg) translate(0, 0) scale(1); opacity: 1; }
-              100% { transform: rotate(${rotateDeg}deg) translate(0, 240px) scale(0.92); opacity: 0; }
-            }`
-          : null;
-
         return (
           <div
             key={id}
             className="absolute"
+            data-testid={`hand-card-${id}`}
             style={{
               left: `calc(50% + ${offset * spread}px - ${CARD_WIDTH / 2}px)`,
               bottom: dropPx,
               transform: `rotate(${rotateDeg}deg)`,
               transformOrigin: "50% 120%",
-              zIndex: isFlying ? 999 : index,
-              animation: isFlying
-                ? `handThrow_${animScope}_${index} ${HAND_THROW_MS}ms cubic-bezier(0.4, 0, 0.7, 1) both`
-                : undefined,
+              zIndex: index,
+              // While flying, hide the hand card's pixels — the CardFlight
+              // overlay paints the moving card in screen-fixed coordinates.
+              // Visibility (rather than display:none) preserves the layout so
+              // adjacent cards don't reflow during the flight, which would
+              // otherwise mis-position the source rect we measured.
+              visibility: isFlying ? "hidden" : "visible",
               pointerEvents: isFlying ? "none" : "auto",
             }}
           >
-            {flyKeyframes && <style>{flyKeyframes}</style>}
             <PlayingCard
               card={card}
               state={state}

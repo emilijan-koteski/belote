@@ -16,15 +16,31 @@ export const MOTION = {
   // ─── Card flight (game-flow critical) ────────────────────────────
   /** Hand card slides off-screen-bottom on throw. Long enough to register
    *  as deliberate; short enough that it doesn't precede the responding
-   *  trick-land animation by an awkward pause. */
+   *  trick-land animation by an awkward pause. Used as the legacy / reduced-
+   *  motion fallback when the CardFlight overlay can't read DOM rects. */
   CARD_THROW: 280,
 
   /** Self's card flying up from screen-bottom into the south slot.
-   *  Slightly longer than opponent landings to match the longer travel. */
+   *  Slightly longer than opponent landings to match the longer travel.
+   *  Legacy / fallback path. */
   CARD_LAND_SELF: 460,
 
-  /** Opponent's card growing from their deck to their slot. */
+  /** Opponent's card growing from their deck to their slot. Legacy / fallback path. */
   CARD_LAND_OPPONENT: 360,
+
+  /** CardFlight overlay — self throw, hand → south trick slot. The flight
+   *  arcs through screen-bottom-center so the gesture reads as one continuous
+   *  motion instead of two separate hand-throw + trick-land animations. */
+  CARD_FLIGHT_SELF_THROW: 520,
+
+  /** CardFlight overlay — opponent throw, their CardBackStack → their compass
+   *  trick slot. */
+  CARD_FLIGHT_OPPONENT_THROW: 420,
+
+  /** CardFlight overlay — collect after a trick resolves. All four trick
+   *  slots → winner's deck (or, when the local player wins, the hand region
+   *  near screen-bottom-center). Runs after TRICK_RESOLVE_PAUSE. */
+  CARD_FLIGHT_COLLECT: 560,
 
   /** Winner-glow hold after the trick fills. Long enough for players to
    *  identify the winning card before the cards collect away. */
@@ -141,9 +157,12 @@ export const MOTION = {
 const FLAG_BUFFER_MS = 40;
 
 export const FLAG_LIFETIME = {
-  /** GamePage's `flyingCardId` — must outlive `CARD_THROW`. */
-  FLYING_CARD: MOTION.CARD_THROW + FLAG_BUFFER_MS,
-  /** TrickArea's `incomingCompass` — must outlive the longest land. */
+  /** GamePage's `flyingCardId` — must outlive whichever throw animation runs.
+   *  When the CardFlight overlay is active (the common case) this guards the
+   *  full self-throw flight; when it falls back to the legacy hand-throw +
+   *  trick-land sequence it still covers the longer of the two. */
+  FLYING_CARD: Math.max(MOTION.CARD_FLIGHT_SELF_THROW, MOTION.CARD_THROW) + FLAG_BUFFER_MS,
+  /** TrickArea's `incomingCompass` — must outlive the longest legacy land. */
   INCOMING_COMPASS: MOTION.CARD_LAND_SELF + FLAG_BUFFER_MS,
 } as const;
 

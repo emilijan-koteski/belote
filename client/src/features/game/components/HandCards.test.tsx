@@ -121,7 +121,7 @@ describe("HandCards", () => {
     expect(onPlayCard).toHaveBeenCalledWith("TH");
   });
 
-  it("animates the flying card with the hand-throw keyframe and disables pointer events", () => {
+  it("hides the flying card via visibility while the overlay paints it, and disables pointer events", () => {
     render(
       <HandCards
         hand={testHand}
@@ -132,13 +132,14 @@ describe("HandCards", () => {
       />,
     );
 
-    // The wrapper around the flying card carries the animation + pointer-
-    // events:none. The other cards stay at their normal layout.
+    // The wrapper around the flying card carries visibility:hidden + pointer-
+    // events:none so the CardFlight overlay is the sole painter for the
+    // moving card; the other cards stay visible at their normal layout.
     const flyingWrapper = screen.getByTestId("playing-card-KS").parentElement;
     const otherWrapper = screen.getByTestId("playing-card-TH").parentElement;
-    expect(flyingWrapper?.style.animation).toContain("handThrow");
+    expect(flyingWrapper?.style.visibility).toBe("hidden");
     expect(flyingWrapper?.style.pointerEvents).toBe("none");
-    expect(otherWrapper?.style.animation ?? "").not.toContain("handThrow");
+    expect(otherWrapper?.style.visibility).toBe("visible");
   });
 
   it("treats the flying card as 'default' state so it is not clickable mid-flight", () => {

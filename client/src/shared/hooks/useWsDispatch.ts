@@ -138,6 +138,14 @@ function dispatchGameEvent(message: WsMessage): void {
       store.setDeclarationReveal(null);
       store.setBelotReveal(null);
     }
+    // NOTE: pendingResolvedTrick is intentionally NOT cleared here. The
+    // server emits a trailing event:game_state ~immediately after every
+    // event:trick_resolved (manager.go:543); clearing the snapshot here
+    // would tear it down before the collect animation can run. GamePage's
+    // pendingResolvedTrick effect installs a fallback clear timer scoped
+    // to the animation duration, which also handles the reconnect-mid-
+    // collect case (snapshot survives reconnect, the remounted effect
+    // re-arms the timer and the snapshot clears within ~1.6s of remount).
     revealJustEmitted = false;
     store.setGameState(gameState);
     return;
@@ -194,6 +202,20 @@ function dispatchGameEvent(message: WsMessage): void {
     const payload = message.payload as TrickResolvedPayload;
     const current = store.gameState;
     if (current) {
+      // Snapshot the full 4-card trick BEFORE clearing currentTrick. By the
+      // time this dispatcher runs, the preceding event:card_played for the
+      // 4th card has already pushed it into current.currentTrick — but
+      // React batches both store updates into one render, so without a
+      // snapshot the UI sees currentTrick jump 3 → 0 and the collect
+      // animation never has a chance to run. The snapshot decouples the
+      // collect animation from currentTrick's authoritative-but-transient
+      // state. GamePage clears it after the take flight completes.
+      if (current.currentTrick && current.currentTrick.length > 0) {
+        store.setPendingResolvedTrick({
+          trick: current.currentTrick,
+          winnerSeat: payload.winnerSeat,
+        });
+      }
       // Clear turnExpiresAt here so the previous active seat's TimerRing stops
       // ticking the moment the trick resolves. The trailing event:game_state
       // will set the next turn's deadline; until then, no seat counts down.

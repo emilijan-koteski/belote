@@ -233,6 +233,37 @@ describe("gameStore", () => {
     expect(useGameStore.getState().lastEmoteSentAt).toBe(0);
   });
 
+  it("setPendingResolvedTrick stores the snapshot with a receivedAt stamp", () => {
+    useGameStore.getState().setPendingResolvedTrick({
+      trick: [{ card: { rank: "K", suit: "S" }, playerSeat: 0 }],
+      winnerSeat: 2,
+    });
+
+    const snap = useGameStore.getState().pendingResolvedTrick;
+    expect(snap).not.toBeNull();
+    expect(snap?.trick).toHaveLength(1);
+    expect(snap?.winnerSeat).toBe(2);
+    expect(typeof snap?.receivedAt).toBe("number");
+  });
+
+  it("setPendingResolvedTrick(null) clears the snapshot", () => {
+    useGameStore.getState().setPendingResolvedTrick({
+      trick: [{ card: { rank: "K", suit: "S" }, playerSeat: 0 }],
+      winnerSeat: 2,
+    });
+    useGameStore.getState().setPendingResolvedTrick(null);
+    expect(useGameStore.getState().pendingResolvedTrick).toBeNull();
+  });
+
+  it("clearGame resets pendingResolvedTrick", () => {
+    useGameStore.getState().setPendingResolvedTrick({
+      trick: [{ card: { rank: "K", suit: "S" }, playerSeat: 0 }],
+      winnerSeat: 2,
+    });
+    useGameStore.getState().clearGame();
+    expect(useGameStore.getState().pendingResolvedTrick).toBeNull();
+  });
+
   it("replaces gameState on subsequent setGameState calls", () => {
     useGameStore.getState().setGameState(mockGameState);
 

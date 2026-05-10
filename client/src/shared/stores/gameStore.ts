@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { GameState } from "@/shared/types/gameTypes";
+import type { GameState, TrickCard } from "@/shared/types/gameTypes";
 import type {
   BelotAnnouncedPayload,
   DeclarationsResolvedPayload,
@@ -12,6 +12,21 @@ import type {
   SurrenderProposedPayload,
   TrumpSelectedPayload,
 } from "@/shared/types/wsEvents";
+
+// Snapshot of the just-resolved trick. Captured by the EVENT_TRICK_RESOLVED
+// dispatcher BEFORE clearing currentTrick — without this, a same-tick batch
+// of event:card_played (#4) + event:trick_resolved would render the trick
+// going from 3 → 0 cards directly, leaving no chance to animate the four
+// cards flowing toward the winner. The TrickArea + CardFlight overlay read
+// this to drive the resolve-glow + collect flight; GamePage clears it after
+// the take animation completes (or on receiving the next event:game_state).
+export interface PendingResolvedTrick {
+  trick: TrickCard[];
+  winnerSeat: number;
+  /** Stamped on capture so consumers can debounce duplicate captures during
+   *  rapid trick cycles. */
+  receivedAt: number;
+}
 
 // Per-seat ephemeral emote slot. The receivedAt stamp doubles as a remount
 // key so a second emote on the same seat replaces the first cleanly.
@@ -49,6 +64,7 @@ interface GameStoreState {
   surrenderProposed: SurrenderProposedPayload | null;
   surrenderDeclined: SurrenderDeclinedPayload | null;
   pendingAutoPlayedCard: PendingAutoPlayedCard | null;
+  pendingResolvedTrick: PendingResolvedTrick | null;
   activeEmotes: ActiveEmotesMap;
   // Monotonic timestamp (performance.now()) of the most recent emote sent
   // from this client. Lifted out of EmotePickerButton's local useState so
@@ -70,6 +86,7 @@ interface GameStoreState {
   setSurrenderProposed: (payload: SurrenderProposedPayload | null) => void;
   setSurrenderDeclined: (payload: SurrenderDeclinedPayload | null) => void;
   setPendingAutoPlayedCard: (cardId: string | null) => void;
+  setPendingResolvedTrick: (snapshot: { trick: TrickCard[]; winnerSeat: number } | null) => void;
   setActiveEmote: (seat: number, emote: EmoteID | null) => void;
   setLastEmoteSentAt: (value: number) => void;
   clearGame: () => void;
@@ -106,6 +123,7 @@ const initialState = {
   surrenderProposed: null,
   surrenderDeclined: null,
   pendingAutoPlayedCard: null,
+  pendingResolvedTrick: null,
   activeEmotes: { 0: null, 1: null, 2: null, 3: null } as ActiveEmotesMap,
   lastEmoteSentAt: 0,
 };
@@ -141,6 +159,23 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setPendingAutoPlayedCard: (cardId) =>
     set({
       pendingAutoPlayedCard: cardId === null ? null : { cardId, receivedAt: Date.now() },
+    }),
+
+  setPendingResolvedTrick: (snapshot) =>
+    set({
+      pendingResolvedTrick:
+        snapshot === null
+          ? null
+          : {
+              // Shallow-clone the trick array so the snapshot doesn't share
+              // its backing storage with `gameState.currentTrick` — the
+              // dispatcher zeroes that array immediately after this setter,
+              // and we want the snapshot to remain a stable, isolated
+              // snapshot of the just-resolved trick.
+              trick: [...snapshot.trick],
+              winnerSeat: snapshot.winnerSeat,
+              receivedAt: Date.now(),
+            },
     }),
 
   setActiveEmote: (seat, emote) =>
