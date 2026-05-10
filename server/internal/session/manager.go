@@ -518,13 +518,26 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 			(len(newState.CurrentTrick) == 0 || newState.Phase != game.PhasePlaying)
 
 		if trickCompleted {
-			// Capture trick winner from oldState's trick context — after resolution
-			// the winner is in the state returned by ApplyAction
-			winnerSeat := 0
-			if oldState.TrickWinnerSeat != nil {
-				winnerSeat = *oldState.TrickWinnerSeat
-			} else if newState.TrickWinnerSeat != nil {
+			// Capture the trick winner from newState. The engine flow is:
+			//   - On trick 8 (last trick of hand): ApplyAction returns early
+			//     in resolveTrick (playing.go:132) AFTER setting
+			//     TrickWinnerSeat — so newState.TrickWinnerSeat is set.
+			//   - On tricks 1–7: resolveTrick sets TrickWinnerSeat then
+			//     immediately clears it (playing.go:141) when setting up
+			//     the next trick — so newState.TrickWinnerSeat is nil.
+			//     But the engine ALSO assigns ActivePlayerSeat = winnerSeat
+			//     ("winner leads next trick", playing.go:142), so the
+			//     winner is preserved there.
+			//   - oldState.TrickWinnerSeat is the PREVIOUS trick's winner
+			//     (or nil at hand start) and must NOT be used here — using
+			//     it sent stale winner data to the client for tricks 1–7
+			//     and made the just-played trick visually collapse toward
+			//     whichever seat happened to be set in oldState.
+			var winnerSeat int
+			if newState.TrickWinnerSeat != nil {
 				winnerSeat = *newState.TrickWinnerSeat
+			} else {
+				winnerSeat = newState.ActivePlayerSeat
 			}
 
 			trickCards := make([]string, 0, 4)
