@@ -77,7 +77,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="relative flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-100 rounded-xl bg-surface p-8">
         <h1
           className="mb-6 text-center font-display text-2xl font-bold text-text-primary"
@@ -162,6 +162,10 @@ export function LoginPage() {
           </Link>
         </p>
       </div>
+
+      <p className="absolute bottom-4 left-0 right-0 text-center text-xs text-text-secondary">
+        Crafted with 💚 by Emilijan Koteski
+      </p>
     </div>
   );
 }
