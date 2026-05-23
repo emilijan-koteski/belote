@@ -81,7 +81,10 @@ func main() {
 	e.HTTPErrorHandler = appErrorHandler
 
 	// Routes
+	// HEAD is registered explicitly so health-check probes (UptimeRobot,
+	// load balancers, k8s) that default to HEAD don't get 405s.
 	e.GET("/health", healthHandler)
+	e.HEAD("/health", healthHandler)
 
 	// Auth routes — public, no auth middleware
 	authGroup := e.Group("/api/v1/auth")
