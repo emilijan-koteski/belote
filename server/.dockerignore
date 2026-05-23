@@ -1,0 +1,16 @@
+.git
+.gitignore
+
+bin/
+tmp/
+coverage/
+*.test
+*.out
+*.prof
+
+_bmad
+*.md
+
+.env
+.env.*
+*.log

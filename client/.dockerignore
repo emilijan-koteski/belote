@@ -1,0 +1,13 @@
+.git
+.gitignore
+
+node_modules
+dist
+coverage
+.vite
+tsconfig.tsbuildinfo
+
+*.md
+.env
+.env.*
+*.log
