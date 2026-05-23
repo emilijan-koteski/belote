@@ -558,6 +558,9 @@
     "authFailed": "Автентификацијата на врската не успеа"
   },
   "auth": {
+    "languageSelector": {
+      "label": "Јазик"
+    },
     "login": {
       "title": "Најави се",
       "emailLabel": "Email",

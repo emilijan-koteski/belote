@@ -34,6 +34,14 @@ var supportedLanguages = map[string]struct{}{
 	"hr": {},
 }
 
+// IsSupportedLanguage reports whether code is one of the registered UI
+// languages. Exported so the auth package can validate register-time language
+// preferences without duplicating the allowlist.
+func IsSupportedLanguage(code string) bool {
+	_, ok := supportedLanguages[code]
+	return ok
+}
+
 // MatchPlayer is the per-seat participant embedded in a match list item.
 type MatchPlayer struct {
 	Seat     int    `json:"seat"`

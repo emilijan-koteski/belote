@@ -3,9 +3,10 @@ import "@/shared/i18n/i18n";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FetchError } from "@/shared/api/axiosClient";
+import { i18n } from "@/shared/i18n/i18n";
 import { QueryWrapper } from "@/test-utils";
 
 import { RegisterPage } from "./RegisterPage";
@@ -35,8 +36,13 @@ function renderRegisterPage() {
 }
 
 describe("RegisterPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await i18n.changeLanguage("en");
+  });
+
+  afterEach(async () => {
+    await i18n.changeLanguage("en");
   });
 
   it("renders email, username, password fields and submit button", () => {
@@ -148,6 +154,41 @@ describe("RegisterPage", () => {
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/lobby");
+    });
+  });
+
+  it("renders the pre-auth language selector", () => {
+    renderRegisterPage();
+    expect(screen.getByTestId("auth-language-selector")).toBeInTheDocument();
+  });
+
+  it("includes the active i18n language in the register payload", async () => {
+    await i18n.changeLanguage("mk");
+    mockRegister.mockResolvedValueOnce({
+      token: "mock-token",
+      id: 1,
+      username: "testuser",
+      email: "test@example.com",
+      languagePreference: "mk",
+      createdAt: "2026-04-10T00:00:00Z",
+    });
+
+    renderRegisterPage();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByTestId("email-input"), "test@example.com");
+    await user.type(screen.getByTestId("username-input"), "testuser");
+    await user.type(screen.getByTestId("password-input"), "password123");
+    await user.click(screen.getByTestId("consent-checkbox"));
+    await user.click(screen.getByTestId("submit-button"));
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith({
+        email: "test@example.com",
+        username: "testuser",
+        password: "password123",
+        languagePreference: "mk",
+      });
     });
   });
 

@@ -5,9 +5,11 @@ import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { FetchError } from "@/shared/api/axiosClient";
+import { AuthLanguageSelector } from "@/shared/components/AuthLanguageSelector";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { useRegisterMutation } from "@/shared/hooks/mutations/useAuth";
+import { normalizeLanguage } from "@/shared/i18n/i18n";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
@@ -20,7 +22,7 @@ interface FieldErrors {
 }
 
 export function RegisterPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const registerMutation = useRegisterMutation();
 
@@ -82,7 +84,15 @@ export function RegisterPage() {
     setErrors({});
 
     try {
-      await registerMutation.mutateAsync({ email, username, password });
+      await registerMutation.mutateAsync({
+        email,
+        username,
+        password,
+        // Normalize so a region-tagged i18n.language ("en-US") doesn't
+        // get silently downgraded by the server to "en" — send the short
+        // code we already display.
+        languagePreference: normalizeLanguage(i18n.language) ?? "en",
+      });
       navigate("/lobby");
     } catch (err) {
       if (err instanceof FetchError) {
@@ -113,6 +123,9 @@ export function RegisterPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background">
+      <div className="absolute top-4 right-4">
+        <AuthLanguageSelector />
+      </div>
       <div className="w-full max-w-100 rounded-xl bg-surface p-8">
         <h1
           className="mb-6 text-center font-display text-2xl font-bold text-text-primary"

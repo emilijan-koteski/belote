@@ -20,9 +20,10 @@ import (
 var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 
 type RegisterRequest struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Email              string `json:"email"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	LanguagePreference string `json:"languagePreference"`
 }
 
 type RegisterResponseData struct {
@@ -103,11 +104,19 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return fmt.Errorf("hashing password: %w", err)
 	}
 
+	// languagePreference is a UX-tolerant field — bad/absent values fall
+	// back to "en" rather than failing the registration. The /preferences
+	// endpoint is the strict validator and exists for later correction.
+	lang := "en"
+	if user.IsSupportedLanguage(req.LanguagePreference) {
+		lang = req.LanguagePreference
+	}
+
 	u := &user.User{
 		Email:              req.Email,
 		Username:           req.Username,
 		PasswordHash:       hash,
-		LanguagePreference: "en",
+		LanguagePreference: lang,
 	}
 
 	if err := h.userRepo.Create(u); err != nil {
