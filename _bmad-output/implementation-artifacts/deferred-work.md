@@ -1,5 +1,11 @@
 # Deferred Work
 
+## Deferred from: code review of spec-auth-page-language-selector (2026-05-23)
+
+- **Post-login PATCH `/users/:id/preferences` is awaited before `navigate("/lobby")`** — a slow or hanging preferences endpoint will block the redirect with no loading indicator or timeout. Spec leaves async semantics unspecified; UX would benefit from making the reconcile fire-and-forget so navigation never waits on it. Surfaced by adversarial + edge-case reviews. [client/src/features/auth/LoginPage.tsx handleSubmit]
+- **Quadruple source-of-truth for the supported-language set grew to five sites** — adding `client/src/shared/i18n/i18n.ts` `SUPPORTED_LANGUAGES`, `client/src/shared/components/AuthLanguageSelector.tsx` `languages`, and `server/internal/auth/handler.go` `user.IsSupportedLanguage` call on top of the four existing sites (LanguageSelector, SettingsDialog, user/handler.go map, error message). Adding a 6th locale touches 5+ places with no enforcement. Folded into the existing deferred cleanup from 10-1.
+- **PATCH `/users/:id/preferences` does not carry an `AbortController` in the login reconcile path** — if the user navigates away (or logs out as a different user) before the PATCH resolves, the response is still processed by the same closure. The id-guard prevents resurrection, but the request itself completes against the server. UX-tolerant rather than a bug. [client/src/features/auth/LoginPage.tsx handleSubmit]
+
 ## Deferred from: code review of 10-1-macedonian-and-croatian-translations (2026-05-09)
 
 - **Quadruple source-of-truth for the supported-language set** — `server/internal/user/handler.go` (supportedLanguages map), `client/src/shared/components/LanguageSelector.tsx` (LANGUAGES const), `client/src/features/game/components/SettingsDialog.tsx` (LANGUAGES const), `client/src/shared/i18n/i18n.ts` (resources map), and `server/internal/apperr/errors.go:52` (error message string). Adding a 5th locale touches 4+ places with no enforcement. Cleanup, not a current bug.

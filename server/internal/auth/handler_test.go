@@ -172,6 +172,60 @@ func TestRegister_Success(t *testing.T) {
 	assert.False(t, data.CreatedAt.IsZero(), "createdAt should be set")
 }
 
+func TestRegister_LanguagePreference(t *testing.T) {
+	tests := []struct {
+		name     string
+		body     string
+		expected string
+	}{
+		{
+			name:     "absent field defaults to en",
+			body:     `{"email":"a@example.com","username":"absent","password":"password123"}`,
+			expected: "en",
+		},
+		{
+			name:     "empty string defaults to en",
+			body:     `{"email":"b@example.com","username":"empty","password":"password123","languagePreference":""}`,
+			expected: "en",
+		},
+		{
+			name:     "unsupported code falls back to en (no 4xx)",
+			body:     `{"email":"c@example.com","username":"badlang","password":"password123","languagePreference":"fr"}`,
+			expected: "en",
+		},
+		{
+			name:     "supported code mk is persisted",
+			body:     `{"email":"d@example.com","username":"mkuser","password":"password123","languagePreference":"mk"}`,
+			expected: "mk",
+		},
+		{
+			name:     "supported code hr is persisted",
+			body:     `{"email":"e@example.com","username":"hruser","password":"password123","languagePreference":"hr"}`,
+			expected: "hr",
+		},
+		{
+			name:     "supported code sr is persisted",
+			body:     `{"email":"f@example.com","username":"sruser","password":"password123","languagePreference":"sr"}`,
+			expected: "sr",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, e := setupHandler()
+			rec := doRegister(e, tc.body)
+
+			require.Equal(t, http.StatusCreated, rec.Code, "register should succeed; body: %s", rec.Body.String())
+
+			var resp map[string]json.RawMessage
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+			var data RegisterResponseData
+			require.NoError(t, json.Unmarshal(resp["data"], &data))
+			assert.Equal(t, tc.expected, data.LanguagePreference)
+		})
+	}
+}
+
 func TestRegister_SetsRefreshCookie(t *testing.T) {
 	_, e := setupHandler()
 

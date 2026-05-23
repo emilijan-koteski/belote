@@ -558,6 +558,9 @@
     "authFailed": "Connection authentication failed"
   },
   "auth": {
+    "languageSelector": {
+      "label": "Language"
+    },
     "login": {
       "title": "Log In",
       "emailLabel": "Email",

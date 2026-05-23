@@ -558,6 +558,9 @@
     "authFailed": "Autentifikacija veze nije uspjela"
   },
   "auth": {
+    "languageSelector": {
+      "label": "Jezik"
+    },
     "login": {
       "title": "Prijavi se",
       "emailLabel": "Email",

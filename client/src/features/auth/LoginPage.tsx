@@ -5,9 +5,13 @@ import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { FetchError } from "@/shared/api/axiosClient";
+import { updatePreferences } from "@/shared/api/profile";
+import { AuthLanguageSelector } from "@/shared/components/AuthLanguageSelector";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { useLoginMutation } from "@/shared/hooks/mutations/useAuth";
+import { normalizeLanguage } from "@/shared/i18n/i18n";
+import { useAuthStore } from "@/shared/stores/authStore";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -17,7 +21,7 @@ interface FieldErrors {
 }
 
 export function LoginPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const loginMutation = useLoginMutation();
 
@@ -61,7 +65,30 @@ export function LoginPage() {
     setFormError(null);
 
     try {
-      await loginMutation.mutateAsync({ email, password });
+      const res = await loginMutation.mutateAsync({ email, password });
+      // If the visitor picked a different language on the auth page than the
+      // one stored on their profile, push the picked language to the server
+      // and reconcile the auth store. Mirrors LanguageSelector.tsx's
+      // optimistic-with-rollback pattern; UI language stays as picked.
+      // Normalize i18n.language to the short code so region-tagged values
+      // like "en-US" don't trigger a futile PATCH the server would reject.
+      const picked = normalizeLanguage(i18n.language);
+      if (picked && picked !== res.languagePreference) {
+        try {
+          await updatePreferences(res.id, { languagePreference: picked });
+          const current = useAuthStore.getState().user;
+          if (current?.id === res.id) {
+            useAuthStore.getState().setUser({ ...current, languagePreference: picked });
+          }
+        } catch {
+          const current = useAuthStore.getState().user;
+          if (current?.id === res.id) {
+            useAuthStore
+              .getState()
+              .setUser({ ...current, languagePreference: res.languagePreference });
+          }
+        }
+      }
       navigate("/lobby");
     } catch (err) {
       if (err instanceof FetchError) {
@@ -78,6 +105,9 @@ export function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background">
+      <div className="absolute top-4 right-4">
+        <AuthLanguageSelector />
+      </div>
       <div className="w-full max-w-100 rounded-xl bg-surface p-8">
         <h1
           className="mb-6 text-center font-display text-2xl font-bold text-text-primary"
