@@ -1,48 +1,48 @@
 installation:
-  version: 6.6.0
+  version: 6.8.0
   installDate: 2026-02-21T11:04:51.066Z
-  lastUpdated: 2026-05-08T17:42:44.581Z
+  lastUpdated: 2026-05-28T14:14:30.738Z
 modules:
   - name: core
-    version: 6.6.0
+    version: 6.8.0
     installDate: 2026-02-21T11:04:48.435Z
-    lastUpdated: 2026-05-08T17:42:44.420Z
+    lastUpdated: 2026-05-28T14:14:30.729Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: bmm
-    version: 6.6.0
+    version: 6.8.0
     installDate: 2026-02-21T11:04:39.091Z
-    lastUpdated: 2026-05-08T17:42:44.422Z
+    lastUpdated: 2026-05-28T14:14:30.731Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: cis
-    version: v0.2.0
+    version: v0.2.1
     installDate: 2026-02-21T11:04:42.019Z
-    lastUpdated: 2026-05-08T17:42:44.477Z
+    lastUpdated: 2026-05-28T14:14:30.733Z
     source: external
     npmPackage: bmad-creative-intelligence-suite
     repoUrl: https://github.com/bmad-code-org/bmad-module-creative-intelligence-suite
     channel: stable
-    sha: 14a63b893c07173b7a6cfe0fb6a9a72ba51d3cf1
+    sha: 07a8dd03d196a762f21c241d985293fe5b0f90e7
   - name: gds
-    version: v0.4.0
+    version: v0.5.0
     installDate: 2026-02-21T11:04:38.387Z
-    lastUpdated: 2026-05-08T17:42:44.530Z
+    lastUpdated: 2026-05-28T14:14:30.736Z
     source: external
     npmPackage: bmad-game-dev-studio
-    repoUrl: https://github.com/bmad-code-org/bmad-module-game-dev-studio
+    repoUrl: https://github.com/bmad-code-org/bmad-module-game-dev-studio.git
     channel: stable
-    sha: 07ef779abaafb21fe3a8d80d57cf0b4dc9801d60
+    sha: 9dcd12538accc0f80a895841c2a19da5d362a6d6
   - name: tea
-    version: v1.16.0
+    version: v1.19.0
     installDate: 2026-02-21T11:04:44.804Z
-    lastUpdated: 2026-05-08T17:42:44.581Z
+    lastUpdated: 2026-05-28T14:14:30.738Z
     source: external
     npmPackage: bmad-method-test-architecture-enterprise
     repoUrl: https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise
     channel: stable
-    sha: cd5427959c10b766e880cf112bf84b9fef0af848
+    sha: 8734d51f24071ddbcb3617390b5fcddb4128ef77
 ides:
   - claude-code
