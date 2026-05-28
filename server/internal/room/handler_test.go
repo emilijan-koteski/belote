@@ -21,14 +21,15 @@ import (
 // --- Mock Repository ---
 
 type mockRoomRepo struct {
-	rooms   []*room.Room
-	players []*room.RoomPlayer
-	nextID  uint
-	nextPID uint
+	rooms          []*room.Room
+	players        []*room.RoomPlayer
+	nextID         uint
+	nextPID        uint
+	ownerUsernames map[uint]string
 }
 
 func newMockRoomRepo() *mockRoomRepo {
-	return &mockRoomRepo{nextID: 1, nextPID: 1}
+	return &mockRoomRepo{nextID: 1, nextPID: 1, ownerUsernames: map[uint]string{}}
 }
 
 func (m *mockRoomRepo) Create(r *room.Room) error {
@@ -228,6 +229,30 @@ func (m *mockRoomRepo) UpdateStatus(roomID uint, status string) error {
 		}
 	}
 	return nil
+}
+
+func (m *mockRoomRepo) LoadOwnerUsernames(rooms []*room.Room) error {
+	for _, rm := range rooms {
+		if rm == nil || rm.OwnerUsername != "" {
+			continue
+		}
+		if name, ok := m.ownerUsernames[rm.OwnerID]; ok {
+			rm.OwnerUsername = name
+		}
+	}
+	return nil
+}
+
+func (m *mockRoomRepo) FindPlayersByRoomIDs(roomIDs []uint) (map[uint][]room.RoomPlayer, error) {
+	out := make(map[uint][]room.RoomPlayer)
+	for _, id := range roomIDs {
+		for _, p := range m.players {
+			if p.RoomID == id {
+				out[id] = append(out[id], *p)
+			}
+		}
+	}
+	return out, nil
 }
 
 func (m *mockRoomRepo) RunInTransaction(fn func(room.RoomRepository) error) error {
@@ -2788,9 +2813,12 @@ func TestSwapSeats_Success(t *testing.T) {
 		}
 	}
 
-	// Two ordered seat_updated broadcasts, no lobby-wide broadcast
+	// Two ordered seat_updated broadcasts to room members, plus a single
+	// lobby-wide room_updated snapshot so non-participant lobby viewers
+	// see the seat changes on the grid.
 	require.Len(t, broadcaster.calls, 2, "expected exactly two BroadcastToUsers calls")
-	assert.Empty(t, broadcaster.allCalls, "swap must NOT trigger room_updated lobby-wide broadcast")
+	require.Len(t, broadcaster.allCalls, 1, "swap should emit one lobby-wide room_updated snapshot")
+	assert.Equal(t, "system:room_updated", msgTypeOf(t, broadcaster.allCalls[0].msg))
 
 	for _, call := range broadcaster.calls {
 		assert.Equal(t, "system:seat_updated", msgTypeOf(t, call.msg))
@@ -2941,9 +2969,12 @@ func TestSwapSeats_MoveToEmptySeat(t *testing.T) {
 		}
 	}
 
-	// A move-to-empty emits exactly ONE seat_updated broadcast.
+	// A move-to-empty emits exactly ONE seat_updated broadcast to room
+	// members, plus one lobby-wide room_updated snapshot so non-participant
+	// viewers see the seat change on the grid.
 	require.Len(t, broadcaster.calls, 1, "expected exactly one BroadcastToUsers call for move-to-empty")
-	assert.Empty(t, broadcaster.allCalls, "move must NOT trigger room_updated lobby-wide broadcast")
+	require.Len(t, broadcaster.allCalls, 1, "move-to-empty should emit one lobby-wide room_updated snapshot")
+	assert.Equal(t, "system:room_updated", msgTypeOf(t, broadcaster.allCalls[0].msg))
 	assert.Equal(t, "system:seat_updated", msgTypeOf(t, broadcaster.calls[0].msg))
 	assert.ElementsMatch(t, []uint{100, 200}, broadcaster.calls[0].userIDs)
 

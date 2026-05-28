@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -132,13 +133,37 @@ func (h *RoomHandler) broadcastToAll(msgType string, payload interface{}) {
 	h.hub.BroadcastAll(msg)
 }
 
-// broadcastRoomUpdated sends a system:room_updated event to all connected clients.
-func (h *RoomHandler) broadcastRoomUpdated(r *Room) {
-	h.broadcastToAll(ws.SystemRoomUpdated, map[string]interface{}{
+// roomLifecyclePayload builds the WS payload shared by `system:room_created`
+// and `system:room_updated`. Ensures `ownerUsername` is hydrated so the lobby
+// grid can render host avatars without an extra round-trip per row, embeds
+// `players` so seat chips render correctly the instant the card appears, and
+// always carries `createdAt`/`updatedAt` so the client's <RelativeTime>
+// component has a valid ISO to format.
+func (h *RoomHandler) roomLifecyclePayload(r *Room) map[string]any {
+	if r.OwnerUsername == "" {
+		if err := h.repo.LoadOwnerUsernames([]*Room{r}); err != nil {
+			slog.Error("broadcast: failed to load owner username", "roomID", r.ID, "error", err)
+		}
+	}
+	// Always include `players` — even an empty slice — so the client can rely
+	// on the field's presence and never end up with `undefined` seat chips on
+	// a freshly-broadcast room.
+	players := r.Players
+	if players == nil {
+		fetched, err := h.repo.FindPlayersByRoomID(r.ID)
+		if err != nil {
+			slog.Error("broadcast: failed to load room players", "roomID", r.ID, "error", err)
+			fetched = []RoomPlayer{}
+		}
+		players = fetched
+	}
+	return map[string]any{
 		"id":                   r.ID,
 		"name":                 r.Name,
 		"code":                 r.Code,
 		"ownerId":              r.OwnerID,
+		"ownerUsername":        r.OwnerUsername,
+		"players":              players,
 		"variant":              r.Variant,
 		"matchMode":            r.MatchMode,
 		"timerStyle":           r.TimerStyle,
@@ -146,7 +171,28 @@ func (h *RoomHandler) broadcastRoomUpdated(r *Room) {
 		"playerCount":          r.PlayerCount,
 		"status":               r.Status,
 		"isQuickPlay":          r.IsQuickPlay,
-	})
+		"createdAt":            r.CreatedAt.UTC().Format(time.RFC3339),
+		"updatedAt":            r.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+}
+
+// broadcastRoomUpdated sends a system:room_updated event to all connected clients.
+func (h *RoomHandler) broadcastRoomUpdated(r *Room) {
+	h.broadcastToAll(ws.SystemRoomUpdated, h.roomLifecyclePayload(r))
+}
+
+// broadcastRoomSeatSnapshot pushes a system:room_updated event to every
+// connected client with the freshly-fetched players[] so lobby grid seat
+// chips stay in sync after seat changes. Without this, system:seat_updated
+// (which only fans out to room participants) leaves third-party lobby
+// watchers showing stale empty chips.
+func (h *RoomHandler) broadcastRoomSeatSnapshot(roomID uint, players []RoomPlayer) {
+	r, err := h.repo.FindByID(roomID)
+	if err != nil || r == nil {
+		return
+	}
+	r.Players = players
+	h.broadcastRoomUpdated(r)
 }
 
 func (h *RoomHandler) CreateRoom(c echo.Context) error {
@@ -268,20 +314,10 @@ func (h *RoomHandler) CreateRoom(c echo.Context) error {
 		return createErr
 	}
 
-	// Broadcast system:room_created to all connected clients (lobby-wide)
-	h.broadcastToAll(ws.SystemRoomCreated, map[string]interface{}{
-		"id":                   room.ID,
-		"name":                 room.Name,
-		"code":                 room.Code,
-		"ownerId":              room.OwnerID,
-		"variant":              room.Variant,
-		"matchMode":            room.MatchMode,
-		"timerStyle":           room.TimerStyle,
-		"timerDurationSeconds": room.TimerDurationSeconds,
-		"playerCount":          room.PlayerCount,
-		"status":               room.Status,
-		"isQuickPlay":          room.IsQuickPlay,
-	})
+	// Broadcast system:room_created to all connected clients (lobby-wide).
+	// roomLifecyclePayload also populates room.OwnerUsername so the JSON
+	// response immediately below carries it.
+	h.broadcastToAll(ws.SystemRoomCreated, h.roomLifecyclePayload(room))
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{"data": room})
 }
@@ -299,6 +335,26 @@ func (h *RoomHandler) ListRooms(c echo.Context) error {
 	rooms, err := h.repo.FindByStatus(status)
 	if err != nil {
 		return fmt.Errorf("listing rooms: %w", err)
+	}
+
+	// Hydrate `ownerUsername` + `players` on each row via two batch queries
+	// so the lobby grid renders host avatars + seat chips in a single fetch
+	// (no N+1 per visible card).
+	roomPtrs := make([]*Room, len(rooms))
+	roomIDs := make([]uint, len(rooms))
+	for i := range rooms {
+		roomPtrs[i] = &rooms[i]
+		roomIDs[i] = rooms[i].ID
+	}
+	if err := h.repo.LoadOwnerUsernames(roomPtrs); err != nil {
+		slog.Error("list rooms: failed to load owner usernames", "error", err)
+	}
+	if playersByRoom, perr := h.repo.FindPlayersByRoomIDs(roomIDs); perr != nil {
+		slog.Error("list rooms: failed to load players", "error", perr)
+	} else {
+		for i := range rooms {
+			rooms[i].Players = playersByRoom[rooms[i].ID]
+		}
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": rooms})
@@ -328,6 +384,10 @@ func (h *RoomHandler) GetRoom(c echo.Context) error {
 		return fmt.Errorf("finding room players: %w", err)
 	}
 
+	if err := h.repo.LoadOwnerUsernames([]*Room{room}); err != nil {
+		slog.Error("get room: failed to load owner username", "roomID", room.ID, "error", err)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": RoomDetailResponse{
 			Room:    room,
@@ -353,6 +413,10 @@ func (h *RoomHandler) GetRoomByCode(c echo.Context) error {
 	players, err := h.repo.FindPlayersByRoomID(room.ID)
 	if err != nil {
 		return fmt.Errorf("finding room players: %w", err)
+	}
+
+	if err := h.repo.LoadOwnerUsernames([]*Room{room}); err != nil {
+		slog.Error("get room by code: failed to load owner username", "roomID", room.ID, "error", err)
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -540,9 +604,8 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 
 	// Broadcast system:player_left to remaining room participants (not the leaving player)
 	remainingPlayers, broadcastErr := h.repo.FindPlayersByRoomID(uint(roomID))
+	postRoom, postErr := h.repo.FindByID(uint(roomID))
 	if broadcastErr == nil && len(remainingPlayers) > 0 {
-		// Re-fetch room after transaction to get accurate playerCount
-		postRoom, postErr := h.repo.FindByID(uint(roomID))
 		actualPlayerCount := len(remainingPlayers)
 		if postErr == nil && postRoom != nil {
 			actualPlayerCount = postRoom.PlayerCount
@@ -561,11 +624,14 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 			payload["newOwnerId"] = *newOwnerID
 		}
 		h.broadcastToUsers(userIDs, ws.SystemPlayerLeft, payload)
+	}
 
-		// Broadcast system:room_updated to lobby browse page
-		if postErr == nil && postRoom != nil {
-			h.broadcastRoomUpdated(postRoom)
-		}
+	// Broadcast system:room_updated to ALL lobby browsers — even when the
+	// room emptied out and was flipped to "completed". Without this, a
+	// lobby grid that received the room_created event has no way to learn
+	// the room closed, so the stale tile lingers forever.
+	if postErr == nil && postRoom != nil {
+		h.broadcastRoomUpdated(postRoom)
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]string{"message": "left room"}})
@@ -695,6 +761,7 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 			"previousSeat": previousSeat,
 		}
 		h.broadcastToRoom(uint(roomID), ws.SystemSeatUpdated, seatPayload)
+		h.broadcastRoomSeatSnapshot(uint(roomID), players)
 	}
 
 	// Check if Quick Play room should auto-start (wrapped in transaction to prevent double-start)
@@ -1253,6 +1320,9 @@ func (h *RoomHandler) SwapSeats(c echo.Context) error {
 			"previousSeat": swapB.previousSeat,
 		})
 	}
+	// Single snapshot broadcast after both per-room events so lobby viewers
+	// see the final state in one cache update, not two intermediate ones.
+	h.broadcastRoomSeatSnapshot(uint(roomID), players)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": PlayersResponse{Players: players},
@@ -1346,6 +1416,7 @@ func (h *RoomHandler) LeaveSeat(c echo.Context) error {
 		"team":         nil,
 		"previousSeat": previousSeat,
 	})
+	h.broadcastRoomSeatSnapshot(uint(roomID), players)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": PlayersResponse{Players: players},
@@ -1633,6 +1704,9 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 			"team":         assignedTeam,
 			"previousSeat": nil,
 		})
+		// Seat broadcast above is room-scoped; push a fresh room snapshot to
+		// every lobby viewer so the auto-assigned seat appears on grid cards.
+		h.broadcastRoomSeatSnapshot(resultRoom.ID, roomPlayers)
 	}
 
 	// Auto-start when all four seats are filled (4th joiner closes the room).

@@ -404,6 +404,19 @@ function dispatchSystemEvent(message: WsMessage): void {
     return;
   }
 
+  // Lobby grid cache updates — keep the ["rooms","waiting"] cache live for
+  // playerCount + per-seat names without touching the roomLobbyStore path
+  // below (which only fires for the user's currently viewed room). Falls
+  // through so the roomLobbyStore branch still runs.
+  if (
+    type === SYSTEM_PLAYER_JOINED ||
+    type === SYSTEM_PLAYER_LEFT ||
+    type === SYSTEM_SEAT_UPDATED
+  ) {
+    handleRoomListMessage(new MessageEvent("message", { data: JSON.stringify(message) }));
+    // intentional fall-through to the per-room store dispatch below
+  }
+
   // Room lobby updates — dispatch to roomLobbyStore (only if event matches the currently viewed room)
   if (type === SYSTEM_PLAYER_JOINED) {
     const payload = message.payload as PlayerJoinedPayload;

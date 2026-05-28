@@ -148,7 +148,7 @@
     }
   },
   "lobby": {
-    "title": "Лоби",
+    "title": "Отворени маси",
     "quickPlay": "Брза игра",
     "quickPlayDesc": "Веднаш скокни во игра",
     "browseRooms": "Прелистај соби",
@@ -159,38 +159,45 @@
     "stats": {
       "title": "Играчи",
       "loading": "Се вчитува…",
-      "inLobby": "Во лоби",
-      "inRoom": "Во соба",
-      "inGame": "Во игра",
+      "inLobby": "во лоби",
+      "inRoom": "во соба",
+      "inGame": "играат",
       "totalActive": "Вкупно онлајн",
       "registered": "Регистрирани",
       "activeRatio": "Онлајн / Регистрирани",
-      "activeRatioValue": "{{active}} / {{registered}}"
+      "activeRatioValue": "{{active}} / {{registered}}",
+      "online": "онлајн"
     },
     "matchmaking": {
       "finding": "Пребарување меч…",
       "cancel": "Откажи",
       "failed": "Не може да се најде меч — обиди се повторно",
-      "alreadyInRoom": "Веќе си во соба — прво излези"
+      "alreadyInRoom": "Веќе си во соба — прво излези",
+      "title": "Барам партија…",
+      "subtitle": "Ќе те сместиме на следната слободна маса.",
+      "errors": {
+        "alreadyInRoom": "Веќе си во соба",
+        "generic": "Барањето не успеа. Обиди се повторно."
+      }
     },
     "createRoomModal": {
-      "title": "Направи соба за игра",
-      "roomName": "Име на соба",
-      "roomNamePlaceholder": "Внеси име на соба…",
-      "variant": "Варијанта на игра",
+      "title": "Креирај соба",
+      "roomName": "Име на собата",
+      "roomNamePlaceholder": "Неделна партија…",
+      "variant": "Варијанта",
       "variantBitola": "Битола",
-      "matchMode": "Режим на меч",
-      "matchMode1001": "1001 поени",
-      "timerStyle": "Стил на тајмер",
-      "timerRelaxed": "Опуштено (без тајмер)",
-      "timerPerMove": "Тајмер по потег",
-      "timerDuration": "Траење на тајмер (секунди)",
-      "create": "Направи соба",
+      "matchMode": "Тип на партија",
+      "matchMode1001": "1001 поен",
+      "timerStyle": "Тип тајмер",
+      "timerRelaxed": "Опуштено",
+      "timerPerMove": "По потег",
+      "timerDuration": "Тајмер (секунди по потег)",
+      "create": "Креирај соба",
       "cancel": "Откажи",
       "errors": {
         "nameRequired": "Името на собата е задолжително",
-        "nameTaken": "Соба со ова име веќе постои",
-        "unexpected": "Се случи неочекувана грешка"
+        "nameTaken": "Името е веќе во употреба",
+        "unexpected": "Креирањето не успеа. Обиди се повторно."
       }
     },
     "roomDetail": {
@@ -299,6 +306,66 @@
         "promoteUnseated": "Новиот сопственик мора да биде на место.",
         "promoteNotInRoom": "Тој играч повеќе не е во собата."
       }
+    },
+    "footnote": "Прикажани {{shown}} од {{total}} отворени маси · се освежува во живо",
+    "actions": {
+      "quickPlay": {
+        "title": "Брза игра",
+        "subtitle": "Скокни на следната слободна маса",
+        "cta": "Играј"
+      },
+      "createRoom": {
+        "title": "Креирај соба",
+        "subtitle": "Постави свои правила и тајмер"
+      },
+      "joinByCode": {
+        "placeholder": "Имаш код?",
+        "cta": "Приклучи се"
+      }
+    },
+    "filters": {
+      "all": "Сите",
+      "open": "Има места",
+      "relaxed": "Опуштено",
+      "timed": "Со тајмер"
+    },
+    "sort": {
+      "label": "Подреди",
+      "newest": "Најнови",
+      "filling": "Се полнат"
+    },
+    "search": {
+      "placeholder": "Пребарување по име на соба или код…"
+    },
+    "empty": {
+      "title": "Нема отворени маси за твоите филтри",
+      "description": "Исчисти ги филтрите, кликни Брза игра или креирај соба и ние ќе те сместиме.",
+      "clear": "Исчисти пребарување"
+    },
+    "card": {
+      "join": "Приклучи се",
+      "full": "Полно",
+      "relaxed": "Опуштено",
+      "timerSeconds": "{{seconds}}s тајмер",
+      "occupancy": "{{seated}}/4",
+      "empty": "празно",
+      "joining": "Се приклучуваш на \"{{name}}\"…",
+      "variantBitola": "Битола",
+      "matchMode1001": "1001 поен"
+    },
+    "chat": {
+      "title": "Лоби чет",
+      "placeholder": "Порака…",
+      "openLabel": "Отвори чет",
+      "closeLabel": "Затвори чет",
+      "sendLabel": "Прати порака"
+    },
+    "errors": {
+      "roomFull": "Собата е полна",
+      "roomNotFound": "Собата не е најдена",
+      "alreadyInRoom": "Веќе си во соба",
+      "joinFailed": "Приклучувањето не успеа. Пробај друга соба.",
+      "matchmakingFailed": "Барањето партија не успеа. Обиди се повторно."
     }
   },
   "game": {

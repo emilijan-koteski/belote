@@ -77,6 +77,7 @@ describe("CreateRoomModal", () => {
       name: "Test Room",
       code: "ABC123",
       ownerId: 5,
+      ownerUsername: "owner",
       variant: "bitola",
       matchMode: "1001",
       timerStyle: "relaxed",
@@ -113,6 +114,7 @@ describe("CreateRoomModal", () => {
       name: "Nav Room",
       code: "XYZ789",
       ownerId: 1,
+      ownerUsername: "owner",
       variant: "bitola",
       matchMode: "1001",
       timerStyle: "relaxed",
@@ -167,7 +169,7 @@ describe("CreateRoomModal", () => {
     const timerTrigger = screen.getByTestId("timer-style-select");
     await user.click(timerTrigger);
 
-    const perMoveOption = await screen.findByText("Per-move timer");
+    const perMoveOption = await screen.findByText("Per move");
     await user.click(perMoveOption);
 
     // Timer duration input should now be present

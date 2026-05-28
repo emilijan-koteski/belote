@@ -32,5 +32,15 @@ type RoomRepository interface {
 	// seated in a room whose status matches the provided value. Used by lobby
 	// stats to bucket connected users into "in waiting room" vs "in game".
 	FindUserIDsByRoomStatus(status string) ([]uint, error)
+	// LoadOwnerUsernames populates each room's transient OwnerUsername field
+	// via a single SELECT against the users table (IN clause). The handler
+	// calls this before serializing room responses + WS broadcast payloads so
+	// the lobby grid can show host avatars without N+1 round-trips per row.
+	LoadOwnerUsernames(rooms []*Room) error
+	// FindPlayersByRoomIDs returns a map of roomID → players for the given
+	// rooms via a single JOIN against users. Used by the lobby grid so each
+	// room card can render its 2×2 seat chips inline without an extra fetch
+	// per visible row.
+	FindPlayersByRoomIDs(roomIDs []uint) (map[uint][]RoomPlayer, error)
 	RunInTransaction(fn func(RoomRepository) error) error
 }

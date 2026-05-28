@@ -69,8 +69,12 @@ func (r *fakeRoomRepo) FindQuickPlayRoom() (*room.Room, error) { panic("unused")
 func (r *fakeRoomRepo) FindQuickPlayRoomExcluding(map[uint]bool) (*room.Room, error) {
 	panic("unused")
 }
-func (r *fakeRoomRepo) UpdateStatus(uint, string) error                       { panic("unused") }
+func (r *fakeRoomRepo) UpdateStatus(uint, string) error                        { panic("unused") }
 func (r *fakeRoomRepo) RunInTransaction(func(room.RoomRepository) error) error { panic("unused") }
+func (r *fakeRoomRepo) LoadOwnerUsernames([]*room.Room) error                  { return nil }
+func (r *fakeRoomRepo) FindPlayersByRoomIDs([]uint) (map[uint][]room.RoomPlayer, error) {
+	return map[uint][]room.RoomPlayer{}, nil
+}
 
 type fakeUserRepo struct {
 	count   int64

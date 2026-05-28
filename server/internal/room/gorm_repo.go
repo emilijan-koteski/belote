@@ -246,6 +246,74 @@ func (r *GormRepository) FindUserIDsByRoomStatus(status string) ([]uint, error) 
 	return ids, nil
 }
 
+// LoadOwnerUsernames hydrates the transient OwnerUsername field on each room
+// via a single SELECT against the users table. Skips the query for an empty
+// slice and short-circuits when every room already has a username (the WS
+// broadcast path occasionally pre-populates the field).
+func (r *GormRepository) LoadOwnerUsernames(rooms []*Room) error {
+	if len(rooms) == 0 {
+		return nil
+	}
+	ids := make(map[uint]struct{}, len(rooms))
+	for _, rm := range rooms {
+		if rm != nil && rm.OwnerUsername == "" && rm.OwnerID != 0 {
+			ids[rm.OwnerID] = struct{}{}
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	idList := make([]uint, 0, len(ids))
+	for id := range ids {
+		idList = append(idList, id)
+	}
+	type ownerRow struct {
+		ID       uint
+		Username string
+	}
+	var rows []ownerRow
+	if err := r.db.Table("users").Select("id, username").Where("id IN ?", idList).Scan(&rows).Error; err != nil {
+		return fmt.Errorf("loading owner usernames: %w", err)
+	}
+	byID := make(map[uint]string, len(rows))
+	for _, row := range rows {
+		byID[row.ID] = row.Username
+	}
+	for _, rm := range rooms {
+		if rm == nil || rm.OwnerUsername != "" {
+			continue
+		}
+		if username, ok := byID[rm.OwnerID]; ok {
+			rm.OwnerUsername = username
+		}
+	}
+	return nil
+}
+
+// FindPlayersByRoomIDs returns players for every supplied room id in a single
+// JOIN query. Empty input → empty map. Rooms with no players are simply
+// missing from the returned map (callers should use the zero-value slice).
+func (r *GormRepository) FindPlayersByRoomIDs(roomIDs []uint) (map[uint][]RoomPlayer, error) {
+	out := make(map[uint][]RoomPlayer)
+	if len(roomIDs) == 0 {
+		return out, nil
+	}
+	var rows []roomPlayerRow
+	err := r.db.Table("room_players").
+		Select("room_players.*, users.username").
+		Joins("JOIN users ON users.id = room_players.user_id").
+		Where("room_players.room_id IN ?", roomIDs).
+		Order("room_players.room_id ASC, room_players.created_at ASC").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("finding players for %d rooms: %w", len(roomIDs), err)
+	}
+	for _, row := range rows {
+		out[row.RoomID] = append(out[row.RoomID], row.toRoomPlayer())
+	}
+	return out, nil
+}
+
 func (r *GormRepository) RunInTransaction(fn func(RoomRepository) error) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		txRepo := &GormRepository{db: tx}

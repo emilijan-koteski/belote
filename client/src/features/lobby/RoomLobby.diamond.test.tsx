@@ -82,6 +82,7 @@ function fourSeated(viewerSeat: number) {
       name: "Test Room",
       code: "ABC123",
       ownerId: 100,
+      ownerUsername: "owner",
       variant: "bitola",
       matchMode: "1001",
       timerStyle: "relaxed",

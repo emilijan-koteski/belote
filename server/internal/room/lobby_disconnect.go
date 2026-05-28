@@ -204,11 +204,18 @@ func (h *LobbyDisconnectHandler) broadcastRoomUpdated(r *Room) {
 	if h.hub == nil {
 		return
 	}
+	if r.OwnerUsername == "" {
+		// Best-effort hydration so disconnect-driven updates carry the host
+		// avatar the lobby card needs. Silently swallow errors — the rest of
+		// the payload is still valid without the username field.
+		_ = h.repo.LoadOwnerUsernames([]*Room{r})
+	}
 	payload := map[string]interface{}{
 		"id":                   r.ID,
 		"name":                 r.Name,
 		"code":                 r.Code,
 		"ownerId":              r.OwnerID,
+		"ownerUsername":        r.OwnerUsername,
 		"variant":              r.Variant,
 		"matchMode":            r.MatchMode,
 		"timerStyle":           r.TimerStyle,

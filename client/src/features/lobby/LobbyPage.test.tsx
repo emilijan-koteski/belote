@@ -12,6 +12,7 @@ import { LobbyPage } from "./LobbyPage";
 const mockGetRooms = vi.fn();
 const mockQuickPlay = vi.fn();
 const mockJoinRoom = vi.fn();
+const mockGetLobbyStats = vi.fn();
 
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
@@ -30,6 +31,10 @@ vi.mock("@/shared/api/rooms", () => ({
   getRoomByCode: vi.fn(),
 }));
 
+vi.mock("@/shared/api/lobby", () => ({
+  getLobbyStats: (...args: unknown[]) => mockGetLobbyStats(...args),
+}));
+
 vi.mock("@/shared/providers/WebSocketContext", () => ({
   useWsSendMessage: () => vi.fn(),
   useWsConnectionState: () => "connected" as const,
@@ -40,6 +45,15 @@ afterEach(() => {
 });
 
 function renderLobbyPage() {
+  // Default mocks so the page can render without unhandled query rejections.
+  mockGetRooms.mockResolvedValue([]);
+  mockGetLobbyStats.mockResolvedValue({
+    inLobby: 0,
+    inRoom: 0,
+    inGame: 0,
+    online: 0,
+    registered: 0,
+  });
   render(
     <QueryWrapper>
       <BrowserRouter>
@@ -50,18 +64,36 @@ function renderLobbyPage() {
 }
 
 describe("LobbyPage", () => {
-  it("renders play option cards", () => {
+  it("renders hero action tiles", () => {
     renderLobbyPage();
 
     expect(screen.getByTestId("quick-play-card")).toBeInTheDocument();
-    expect(screen.getByTestId("browse-rooms-card")).toBeInTheDocument();
     expect(screen.getByTestId("create-room-card")).toBeInTheDocument();
+    expect(screen.getByTestId("join-by-code")).toBeInTheDocument();
   });
 
-  it("renders the ChatPanel in the right column", () => {
+  it("renders the chat dock FAB", () => {
     renderLobbyPage();
-    expect(screen.getByTestId("chat-panel")).toBeInTheDocument();
-    expect(screen.getByTestId("chat-input")).toBeInTheDocument();
+    expect(screen.getByTestId("lobby-chat-fab")).toBeInTheDocument();
+  });
+
+  it("renders the filter rail with search + chips + sort", () => {
+    renderLobbyPage();
+    expect(screen.getByTestId("room-list-search")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-chip-all")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-chip-open")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-chip-relaxed")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-chip-timed")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-toggle")).toBeInTheDocument();
+  });
+
+  it("renders the lobby stats panel with all four pills", () => {
+    renderLobbyPage();
+    expect(screen.getByTestId("lobby-stats-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("stats-in-lobby")).toBeInTheDocument();
+    expect(screen.getByTestId("stats-in-room")).toBeInTheDocument();
+    expect(screen.getByTestId("stats-in-game")).toBeInTheDocument();
+    expect(screen.getByTestId("stats-active-ratio")).toBeInTheDocument();
   });
 
   it("opens CreateRoomModal when Create Room card is clicked", async () => {
@@ -74,49 +106,8 @@ describe("LobbyPage", () => {
     expect(screen.getByTestId("room-name-input")).toBeInTheDocument();
   });
 
-  it("switches to browse view when Browse Rooms card is clicked", async () => {
-    const user = userEvent.setup();
-    mockGetRooms.mockResolvedValueOnce([]);
+  it("fetches rooms on mount (always-on lobby grid)", async () => {
     renderLobbyPage();
-
-    const browseCard = screen.getByTestId("browse-rooms-card");
-    await user.click(browseCard);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("back-to-options")).toBeInTheDocument();
-    });
-    expect(screen.getByTestId("room-list-search")).toBeInTheDocument();
-    expect(screen.queryByTestId("quick-play-card")).not.toBeInTheDocument();
-  });
-
-  it("returns to options view when back button is clicked", async () => {
-    const user = userEvent.setup();
-    mockGetRooms.mockResolvedValueOnce([]);
-    renderLobbyPage();
-
-    const browseCard = screen.getByTestId("browse-rooms-card");
-    await user.click(browseCard);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("back-to-options")).toBeInTheDocument();
-    });
-
-    const backButton = screen.getByTestId("back-to-options");
-    await user.click(backButton);
-
-    expect(screen.getByTestId("quick-play-card")).toBeInTheDocument();
-    expect(screen.getByTestId("browse-rooms-card")).toBeInTheDocument();
-    expect(screen.getByTestId("create-room-card")).toBeInTheDocument();
-  });
-
-  it("fetches rooms when browse view is activated", async () => {
-    const user = userEvent.setup();
-    mockGetRooms.mockResolvedValueOnce([]);
-    renderLobbyPage();
-
-    const browseCard = screen.getByTestId("browse-rooms-card");
-    await user.click(browseCard);
-
     await waitFor(() => {
       expect(mockGetRooms).toHaveBeenCalledWith("waiting");
     });
@@ -176,9 +167,8 @@ describe("LobbyPage", () => {
     expect(screen.queryByTestId("quick-play-card")).not.toBeInTheDocument();
   });
 
-  it("cancels matchmaking and returns to options view", async () => {
+  it("cancels matchmaking and returns to the lobby grid", async () => {
     const user = userEvent.setup();
-    // Make quickPlay reject with AbortError on abort
     mockQuickPlay.mockImplementation(
       () =>
         new Promise((_resolve, reject) => {

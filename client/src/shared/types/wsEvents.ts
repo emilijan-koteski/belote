@@ -1,5 +1,7 @@
 // WebSocket event contract — keep in sync with server/internal/ws/events.go
 
+import type { RoomPlayer } from "@/shared/types/apiTypes";
+
 // Event type prefixes
 // action: — client -> server
 // event:  — server -> client (game state)
@@ -241,6 +243,8 @@ export interface RoomCreatedPayload {
   name: string;
   code: string;
   ownerId: number;
+  ownerUsername: string;
+  players: RoomPlayer[];
   variant: string;
   matchMode: string;
   timerStyle: string;
@@ -257,6 +261,8 @@ export interface RoomUpdatedPayload {
   name: string;
   code: string;
   ownerId: number;
+  ownerUsername: string;
+  players: RoomPlayer[];
   variant: string;
   matchMode: string;
   timerStyle: string;

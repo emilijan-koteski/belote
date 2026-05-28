@@ -86,6 +86,7 @@ const defaultRoom = {
   name: "Test Room",
   code: "XYZ123",
   ownerId: 10,
+  ownerUsername: "owner",
   variant: "bitola",
   matchMode: "1001",
   timerStyle: "relaxed",

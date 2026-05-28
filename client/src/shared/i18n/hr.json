@@ -148,7 +148,7 @@
     }
   },
   "lobby": {
-    "title": "Lobi",
+    "title": "Otvoreni stolovi",
     "quickPlay": "Brza igra",
     "quickPlayDesc": "Odmah uskoči u igru",
     "browseRooms": "Pregledaj sobe",
@@ -159,38 +159,45 @@
     "stats": {
       "title": "Igrači",
       "loading": "Učitavanje…",
-      "inLobby": "U lobiju",
-      "inRoom": "U sobi",
-      "inGame": "U igri",
+      "inLobby": "u lobiju",
+      "inRoom": "u sobi",
+      "inGame": "igraju",
       "totalActive": "Ukupno online",
       "registered": "Registriranih",
       "activeRatio": "Online / Registrirani",
-      "activeRatioValue": "{{active}} / {{registered}}"
+      "activeRatioValue": "{{active}} / {{registered}}",
+      "online": "online"
     },
     "matchmaking": {
       "finding": "Traženje meča…",
-      "cancel": "Odustani",
+      "cancel": "Otkaži",
       "failed": "Nije moguće pronaći meč — pokušaj ponovno",
-      "alreadyInRoom": "Već si u sobi — prvo je napusti"
+      "alreadyInRoom": "Već si u sobi — prvo je napusti",
+      "title": "Tražim partiju…",
+      "subtitle": "Smjestit ćemo te za sljedeći slobodni stol.",
+      "errors": {
+        "alreadyInRoom": "Već si u sobi",
+        "generic": "Traženje partije nije uspjelo. Pokušaj ponovno."
+      }
     },
     "createRoomModal": {
-      "title": "Stvori sobu za igru",
-      "roomName": "Ime sobe",
-      "roomNamePlaceholder": "Unesi ime sobe…",
-      "variant": "Varijanta igre",
+      "title": "Stvori sobu",
+      "roomName": "Naziv sobe",
+      "roomNamePlaceholder": "Nedjeljna partija…",
+      "variant": "Varijanta",
       "variantBitola": "Bitola",
-      "matchMode": "Način meča",
-      "matchMode1001": "1001 bodova",
-      "timerStyle": "Stil tajmera",
-      "timerRelaxed": "Opušteno (bez tajmera)",
-      "timerPerMove": "Tajmer po potezu",
-      "timerDuration": "Trajanje tajmera (sekunde)",
+      "matchMode": "Način partije",
+      "matchMode1001": "1001 bod",
+      "timerStyle": "Tip tajmera",
+      "timerRelaxed": "Opušteno",
+      "timerPerMove": "Po potezu",
+      "timerDuration": "Tajmer (sekundi po potezu)",
       "create": "Stvori sobu",
-      "cancel": "Odustani",
+      "cancel": "Otkaži",
       "errors": {
-        "nameRequired": "Ime sobe je obavezno",
-        "nameTaken": "Soba s ovim imenom već postoji",
-        "unexpected": "Došlo je do neočekivane greške"
+        "nameRequired": "Naziv sobe je obavezan",
+        "nameTaken": "Naziv je već u upotrebi",
+        "unexpected": "Stvaranje sobe nije uspjelo. Pokušaj ponovno."
       }
     },
     "roomDetail": {
@@ -299,6 +306,66 @@
         "promoteUnseated": "Novi vlasnik mora biti smješten na mjesto.",
         "promoteNotInRoom": "Taj igrač više nije u sobi."
       }
+    },
+    "footnote": "Prikazano {{shown}} od {{total}} otvorenih stolova · živo se osvježava",
+    "actions": {
+      "quickPlay": {
+        "title": "Brza igra",
+        "subtitle": "Skoči na prvo slobodno mjesto",
+        "cta": "Igraj"
+      },
+      "createRoom": {
+        "title": "Stvori sobu",
+        "subtitle": "Postavi svoja pravila i tajmer"
+      },
+      "joinByCode": {
+        "placeholder": "Imaš kod?",
+        "cta": "Pridruži se"
+      }
+    },
+    "filters": {
+      "all": "Sve",
+      "open": "Ima mjesta",
+      "relaxed": "Opušteno",
+      "timed": "S tajmerom"
+    },
+    "sort": {
+      "label": "Sortiraj",
+      "newest": "Najnovije",
+      "filling": "Najpunije"
+    },
+    "search": {
+      "placeholder": "Pretraži po imenu sobe ili kodu…"
+    },
+    "empty": {
+      "title": "Nema otvorenih stolova za tvoje filtre",
+      "description": "Obriši filtre, pritisni Brza igra ili stvori sobu i mi ćemo te smjestiti.",
+      "clear": "Obriši pretragu"
+    },
+    "card": {
+      "join": "Pridruži se",
+      "full": "Puno",
+      "relaxed": "Opušteno",
+      "timerSeconds": "{{seconds}}s tajmer",
+      "occupancy": "{{seated}}/4",
+      "empty": "prazno",
+      "joining": "Pridruživanje sobi \"{{name}}\"…",
+      "variantBitola": "Bitola",
+      "matchMode1001": "1001 bod"
+    },
+    "chat": {
+      "title": "Lobi chat",
+      "placeholder": "Poruka…",
+      "openLabel": "Otvori chat",
+      "closeLabel": "Zatvori chat",
+      "sendLabel": "Pošalji poruku"
+    },
+    "errors": {
+      "roomFull": "Soba je puna",
+      "roomNotFound": "Soba nije pronađena",
+      "alreadyInRoom": "Već si u sobi",
+      "joinFailed": "Pridruživanje nije uspjelo. Probaj drugu sobu.",
+      "matchmakingFailed": "Traženje partije nije uspjelo. Pokušaj ponovno."
     }
   },
   "game": {

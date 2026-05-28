@@ -71,6 +71,11 @@ func (r *mockRepoForLobby) RunInTransaction(fn func(room.RoomRepository) error) 
 	return fn(r)
 }
 
+func (r *mockRepoForLobby) LoadOwnerUsernames(_ []*room.Room) error { return nil }
+func (r *mockRepoForLobby) FindPlayersByRoomIDs(_ []uint) (map[uint][]room.RoomPlayer, error) {
+	return map[uint][]room.RoomPlayer{}, nil
+}
+
 // Unused but required by interface
 func (r *mockRepoForLobby) Create(_ *room.Room) error                                { return nil }
 func (r *mockRepoForLobby) Update(rm *room.Room) error                               { r.rooms[rm.ID] = rm; return nil }
