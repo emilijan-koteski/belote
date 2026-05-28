@@ -178,21 +178,6 @@ body {
   }
 }
 
-@keyframes float-up {
-  0% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-24px);
-    opacity: 0;
-  }
-}
-
 @utility animate-capot-scale {
   animation: capot-scale 2.5s ease-out forwards;
-}
-
-@utility animate-float-up {
-  animation: float-up 1.2s ease-out forwards;
 }

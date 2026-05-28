@@ -136,8 +136,6 @@ export const MOTION = {
   SCORE_BONUS_FADE_REDUCED: 300,
   /** Auto-redirect to lobby after match abandonment. */
   RECONNECT_REDIRECT: 3000,
-  /** Generic float-up text exit (`float-up` keyframe in `index.css`). */
-  FLOAT_UP: 1200,
 
   // ─── Cooldowns (rate limits, not animation) ──────────────────────
   /** Spam guard between emote sends. */

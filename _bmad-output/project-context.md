@@ -28,14 +28,14 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ### Frontend
 
 - **TypeScript** (strict mode), **React 19**, compiled via **SWC**
-- **Vite 8** — dev server + production bundler
+- **Vite 6** — dev server + production bundler
 - **Tailwind CSS v4** via `@tailwindcss/vite` plugin — CSS-first configuration only. **No `tailwind.config.js`** — all theming via `@theme` directives in `index.css`
 - **shadcn/ui** — components are owned copies in `src/shared/components/ui/`. Install via `npx shadcn@latest add <component>`, never `npm install`. Never create UI primitive files manually
 - **Zustand** — 5 partitioned stores: `authStore`, `lobbyStore`, `gameStore`, `chatStore`, `roomLobbyStore`
 - **React Router v7**
 - **react-i18next** — JSON translation files, English + Serbian (Latin)
 - **Vitest** — Vite-native testing (Jest-compatible API)
-- **Node 18+** required (React 19 + Vite 8 dependency)
+- **Node 18+** required (React 19 + Vite 6 dependency)
 
 ### Backend
 

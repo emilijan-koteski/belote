@@ -306,7 +306,9 @@ export function ScorePanel({
       {showBonus !== null && bonusTeamString !== null && bonusGradient !== null && (
         <div
           className={`absolute -top-2 right-3 font-display text-sm font-bold ${
-            prefersReducedMotion ? "" : "motion-safe:animate-float-up"
+            prefersReducedMotion
+              ? ""
+              : "motion-safe:animate-out motion-safe:fade-out motion-safe:slide-out-to-top-6 motion-safe:duration-1200 motion-safe:ease-out motion-safe:fill-mode-forwards"
           } pointer-events-none`}
           style={{ color: bonusGradient[0] }}
           data-testid="score-bonus"
