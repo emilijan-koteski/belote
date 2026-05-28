@@ -2,14 +2,19 @@ import { Check } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router";
 
+import { Field } from "@/shared/components/ui/field";
+import { SuitRule } from "@/shared/components/ui/suit-rule";
 import { cn } from "@/shared/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Auth-page composable primitives — parchment card chrome that mirrors the
-// design's <AuthCard>, <SuitRule>, <Field>, <AltLink>, <Checkbox> on the
-// Lobby Style System. Colocated here because they're only used on /login
-// and /register; promote to shared/ if a third consumer ever shows up.
+// Auth-page composable primitives — the parchment card chrome.
+//
+// Field + SuitRule were promoted to shared/components/ui/ once Create Room
+// became a third consumer; we re-export them here so existing auth-page
+// imports (`import { Field, SuitRule } from ".../AuthCard"`) stay green.
 // ─────────────────────────────────────────────────────────────────────────
+
+export { Field, SuitRule };
 
 type AuthCardProps = {
   eyebrow: string;
@@ -53,76 +58,6 @@ export function AuthCard({ eyebrow, title, subtitle, children, footer }: AuthCar
       {children}
 
       {footer && <div className="mt-5.5">{footer}</div>}
-    </div>
-  );
-}
-
-/**
- * ♥ ♠ ♦ ♣ row divider — the in-game DNA dropped onto parchment. Suit glyphs
- * are forced to a serif font with the U+FE0E variation selector so they
- * render as text not emoji (which renders ~1.3× larger and breaks the row).
- */
-export function SuitRule() {
-  const glyphStyle: React.CSSProperties = {
-    fontFamily: '"Times New Roman", "DejaVu Serif", serif',
-    fontSize: 17,
-    lineHeight: 1,
-    display: "inline-block",
-  };
-  return (
-    <div className="mt-1 mb-4.5 flex items-center gap-3.5" aria-hidden="true">
-      <div className="bg-border h-px flex-1" />
-      <div className="flex items-center gap-2.5 tracking-[1px]">
-        <span style={{ ...glyphStyle, color: "var(--danger)" }}>{"♥︎"}</span>
-        <span style={{ ...glyphStyle, color: "var(--ink)" }}>{"♠︎"}</span>
-        <span style={{ ...glyphStyle, color: "var(--danger)" }}>{"♦︎"}</span>
-        <span style={{ ...glyphStyle, color: "var(--ink)" }}>{"♣︎"}</span>
-      </div>
-      <div className="bg-border h-px flex-1" />
-    </div>
-  );
-}
-
-type FieldProps = {
-  label: string;
-  htmlFor: string;
-  hint?: React.ReactNode;
-  error?: string;
-  errorTestId?: string;
-  children: React.ReactNode;
-};
-
-/**
- * Brass-deep micro-caps label + optional right-aligned hint slot + the
- * input + an inline error message. The label flips to `--danger` when the
- * field carries an error.
- */
-export function Field({ label, htmlFor, hint, error, errorTestId, children }: FieldProps) {
-  const hasError = Boolean(error);
-  return (
-    <div className="flex flex-col gap-[7px]">
-      <div className="flex items-baseline justify-between">
-        <label
-          htmlFor={htmlFor}
-          className={cn(
-            "font-mono text-[11px] font-semibold tracking-[1.8px] uppercase transition-colors",
-            hasError ? "text-destructive" : "text-brass-deep",
-          )}
-        >
-          {label}
-        </label>
-        {hint && (
-          <span className="text-ink-mute text-[11.5px] font-medium tracking-[0.5px] normal-case">
-            {hint}
-          </span>
-        )}
-      </div>
-      {children}
-      {error && (
-        <p className="text-destructive text-xs leading-[1.4] font-medium" data-testid={errorTestId}>
-          {error}
-        </p>
-      )}
     </div>
   );
 }

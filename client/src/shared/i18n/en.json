@@ -191,13 +191,42 @@
       "timerStyle": "Timer style",
       "timerRelaxed": "Relaxed",
       "timerPerMove": "Per move",
-      "timerDuration": "Timer (seconds per move)",
+      "timerDuration": "Move duration",
       "create": "Create room",
       "cancel": "Cancel",
       "errors": {
         "nameRequired": "Room name is required",
         "nameTaken": "That name is taken",
-        "unexpected": "Could not create room. Try again."
+        "unexpected": "Could not create room. Try again.",
+        "nameTooShort": "Name needs at least {{min}} characters"
+      },
+      "eyebrow": "New room",
+      "headline": "Open a custom table",
+      "subhead": "Give the room a name, pick a pace, then share the join code with friends. The lobby list updates the moment you confirm.",
+      "roomNameHint": "{{min}}–{{max}} characters",
+      "variantCroatia": "Croatian",
+      "matchMode501": "501 points",
+      "timerDurationSuffix": "seconds / move",
+      "timerDurationRange": "{{min}}s – {{max}}s",
+      "submit": "Open table",
+      "submitting": "Opening…",
+      "preview": {
+        "title": "Live preview · how it appears in the lobby",
+        "placeholderName": "Untitled table",
+        "joinLabel": "Join",
+        "justNow": "just now",
+        "codeLabel": "CODE",
+        "seated": "{{current}}/4"
+      },
+      "variantHint": "Only Bitola for now",
+      "matchModeHint": "Only 1001 pts for now",
+      "timerHintRelaxed": "No timer",
+      "timerDurationHint": "10–120s · default 30s",
+      "nextSteps": {
+        "title": "What happens next",
+        "step1": "You land in the new room as <strong>owner</strong> with seat 1.",
+        "step2": "Share the <code>CODE</code> with friends — or wait for the lobby list.",
+        "step3": "Once all four seats are filled, you start the match."
       }
     },
     "roomDetail": {

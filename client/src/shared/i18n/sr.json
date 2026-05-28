@@ -191,13 +191,42 @@
       "timerStyle": "Tip tajmera",
       "timerRelaxed": "Opušteno",
       "timerPerMove": "Po potezu",
-      "timerDuration": "Tajmer (sekundi po potezu)",
+      "timerDuration": "Trajanje poteza",
       "create": "Kreiraj sobu",
       "cancel": "Otkaži",
       "errors": {
         "nameRequired": "Naziv sobe je obavezan",
         "nameTaken": "Naziv je već u upotrebi",
-        "unexpected": "Kreiranje sobe nije uspelo. Pokušaj ponovo."
+        "unexpected": "Kreiranje sobe nije uspelo. Pokušaj ponovo.",
+        "nameTooShort": "Naziv mora imati bar {{min}} znakova"
+      },
+      "eyebrow": "Nova soba",
+      "headline": "Otvori sobu po meri",
+      "subhead": "Daj sobi naziv, izaberi tempo, pa podeli pristupni kod sa prijateljima. Spisak lobija se osvežava čim potvrdiš.",
+      "roomNameHint": "{{min}}–{{max}} znakova",
+      "variantCroatia": "Hrvatska",
+      "matchMode501": "501 poen",
+      "timerDurationSuffix": "sekundi / potezu",
+      "timerDurationRange": "{{min}}s – {{max}}s",
+      "submit": "Otvori sobu",
+      "submitting": "Otvaram…",
+      "preview": {
+        "title": "Pregled uživo · ovako izgleda u lobiju",
+        "placeholderName": "Neimenovana soba",
+        "joinLabel": "Pridruži se",
+        "justNow": "upravo sad",
+        "codeLabel": "KOD",
+        "seated": "{{current}}/4"
+      },
+      "variantHint": "Zasad samo Bitola",
+      "matchModeHint": "Zasad samo 1001 poen",
+      "timerHintRelaxed": "Bez tajmera",
+      "timerDurationHint": "10–120s · podrazumevano 30s",
+      "nextSteps": {
+        "title": "Šta sledi",
+        "step1": "Ulaziš u novu sobu kao <strong>vlasnik</strong> na 1. mestu.",
+        "step2": "Podeli <code>KOD</code> sa prijateljima — ili sačekaj da te pronađu u lobiju.",
+        "step3": "Kad se popune sva četiri mesta, krećeš sa mečom."
       }
     },
     "roomDetail": {

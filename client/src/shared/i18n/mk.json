@@ -191,13 +191,42 @@
       "timerStyle": "Тип тајмер",
       "timerRelaxed": "Опуштено",
       "timerPerMove": "По потег",
-      "timerDuration": "Тајмер (секунди по потег)",
+      "timerDuration": "Времетраење на потег",
       "create": "Креирај соба",
       "cancel": "Откажи",
       "errors": {
         "nameRequired": "Името на собата е задолжително",
         "nameTaken": "Името е веќе во употреба",
-        "unexpected": "Креирањето не успеа. Обиди се повторно."
+        "unexpected": "Креирањето не успеа. Обиди се повторно.",
+        "nameTooShort": "Името треба најмалку {{min}} знаци"
+      },
+      "eyebrow": "Нова соба",
+      "headline": "Отвори своја соба",
+      "subhead": "Дај ѝ име на собата, избери темпо и сподели го кодот со пријателите. Листата на лобито се освежува штом ќе потврдиш.",
+      "roomNameHint": "{{min}}–{{max}} знаци",
+      "variantCroatia": "Хрватска",
+      "matchMode501": "501 поен",
+      "timerDurationSuffix": "секунди / потег",
+      "timerDurationRange": "{{min}}s – {{max}}s",
+      "submit": "Отвори соба",
+      "submitting": "Отворам…",
+      "preview": {
+        "title": "Преглед во живо · вака се прикажува во лобито",
+        "placeholderName": "Соба без име",
+        "joinLabel": "Приклучи се",
+        "justNow": "штотуку",
+        "codeLabel": "КОД",
+        "seated": "{{current}}/4"
+      },
+      "variantHint": "Засега само Битола",
+      "matchModeHint": "Засега само 1001 поен",
+      "timerHintRelaxed": "Без тајмер",
+      "timerDurationHint": "10–120s · стандардно 30s",
+      "nextSteps": {
+        "title": "Што следи потоа",
+        "step1": "Влегуваш во новата соба како <strong>сопственик</strong> на седиште 1.",
+        "step2": "Сподели го <code>КОДОТ</code> со пријателите — или почекај да те најдат во лобито.",
+        "step3": "Кога ќе се пополнат сите четири места, го почнуваш мечот."
       }
     },
     "roomDetail": {
