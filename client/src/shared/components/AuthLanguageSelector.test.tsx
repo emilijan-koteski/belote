@@ -7,20 +7,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n, LANGUAGE_STORAGE_KEY } from "@/shared/i18n/i18n";
 import { useAuthStore } from "@/shared/stores/authStore";
 
-import { AuthLanguageSelector } from "./AuthLanguageSelector";
+import { LanguageSelector } from "./LanguageSelector";
 
+// The pre-auth flow renders the unified <LanguageSelector /> with
+// `persistToServer={false}` and `testIdPrefix="auth-language"` so it keeps
+// the original auth-language-* test ids and does NOT push the picked
+// language to the server.
 const mockUpdatePreferences = vi.fn();
 vi.mock("@/shared/api/profile", () => ({
   updatePreferences: (...args: unknown[]) => mockUpdatePreferences(...args),
 }));
 
-describe("AuthLanguageSelector", () => {
+function renderAuthMode() {
+  return render(<LanguageSelector testIdPrefix="auth-language" />);
+}
+
+describe("LanguageSelector (auth-prefixed, no server persistence)", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     window.localStorage.clear();
     await i18n.changeLanguage("en");
-    // Clean any localStorage write that the changeLanguage above triggered
-    // via the i18n listener, so each test starts from a known state.
     window.localStorage.clear();
     useAuthStore.setState({ token: null, user: null, isLoading: false });
   });
@@ -30,13 +36,13 @@ describe("AuthLanguageSelector", () => {
   });
 
   it("renders the current language in the trigger", () => {
-    render(<AuthLanguageSelector />);
+    renderAuthMode();
     expect(screen.getByTestId("auth-language-selector")).toHaveTextContent("EN");
   });
 
   it("renders all four language options in order en/hr/sr/mk", async () => {
     const user = userEvent.setup();
-    render(<AuthLanguageSelector />);
+    renderAuthMode();
 
     await user.click(screen.getByTestId("auth-language-selector"));
 
@@ -54,7 +60,7 @@ describe("AuthLanguageSelector", () => {
 
   it("changes i18n.language on selection without calling the preferences API", async () => {
     const user = userEvent.setup();
-    render(<AuthLanguageSelector />);
+    renderAuthMode();
 
     await user.click(screen.getByTestId("auth-language-selector"));
     await waitFor(() => {
@@ -71,7 +77,7 @@ describe("AuthLanguageSelector", () => {
 
   it("persists the picked language to localStorage via the i18n listener", async () => {
     const user = userEvent.setup();
-    render(<AuthLanguageSelector />);
+    renderAuthMode();
 
     await user.click(screen.getByTestId("auth-language-selector"));
     await waitFor(() => {

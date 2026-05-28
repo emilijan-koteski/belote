@@ -41,7 +41,7 @@ describe("App routing", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByTestId("login-title")).toHaveTextContent("Log In");
+    expect(screen.getByTestId("login-title")).toHaveTextContent("Log in");
   });
 
   it("renders lobby page at /lobby", () => {

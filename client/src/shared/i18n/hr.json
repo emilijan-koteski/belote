@@ -15,7 +15,8 @@
     "profile": "Profil",
     "rules": "Pravila",
     "appName": "Beljot",
-    "logout": "Odjavi se"
+    "logout": "Odjavi se",
+    "signedInAs": "Prijavljen kao"
   },
   "profile": {
     "title": "Profil",
@@ -569,14 +570,17 @@
       "passwordPlaceholder": "Unesi lozinku",
       "submitButton": "Prijavi se",
       "submitting": "Prijavljivanje…",
-      "registerLink": "Nemaš račun? Stvori jedan",
       "errors": {
         "emailRequired": "Email je obavezan",
         "emailInvalid": "Unesi valjanu email adresu",
         "passwordRequired": "Lozinka je obavezna",
         "invalidCredentials": "Pogrešan email ili lozinka",
         "loginFailed": "Prijava nije uspjela. Pokušaj ponovno."
-      }
+      },
+      "eyebrow": "Dobrodošao natrag",
+      "subtitle": "Sjedni opet za stol — tvoje je mjesto još toplo.",
+      "altPrompt": "Nov si na Beljotu?",
+      "altCta": "Stvori račun"
     },
     "register": {
       "title": "Stvori račun",
@@ -588,7 +592,6 @@
       "passwordPlaceholder": "Najmanje 8 znakova",
       "submitButton": "Stvori račun",
       "submitting": "Stvaranje…",
-      "loginLink": "Već imaš račun? Prijavi se",
       "consent": {
         "prefix": "Prihvaćam ",
         "termsLink": "Uvjete korištenja",
@@ -610,7 +613,14 @@
         "passwordTooLong": "Lozinka može imati najviše 72 znaka",
         "consentRequired": "Moraš prihvatiti Uvjete korištenja i Pravila privatnosti",
         "registrationFailed": "Registracija nije uspjela. Pokušaj ponovno."
-      }
+      },
+      "eyebrow": "Privuci stolac",
+      "subtitle": "Odaberi ime, dobij mjesto. Četiri igrača za stolom, dva u ekipi.",
+      "altPrompt": "Već imaš račun?",
+      "altCta": "Prijavi se"
+    },
+    "footer": {
+      "credit": "Izradio <name>Emilijan Koteski</name> s <suit>♣</suit>"
     }
   }
 }

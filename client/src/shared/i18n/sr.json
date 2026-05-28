@@ -15,7 +15,8 @@
     "profile": "Profil",
     "rules": "Pravila",
     "appName": "Beljot",
-    "logout": "Odjavi se"
+    "logout": "Odjavi se",
+    "signedInAs": "Prijavljen kao"
   },
   "profile": {
     "title": "Profil",
@@ -562,21 +563,24 @@
       "label": "Jezik"
     },
     "login": {
-      "title": "Prijavite se",
+      "title": "Prijavi se",
       "emailLabel": "Email",
       "emailPlaceholder": "ime@primer.com",
       "passwordLabel": "Lozinka",
       "passwordPlaceholder": "Unesite lozinku",
-      "submitButton": "Prijavite se",
+      "submitButton": "Prijavi se",
       "submitting": "Prijavljivanje…",
-      "registerLink": "Nemate nalog? Kreirajte jedan",
       "errors": {
         "emailRequired": "Email je obavezan",
         "emailInvalid": "Unesite validnu email adresu",
         "passwordRequired": "Lozinka je obavezna",
         "invalidCredentials": "Pogrešan email ili lozinka",
         "loginFailed": "Prijava nije uspela. Pokušajte ponovo."
-      }
+      },
+      "eyebrow": "Dobrodošao nazad",
+      "subtitle": "Sedi ponovo za sto — tvoje mesto je još toplo.",
+      "altPrompt": "Nov si na Beljotu?",
+      "altCta": "Kreiraj nalog"
     },
     "register": {
       "title": "Kreiraj nalog",
@@ -588,7 +592,6 @@
       "passwordPlaceholder": "Najmanje 8 karaktera",
       "submitButton": "Kreiraj nalog",
       "submitting": "Kreiranje…",
-      "loginLink": "Već imate nalog? Prijavite se",
       "consent": {
         "prefix": "Prihvatam ",
         "termsLink": "Uslove korišćenja",
@@ -610,7 +613,14 @@
         "passwordTooLong": "Lozinka može imati najviše 72 karaktera",
         "consentRequired": "Morate prihvatiti Uslove korišćenja i Politiku privatnosti",
         "registrationFailed": "Registracija nije uspela. Pokušajte ponovo."
-      }
+      },
+      "eyebrow": "Privuci stolicu",
+      "subtitle": "Izaberi ime, dobij mesto. Četiri igrača za stolom, dva u timu.",
+      "altPrompt": "Već imaš nalog?",
+      "altCta": "Prijavi se"
+    },
+    "footer": {
+      "credit": "Napravio <name>Emilijan Koteski</name> sa <suit>♣</suit>"
     }
   }
 }

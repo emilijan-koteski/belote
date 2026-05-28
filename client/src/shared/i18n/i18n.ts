@@ -6,7 +6,7 @@ import hr from "./hr.json";
 import mk from "./mk.json";
 import sr from "./sr.json";
 
-// Same order as LanguageSelector / AuthLanguageSelector dropdowns: Latin-script
+// Same order as the LanguageSelector dropdown: Latin-script
 // entries sorted ASC by native name, then Cyrillic-script ASC. Order only
 // affects this allowlist's iteration (not display), but is kept aligned so
 // future contributors don't see a "second source of truth" with different ordering.

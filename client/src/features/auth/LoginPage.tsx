@@ -1,12 +1,12 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
+import { AltLink, AuthCard, Field } from "@/features/auth/components/AuthCard";
 import { FetchError } from "@/shared/api/axiosClient";
 import { updatePreferences } from "@/shared/api/profile";
-import { AuthLanguageSelector } from "@/shared/components/AuthLanguageSelector";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { useLoginMutation } from "@/shared/hooks/mutations/useAuth";
@@ -68,7 +68,7 @@ export function LoginPage() {
       const res = await loginMutation.mutateAsync({ email, password });
       // If the visitor picked a different language on the auth page than the
       // one stored on their profile, push the picked language to the server
-      // and reconcile the auth store. Mirrors LanguageSelector.tsx's
+      // and reconcile the auth store. Mirrors LanguageSelector's
       // optimistic-with-rollback pattern; UI language stays as picked.
       // Normalize i18n.language to the short code so region-tagged values
       // like "en-US" don't trigger a futile PATCH the server would reject.
@@ -104,98 +104,96 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background">
-      <div className="absolute top-4 right-4">
-        <AuthLanguageSelector />
-      </div>
-      <div className="w-full max-w-100 rounded-xl bg-surface p-8">
-        <h1
-          className="mb-6 text-center font-display text-2xl font-bold text-text-primary"
-          data-testid="login-title"
+    <AuthCard
+      eyebrow={t("auth.login.eyebrow")}
+      title={t("auth.login.title")}
+      subtitle={t("auth.login.subtitle")}
+      footer={
+        <AltLink
+          prompt={t("auth.login.altPrompt")}
+          cta={t("auth.login.altCta")}
+          to="/register"
+          testId="register-link"
+        />
+      }
+    >
+      <h1 data-testid="login-title" className="sr-only">
+        {t("auth.login.title")}
+      </h1>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" data-testid="login-form">
+        <Field
+          label={t("auth.login.emailLabel")}
+          htmlFor="email"
+          error={errors.email}
+          errorTestId="email-error"
         >
-          {t("auth.login.title")}
-        </h1>
+          <Input
+            id="email"
+            type="email"
+            className="h-10.5"
+            placeholder={t("auth.login.emailPlaceholder")}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => handleBlur("email")}
+            aria-invalid={!!errors.email}
+            autoFocus
+            data-testid="email-input"
+          />
+        </Field>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" data-testid="login-form">
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm text-text-secondary">
-              {t("auth.login.emailLabel")}
-            </label>
+        <Field
+          label={t("auth.login.passwordLabel")}
+          htmlFor="password"
+          error={errors.password}
+          errorTestId="password-error"
+        >
+          <div className="relative">
             <Input
-              id="email"
-              type="email"
-              placeholder={t("auth.login.emailPlaceholder")}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => handleBlur("email")}
-              aria-invalid={!!errors.email}
-              data-testid="email-input"
+              id="password"
+              type={showPassword ? "text" : "password"}
+              className="h-[42px] pr-10"
+              placeholder={t("auth.login.passwordPlaceholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onBlur={() => handleBlur("password")}
+              aria-invalid={!!errors.password}
+              data-testid="password-input"
             />
-            {errors.email && (
-              <p className="mt-1 text-xs text-destructive" data-testid="email-error">
-                {errors.email}
-              </p>
-            )}
+            <button
+              type="button"
+              tabIndex={-1}
+              className="text-ink-mute hover:text-ink absolute top-1/2 right-2.5 -translate-y-1/2 p-1.5"
+              onClick={() => setShowPassword(!showPassword)}
+              data-testid="password-toggle"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
           </div>
+        </Field>
 
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm text-text-secondary">
-              {t("auth.login.passwordLabel")}
-            </label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder={t("auth.login.passwordPlaceholder")}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onBlur={() => handleBlur("password")}
-                aria-invalid={!!errors.password}
-                data-testid="password-input"
-              />
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
-                onClick={() => setShowPassword(!showPassword)}
-                data-testid="password-toggle"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </div>
-            {errors.password && (
-              <p className="mt-1 text-xs text-destructive" data-testid="password-error">
-                {errors.password}
-              </p>
-            )}
+        {formError && (
+          <div
+            className="text-destructive rounded-md border border-destructive/30 bg-destructive/6 px-3 py-2 text-xs font-medium"
+            data-testid="form-error"
+          >
+            {formError}
           </div>
+        )}
 
-          {formError && (
-            <p className="text-xs text-destructive" data-testid="form-error">
-              {formError}
-            </p>
-          )}
-
+        <div className="mt-1.5">
           <Button
             type="submit"
-            className="mt-2 h-10 w-full bg-primary text-primary-foreground font-semibold hover:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed"
-            disabled={loginMutation.isPending}
+            size="cta"
+            className="w-full"
+            disabled={loginMutation.isPending || !email || !password}
             data-testid="submit-button"
           >
             {loginMutation.isPending ? t("auth.login.submitting") : t("auth.login.submitButton")}
           </Button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-text-secondary">
-          <Link to="/register" className="text-primary hover:underline" data-testid="register-link">
-            {t("auth.login.registerLink")}
-          </Link>
-        </p>
-      </div>
-
-      <p className="absolute bottom-4 left-0 right-0 text-center text-xs text-text-secondary">
-        Crafted with 💚 by Emilijan Koteski
-      </p>
-    </div>
+        </div>
+      </form>
+    </AuthCard>
   );
 }

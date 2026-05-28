@@ -4,30 +4,93 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-  /* Balatro design tokens */
-  --color-background: #0a0a0f;
-  --color-surface: #13131a;
-  --color-surface-elevated: #1c1c26;
-  --color-border: #2a2a38;
-  --color-accent: #00e5a0;
-  --color-accent-glow: #00e5a040;
-  --color-team-a: #ff4d4d;
-  --color-team-b: #4d9fff;
-  --color-text-primary: #f0f0f8;
-  --color-text-secondary: #8888a0;
-  --color-text-disabled: #44445a;
-  --color-success: #22c55e;
-  --color-warning: #eab308;
-  --color-destructive: #ef4444;
+/* ──────────────────────────────────────────────────────────────────────────
+   Beljot design tokens — THE single source of truth.
 
-  --font-display: "Space Grotesk", sans-serif;
-  --font-body: "Inter", sans-serif;
+   Two surfaces, one sheet:
+     • parchment  — default. Body, lobby, auth, profile, legal, rules, room.
+     • felt-dark  — scoped under `.game-table`. The in-round table only.
+
+   Token names mirror the Lobby Style System handoff (--bg, --surface, --ink,
+   --accent, --brass, --team-a, …) so design references resolve 1:1.
+
+   The `@theme inline` block republishes these as Tailwind utility-class
+   aliases so existing usages (bg-background, bg-surface, text-text-primary,
+   bg-primary, text-team-a…) resolve to the new parchment values without
+   code churn. As each non-auth page gets pixel-perfectly redesigned, the
+   alias names can be retired.
+   ────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  /* Type — constant across all scopes */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-heading: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
 }
 
 @theme inline {
-  --font-heading: var(--font-display);
-  --font-sans: "Inter", sans-serif;
+  /* Surfaces */
+  --color-background: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-2);
+  --color-surface-sunken: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-2: var(--border-2);
+  --color-input: var(--border);
+  --color-ring: var(--accent);
+
+  /* Text */
+  --color-foreground: var(--ink);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-mute: var(--ink-mute);
+  --color-ink-off: var(--ink-off);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink-dim);
+  --color-text-disabled: var(--ink-off);
+
+  /* Accent (felt-green action) */
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-foreground: var(--accent-ink);
+
+  /* Primary = accent (for shadcn primitives that hardcode bg-primary) */
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-ink);
+
+  /* Brass (chrome edge) */
+  --color-brass: var(--brass);
+  --color-brass-deep: var(--brass-deep);
+  --color-brass-ink: var(--brass-ink);
+  --color-brass-soft: var(--brass-soft);
+
+  /* Shadcn surfaces */
+  --color-secondary: var(--surface-3);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--surface-3);
+  --color-muted-foreground: var(--ink-mute);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface-2);
+  --color-popover-foreground: var(--ink);
+
+  /* Teams — viewer-relative (Us = gold, Them = silver) */
+  --color-team-a: var(--team-a);
+  --color-team-a-fill: var(--team-a-fill);
+  --color-team-b: var(--team-b);
+  --color-team-b-fill: var(--team-b-fill);
+
+  /* Status */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--danger);
+  --color-danger: var(--danger);
+
+  /* Radius scale — base radius lives at :root so .game-table could rescale */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -35,59 +98,131 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
-  --color-background: var(--background);
 }
 
-/* Balatro dark theme as default — card game UI is always dark */
 :root {
-  --background: #0a0a0f;
-  --foreground: #f0f0f8;
-  --card: #13131a;
-  --card-foreground: #f0f0f8;
-  --popover: #1c1c26;
-  --popover-foreground: #f0f0f8;
-  --primary: #00e5a0;
-  --primary-foreground: #0a0a0f;
-  --secondary: #1c1c26;
-  --secondary-foreground: #f0f0f8;
-  --muted: #13131a;
-  --muted-foreground: #8888a0;
-  --accent: #00e5a0;
-  --accent-foreground: #0a0a0f;
-  --destructive: #ef4444;
-  --border: #2a2a38;
-  --input: #2a2a38;
-  --ring: #00e5a0;
-  --radius: 0.625rem;
+  /* ── Surfaces ─────────────────────────────────────────────────────── */
+  --bg: #f5f2e8;
+  --surface: #fbf9f2;
+  --surface-2: #ffffff;
+  --surface-3: #ebe6d6;
+  --border: #d9d1ba;
+  --border-2: #c9a876;
+
+  /* ── Ink (text) ───────────────────────────────────────────────────── */
+  --ink: #0e3a24;
+  --ink-dim: #466354;
+  --ink-mute: #7a8a82;
+  --ink-off: #b1b8b3;
+
+  /* ── Accent (felt-green action) ───────────────────────────────────── */
+  --accent: #196536;
+  --accent-deep: #0e4824;
+  --accent-soft: rgba(25, 101, 54, 0.1);
+  --accent-ink: #f5f2e8;
+
+  /* ── Brass (chrome accent) ────────────────────────────────────────── */
+  --brass: #c9a876;
+  --brass-deep: #9c7d4e;
+  --brass-ink: #2a1a08;
+  --brass-soft: rgba(201, 168, 118, 0.18);
+
+  /* ── Teams — viewer-relative (Us = gold, Them = silver) ───────────── */
+  --team-a: #a07d1a;
+  --team-a-fill: #e8c25a;
+  --team-a-tint: rgba(160, 125, 26, 0.1);
+  --team-a-line: rgba(160, 125, 26, 0.05);
+  --team-a-edge: rgba(160, 125, 26, 0.55);
+  --team-a-edge-soft: rgba(160, 125, 26, 0.32);
+
+  --team-b: #8b919a;
+  --team-b-fill: #d8dde4;
+  --team-b-tint: rgba(139, 145, 154, 0.16);
+  --team-b-line: rgba(139, 145, 154, 0.08);
+  --team-b-edge: rgba(139, 145, 154, 0.6);
+  --team-b-edge-soft: rgba(139, 145, 154, 0.38);
+
+  /* ── Status ───────────────────────────────────────────────────────── */
+  --success: #196536;
+  --warning: #9c7d4e;
+  --danger: #8b2a1f;
+
+  /* ── Radius ───────────────────────────────────────────────────────── */
+  --radius: 14px;
 }
 
-body {
-  margin: 0;
-  background-color: var(--color-background);
-  color: var(--color-text-primary);
-  font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* ──────────────────────────────────────────────────────────────────────────
+   Reset + base — parchment surface with felt + brass halos.
 
+   Everything in this section lives inside `@layer base` so Tailwind utility
+   classes (declared in `@layer utilities`) win the cascade. Unlayered CSS
+   would otherwise outrank utilities and silently override classes like
+   `text-accent-ink` via the `color: inherit` reset on form elements.
+   ────────────────────────────────────────────────────────────────────── */
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Soft halos used by every parchment surface. The `.no-halos` class on
+     <body> opts out (e.g. for fullscreen `.game-table`, which paints its own). */
+  body:not(.no-halos):not(.game-table) {
+    background:
+      radial-gradient(ellipse 90% 50% at 50% -15%, rgba(25, 101, 54, 0.07), transparent 70%),
+      radial-gradient(ellipse 70% 40% at 50% 115%, rgba(201, 168, 118, 0.1), transparent 70%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  label {
+    font: inherit;
+    color: inherit;
+  }
+
+  input::placeholder {
+    color: var(--ink-off);
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* Scrollbar — webkit only. Warm on parchment, dim on felt. */
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--border-2);
+    border-radius: 6px;
+    border: 2px solid var(--bg);
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--ink-mute);
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -99,21 +234,41 @@ body {
   }
 }
 
+/* Display helpers — unlayered on purpose so callers can use them as
+   utility-like classes without thinking about layers. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
 /* ───────────────────────────────────────────────────────────────────────
-   In-game table palette — scoped to `.game-table`.
+   In-game table scope — `<div class="game-table">` on the in-round screen
+   only. Overrides the parchment palette with the dark felt + wood + brass
+   system from Color System.html.
 
    Three identity channels at the table, each carrying one job:
    • Gold     → "Us" team identity (viewer-relative)
    • Silver   → "Them" team identity (viewer-relative)
    • Lime     → universal turn / playable / action signal
-   • Urgent   → red flip on ≤1/8 of turn timer remaining
+   • Urgent   → red flip on ≤1/4 of turn timer remaining
    • Brass    → every chrome edge (borders, filigree, primary buttons)
-
-   The lobby/auth/room screens keep the existing Balatro tokens (--color-team-a
-   etc.) untouched — only descendants of `.game-table` resolve to these.
    ─────────────────────────────────────────────────────────────────────── */
 .game-table {
-  /* Surface / table */
+  /* Surfaces */
+  --bg: #0a1812;
+  --surface: #112a1d;
+  --surface-2: #16382a;
+  --surface-3: #0e2618;
+
+  /* Felt — the playing surface */
   --felt-light: #1e7a42;
   --felt-mid: #196536;
   --felt-dark: #0e4824;
@@ -125,10 +280,20 @@ body {
   --wood-base: #5b3a1e;
   --wood-dark: #4a2d17;
 
-  /* Brass / parchment */
-  --brass: #c9a876;
-  --brass-deep: #9c7d4e;
-  --brass-ink: #2a1a08;
+  /* Ink — flipped for dark surface */
+  --ink: #f5f2e8;
+  --ink-dim: #c8d5cd;
+  --ink-mute: rgba(245, 242, 232, 0.65);
+  --ink-off: rgba(245, 242, 232, 0.35);
+
+  /* Accent — lime turn signal on felt */
+  --accent: #00e5a0;
+  --accent-deep: #00b07c;
+  --accent-soft: rgba(0, 229, 160, 0.18);
+  --accent-ink: #0a1812;
+
+  --border: rgba(201, 168, 118, 0.25);
+  --border-2: #c9a876;
 
   /* Team colors — viewer-relative (Us = gold, Them = silver) */
   --team-gold: #e8c25a;
@@ -141,10 +306,6 @@ body {
   --turn-lime-deep: #00a878;
   --turn-urgent: #ef4444;
   --turn-urgent-deep: #b91c1c;
-
-  /* Text */
-  --ink-light: #f5f2e8;
-  --ink-dark: #0e3a24;
 
   /* Surface panels */
   --panel-dark: rgba(20, 45, 30, 0.85);
@@ -160,7 +321,71 @@ body {
   --suit-black: #1a1a1a;
 }
 
-/* Game animations — Story 4.6 */
+/* ──────────────────────────────────────────────────────────────────────
+   Shared keyframes — referenced across screens.
+   ────────────────────────────────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.78);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bump {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Game animation — preserved from Story 4.6 */
 @keyframes capot-scale {
   0% {
     transform: scale(0.3);

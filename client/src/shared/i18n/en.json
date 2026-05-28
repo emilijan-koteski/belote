@@ -15,7 +15,8 @@
     "profile": "Profile",
     "rules": "Rules",
     "appName": "Beljot",
-    "logout": "Log out"
+    "logout": "Log out",
+    "signedInAs": "Signed in as"
   },
   "profile": {
     "title": "Profile",
@@ -562,33 +563,35 @@
       "label": "Language"
     },
     "login": {
-      "title": "Log In",
+      "title": "Log in",
       "emailLabel": "Email",
       "emailPlaceholder": "your@email.com",
       "passwordLabel": "Password",
       "passwordPlaceholder": "Enter your password",
-      "submitButton": "Log In",
+      "submitButton": "Log in",
       "submitting": "Logging in…",
-      "registerLink": "Don't have an account? Create one",
       "errors": {
         "emailRequired": "Email is required",
         "emailInvalid": "Enter a valid email address",
         "passwordRequired": "Password is required",
         "invalidCredentials": "Invalid email or password",
         "loginFailed": "Login failed. Please try again."
-      }
+      },
+      "eyebrow": "Welcome back",
+      "subtitle": "Sit back down at the table — your seat's still warm.",
+      "altPrompt": "New to Beljot?",
+      "altCta": "Create an account"
     },
     "register": {
-      "title": "Create Account",
+      "title": "Create account",
       "emailLabel": "Email",
       "emailPlaceholder": "your@email.com",
       "usernameLabel": "Username",
       "usernamePlaceholder": "Choose a username",
       "passwordLabel": "Password",
       "passwordPlaceholder": "Minimum 8 characters",
-      "submitButton": "Create Account",
+      "submitButton": "Create account",
       "submitting": "Creating…",
-      "loginLink": "Already have an account? Log in",
       "consent": {
         "prefix": "I agree to the ",
         "termsLink": "Terms of Service",
@@ -610,7 +613,14 @@
         "passwordTooLong": "Password must be at most 72 characters",
         "consentRequired": "You must accept the Terms of Service and Privacy Policy",
         "registrationFailed": "Registration failed. Please try again."
-      }
+      },
+      "eyebrow": "Pull up a chair",
+      "subtitle": "Pick a name, get a seat. Four players to a table, two to a team.",
+      "altPrompt": "Already have an account?",
+      "altCta": "Log in"
+    },
+    "footer": {
+      "credit": "Crafted with <suit>♣</suit> by <name>Emilijan Koteski</name>"
     }
   }
 }

@@ -15,7 +15,8 @@
     "profile": "Профил",
     "rules": "Правила",
     "appName": "Beljot",
-    "logout": "Одјави се"
+    "logout": "Одјави се",
+    "signedInAs": "Најавен како"
   },
   "profile": {
     "title": "Профил",
@@ -563,24 +564,27 @@
     },
     "login": {
       "title": "Најави се",
-      "emailLabel": "Email",
+      "emailLabel": "Е-пошта",
       "emailPlaceholder": "ime@primer.com",
       "passwordLabel": "Лозинка",
       "passwordPlaceholder": "Внеси ја лозинката",
       "submitButton": "Најави се",
       "submitting": "Најавување…",
-      "registerLink": "Немаш сметка? Креирај една",
       "errors": {
-        "emailRequired": "Email е задолжителен",
-        "emailInvalid": "Внеси валидна email адреса",
+        "emailRequired": "Е-поштата е задолжителна",
+        "emailInvalid": "Внеси валидна адреса за е-пошта",
         "passwordRequired": "Лозинката е задолжителна",
-        "invalidCredentials": "Погрешен email или лозинка",
+        "invalidCredentials": "Погрешна е-пошта или лозинка",
         "loginFailed": "Најавата не успеа. Обиди се повторно."
-      }
+      },
+      "eyebrow": "Добредојде назад",
+      "subtitle": "Седни повторно на масата — твоето место е сè уште топло.",
+      "altPrompt": "Нов си на Beljot?",
+      "altCta": "Креирај сметка"
     },
     "register": {
       "title": "Креирај сметка",
-      "emailLabel": "Email",
+      "emailLabel": "Е-пошта",
       "emailPlaceholder": "ime@primer.com",
       "usernameLabel": "Корисничко име",
       "usernamePlaceholder": "Избери корисничко име",
@@ -588,7 +592,6 @@
       "passwordPlaceholder": "Најмалку 8 знаци",
       "submitButton": "Креирај сметка",
       "submitting": "Креирање…",
-      "loginLink": "Веќе имаш сметка? Најави се",
       "consent": {
         "prefix": "Се согласувам со ",
         "termsLink": "Условите за користење",
@@ -597,9 +600,9 @@
         "suffix": "."
       },
       "errors": {
-        "emailRequired": "Email е задолжителен",
-        "emailInvalid": "Внеси валидна email адреса",
-        "emailTaken": "Овој email е веќе регистриран",
+        "emailRequired": "Е-поштата е задолжителна",
+        "emailInvalid": "Внеси валидна адреса за е-пошта",
+        "emailTaken": "Оваа е-пошта е веќе регистрирана",
         "usernameRequired": "Корисничкото име е задолжително",
         "usernameTooShort": "Корисничкото име мора да има најмалку 3 знаци",
         "usernameTooLong": "Корисничкото име може да има најмногу 20 знаци",
@@ -610,7 +613,14 @@
         "passwordTooLong": "Лозинката може да има најмногу 72 знаци",
         "consentRequired": "Мора да ги прифатиш Условите за користење и Политиката за приватност",
         "registrationFailed": "Регистрацијата не успеа. Обиди се повторно."
-      }
+      },
+      "eyebrow": "Повлечи столче",
+      "subtitle": "Избери име, добиј место. Четири играчи на маса, двајца во тим.",
+      "altPrompt": "Веќе имаш сметка?",
+      "altCta": "Најави се"
+    },
+    "footer": {
+      "credit": "Изработено со <suit>♣</suit> од <name>Emilijan Koteski</name>"
     }
   }
 }
