@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Beljot">
+  <rect x="1.5" y="1.5" width="29" height="29" rx="8" fill="#0e4824" />
+  <rect x="1.5" y="1.5" width="29" height="29" rx="8" fill="none" stroke="#c9a876" stroke-width="1.6" />
+  <text x="16" y="22.5" text-anchor="middle" font-family="'Space Grotesk', system-ui, sans-serif" font-weight="700" font-size="20" fill="#f5f2e8">B</text>
+</svg>
