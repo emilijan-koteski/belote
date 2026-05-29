@@ -1,6 +1,6 @@
 import "@/shared/i18n/i18n";
 
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -167,13 +167,15 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("alice")).toBeInTheDocument();
+      expect(screen.getByTestId("player-seat-0")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("bob")).toBeInTheDocument();
+    // Names also surface in the team legend, so scope to the seat tiles.
+    expect(within(screen.getByTestId("player-seat-0")).getByText("alice")).toBeInTheDocument();
+    expect(within(screen.getByTestId("player-seat-1")).getByText("bob")).toBeInTheDocument();
   });
 
-  it("displays empty seats with Waiting text", async () => {
+  it("displays empty seats with take-a-seat prompts", async () => {
     useAuthStore.setState({ user: defaultUser, token: "tok" });
 
     mockGetRoom.mockResolvedValue({
@@ -186,11 +188,11 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("alice")).toBeInTheDocument();
+      expect(screen.getByTestId("player-seat-0")).toBeInTheDocument();
     });
 
-    const waitingTexts = screen.getAllByText("Waiting…");
-    expect(waitingTexts).toHaveLength(3);
+    // Three empty seats each show the "Take this seat" prompt.
+    expect(screen.getAllByText("Take this seat")).toHaveLength(3);
   });
 
   it("highlights current user seat with You indicator", async () => {
@@ -287,7 +289,7 @@ describe("RoomLobby", () => {
 
   // --- Team color indicators ---
 
-  it("renders Team A and Team B labels", async () => {
+  it("renders Us and Them legend labels once seated", async () => {
     useAuthStore.setState({ user: defaultUser, token: "tok" });
 
     mockGetRoom.mockResolvedValue({
@@ -300,9 +302,9 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("Team A")).toBeInTheDocument();
+      expect(screen.getByText("Us")).toBeInTheDocument();
     });
-    expect(screen.getByText("Team B")).toBeInTheDocument();
+    expect(screen.getByText("Them")).toBeInTheDocument();
   });
 
   // --- Seat selection ---
@@ -354,10 +356,11 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("bob")).toBeInTheDocument();
+      expect(screen.getByTestId("player-seat-1")).toBeInTheDocument();
     });
 
-    // Seat 1 is occupied by bob — should be disabled
+    // Seat 1 is occupied by bob — clicking it never fires a seat selection
+    // (for the owner it enters swap mode instead; for others it's inert).
     await user.click(screen.getByTestId("player-seat-1"));
 
     expect(mockSelectSeat).not.toHaveBeenCalled();
@@ -384,7 +387,7 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("alice")).toBeInTheDocument();
+      expect(screen.getByTestId("player-seat-0")).toBeInTheDocument();
     });
 
     // Click empty seat 1 to switch
@@ -513,10 +516,10 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByTestId("waiting-for-start")).toBeInTheDocument();
+      expect(screen.getByTestId("room-cta")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Waiting for alice to start/)).toBeInTheDocument();
+    expect(screen.getByTestId("room-cta")).toHaveTextContent(/Waiting for host to start the match/);
     expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
   });
 
@@ -588,11 +591,10 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByTestId("auto-start-message")).toBeInTheDocument();
+      expect(screen.getByTestId("room-cta")).toBeInTheDocument();
     });
 
     expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("waiting-for-start")).not.toBeInTheDocument();
   });
 
   it("does not show Start Game button for owner in Quick Play room", async () => {
@@ -611,7 +613,7 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByTestId("auto-start-message")).toBeInTheDocument();
+      expect(screen.getByTestId("room-cta")).toBeInTheDocument();
     });
 
     expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
@@ -636,10 +638,9 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByTestId("auto-start-message")).toBeInTheDocument();
+      expect(screen.getByTestId("room-cta")).toBeInTheDocument();
     });
 
-    expect(screen.queryByTestId("waiting-for-start")).not.toBeInTheDocument();
     expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
   });
 
@@ -660,7 +661,7 @@ describe("RoomLobby", () => {
     await waitFor(() => {
       expect(screen.getByTestId("room-lobby")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("chat-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("room-chat-dock")).toBeInTheDocument();
   });
 
   it("clears chatStore.roomMessages on unmount", async () => {
@@ -770,7 +771,7 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("alice")).toBeInTheDocument();
+      expect(screen.getByTestId("player-seat-0")).toBeInTheDocument();
     });
 
     // Owner's own tile (seat 0) does NOT render a kick icon
@@ -792,7 +793,7 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("alice")).toBeInTheDocument();
+      expect(screen.getByTestId("player-seat-0")).toBeInTheDocument();
     });
 
     expect(screen.queryByTestId("kick-player-0")).not.toBeInTheDocument();
@@ -812,7 +813,7 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("alice")).toBeInTheDocument();
+      expect(screen.getByTestId("player-seat-0")).toBeInTheDocument();
     });
 
     expect(screen.queryByTestId("kick-player-1")).not.toBeInTheDocument();
@@ -884,7 +885,7 @@ describe("RoomLobby", () => {
     // First click on seat 1 (bob, non-owner) — enter swap mode
     await user.click(screen.getByTestId("player-seat-1"));
     await waitFor(() => {
-      expect(screen.getByText("Pick a seat to swap with")).toBeInTheDocument();
+      expect(screen.getByTestId("swap-mode-banner")).toBeInTheDocument();
     });
 
     // Second click on seat 3 (dave, non-owner) — fires the swap
@@ -924,7 +925,7 @@ describe("RoomLobby", () => {
     // First click on seat 1 (bob, non-owner) — enter swap mode
     await user.click(screen.getByTestId("player-seat-1"));
     await waitFor(() => {
-      expect(screen.getByText("Pick a seat to swap with")).toBeInTheDocument();
+      expect(screen.getByTestId("swap-mode-banner")).toBeInTheDocument();
     });
 
     // Click empty seat 2 — should fire swap (move bob into seat 2)
@@ -947,7 +948,7 @@ describe("RoomLobby", () => {
     // First click — enter swap mode
     await user.click(screen.getByTestId("player-seat-1"));
     await waitFor(() => {
-      expect(screen.getByText("Pick a seat to swap with")).toBeInTheDocument();
+      expect(screen.getByTestId("swap-mode-banner")).toBeInTheDocument();
     });
 
     // Click the same seat again — cancels (no swap call)
@@ -990,7 +991,7 @@ describe("RoomLobby", () => {
     renderRoomLobby();
 
     await waitFor(() => {
-      expect(screen.getByText("alice")).toBeInTheDocument();
+      expect(screen.getByTestId("player-seat-0")).toBeInTheDocument();
     });
 
     await user.click(screen.getByTestId("player-seat-0"));
@@ -1037,7 +1038,7 @@ describe("RoomLobby", () => {
     await user.click(screen.getByTestId("player-seat-1"));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("room owner"));
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("host"));
     });
   });
 

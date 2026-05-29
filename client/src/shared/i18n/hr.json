@@ -122,7 +122,10 @@
   "room": {
     "chat": {
       "title": "Chat sobe",
-      "placeholder": "Razgovaraj sa stolom…"
+      "placeholder": "Poruka…",
+      "openLabel": "Otvori chat sobe",
+      "closeLabel": "Zatvori chat",
+      "sendLabel": "Pošalji"
     },
     "errors": {
       "gameStartFailed": "Pokretanje partije nije uspjelo. Pokušaj ponovno.",
@@ -150,12 +153,6 @@
   "lobby": {
     "title": "Otvoreni stolovi",
     "quickPlay": "Brza igra",
-    "quickPlayDesc": "Odmah uskoči u igru",
-    "browseRooms": "Pregledaj sobe",
-    "browseRoomsDesc": "Pronađi otvorenu igru",
-    "createRoom": "Stvori sobu",
-    "createRoomDesc": "Postavi igru po svome",
-    "leaderboardPlaceholder": "Rang ljestvica uskoro",
     "stats": {
       "title": "Igrači",
       "loading": "Učitavanje…",
@@ -229,39 +226,14 @@
         "step3": "Kad se popune sva četiri mjesta, krećeš s mečom."
       }
     },
-    "roomDetail": {
-      "emptySlot": "Prazno",
-      "notSeated": "Nije sjeo"
-    },
     "roomList": {
-      "searchPlaceholder": "Pretraži sobe po imenu ili kodu…",
-      "backToOptions": "Natrag",
-      "variant": "Varijanta",
       "variantBitola": "Bitola",
-      "mode": "Način",
       "matchMode1001": "1001 bodova",
-      "players": "{{current}}/{{max}}",
       "timerRelaxed": "Opušteno",
-      "timerPerMove": "{{seconds}}s tajmer",
-      "join": "Pridruži se",
-      "loading": "Učitavanje soba…",
-      "emptyNoRooms": "Nema otvorenih soba — Stvori sobu ili probaj Brzu igru",
-      "emptyNoMatch": "Nijedna soba ne odgovara '{{query}}' —",
-      "clearSearch": "Obriši pretragu",
-      "errors": {
-        "roomFull": "Soba je puna — probaj drugu",
-        "alreadyInRoom": "Već si u sobi",
-        "joinFailed": "Pridruživanje nije uspjelo — pokušaj ponovno"
-      }
-    },
-    "joinByCode": {
-      "label": "Imaš kod sobe?",
-      "placeholder": "Unesi kod…",
-      "join": "Pridruži se",
-      "notFound": "Soba nije pronađena — provjeri kod i pokušaj ponovno"
+      "timerPerMove": "{{seconds}}s tajmer"
     },
     "roomLobby": {
-      "waitingForPlayers": "Čekanje igrača…",
+      "waitingForPlayers": "Čekanje igrača",
       "backToLobby": "Natrag u lobi",
       "copyLink": "Kopiraj poveznicu",
       "copyLinkAriaLabel": "Kopiraj kod sobe {{code}}",
@@ -272,8 +244,9 @@
       "leaveRoom": "Napusti sobu",
       "seatEmpty": "Čekanje…",
       "seatYou": "Ti",
-      "seatOwner": "Vlasnik",
-      "ownerLine": "Domaćin: {{owner}}",
+      "seatYouInline": "ti",
+      "seatOwner": "Domaćin",
+      "ownerLine": "Domaćin: <name>{{owner}}</name>",
       "seatedCount": "{{current}} / {{max}} sjedi",
       "inRoomCount": "{{count}} u sobi",
       "inRoomList": {
@@ -281,7 +254,7 @@
         "title": "Igrači u sobi",
         "empty": "Još nema igrača",
         "seated": "Mjesto {{seat}}",
-        "notSeated": "Ne sjedi"
+        "notSeated": "Stoji"
       },
       "yourSeat": "Tvoje mjesto",
       "loading": "Učitavanje sobe…",
@@ -291,9 +264,9 @@
       "returningToLobby": "Povratak u lobi…",
       "playerJoined": "{{username}} se pridružio sobi",
       "playerLeft": "{{username}} je napustio sobu",
-      "startGame": "Pokreni igru",
+      "startGame": "Pokreni meč",
       "startGameDisabled": "Sva 4 igrača moraju sjesti",
-      "waitingForOwner": "Čekanje da {{owner}} pokrene igru…",
+      "waitingForOwner": "Čekanje da domaćin pokrene meč",
       "seatTaken": "To mjesto je zauzeto",
       "seatUpdated": "Mjesto ažurirano",
       "gameStarting": "Igra počinje…",
@@ -311,18 +284,18 @@
         "enter": "Odaberi mjesto za zamjenu"
       },
       "leaveSeatLabel": "Napusti mjesto (ostani u sobi)",
-      "promoteIconLabel": "Postavi {{username}} za vlasnika sobe",
+      "promoteIconLabel": "Postavi {{username}} za domaćina",
       "transferConfirm": {
-        "title": "Prenijeti vlasništvo nad sobom?",
-        "body": "{{username}} postaje novi vlasnik sobe. Izgubit ćeš kontrole vlasnika.",
-        "confirm": "Prenesi vlasništvo",
+        "title": "Prenijeti ulogu domaćina?",
+        "body": "{{username}} postaje domaćin. Izgubit ćeš kontrole domaćina.",
+        "confirm": "Postavi domaćina",
         "cancel": "Odustani"
       },
       "errors": {
         "seatFailed": "Odabir mjesta nije uspio — pokušaj ponovno",
         "startFailed": "Pokretanje nije uspjelo — pokušaj ponovno",
-        "notOwner": "Samo vlasnik sobe može pokrenuti igru",
-        "notOwnerAction": "To može samo vlasnik sobe",
+        "notOwner": "Samo domaćin može pokrenuti meč",
+        "notOwnerAction": "To može samo domaćin",
         "notAllSeated": "Sva 4 igrača moraju sjesti da bi počelo",
         "roomStarted": "Igra je već počela — izbacivanje i zamjena mjesta više nisu dostupni.",
         "seatNotOccupied": "Odaberi dva zauzeta mjesta za zamjenu.",
@@ -330,10 +303,35 @@
         "swapFailed": "Zamjena mjesta nije uspjela — pokušaj ponovno",
         "leaveSeatFailed": "Napuštanje mjesta nije uspjelo — pokušaj ponovno",
         "leaveSeatQuickPlay": "Ne možeš napustiti mjesto u brzoj igri — napusti sobu.",
-        "leaveSeatOwner": "Vlasnik sobe ne može napustiti mjesto — napusti sobu.",
-        "transferFailed": "Prijenos vlasništva nije uspio — pokušaj ponovno",
-        "promoteUnseated": "Novi vlasnik mora biti smješten na mjesto.",
+        "leaveSeatOwner": "Domaćin ne može napustiti mjesto — napusti sobu.",
+        "transferFailed": "Prijenos uloge domaćina nije uspio — pokušaj ponovno",
+        "promoteUnseated": "Novi domaćin mora sjediti.",
         "promoteNotInRoom": "Taj igrač više nije u sobi."
+      },
+      "legendNeutral": "Slobodna mjesta · timovi se otkrivaju kad sjedneš",
+      "legendOpen": "slobodno",
+      "legendVs": "vs",
+      "legendUs": "Mi",
+      "legendThem": "Oni",
+      "actionBarSwap": "Zamjena · odaberi mjesto",
+      "actionBarWaiting": "Čekamo igrače · {{current}}/{{max}} sjedi",
+      "actionBarFinishSwap": "Završi zamjenu za početak",
+      "tip": {
+        "unseated": "Zauzmi bilo koje mjesto — partner sjedi dijagonalno nasuprot.",
+        "owner": "Klikni sjedećeg igrača, pa drugo mjesto za zamjenu — ili prazno mjesto da ga premjestiš. Zadrži pokazivač nad igračem za izbacivanje ili postavljanje domaćina.",
+        "seated": "Smjesti se — chat je dolje desno. Upiši /cc za brisanje."
+      },
+      "tableCenter": "Stol",
+      "seatTile": {
+        "takeSeat": "Zauzmi ovo mjesto",
+        "moveHere": "Premjesti ovamo",
+        "swapHere": "Zamijeni ovdje",
+        "partner": "Partner",
+        "opponent": "Protivnik",
+        "pickTarget": "Za zamjenu",
+        "partnerSeat": "Mjesto partnera · slobodno",
+        "opponentSeat": "Mjesto protivnika · slobodno",
+        "openSeat": "Slobodno mjesto"
       }
     },
     "footnote": "Prikazano {{shown}} od {{total}} otvorenih stolova · živo se osvježava",

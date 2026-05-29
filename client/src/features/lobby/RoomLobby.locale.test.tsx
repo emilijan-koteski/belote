@@ -133,7 +133,7 @@ afterEach(async () => {
 
 describe("RoomLobby locale overflow", () => {
   it.each(["en", "sr"] as const)(
-    "renders Tim A / Tim B labels without missing-key fallback in %s locale",
+    "renders Us / Them legend labels without missing-key fallback in %s locale",
     async (locale) => {
       await i18n.changeLanguage(locale);
 
@@ -143,10 +143,12 @@ describe("RoomLobby locale overflow", () => {
         expect(screen.getByTestId("seats-grid")).toBeInTheDocument();
       });
 
-      const expectedTeamA = locale === "en" ? "Team A" : "Tim A";
-      const expectedTeamB = locale === "en" ? "Team B" : "Tim B";
-      expect(screen.getByText(expectedTeamA)).toBeInTheDocument();
-      expect(screen.getByText(expectedTeamB)).toBeInTheDocument();
+      // Viewer alice is seated, so the legend renders the perspective-based
+      // "Us" / "Them" labels in the active locale.
+      const expectedUs = locale === "en" ? "Us" : "Mi";
+      const expectedThem = locale === "en" ? "Them" : "Oni";
+      expect(screen.getByText(expectedUs)).toBeInTheDocument();
+      expect(screen.getByText(expectedThem)).toBeInTheDocument();
 
       // Sanity-check the diamond layout has all four seat tiles.
       const seatGrid = screen.getByTestId("seats-grid");

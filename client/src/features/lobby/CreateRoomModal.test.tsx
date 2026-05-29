@@ -45,9 +45,9 @@ describe("CreateRoomModal", () => {
     renderModal(true);
 
     expect(screen.getByTestId("room-name-input")).toBeInTheDocument();
-    expect(screen.getByTestId("variant-select")).toBeInTheDocument();
-    expect(screen.getByTestId("match-mode-select")).toBeInTheDocument();
-    expect(screen.getByTestId("timer-style-select")).toBeInTheDocument();
+    expect(screen.getByTestId("variant-segmented")).toBeInTheDocument();
+    expect(screen.getByTestId("match-mode-segmented")).toBeInTheDocument();
+    expect(screen.getByTestId("timer-style-segmented")).toBeInTheDocument();
     expect(screen.getByTestId("create-room-button")).toBeInTheDocument();
     expect(screen.getByTestId("cancel-button")).toBeInTheDocument();
   });
@@ -158,22 +158,18 @@ describe("CreateRoomModal", () => {
     });
   });
 
-  it("shows timer duration input when per-move selected and hides for relaxed", async () => {
+  it("shows timer duration slider when per-move selected and hides for relaxed", async () => {
     const user = userEvent.setup();
     renderModal(true);
 
-    // Initially relaxed — duration input should not be present
-    expect(screen.queryByTestId("timer-duration-input")).not.toBeInTheDocument();
+    // Initially relaxed — duration slider should not be present
+    expect(screen.queryByTestId("timer-duration-slider")).not.toBeInTheDocument();
 
-    // Open timer style select and pick per-move
-    const timerTrigger = screen.getByTestId("timer-style-select");
-    await user.click(timerTrigger);
+    // The timer style is a segmented control — pick the "Per move" segment
+    await user.click(screen.getByText("Per move"));
 
-    const perMoveOption = await screen.findByText("Per move");
-    await user.click(perMoveOption);
-
-    // Timer duration input should now be present
-    expect(screen.getByTestId("timer-duration-input")).toBeInTheDocument();
+    // Timer duration slider should now be present
+    expect(screen.getByTestId("timer-duration-slider")).toBeInTheDocument();
   });
 
   it("calls onOpenChange with false when cancel is clicked", async () => {

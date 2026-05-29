@@ -122,7 +122,10 @@
   "room": {
     "chat": {
       "title": "Room Chat",
-      "placeholder": "Chat with the table…"
+      "placeholder": "Message…",
+      "openLabel": "Open room chat",
+      "closeLabel": "Close room chat",
+      "sendLabel": "Send message"
     },
     "errors": {
       "gameStartFailed": "Failed to start the game. Please try again.",
@@ -150,12 +153,6 @@
   "lobby": {
     "title": "Open tables",
     "quickPlay": "Quick Play",
-    "quickPlayDesc": "Jump into a game instantly",
-    "browseRooms": "Browse Rooms",
-    "browseRoomsDesc": "Find an open game to join",
-    "createRoom": "Create Room",
-    "createRoomDesc": "Set up a game your way",
-    "leaderboardPlaceholder": "Leaderboard coming soon",
     "stats": {
       "title": "Players",
       "loading": "Loading…",
@@ -201,18 +198,18 @@
         "nameTooShort": "Name needs at least {{min}} characters"
       },
       "eyebrow": "New room",
-      "headline": "Open a custom table",
+      "headline": "Open a custom room",
       "subhead": "Give the room a name, pick a pace, then share the join code with friends. The lobby list updates the moment you confirm.",
       "roomNameHint": "{{min}}–{{max}} characters",
       "variantCroatia": "Croatian",
       "matchMode501": "501 points",
       "timerDurationSuffix": "seconds / move",
       "timerDurationRange": "{{min}}s – {{max}}s",
-      "submit": "Open table",
+      "submit": "Open room",
       "submitting": "Opening…",
       "preview": {
         "title": "Live preview · how it appears in the lobby",
-        "placeholderName": "Untitled table",
+        "placeholderName": "Untitled room",
         "joinLabel": "Join",
         "justNow": "just now",
         "codeLabel": "CODE",
@@ -229,39 +226,14 @@
         "step3": "Once all four seats are filled, you start the match."
       }
     },
-    "roomDetail": {
-      "emptySlot": "Empty",
-      "notSeated": "Not seated"
-    },
     "roomList": {
-      "searchPlaceholder": "Search rooms by name or code…",
-      "backToOptions": "Back",
-      "variant": "Variant",
       "variantBitola": "Bitola",
-      "mode": "Mode",
       "matchMode1001": "1001 pts",
-      "players": "{{current}}/{{max}}",
       "timerRelaxed": "Relaxed",
-      "timerPerMove": "{{seconds}}s timer",
-      "join": "Join",
-      "loading": "Loading rooms…",
-      "emptyNoRooms": "No open rooms — Create one or try Quick Play",
-      "emptyNoMatch": "No rooms match '{{query}}' —",
-      "clearSearch": "Clear search",
-      "errors": {
-        "roomFull": "Room is full — try another",
-        "alreadyInRoom": "You're already in a room",
-        "joinFailed": "Failed to join room — try again"
-      }
-    },
-    "joinByCode": {
-      "label": "Have a room code?",
-      "placeholder": "Enter code…",
-      "join": "Join",
-      "notFound": "Room not found — check the code and try again"
+      "timerPerMove": "{{seconds}}s timer"
     },
     "roomLobby": {
-      "waitingForPlayers": "Waiting for players…",
+      "waitingForPlayers": "Waiting for players",
       "backToLobby": "Back to Lobby",
       "copyLink": "Copy Link",
       "copyLinkAriaLabel": "Copy room code {{code}}",
@@ -272,8 +244,9 @@
       "leaveRoom": "Leave Room",
       "seatEmpty": "Waiting…",
       "seatYou": "You",
-      "seatOwner": "Owner",
-      "ownerLine": "Hosted by {{owner}}",
+      "seatYouInline": "you",
+      "seatOwner": "Host",
+      "ownerLine": "Hosted by <name>{{owner}}</name>",
       "seatedCount": "{{current}} / {{max}} seated",
       "inRoomCount": "{{count}} in room",
       "inRoomList": {
@@ -281,7 +254,7 @@
         "title": "Players in room",
         "empty": "No players yet",
         "seated": "Seat {{seat}}",
-        "notSeated": "Not seated"
+        "notSeated": "Standing"
       },
       "yourSeat": "Your seat",
       "loading": "Loading room…",
@@ -291,9 +264,9 @@
       "returningToLobby": "Returning to lobby…",
       "playerJoined": "{{username}} joined the room",
       "playerLeft": "{{username}} left the room",
-      "startGame": "Start Game",
+      "startGame": "Start match",
       "startGameDisabled": "All 4 players must be seated",
-      "waitingForOwner": "Waiting for {{owner}} to start the game…",
+      "waitingForOwner": "Waiting for host to start the match",
       "seatTaken": "That seat is already taken",
       "seatUpdated": "Seat updated",
       "gameStarting": "Game starting…",
@@ -311,18 +284,18 @@
         "enter": "Pick a seat to swap with"
       },
       "leaveSeatLabel": "Leave seat (stay in room)",
-      "promoteIconLabel": "Make {{username}} the room owner",
+      "promoteIconLabel": "Make {{username}} the host",
       "transferConfirm": {
-        "title": "Transfer room ownership?",
-        "body": "{{username}} will become the new room owner. You will lose owner controls.",
-        "confirm": "Transfer ownership",
+        "title": "Transfer host role?",
+        "body": "{{username}} will become the host. You will lose host controls.",
+        "confirm": "Make host",
         "cancel": "Cancel"
       },
       "errors": {
         "seatFailed": "Failed to select seat — try again",
         "startFailed": "Failed to start game — try again",
-        "notOwner": "Only the room owner can start the game",
-        "notOwnerAction": "Only the room owner can do that",
+        "notOwner": "Only the host can start the game",
+        "notOwnerAction": "Only the host can do that",
         "notAllSeated": "All 4 players must be seated to start",
         "roomStarted": "The game has already started — kick and seat-swap are no longer available.",
         "seatNotOccupied": "Pick two seated players to swap.",
@@ -330,10 +303,35 @@
         "swapFailed": "Failed to swap seats — try again",
         "leaveSeatFailed": "Failed to leave seat — try again",
         "leaveSeatQuickPlay": "You can't leave your seat in quick play — leave the room instead.",
-        "leaveSeatOwner": "The room owner can't leave their seat — leave the room instead.",
-        "transferFailed": "Failed to transfer ownership — try again",
-        "promoteUnseated": "The new owner must be seated.",
+        "leaveSeatOwner": "The host can't leave their seat — leave the room instead.",
+        "transferFailed": "Failed to transfer the host role — try again",
+        "promoteUnseated": "The new host must be seated.",
         "promoteNotInRoom": "That player is no longer in the room."
+      },
+      "legendNeutral": "Open seats · teams reveal once you sit down",
+      "legendOpen": "open",
+      "legendVs": "vs",
+      "legendUs": "Us",
+      "legendThem": "Them",
+      "actionBarSwap": "Swap mode · pick a seat",
+      "actionBarWaiting": "Waiting for players · {{current}}/{{max}} seated",
+      "actionBarFinishSwap": "Finish swap to start",
+      "tip": {
+        "unseated": "Take any seat to join — your partner sits diagonally across.",
+        "owner": "Click a seated player, then another seat to swap them — or an empty seat to move them. Hover a player to kick or make host.",
+        "seated": "Settle in — chat lives in the bottom-right. Type /cc to clear it."
+      },
+      "tableCenter": "Table",
+      "seatTile": {
+        "takeSeat": "Take this seat",
+        "moveHere": "Move here",
+        "swapHere": "Swap here",
+        "partner": "Partner",
+        "opponent": "Opponent",
+        "pickTarget": "To swap",
+        "partnerSeat": "Partner seat · open",
+        "opponentSeat": "Opponent seat · open",
+        "openSeat": "Open seat"
       }
     },
     "footnote": "Showing {{shown}} of {{total}} open tables · refreshes live",

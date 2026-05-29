@@ -538,7 +538,7 @@ describe("ChatPanel (room channel)", () => {
   it("flips room-channel placeholder to 'Message…' after a successful send", () => {
     render(<ChatPanel channel="room" roomId={7} />);
     const input = screen.getByTestId("chat-input") as HTMLInputElement;
-    expect(input.placeholder).toBe("Chat with the table\u2026");
+    expect(input.placeholder).toBe("Message\u2026");
     fireEvent.change(input, { target: { value: "ready" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(input.placeholder).toBe("Message\u2026");
@@ -553,7 +553,7 @@ describe("ChatPanel (room channel)", () => {
     act(() => useChatStore.getState().clearRoom());
     rerender(<ChatPanel channel="room" roomId={7} />);
     expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe(
-      "Chat with the table\u2026",
+      "Message\u2026",
     );
   });
 
