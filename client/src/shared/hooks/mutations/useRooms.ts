@@ -8,6 +8,7 @@ import {
   kickPlayer,
   leaveRoom,
   leaveSeat,
+  quickJoin,
   quickPlay,
   selectSeat,
   startGame,
@@ -16,6 +17,7 @@ import {
 } from "@/shared/api/rooms";
 import type {
   CreateRoomRequest,
+  QuickPlayResponse,
   Room,
   RoomPlayer,
   SelectSeatResponse,
@@ -78,6 +80,16 @@ export function useStartGameMutation() {
 export function useQuickPlayMutation() {
   return useMutation({
     mutationFn: (signal?: AbortSignal) => quickPlay(signal),
+  });
+}
+
+export function useQuickJoinMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<QuickPlayResponse, Error, number>({
+    mutationFn: (id: number) => quickJoin(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.rooms.all });
+    },
   });
 }
 

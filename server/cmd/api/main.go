@@ -173,6 +173,7 @@ func main() {
 	api.GET("/rooms/code/:code", roomHandler.GetRoomByCode)
 	api.GET("/rooms/:id", roomHandler.GetRoom)
 	api.POST("/rooms/:id/join", roomHandler.JoinRoom)
+	api.POST("/rooms/:id/quick-join", roomHandler.QuickJoin)
 	api.POST("/rooms/:id/leave", roomHandler.LeaveRoom)
 	api.POST("/rooms/:id/seat", roomHandler.SelectSeat)
 	api.POST("/rooms/:id/leave-seat", roomHandler.LeaveSeat)

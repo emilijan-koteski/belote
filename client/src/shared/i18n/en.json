@@ -261,8 +261,15 @@
       "cancel": "Cancel",
       "failed": "Could not find a match — try again",
       "alreadyInRoom": "You're already in a room — leave it first",
-      "title": "Finding match…",
-      "subtitle": "We're seating you at the next open table.",
+      "title": "Quick Play, finding a table…",
+      "subtitle": "You'll be seated as soon as three other players are ready. The match starts the moment the last seat fills.",
+      "eyebrow": "Searching for opponents",
+      "elapsed": "elapsed",
+      "seated": "{{found}} / 4 seated",
+      "remaining": "{{count}} more to go",
+      "cancelQueue": "Cancel queue",
+      "you": "You",
+      "searching": "searching",
       "errors": {
         "alreadyInRoom": "You are already in a room",
         "generic": "Matchmaking failed. Try again."
@@ -477,6 +484,8 @@
     },
     "card": {
       "join": "Join",
+      "joinQueue": "Join queue",
+      "quickPlay": "Quick Play",
       "full": "Full",
       "relaxed": "Relaxed",
       "timerSeconds": "{{seconds}}s timer",

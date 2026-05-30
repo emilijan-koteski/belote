@@ -8,6 +8,7 @@ import { LeaderboardPage } from "@/features/leaderboard/LeaderboardPage";
 import { PrivacyPage } from "@/features/legal/PrivacyPage";
 import { TermsPage } from "@/features/legal/TermsPage";
 import { LobbyPage } from "@/features/lobby/LobbyPage";
+import { MatchmakingPage } from "@/features/lobby/MatchmakingPage";
 import { RoomLobby } from "@/features/lobby/RoomLobby";
 import { ProfilePage } from "@/features/profile/ProfilePage";
 import { RulesPage } from "@/features/rules/RulesPage";
@@ -49,6 +50,7 @@ function AppRoutes() {
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/rooms/:id" element={<RoomLobby />} />
+          <Route path="/matchmaking/:id" element={<MatchmakingPage />} />
         </Route>
         <Route path="/game/:roomId" element={<GamePage />} />
       </Route>

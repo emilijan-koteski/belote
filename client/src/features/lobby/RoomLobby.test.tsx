@@ -577,72 +577,10 @@ describe("RoomLobby", () => {
 
   // --- Quick Play Room Behavior ---
 
-  it("renders auto-start message for Quick Play room instead of Start Game button", async () => {
-    useAuthStore.setState({ user: defaultUser, token: "tok" });
-
-    mockGetRoom.mockResolvedValue({
-      room: { ...defaultRoom, isQuickPlay: true, playerCount: 2 },
-      players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: null, team: null, createdAt: "" },
-      ],
-    });
-
-    renderRoomLobby();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("room-cta")).toBeInTheDocument();
-    });
-
-    expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
-  });
-
-  it("does not show Start Game button for owner in Quick Play room", async () => {
-    useAuthStore.setState({ user: defaultUser, token: "tok" });
-
-    mockGetRoom.mockResolvedValue({
-      room: { ...defaultRoom, isQuickPlay: true, playerCount: 4 },
-      players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
-      ],
-    });
-
-    renderRoomLobby();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("room-cta")).toBeInTheDocument();
-    });
-
-    expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
-  });
-
-  it("does not show waiting-for-owner message for non-owner in Quick Play room", async () => {
-    useAuthStore.setState({
-      user: { id: 20, username: "bob", email: "b@b.com", languagePreference: "en", createdAt: "" },
-      token: "tok",
-    });
-
-    mockGetRoom.mockResolvedValue({
-      room: { ...defaultRoom, isQuickPlay: true, playerCount: 4 },
-      players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
-      ],
-    });
-
-    renderRoomLobby();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("room-cta")).toBeInTheDocument();
-    });
-
-    expect(screen.queryByTestId("start-game")).not.toBeInTheDocument();
-  });
+  // NOTE: Quick Play rooms no longer render in RoomLobby — they redirect to the
+  // dedicated /matchmaking/:id screen (see the redirect test below and
+  // MatchmakingPage.test.tsx). The former QP CTA/seat tests here moved with that
+  // behaviour.
 
   // --- Room-scoped chat ---
 
@@ -702,44 +640,6 @@ describe("RoomLobby", () => {
     unmount();
 
     expect(useChatStore.getState().roomMessages).toHaveLength(0);
-  });
-
-  it("navigates to game when selectSeat returns gameStarted true", async () => {
-    const user = userEvent.setup();
-    useAuthStore.setState({ user: defaultUser, token: "tok" });
-
-    mockGetRoom.mockResolvedValue({
-      room: { ...defaultRoom, isQuickPlay: true, playerCount: 4 },
-      players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: null, team: null, createdAt: "" },
-      ],
-    });
-
-    mockSelectSeat.mockResolvedValue({
-      gameStarted: true,
-      players: [
-        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
-        { id: 2, roomId: 1, userId: 20, username: "bob", seat: 1, team: "teamB", createdAt: "" },
-        { id: 3, roomId: 1, userId: 30, username: "carol", seat: 2, team: "teamA", createdAt: "" },
-        { id: 4, roomId: 1, userId: 40, username: "dave", seat: 3, team: "teamB", createdAt: "" },
-      ],
-    });
-
-    renderRoomLobby();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("player-seat-3")).toBeInTheDocument();
-    });
-
-    // Seat 3 is empty — click it to trigger auto-start
-    await user.click(screen.getByTestId("player-seat-3"));
-
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/game/1", { state: { fromRoom: true } });
-    });
   });
 
   // --- Owner pre-game controls (Story 8.1) ---
@@ -998,26 +898,6 @@ describe("RoomLobby", () => {
     expect(mockLeaveSeat).not.toHaveBeenCalled();
   });
 
-  it("clicking own seat in quick play does not unseat", async () => {
-    const user = userEvent.setup();
-    useAuthStore.setState({
-      user: { ...defaultUser, id: 20, username: "bob" },
-      token: "tok",
-    });
-    const quickPlay = fourSeatedRoomQuery();
-    quickPlay.room = { ...quickPlay.room, isQuickPlay: true };
-    mockGetRoom.mockResolvedValue(quickPlay);
-
-    renderRoomLobby();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("player-seat-1")).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByTestId("player-seat-1"));
-    expect(mockLeaveSeat).not.toHaveBeenCalled();
-  });
-
   it("shows error toast on 409 OWNER_CANNOT_LEAVE_SEAT from leave-seat", async () => {
     const user = userEvent.setup();
     useAuthStore.setState({
@@ -1213,5 +1093,36 @@ describe("RoomLobby", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/lobby");
     // The flag is cleared so the effect doesn't re-fire on a future mount.
     expect(useRoomLobbyStore.getState().kickedFromRoomId).toBeNull();
+  });
+
+  it("redirects a quick-play room to the matchmaking screen without leaving the queue", async () => {
+    useAuthStore.setState({ user: defaultUser, token: "tok" });
+
+    mockGetRoom.mockResolvedValue({
+      room: { ...defaultRoom, isQuickPlay: true, playerCount: 1 },
+      players: [
+        { id: 1, roomId: 1, userId: 10, username: "alice", seat: 0, team: "teamA", createdAt: "" },
+      ],
+    });
+
+    const { unmount } = render(
+      <QueryWrapper>
+        <BrowserRouter>
+          <RoomLobby />
+        </BrowserRouter>
+      </QueryWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/matchmaking/1", { replace: true });
+    });
+
+    // The seat grid never renders — this surface is for custom rooms only.
+    expect(screen.queryByTestId("room-lobby")).not.toBeInTheDocument();
+
+    // hasLeftRef is set before the redirect, so unmounting must NOT fire the
+    // cleanup `/leave` that would eject the player from the queue.
+    unmount();
+    expect(mockLeaveRoom).not.toHaveBeenCalled();
   });
 });

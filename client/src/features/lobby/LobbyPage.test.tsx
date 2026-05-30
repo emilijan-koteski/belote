@@ -11,6 +11,7 @@ import { LobbyPage } from "./LobbyPage";
 
 const mockGetRooms = vi.fn();
 const mockQuickPlay = vi.fn();
+const mockQuickJoin = vi.fn();
 const mockJoinRoom = vi.fn();
 const mockGetLobbyStats = vi.fn();
 
@@ -27,6 +28,7 @@ vi.mock("@/shared/api/rooms", () => ({
   createRoom: vi.fn(),
   getRooms: (...args: unknown[]) => mockGetRooms(...args),
   joinRoom: (...args: unknown[]) => mockJoinRoom(...args),
+  quickJoin: (...args: unknown[]) => mockQuickJoin(...args),
   quickPlay: (...args: unknown[]) => mockQuickPlay(...args),
   getRoomByCode: vi.fn(),
 }));
@@ -113,7 +115,7 @@ describe("LobbyPage", () => {
     });
   });
 
-  it("calls quickPlay API and navigates to the room lobby on success", async () => {
+  it("calls quickPlay API and navigates to the matchmaking screen on success", async () => {
     const user = userEvent.setup();
     mockQuickPlay.mockResolvedValueOnce({
       room: { id: 42, isQuickPlay: true },
@@ -130,7 +132,7 @@ describe("LobbyPage", () => {
     });
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/rooms/42");
+      expect(mockNavigate).toHaveBeenCalledWith("/matchmaking/42");
     });
   });
 
@@ -151,44 +153,75 @@ describe("LobbyPage", () => {
     });
   });
 
-  it("shows matchmaking overlay with cancel button during matchmaking", async () => {
+  it("ports a quick-play room join to the matchmaking screen (quick-join)", async () => {
     const user = userEvent.setup();
-    // Make quickPlay hang indefinitely
-    mockQuickPlay.mockReturnValue(new Promise(() => {}));
+    mockGetRooms.mockResolvedValueOnce([
+      {
+        id: 5,
+        name: "Quick Play QPX",
+        code: "QPX123",
+        ownerId: 1,
+        ownerUsername: "host",
+        variant: "bitola",
+        matchMode: "1001",
+        timerStyle: "relaxed",
+        timerDurationSeconds: null,
+        status: "waiting",
+        playerCount: 1,
+        isQuickPlay: true,
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+        players: [
+          { id: 1, roomId: 5, userId: 1, username: "host", seat: 0, team: "teamA", createdAt: "" },
+        ],
+      },
+    ]);
+    mockQuickJoin.mockResolvedValueOnce({
+      room: { id: 5, isQuickPlay: true },
+      seat: 1,
+      gameStarted: false,
+    });
     renderLobbyPage();
 
-    const quickPlayCard = screen.getByTestId("quick-play-card");
-    await user.click(quickPlayCard);
+    await waitFor(() => expect(screen.getByTestId("room-card-join")).toBeInTheDocument());
+    await user.click(screen.getByTestId("room-card-join"));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("matchmaking-overlay")).toBeInTheDocument();
-    });
-    expect(screen.getByTestId("matchmaking-cancel")).toBeInTheDocument();
-    expect(screen.queryByTestId("quick-play-card")).not.toBeInTheDocument();
+    await waitFor(() => expect(mockQuickJoin).toHaveBeenCalledWith(5));
+    expect(mockNavigate).toHaveBeenCalledWith("/matchmaking/5");
+    expect(mockJoinRoom).not.toHaveBeenCalled();
   });
 
-  it("cancels matchmaking and returns to the lobby grid", async () => {
+  it("sends a custom room join to the in-room lobby", async () => {
     const user = userEvent.setup();
-    mockQuickPlay.mockImplementation(
-      () =>
-        new Promise((_resolve, reject) => {
-          setTimeout(() => reject(new DOMException("Aborted", "AbortError")), 100);
-        }),
-    );
+    mockGetRooms.mockResolvedValueOnce([
+      {
+        id: 9,
+        name: "Custom Table",
+        code: "CUS123",
+        ownerId: 1,
+        ownerUsername: "host",
+        variant: "bitola",
+        matchMode: "1001",
+        timerStyle: "relaxed",
+        timerDurationSeconds: null,
+        status: "waiting",
+        playerCount: 1,
+        isQuickPlay: false,
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+        players: [
+          { id: 1, roomId: 9, userId: 1, username: "host", seat: 0, team: "teamA", createdAt: "" },
+        ],
+      },
+    ]);
+    mockJoinRoom.mockResolvedValueOnce({ id: 9 });
     renderLobbyPage();
 
-    const quickPlayCard = screen.getByTestId("quick-play-card");
-    await user.click(quickPlayCard);
+    await waitFor(() => expect(screen.getByTestId("room-card-join")).toBeInTheDocument());
+    await user.click(screen.getByTestId("room-card-join"));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("matchmaking-cancel")).toBeInTheDocument();
-    });
-
-    const cancelButton = screen.getByTestId("matchmaking-cancel");
-    await user.click(cancelButton);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("quick-play-card")).toBeInTheDocument();
-    });
+    await waitFor(() => expect(mockJoinRoom).toHaveBeenCalledWith(9));
+    expect(mockNavigate).toHaveBeenCalledWith("/rooms/9");
+    expect(mockQuickJoin).not.toHaveBeenCalled();
   });
 });

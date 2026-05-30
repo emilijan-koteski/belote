@@ -322,6 +322,7 @@ func setupTest() (*echo.Echo, *mockRoomRepo) {
 	api.GET("/rooms/code/:code", handler.GetRoomByCode)
 	api.GET("/rooms/:id", handler.GetRoom)
 	api.POST("/rooms/:id/join", handler.JoinRoom)
+	api.POST("/rooms/:id/quick-join", handler.QuickJoin)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
 	api.POST("/rooms/:id/leave-seat", handler.LeaveSeat)
@@ -347,6 +348,7 @@ func setupTestWithBroadcast() (*echo.Echo, *mockRoomRepo, *mockBroadcaster) {
 	api.GET("/rooms/code/:code", handler.GetRoomByCode)
 	api.GET("/rooms/:id", handler.GetRoom)
 	api.POST("/rooms/:id/join", handler.JoinRoom)
+	api.POST("/rooms/:id/quick-join", handler.QuickJoin)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
 	api.POST("/rooms/:id/leave-seat", handler.LeaveSeat)
@@ -1530,6 +1532,192 @@ func doQuickPlay(e *echo.Echo, token string) *httptest.ResponseRecorder {
 	return rec
 }
 
+func doQuickJoin(e *echo.Echo, id string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/quick-join", nil)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+// seedQuickPlayRoom creates a waiting quick-play room owned by ownerID, who is
+// auto-seated at the lowest seats together with any extra occupants. Mirrors
+// the state QuickPlay leaves a partially-filled room in. Returns the room.
+func seedQuickPlayRoom(repo *mockRoomRepo, code string, seatedUserIDs ...uint) *room.Room {
+	r := &room.Room{
+		Name:        "Quick Play " + code,
+		Code:        code,
+		OwnerID:     seatedUserIDs[0],
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		IsQuickPlay: true,
+		Status:      "waiting",
+		PlayerCount: len(seatedUserIDs),
+	}
+	_ = repo.Create(r)
+	for i, uid := range seatedUserIDs {
+		seat := i
+		team := "teamA"
+		if seat%2 == 1 {
+			team = "teamB"
+		}
+		_ = repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: uid, Seat: &seat, Team: &team})
+	}
+	return r
+}
+
+func decodeQuickJoinData(t *testing.T, rec *httptest.ResponseRecorder) struct {
+	Room        room.Room `json:"room"`
+	Seat        int       `json:"seat"`
+	GameStarted bool      `json:"gameStarted"`
+} {
+	t.Helper()
+	var resp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	var data struct {
+		Room        room.Room `json:"room"`
+		Seat        int       `json:"seat"`
+		GameStarted bool      `json:"gameStarted"`
+	}
+	require.NoError(t, json.Unmarshal(resp["data"], &data))
+	return data
+}
+
+func TestQuickJoin_SeatsPlayerInTargetRoom(t *testing.T) {
+	e, repo := setupTest()
+	qpRoom := seedQuickPlayRoom(repo, "ABC123", 20)
+
+	rec := doQuickJoin(e, "1", validToken(30))
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	data := decodeQuickJoinData(t, rec)
+
+	assert.Equal(t, qpRoom.ID, data.Room.ID)
+	assert.Equal(t, 2, data.Room.PlayerCount)
+	// Joiner gets the next empty seat (1 → team B) since seat 0 is taken.
+	assert.Equal(t, 1, data.Seat)
+	assert.False(t, data.GameStarted)
+
+	var seat *int
+	var team *string
+	for _, p := range repo.players {
+		if p.UserID == 30 {
+			seat, team = p.Seat, p.Team
+		}
+	}
+	require.NotNil(t, seat)
+	assert.Equal(t, 1, *seat)
+	require.NotNil(t, team)
+	assert.Equal(t, "teamB", *team)
+}
+
+func TestQuickJoin_FourthPlayerAutoStarts(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+	qpRoom := seedQuickPlayRoom(repo, "FILLED", 500, 501, 502)
+
+	rec := doQuickJoin(e, "1", validToken(503))
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	data := decodeQuickJoinData(t, rec)
+
+	assert.Equal(t, 3, data.Seat)
+	assert.True(t, data.GameStarted)
+
+	updated, _ := repo.FindByID(qpRoom.ID)
+	assert.Equal(t, "playing", updated.Status)
+
+	gotGameStarted := false
+	for _, call := range broadcaster.calls {
+		if strings.Contains(string(call.msg), "system:game_started") {
+			gotGameStarted = true
+		}
+	}
+	assert.True(t, gotGameStarted, "expected system:game_started broadcast")
+}
+
+func TestQuickJoin_AlreadyInRoom(t *testing.T) {
+	e, repo := setupTest()
+	seedQuickPlayRoom(repo, "ABC123", 20)
+	// User 30 is already in another room.
+	other := seedQuickPlayRoom(repo, "OTHER1", 30)
+	_ = other
+
+	rec := doQuickJoin(e, "1", validToken(30))
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ALREADY_IN_ROOM", resp["error"]["code"])
+}
+
+func TestQuickJoin_RoomNotQuickPlay(t *testing.T) {
+	e, repo := setupTest()
+	// A manual (custom) room — quick-join must be rejected.
+	manual := &room.Room{
+		Name: "Manual", Code: "MAN001", OwnerID: 50,
+		Variant: "bitola", MatchMode: "1001", TimerStyle: "relaxed",
+		IsQuickPlay: false, Status: "waiting", PlayerCount: 1,
+	}
+	_ = repo.Create(manual)
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: manual.ID, UserID: 50})
+
+	rec := doQuickJoin(e, "1", validToken(60))
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ROOM_NOT_QUICK_PLAY", resp["error"]["code"])
+}
+
+func TestQuickJoin_RoomFull(t *testing.T) {
+	e, repo := setupTest()
+	seedQuickPlayRoom(repo, "FULL01", 70, 71, 72, 73)
+
+	rec := doQuickJoin(e, "1", validToken(80))
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ROOM_FULL", resp["error"]["code"])
+}
+
+func TestQuickJoin_RoomNotFound(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doQuickJoin(e, "999", validToken(1))
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ROOM_NOT_FOUND", resp["error"]["code"])
+}
+
+func TestQuickJoin_NotWaitingStatus(t *testing.T) {
+	e, repo := setupTest()
+	qpRoom := seedQuickPlayRoom(repo, "PLAY01", 90, 91, 92, 93)
+	qpRoom.Status = "playing"
+
+	rec := doQuickJoin(e, "1", validToken(95))
+
+	// Matches JoinRoom's convention: a non-waiting room reads as not found.
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ROOM_NOT_FOUND", resp["error"]["code"])
+}
+
+func TestQuickJoin_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doQuickJoin(e, "1", "")
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
 func TestQuickPlay_CreatesNewRoom(t *testing.T) {
 	e, repo := setupTest()
 	token := validToken(10)
@@ -1905,6 +2093,7 @@ func setupTestWithStarter(starter room.GameStarter, broadcaster room.Broadcaster
 	api.POST("/rooms", handler.CreateRoom)
 	api.POST("/rooms/quick-play", handler.QuickPlay)
 	api.POST("/rooms/:id/join", handler.JoinRoom)
+	api.POST("/rooms/:id/quick-join", handler.QuickJoin)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
 	api.POST("/rooms/:id/leave-seat", handler.LeaveSeat)

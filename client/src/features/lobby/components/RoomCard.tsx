@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, KeyRound, Users } from "lucide-react";
+import { ArrowRight, Clock, KeyRound, Users, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { SeatChip } from "@/features/lobby/components/SeatChip";
@@ -64,6 +64,15 @@ export function RoomCard({ room, onJoin, index = 0 }: Props) {
           <h3 className="font-display text-ink m-0 flex-1 min-w-0 truncate text-base font-semibold">
             {room.name}
           </h3>
+          {room.isQuickPlay && (
+            <span
+              data-testid="quick-play-badge"
+              className="border-accent/30 bg-accent-soft text-accent-deep inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-[0.6px] uppercase"
+            >
+              <Zap className="size-2.5" strokeWidth={2.4} />
+              {t("lobby.card.quickPlay")}
+            </span>
+          )}
           <CodeChip code={room.code} />
         </div>
 
@@ -130,8 +139,17 @@ export function RoomCard({ room, onJoin, index = 0 }: Props) {
               : "bg-accent text-accent-ink cursor-pointer",
           )}
         >
-          {full ? t("lobby.card.full") : t("lobby.card.join")}
-          {!full && <ArrowRight className="size-3.5" strokeWidth={2.2} />}
+          {full
+            ? t("lobby.card.full")
+            : room.isQuickPlay
+              ? t("lobby.card.joinQueue")
+              : t("lobby.card.join")}
+          {!full &&
+            (room.isQuickPlay ? (
+              <Zap className="size-3.5" strokeWidth={2.4} />
+            ) : (
+              <ArrowRight className="size-3.5" strokeWidth={2.2} />
+            ))}
         </button>
       </div>
     </article>

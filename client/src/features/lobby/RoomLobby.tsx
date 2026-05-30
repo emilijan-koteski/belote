@@ -158,6 +158,18 @@ export function RoomLobby() {
     }
   }, [roomQuery.data]);
 
+  // Quick-play rooms have their own dedicated matchmaking screen — a deep link
+  // or refresh that lands here must redirect to /matchmaking/:id. Gate on the
+  // authoritative query result, and set hasLeftRef FIRST so the unmount
+  // auto-leave below does not remove the player from the queue we're sending
+  // them into.
+  useEffect(() => {
+    if (roomQuery.isSuccess && roomQuery.data?.room.isQuickPlay && id) {
+      hasLeftRef.current = true;
+      navigate(`/matchmaking/${id}`, { replace: true });
+    }
+  }, [roomQuery.isSuccess, roomQuery.data, id, navigate]);
+
   // Refetch room state after WebSocket reconnects to catch events missed during disconnect
   useEffect(() => {
     const prev = prevWsStateRef.current;
@@ -498,6 +510,12 @@ export function RoomLobby() {
   // Render from store (source of truth after initial seed), fall back to query data
   // during the brief window before the seeding effect runs
   const room = storeRoom ?? roomQuery.data!.room;
+
+  // Quick-play rooms live on the dedicated matchmaking screen; the redirect
+  // effect above navigates there. Render nothing rather than flashing the
+  // custom-room seat grid for a frame.
+  if (room.isQuickPlay) return null;
+
   const players = storePlayers.length > 0 ? storePlayers : roomQuery.data!.players;
 
   const variantLabel = t(variantKeys[room.variant] ?? room.variant);

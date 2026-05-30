@@ -261,8 +261,15 @@
       "cancel": "Otkaži",
       "failed": "Nije moguće pronaći meč — pokušaj ponovno",
       "alreadyInRoom": "Već si u sobi — prvo je napusti",
-      "title": "Tražim partiju…",
-      "subtitle": "Smjestit ćemo te za sljedeći slobodni stol.",
+      "title": "Brza igra, tražim stol…",
+      "subtitle": "Smjestit ćemo te čim budu spremna još tri igrača. Meč počinje čim se popuni zadnje mjesto.",
+      "eyebrow": "Tražim protivnike",
+      "elapsed": "proteklo",
+      "seated": "{{found}} / 4 popunjeno",
+      "remaining": "još {{count}} do početka",
+      "cancelQueue": "Otkaži potragu",
+      "you": "Ti",
+      "searching": "tražim",
       "errors": {
         "alreadyInRoom": "Već si u sobi",
         "generic": "Traženje partije nije uspjelo. Pokušaj ponovno."
@@ -477,6 +484,8 @@
     },
     "card": {
       "join": "Pridruži se",
+      "joinQueue": "Uđi u red",
+      "quickPlay": "Brza igra",
       "full": "Puno",
       "relaxed": "Opušteno",
       "timerSeconds": "{{seconds}}s tajmer",

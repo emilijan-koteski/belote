@@ -1,20 +1,23 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { CreateRoomModal } from "@/features/lobby/CreateRoomModal";
-import { FilterRail } from "@/features/lobby/components/FilterRail";
 import type { FilterCounts, LobbyFilter, LobbySort } from "@/features/lobby/components/FilterRail";
+import { FilterRail } from "@/features/lobby/components/FilterRail";
 import { HeroBlock } from "@/features/lobby/components/HeroBlock";
 import { LobbyChatDock } from "@/features/lobby/components/LobbyChatDock";
 import { RoomGrid } from "@/features/lobby/components/RoomGrid";
 import { Toast } from "@/features/lobby/components/Toast";
+import { CreateRoomModal } from "@/features/lobby/CreateRoomModal";
 import { FetchError } from "@/shared/api/axiosClient";
-import { Button } from "@/shared/components/ui/button";
+import {
+  useJoinRoomMutation,
+  useQuickJoinMutation,
+  useQuickPlayMutation,
+} from "@/shared/hooks/mutations/useRooms";
 import { useLobbyStatsQuery } from "@/shared/hooks/queries/useLobbyStats";
 import { useRoomsQuery } from "@/shared/hooks/queries/useRooms";
-import { useJoinRoomMutation, useQuickPlayMutation } from "@/shared/hooks/mutations/useRooms";
 import type { Room } from "@/shared/types/apiTypes";
 
 function filterAndSort(
@@ -62,6 +65,7 @@ export function LobbyPage() {
   const roomsQuery = useRoomsQuery("waiting", true);
   const statsQuery = useLobbyStatsQuery();
   const quickPlayMutation = useQuickPlayMutation();
+  const quickJoinMutation = useQuickJoinMutation();
   const joinRoomMutation = useJoinRoomMutation();
 
   const [search, setSearch] = useState("");
@@ -69,7 +73,6 @@ export function LobbyPage() {
   const [sort, setSort] = useState<LobbySort>("filling");
   const [showCreate, setShowCreate] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   const rooms = roomsQuery.data ?? [];
   const counts = useMemo(() => deriveCounts(rooms), [rooms]);
@@ -78,38 +81,48 @@ export function LobbyPage() {
     [rooms, search, filter, sort],
   );
 
+  // Routes a quick-play response (from either Quick Play or a quick-join) to the
+  // matchmaking screen, or straight to the game if this entry filled the table.
+  function goToMatchmaking(result: { room: Room; gameStarted: boolean }) {
+    if (result.gameStarted) {
+      // `fromRoom: true` triggers GamePage's "Game is starting…" splash so the
+      // auto-start has the same deliberate beat as a normal lobby.
+      navigate(`/game/${result.room.id}`, { state: { fromRoom: true } });
+    } else {
+      navigate(`/matchmaking/${result.room.id}`);
+    }
+  }
+
   async function handleQuickPlay() {
     if (quickPlayMutation.isPending) return;
-    const controller = new AbortController();
-    abortRef.current = controller;
     try {
-      const result = await quickPlayMutation.mutateAsync(controller.signal);
-      if (result.gameStarted) {
-        // `fromRoom: true` triggers GamePage's "Game is starting…" splash so
-        // quick-play auto-start has the same deliberate beat as a normal lobby.
-        navigate(`/game/${result.room.id}`, { state: { fromRoom: true } });
-      } else {
-        navigate(`/rooms/${result.room.id}`);
-      }
+      goToMatchmaking(await quickPlayMutation.mutateAsync(undefined));
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
       const code = err instanceof FetchError ? err.code : null;
       toast.error(
         code === "ALREADY_IN_ROOM"
           ? t("lobby.matchmaking.errors.alreadyInRoom")
           : t("lobby.errors.matchmakingFailed"),
       );
-    } finally {
-      abortRef.current = null;
     }
   }
 
-  function handleCancelMatchmaking() {
-    abortRef.current?.abort();
-    quickPlayMutation.reset();
-  }
-
   async function handleJoinRoom(room: Room) {
+    // Quick-play rooms get the matchmaking queue, not the in-room seat grid:
+    // quick-join auto-seats the player so the auto-start check can fire.
+    if (room.isQuickPlay) {
+      if (quickJoinMutation.isPending) return;
+      try {
+        goToMatchmaking(await quickJoinMutation.mutateAsync(room.id));
+      } catch (err) {
+        const code = err instanceof FetchError ? err.code : null;
+        if (code === "ROOM_FULL") toast.error(t("lobby.errors.roomFull"));
+        else if (code === "ALREADY_IN_ROOM") toast.error(t("lobby.errors.alreadyInRoom"));
+        else toast.error(t("lobby.errors.joinFailed"));
+      }
+      return;
+    }
+
     setToastMsg(t("lobby.card.joining", { name: room.name }));
     try {
       await joinRoomMutation.mutateAsync(room.id);
@@ -123,29 +136,6 @@ export function LobbyPage() {
     }
   }
 
-  // Matchmaking pending state — preserves the existing testid contract.
-  if (quickPlayMutation.isPending) {
-    return (
-      <div className="mx-auto max-w-5xl px-4 py-12 md:px-8">
-        <div
-          className="bg-surface flex flex-col items-center justify-center gap-6 rounded-[var(--radius-lg)] border border-border p-12"
-          data-testid="matchmaking-overlay"
-        >
-          <div className="flex items-center gap-3">
-            <span className="bg-accent inline-block h-2.5 w-2.5 rounded-full [animation:pulse-dot_1.6s_ease-in-out_infinite]" />
-            <span className="text-ink font-display text-lg font-semibold">
-              {t("lobby.matchmaking.title")}
-            </span>
-          </div>
-          <p className="text-ink-dim m-0 text-sm">{t("lobby.matchmaking.subtitle")}</p>
-          <Button variant="ghost" onClick={handleCancelMatchmaking} data-testid="matchmaking-cancel">
-            {t("lobby.matchmaking.cancel")}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-[1320px] px-7 py-8 pb-32">
       <HeroBlock
@@ -153,6 +143,7 @@ export function LobbyPage() {
         stats={statsQuery.data}
         onQuickPlay={handleQuickPlay}
         onCreateRoom={() => setShowCreate(true)}
+        quickPlayDisabled={quickPlayMutation.isPending}
       />
 
       <FilterRail
