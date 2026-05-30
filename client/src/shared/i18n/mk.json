@@ -402,9 +402,10 @@
     },
     "chat": {
       "title": "Чет во меч",
-      "placeholder": "Разговарај за масата…",
+      "placeholder": "Порака…",
       "toggleOpen": "Отвори чет на меч",
-      "toggleClose": "Затвори чет на меч"
+      "toggleClose": "Затвори чет на меч",
+      "sendLabel": "Прати порака"
     },
     "trump": "Адут: {{suit}}",
     "starting": "Играта започнува…",

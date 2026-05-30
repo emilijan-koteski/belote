@@ -38,9 +38,9 @@ import { DeclarationPrompt } from "./components/DeclarationPrompt";
 import { DeclarationReveal } from "./components/DeclarationReveal";
 import { EmoteBubble } from "./components/EmoteBubble";
 import { EmotePickerButton } from "./components/EmotePickerButton";
+import { GameChatDock } from "./components/GameChatDock";
 import { HandCards } from "./components/HandCards";
 import { HUDButton } from "./components/HUDButton";
-import { MatchChatSidebar } from "./components/MatchChatSidebar";
 import { MatchResult } from "./components/MatchResult";
 import { PauseOverlay } from "./components/PauseOverlay";
 import { PlayerSeat, type SeatOrientation } from "./components/PlayerSeat";
@@ -1147,11 +1147,10 @@ export function GamePage() {
       )}
 
       {/* Rules + settings + emote — bottom-right HUD cluster sitting LEFT of
-          the chat FAB. The emote button joins this row (instead of floating
-          on its own) and is hidden while the chat sidebar is open so it
-          doesn't peek out from behind the rail. The Sound button is
-          intentionally omitted until audio ships. */}
-      {!isOverlayActive && (
+          the chat FAB. The whole cluster is hidden while the chat dock is open,
+          since the floating panel covers this corner; it returns on close. The
+          Sound button is intentionally omitted until audio ships. */}
+      {!isOverlayActive && !isChatOpen && (
         <div className="absolute bottom-4 right-24 z-10 flex items-center gap-2">
           <HUDButton
             icon={<HelpCircle className="h-4 w-4" aria-hidden="true" />}
@@ -1167,10 +1166,9 @@ export function GamePage() {
             onClick={() => setSettingsOpen(true)}
             data-testid="settings-button"
           />
-          {!isChatOpen &&
-            (gameState.phase === "dealing" ||
-              gameState.phase === "bidding" ||
-              gameState.phase === "playing") &&
+          {(gameState.phase === "dealing" ||
+            gameState.phase === "bidding" ||
+            gameState.phase === "playing") &&
             matchEndData === null &&
             matchAbandonedData === null && <EmotePickerButton onSend={handleSendEmote} />}
         </div>
@@ -1349,8 +1347,8 @@ export function GamePage() {
         />
       )}
 
-      {/* Match chat sidebar — collapsible right-edge panel broadcasting to the 4 participants */}
-      <MatchChatSidebar isOpen={isChatOpen} onOpenChange={setIsChatOpen} />
+      {/* Match chat dock — bottom-right floating window broadcasting to the 4 participants */}
+      <GameChatDock isOpen={isChatOpen} onOpenChange={setIsChatOpen} />
 
       {/* Emote bubbles — one per seat that has an active emote. Suppressed
           when an overlay or pause owns the screen; the store still records

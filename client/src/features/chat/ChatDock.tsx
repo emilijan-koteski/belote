@@ -7,7 +7,6 @@ import { cn } from "@/shared/lib/utils";
 import { useWsConnectionState, useWsSendMessage } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { useChatStore } from "@/shared/stores/chatStore";
-import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { ChatMessagePayload, ChatMessageRequest } from "@/shared/types/wsEvents";
 import { ACTION_CHAT_MESSAGE } from "@/shared/types/wsEvents";
 
@@ -15,17 +14,34 @@ const PEEK_MS = 2000;
 const PEEK_MAX_CHARS = 90;
 const MAX_MESSAGE_LENGTH = 500;
 
-type Variant = "global" | "room";
+type Variant = "global" | "room" | "match";
 
-type ChatDockProps =
-  | { variant: "global"; roomId?: never }
-  | { variant: "room"; roomId: number };
+interface ChatDockBaseProps {
+  /** Extra class(es) applied to the dock root(s) — used by the in-game wrapper
+   *  to attach the `.chat-dock-game` skin. */
+  className?: string;
+  /** Resolve a sender's username color (team tinting). When omitted, usernames
+   *  render in the default muted style (lobby/global chat has no teams). */
+  resolveNameColor?: (userId: number) => string | undefined;
+  /** Controlled open state. When `onOpenChange` is provided the dock is
+   *  controlled (the in-game dock lifts this so the HUD can react); otherwise
+   *  it manages its own open state internally. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+type ChatDockProps = ChatDockBaseProps &
+  (
+    | { variant: "global"; roomId?: never }
+    | { variant: "room"; roomId: number }
+    | { variant: "match"; roomId: number }
+  );
 
 /**
- * Bottom-right floating chat dock, shared between lobby (global channel) and
- * room (room-scoped channel). Closed state is a 56px FAB with an unread badge
- * + 2-second "peek" bubble for each new incoming message. Open state is a
- * 340×480 panel docked to the same corner.
+ * Bottom-right floating chat dock, shared across lobby (global channel), room
+ * (room-scoped channel), and the in-game table (match channel). Closed state is
+ * a 56px FAB with an unread badge + 2-second "peek" bubble for each new incoming
+ * message. Open state is a 340×480 panel docked to the same corner.
  *
  * Lifecycle:
  *   - The unread counter increments for every incoming message that isn't
@@ -37,44 +53,45 @@ type ChatDockProps =
  *     arrive while the dock is mounted + closed trigger the peek.
  *
  * The variant selects which chat-store slice to read/write and which i18n key
- * namespace to use, so the lobby dock and the in-room dock share visual
- * chrome, lifecycle logic, and data-testids while staying scoped to their
- * own channel.
+ * namespace to use, so all three docks share visual chrome, lifecycle logic,
+ * and data-testids while staying scoped to their own channel. Per-channel
+ * sender coloring is supplied by the wrapper via `resolveNameColor`, keeping
+ * this component free of any lobby- or game-specific store coupling. The felt
+ * theme is purely a CSS re-skin (`.chat-dock-game`), not a code branch.
  */
 export function ChatDock(props: ChatDockProps) {
-  const { variant } = props;
+  const { variant, resolveNameColor, className } = props;
   const { t } = useTranslation();
 
   const messages = useChatStore((s) =>
-    variant === "room" ? s.roomMessages : s.globalMessages,
+    variant === "match"
+      ? s.matchMessages
+      : variant === "room"
+        ? s.roomMessages
+        : s.globalMessages,
   );
   const markSent = useChatStore((s) =>
-    variant === "room" ? s.markSentRoom : s.markSentGlobal,
+    variant === "match"
+      ? s.markSentMatch
+      : variant === "room"
+        ? s.markSentRoom
+        : s.markSentGlobal,
   );
   const me = useAuthStore((s) => s.user);
   const sendWs = useWsSendMessage();
   const connectionState = useWsConnectionState();
   const isConnected = connectionState === "connected";
 
-  // Room-chat sender coloring: usernames read gold (teammate) / silver
-  // (opponent) relative to the viewer's seat, and cream-brass when either side
-  // is unseated (no perspective). Global (lobby) chat has no teams → undefined,
-  // which keeps its usernames in the default muted style.
-  const roomPlayers = useRoomLobbyStore((s) => s.players);
-  const viewerSeat =
-    variant === "room" && me?.id != null
-      ? (roomPlayers.find((p) => p.userId === me.id)?.seat ?? null)
-      : null;
-  const resolveNameColor = (userId: number): string | undefined => {
-    if (variant !== "room") return undefined;
-    const senderSeat = roomPlayers.find((p) => p.userId === userId)?.seat ?? null;
-    // Neutral = felt-green, matching the neutral (undetermined) avatar — clearly
-    // apart from team-a gold and team-b silver.
-    if (viewerSeat === null || senderSeat === null) return "var(--accent)";
-    return viewerSeat % 2 === senderSeat % 2 ? "var(--team-a)" : "var(--team-b)";
+  // Open state: controlled when the parent wires `onOpenChange` (in-game dock),
+  // otherwise self-managed (lobby/room).
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = props.onOpenChange != null;
+  const open = isControlled ? props.open === true : internalOpen;
+  const setOpen = (next: boolean) => {
+    if (isControlled) props.onOpenChange?.(next);
+    else setInternalOpen(next);
   };
 
-  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [unread, setUnread] = useState(0);
   const [peekVisible, setPeekVisible] = useState(false);
@@ -83,7 +100,16 @@ export function ChatDock(props: ChatDockProps) {
   // Listen for new incoming messages — increment unread + show peek (closed),
   // or clear (open). Skip messages from the local user.
   useEffect(() => {
-    if (messages.length <= seenCountRef.current) return;
+    if (messages.length < seenCountRef.current) {
+      // Buffer shrank (channel cleared / match teardown) — drop any stale
+      // unread + peek and resync, so the badge never lingers over an empty
+      // history.
+      seenCountRef.current = messages.length;
+      setUnread(0);
+      setPeekVisible(false);
+      return;
+    }
+    if (messages.length === seenCountRef.current) return;
     const newMsgs = messages.slice(seenCountRef.current);
     seenCountRef.current = messages.length;
     const incomingFromOthers = newMsgs.filter((m) => m.userId !== me?.id);
@@ -117,10 +143,13 @@ export function ChatDock(props: ChatDockProps) {
   function send() {
     const text = draft.trim();
     if (!text || !isConnected) return;
+    const trimmed = text.slice(0, MAX_MESSAGE_LENGTH);
     const payload: ChatMessageRequest =
-      variant === "room"
-        ? { channel: "room", roomId: props.roomId, text: text.slice(0, MAX_MESSAGE_LENGTH) }
-        : { channel: "global", text: text.slice(0, MAX_MESSAGE_LENGTH) };
+      props.variant === "match"
+        ? { channel: "match", matchId: props.roomId, text: trimmed }
+        : props.variant === "room"
+          ? { channel: "room", roomId: props.roomId, text: trimmed }
+          : { channel: "global", text: trimmed };
     sendWs(ACTION_CHAT_MESSAGE, payload);
     markSent();
     setDraft("");
@@ -128,23 +157,36 @@ export function ChatDock(props: ChatDockProps) {
 
   const peek = useMemo(() => peekPayload(messages, me?.id), [messages, me?.id]);
   const keys = useMemo(() => i18nKeys(variant), [variant]);
-  const testIdRoot = variant === "room" ? "room-chat" : "lobby-chat";
+  const testIdRoot =
+    variant === "match" ? "match-chat" : variant === "room" ? "room-chat" : "lobby-chat";
+
+  // Felt theme is a pure CSS re-skin: `.chat-dock-game` re-points the accent +
+  // surface tokens, and `backdrop-blur` frosts the translucent panel/FAB/peek.
+  const skin = variant === "match" ? "chat-dock-game" : "";
+  const frosted = variant === "match" ? "backdrop-blur-md" : "";
 
   // ── Closed state ──────────────────────────────────────────────────────
   if (!open) {
     return (
       <div
         data-testid={`${testIdRoot}-dock`}
-        className="fixed right-4.5 bottom-4.5 z-40 flex flex-col items-end gap-2.5"
+        className={cn(
+          "fixed right-4.5 bottom-4.5 z-40 flex flex-col items-end gap-2.5",
+          skin,
+          className,
+        )}
       >
         {peek && peekVisible && (
           <div
             data-testid={`${testIdRoot}-peek`}
-            className="bg-surface-elevated max-w-[260px] rounded-2xl border border-border px-3 py-2 shadow-[0_10px_28px_-14px_rgba(14,58,36,0.30)] [animation:card-in_.2s_ease_both]"
+            className={cn(
+              "bg-surface-elevated max-w-[260px] rounded-2xl border border-border px-3 py-2 shadow-[var(--chat-shadow-fab)] [animation:card-in_.2s_ease_both]",
+              frosted,
+            )}
           >
             <div
               className="text-brass-deep text-[10px] font-bold uppercase tracking-[0.8px]"
-              style={{ color: resolveNameColor(peek.userId) }}
+              style={{ color: resolveNameColor?.(peek.userId) }}
             >
               {peek.username}
             </div>
@@ -157,16 +199,17 @@ export function ChatDock(props: ChatDockProps) {
           data-testid={`${testIdRoot}-fab`}
           className={cn(
             "bg-surface text-ink relative inline-flex size-14 items-center justify-center rounded-full transition-transform hover:-translate-y-0.5",
+            frosted,
             unread > 0
               ? "border border-[var(--brass)] shadow-[0_0_0_3px_var(--brass-soft),0_10px_28px_-10px_rgba(14,58,36,0.35)]"
-              : "border border-border-2 shadow-[0_8px_22px_-10px_rgba(14,58,36,0.30)]",
+              : "border-border-2 border shadow-[var(--chat-shadow-fab)]",
           )}
         >
           <MessageSquare className="size-5.5" strokeWidth={1.8} />
           {unread > 0 && (
             <span
               data-testid={`${testIdRoot}-unread`}
-              className="bg-[var(--brass)] text-[var(--brass-ink)] absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-surface px-1.5 text-[11px] font-bold leading-none tabular-nums shadow-[0_0_10px_rgba(201,168,118,0.55)]"
+              className="bg-[var(--brass)] text-[var(--brass-ink)] border-surface absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 px-1.5 text-[11px] font-bold leading-none tabular-nums shadow-[0_0_10px_rgba(201,168,118,0.55)]"
             >
               {unread > 99 ? "99+" : unread}
             </span>
@@ -180,7 +223,12 @@ export function ChatDock(props: ChatDockProps) {
   return (
     <aside
       data-testid={`${testIdRoot}-dock`}
-      className="bg-surface fixed right-4.5 bottom-4.5 z-40 flex h-[480px] w-[340px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border shadow-[0_24px_60px_-20px_rgba(14,58,36,0.30)] [animation:card-in_.18s_ease_both]"
+      className={cn(
+        "bg-surface fixed right-4.5 bottom-4.5 z-40 flex h-[480px] w-[340px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border shadow-[var(--chat-shadow-panel)] [animation:card-in_.18s_ease_both]",
+        frosted,
+        skin,
+        className,
+      )}
     >
       <div className="flex items-center gap-2 border-b border-border px-3.5 py-3">
         <MessageSquare className="text-accent size-3.5" />
@@ -204,7 +252,7 @@ export function ChatDock(props: ChatDockProps) {
             key={`${m.userId}-${m.timestamp}-${m.message}`}
             m={m}
             mine={m.userId === me?.id}
-            nameColor={resolveNameColor(m.userId)}
+            nameColor={resolveNameColor?.(m.userId)}
           />
         ))}
         <div ref={listEndRef} />
@@ -215,10 +263,11 @@ export function ChatDock(props: ChatDockProps) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder={t(keys.placeholder)}
+          placeholder={t(isConnected ? keys.placeholder : "chat.placeholderDisabled")}
+          disabled={!isConnected}
           maxLength={MAX_MESSAGE_LENGTH}
           data-testid={`${testIdRoot}-input`}
-          className="bg-surface-elevated text-ink flex-1 rounded-lg border border-border px-2.5 py-2 text-xs outline-none placeholder:text-ink-off"
+          className="bg-surface-elevated text-ink flex-1 rounded-lg border border-border px-2.5 py-2 text-xs outline-none placeholder:text-ink-off disabled:cursor-not-allowed disabled:opacity-50"
         />
         <button
           onClick={send}
@@ -235,6 +284,15 @@ export function ChatDock(props: ChatDockProps) {
 }
 
 function i18nKeys(variant: Variant) {
+  if (variant === "match") {
+    return {
+      openLabel: "game.chat.toggleOpen",
+      closeLabel: "game.chat.toggleClose",
+      sendLabel: "game.chat.sendLabel",
+      title: "game.chat.title",
+      placeholder: "game.chat.placeholder",
+    };
+  }
   if (variant === "room") {
     return {
       openLabel: "room.chat.openLabel",

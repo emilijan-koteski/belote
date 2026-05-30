@@ -10,7 +10,7 @@ export function Wordmark() {
       className="pointer-events-none absolute top-5 left-1/2 -translate-x-1/2 z-[9] flex items-center gap-2 select-none"
       style={{
         fontFamily: 'Georgia, "Times New Roman", serif',
-        color: "var(--ink-light)",
+        color: "var(--ink)",
         fontSize: 13,
         letterSpacing: 2,
       }}

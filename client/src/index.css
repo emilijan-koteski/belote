@@ -147,6 +147,11 @@
   --warning: #9c7d4e;
   --danger: #8b2a1f;
 
+  /* ── Chat dock shadows — themeable so the felt-scoped dock can swap them
+       for a heavier black drop shadow (see `.chat-dock-game`). ─────────── */
+  --chat-shadow-panel: 0 24px 60px -20px rgba(14, 58, 36, 0.3);
+  --chat-shadow-fab: 0 8px 22px -10px rgba(14, 58, 36, 0.3);
+
   /* ── Radius ───────────────────────────────────────────────────────── */
   --radius: 14px;
 }
@@ -319,6 +324,26 @@
   --suit-red: #c62828;
   --suit-red-up: #ff8585;
   --suit-black: #1a1a1a;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   In-game chat dock — reuses the lobby `ChatDock` chrome but swaps the
+   parchment palette for frosted felt + a brass action accent. The table's
+   own `--accent` is the lime turn-signal, which must NOT bleed into chat,
+   so we re-point the accent family to brass here. Only rendered inside
+   `.game-table`, so `--panel-deeper` / `--brass*` resolve from that scope.
+   ────────────────────────────────────────────────────────────────────── */
+.chat-dock-game {
+  --surface: var(--panel-deeper); /* frosted dark panel */
+  --surface-2: rgba(255, 255, 255, 0.04); /* bubble / input fill */
+  --border: rgba(180, 220, 200, 0.12); /* felt-tinted hairline */
+  --border-2: var(--brass);
+  --accent: var(--brass);
+  --accent-deep: var(--brass-deep);
+  --accent-soft: var(--brass-soft);
+  --accent-ink: var(--brass-ink);
+  --chat-shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(201, 168, 118, 0.06);
+  --chat-shadow-fab: 0 8px 22px rgba(0, 0, 0, 0.45);
 }
 
 /* ──────────────────────────────────────────────────────────────────────

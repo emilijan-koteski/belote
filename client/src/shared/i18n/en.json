@@ -121,7 +121,7 @@
   },
   "room": {
     "chat": {
-      "title": "Room Chat",
+      "title": "Room chat",
       "placeholder": "Message…",
       "openLabel": "Open room chat",
       "closeLabel": "Close room chat",
@@ -401,10 +401,11 @@
       "you": "You"
     },
     "chat": {
-      "title": "Match Chat",
-      "placeholder": "Message your table…",
+      "title": "Match chat",
+      "placeholder": "Message…",
       "toggleOpen": "Open match chat",
-      "toggleClose": "Close match chat"
+      "toggleClose": "Close match chat",
+      "sendLabel": "Send message"
     },
     "trump": "Trump: {{suit}}",
     "starting": "Game is starting…",

@@ -116,12 +116,12 @@
     "send": "Pošalji",
     "empty": "Još nema poruka — pozdravi.",
     "tooLong": "Poruke moraju imati 500 karaktera ili manje.",
-    "clearAriaLabel": "Obriši ćaskanje",
-    "clearTooltip": "Obriši ćaskanje (ili ukucaj /cc)"
+    "clearAriaLabel": "Obriši chat",
+    "clearTooltip": "Obriši chat (ili ukucaj /cc)"
   },
   "room": {
     "chat": {
-      "title": "Ćaskanje u sobi",
+      "title": "Chat sobe",
       "placeholder": "Poruka…",
       "openLabel": "Otvori chat sobe",
       "closeLabel": "Zatvori chat",
@@ -401,10 +401,11 @@
       "you": "Ti"
     },
     "chat": {
-      "title": "Ćaskanje u meču",
-      "placeholder": "Poruči za sto…",
-      "toggleOpen": "Otvori ćaskanje meča",
-      "toggleClose": "Zatvori ćaskanje meča"
+      "title": "Chat meča",
+      "placeholder": "Poruka…",
+      "toggleOpen": "Otvori chat meča",
+      "toggleClose": "Zatvori chat meča",
+      "sendLabel": "Pošalji poruku"
     },
     "trump": "Adut: {{suit}}",
     "starting": "Igra počinje…",

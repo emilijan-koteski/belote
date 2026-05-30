@@ -402,9 +402,10 @@
     },
     "chat": {
       "title": "Chat meča",
-      "placeholder": "Poruči stolu…",
+      "placeholder": "Poruka…",
       "toggleOpen": "Otvori chat meča",
-      "toggleClose": "Zatvori chat meča"
+      "toggleClose": "Zatvori chat meča",
+      "sendLabel": "Pošalji poruku"
     },
     "trump": "Adut: {{suit}}",
     "starting": "Igra počinje…",
