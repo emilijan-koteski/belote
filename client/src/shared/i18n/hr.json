@@ -437,12 +437,12 @@
       "labelWithCaller": "Adut: {{suit}} · {{team}} — {{name}}"
     },
     "trumpReveal": {
-      "title": "{{name}} je uzeo aduta",
       "unknownPlayer": "Adut uzet",
       "eyebrow": "Adut uzet",
       "eyebrowFreeChoice": "Adut uzet · slobodan izbor",
-      "subtitle": "adut za ovo dijeljenje",
-      "candidateLabel": "kandidat: {{rank}} {{suit}}",
+      "isTrump": "<suit>{{suit}}</suit> je adut u ovom dijeljenju",
+      "chose": "izabrao <suit>{{suit}}</suit>",
+      "candidateOnTable": "{{rank}} {{suit}} bila je na stolu",
       "dismiss": "Zatvori"
     },
     "dealerIndicator": {

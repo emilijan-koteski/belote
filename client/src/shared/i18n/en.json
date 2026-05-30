@@ -437,12 +437,12 @@
       "labelWithCaller": "Trump suit: {{suit}} · {{team}} — {{name}}"
     },
     "trumpReveal": {
-      "title": "{{name}} took trump",
       "unknownPlayer": "Trump taken",
       "eyebrow": "Trump taken",
       "eyebrowFreeChoice": "Trump taken · free pick",
-      "subtitle": "trump for this hand",
-      "candidateLabel": "candidate: {{rank}} of {{suit}}",
+      "isTrump": "<suit>{{suit}}</suit> is trump this hand",
+      "chose": "chose <suit>{{suit}}</suit>",
+      "candidateOnTable": "{{rank}} of {{suit}} was on the table",
       "dismiss": "Dismiss"
     },
     "dealerIndicator": {

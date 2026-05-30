@@ -437,12 +437,12 @@
       "labelWithCaller": "Адут: {{suit}} · {{team}} — {{name}}"
     },
     "trumpReveal": {
-      "title": "{{name}} зеде адут",
       "unknownPlayer": "Адутот е земен",
       "eyebrow": "Адутот е земен",
       "eyebrowFreeChoice": "Адутот е земен · слободен избор",
-      "subtitle": "адут за ова делење",
-      "candidateLabel": "кандидат: {{rank}} {{suit}}",
+      "isTrump": "<suit>{{suit}}</suit> е адут во ова делење",
+      "chose": "избра <suit>{{suit}}</suit>",
+      "candidateOnTable": "{{rank}} {{suit}} беше на масата",
       "dismiss": "Затвори"
     },
     "dealerIndicator": {
