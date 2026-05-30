@@ -457,7 +457,7 @@ export function RoomLobby() {
   // Use query loading state for initial load
   if (roomQuery.isPending) {
     return (
-      <div className="mx-auto max-w-230 px-8 py-8" data-testid="room-lobby-loading">
+      <div className="mx-auto max-w-[1320px] px-8 py-8" data-testid="room-lobby-loading">
         <div className="bg-surface-sunken mb-6 h-8 w-48 animate-pulse rounded" />
         <div className="grid grid-cols-2 gap-6">
           {[0, 1, 2, 3].map((i) => (
@@ -473,7 +473,7 @@ export function RoomLobby() {
 
   if (roomQuery.isError || (!storeRoom && !roomQuery.data)) {
     return (
-      <div className="mx-auto max-w-230 px-8 py-12 text-center" data-testid="room-lobby-error">
+      <div className="mx-auto max-w-[1320px] px-8 py-12 text-center" data-testid="room-lobby-error">
         <p className="text-ink-dim mb-4 text-sm">{t("lobby.roomLobby.notFound")}</p>
         <Button variant="ghost" onClick={() => navigate("/lobby")} data-testid="back-to-lobby">
           {t("lobby.roomLobby.notFoundAction")}
@@ -484,7 +484,7 @@ export function RoomLobby() {
 
   if (isRoomClosed && !gameStarted) {
     return (
-      <div className="mx-auto max-w-230 px-8 py-12 text-center" data-testid="room-lobby-closed">
+      <div className="mx-auto max-w-[1320px] px-8 py-12 text-center" data-testid="room-lobby-closed">
         <p className="font-display text-ink mb-2 text-lg font-semibold">
           {t("lobby.roomLobby.roomClosed")}
         </p>
@@ -610,7 +610,7 @@ export function RoomLobby() {
   }
 
   return (
-    <div className="mx-auto max-w-230 px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-[1320px] px-4 py-6 md:px-8">
       <div data-testid="room-lobby">
         {/* Room info card — parchment chrome (brass top hairline + soft inset
             shadow). Left: name + meta row (host · roster · seated count).
