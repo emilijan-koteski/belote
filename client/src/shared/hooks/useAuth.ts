@@ -14,7 +14,12 @@ export function useAuthInit(): void {
   const { i18n } = useTranslation();
 
   useEffect(() => {
-    setAuthRedirect(() => navigate("/login"));
+    // Auth failures (logout, expired session, failed refresh) land on the
+    // public landing page — the canonical logged-out home, with its own
+    // prominent "Log in" CTA. Pointing this at "/" (rather than "/login")
+    // also means a deliberate logout isn't raced to /login by an in-flight
+    // authed request 401-ing as the lobby unmounts.
+    setAuthRedirect(() => navigate("/"));
   }, [navigate]);
 
   useEffect(() => {

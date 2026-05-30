@@ -18,4 +18,7 @@ export const queryKeys = {
   lobby: {
     stats: ["lobby", "stats"] as const,
   },
+  stats: {
+    public: ["stats", "public"] as const,
+  },
 } as const;

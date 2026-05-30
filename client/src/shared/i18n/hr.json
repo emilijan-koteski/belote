@@ -832,5 +832,87 @@
     "footer": {
       "credit": "Izradio <name>Emilijan Koteski</name> s <suit>♣</suit>"
     }
+  },
+  "landing": {
+    "nav": {
+      "login": "Prijava",
+      "signup": "Otvori besplatan račun"
+    },
+    "hero": {
+      "eyebrow": "Beljot Online · 2 na 2 · Besplatno",
+      "title1": "Sjedni za",
+      "title2": "stol.",
+      "subtitle": "Beljot je klasična kartaška igra za četvero — dvije ekipe, utrka do 1001. Nađi stol u nekoliko sekundi ili pozovi svoju ekipu kodom.",
+      "cta": "Otvori besplatan račun",
+      "playing": "trenutno igra",
+      "openTables": "otvorenih stolova"
+    },
+    "how": {
+      "eyebrow": "Tri koraka do prvog štiha",
+      "title": "U igri si prije nego što voda zavri.",
+      "s1t": "Otvori besplatan račun",
+      "s1b": "Odaberi ime, bez preuzimanja. U predvorju si za manje od minute.",
+      "s2t": "Sjedni za stol",
+      "s2b": "Pritisni Brza igra i naći ćemo tvoju četvorku, ili otvori vlastitu sobu i podijeli kod s prijateljima.",
+      "s3t": "Zovi aduta i igraj",
+      "s3b": "Zovi aduta, osvajaj štihove uz svog partnera i vodi ekipu do 1001 boda."
+    },
+    "feat": {
+      "f1tag": "Predvorje · uživo",
+      "f1title": "Gledaj kako se stolovi pune uživo",
+      "f1body": "Svaka otvorena soba, svako mjesto, ažurira se u trenu. Filtriraj po tajmeru ili bodovima, traži po kodu ili samo pritisni Brza igra i smjestit ćemo te.",
+      "f2tag": "Ekipe · zlato protiv srebra",
+      "f2title": "To je partnerstvo, ne svatko za sebe",
+      "f2body": "Dvoje protiv dvoje, onako kako je Beljot zamišljen. Sjedni nasuprot partneru, čitaj najave i igraj dugu igru do 1001. Ugrađeni chat i emotikoni drže stol u razgovoru.",
+      "f3tag": "Profil · povijest partija",
+      "f3title": "Svaka ruka se broji u tvoj učinak",
+      "f3body": "Prati odigrane partije, postotak pobjeda i niz, uz potpunu povijest partija ruku po ruku. Vidi s kim pobjeđuješ i kako je prošla večeras."
+    },
+    "room": {
+      "join": "Uđi",
+      "empty": "prazno",
+      "r1title": "Subotnja duga igra",
+      "r1meta": "Bitola · 1001 bod · 30s",
+      "r1ago": "prije 4 min",
+      "r2title": "Brza 501 — bez tajmera",
+      "r2meta": "Hrvatska · 501 bod · opušteno",
+      "r2ago": "upravo sad"
+    },
+    "vig": {
+      "trump": "Adut",
+      "opponent": "protivnik",
+      "partner": "partner"
+    },
+    "prof": {
+      "member": "Član od 2024",
+      "streak": "Niz 3",
+      "games": "partije",
+      "winrate": "uspješnost",
+      "wins": "pobjede",
+      "recent": "Nedavne partije",
+      "won": "Pobjeda",
+      "lost": "Poraz",
+      "with": "s"
+    },
+    "cta": {
+      "eyebrow": "Stol je postavljen",
+      "title": "Tvoja četvorka te čeka.",
+      "body": "Besplatno zauvijek. Bez preuzimanja. Podijeli prvu ruku večeras.",
+      "cta": "Otvori besplatan račun"
+    },
+    "foot": {
+      "rules": "Pravila",
+      "leaderboard": "Ljestvica",
+      "privacy": "Privatnost",
+      "terms": "Uvjeti",
+      "contact": "Kontakt",
+      "copyright": "© 2026 Beljot.online"
+    },
+    "contact": {
+      "title": "Kontakt",
+      "lead": "Beljot je izradio Emilijan Koteski. Pitanja, prijave grešaka i povratne informacije su dobrodošli.",
+      "linkedin": "LinkedIn",
+      "disclaimer": "Ovo je demo / beta verzija za testiranje — nije gotov proizvod."
+    }
   }
 }

@@ -1,6 +1,6 @@
 import { ChevronDown, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { NavLink } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 
 import { LanguageSelector } from "@/shared/components/LanguageSelector";
 import {
@@ -40,8 +40,16 @@ export function TopBar({
   languageTestIdPrefix,
 }: TopBarProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+
+  // Clear auth state, then land on the public landing page ("/"). Without the
+  // explicit navigate, ProtectedRoute would only fall back to /login.
+  function handleLogout() {
+    logout();
+    navigate("/");
+  }
 
   return (
     <nav
@@ -117,7 +125,7 @@ export function TopBar({
               </div>
               <div className="mx-1 my-1 h-px bg-border" />
               <DropdownMenuItem
-                onClick={logout}
+                onClick={handleLogout}
                 data-testid="nav-logout"
                 className="text-ink hover:bg-surface-sunken flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium"
               >

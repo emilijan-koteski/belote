@@ -832,5 +832,87 @@
     "footer": {
       "credit": "Crafted with <suit>♣</suit> by <name>Emilijan Koteski</name>"
     }
+  },
+  "landing": {
+    "nav": {
+      "login": "Log in",
+      "signup": "Create free account"
+    },
+    "hero": {
+      "eyebrow": "Beljot Online · 2 v 2 · Free to play",
+      "title1": "Sit down at",
+      "title2": "the table.",
+      "subtitle": "Beljot is the classic four-player card-table game — two teams, race to 1001. Find a table in seconds, or invite your usual four with a code.",
+      "cta": "Create free account",
+      "playing": "playing right now",
+      "openTables": "open tables"
+    },
+    "how": {
+      "eyebrow": "Three steps to the first trick",
+      "title": "You’re dealt in before the kettle boils.",
+      "s1t": "Make a free account",
+      "s1b": "Pick a name, no downloads. You’re in the lobby in under a minute.",
+      "s2t": "Take a seat",
+      "s2b": "Hit Quick Play and we’ll matchmake your four, or open a custom room and share the code with friends.",
+      "s3t": "Call trump & play",
+      "s3b": "Bid for the trump suit, win tricks alongside your partner, and race your team to 1001 points."
+    },
+    "feat": {
+      "f1tag": "The lobby · live",
+      "f1title": "Watch the tables fill in real time",
+      "f1body": "Every open room, every seat, updated as it happens. Filter by timer style or points, search by code, or just hit Quick Play and let us seat you.",
+      "f2tag": "Teams · gold vs silver",
+      "f2title": "It’s a partnership, not a free-for-all",
+      "f2body": "Two against two, the way Beljot is built. Sit across from your partner, read the declarations, and play the long game to 1001. Built-in chat and emotes keep the table talking.",
+      "f3tag": "Profile · match history",
+      "f3title": "Every hand counts toward your record",
+      "f3body": "Track your games played, win rate and streak, with a full match history hand by hand. See who you win alongside and how tonight stacked up."
+    },
+    "room": {
+      "join": "Join",
+      "empty": "empty",
+      "r1title": "Saturday night long game",
+      "r1meta": "Bitola · 1001 pts · 30s",
+      "r1ago": "4m ago",
+      "r2title": "Quick 501 — no timer",
+      "r2meta": "Croatia · 501 pts · relaxed",
+      "r2ago": "just now"
+    },
+    "vig": {
+      "trump": "Trump",
+      "opponent": "opponent",
+      "partner": "partner"
+    },
+    "prof": {
+      "member": "Member since 2024",
+      "streak": "W3 streak",
+      "games": "games",
+      "winrate": "win rate",
+      "wins": "wins",
+      "recent": "Recent matches",
+      "won": "Won",
+      "lost": "Lost",
+      "with": "with"
+    },
+    "cta": {
+      "eyebrow": "The table’s set",
+      "title": "Your four are waiting.",
+      "body": "Free forever. No download. Deal the first hand tonight.",
+      "cta": "Create free account"
+    },
+    "foot": {
+      "rules": "Rules",
+      "leaderboard": "Leaderboard",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "contact": "Contact",
+      "copyright": "© 2026 Beljot.online"
+    },
+    "contact": {
+      "title": "Contact",
+      "lead": "Beljot is built by Emilijan Koteski. Questions, bug reports and feedback are welcome.",
+      "linkedin": "LinkedIn",
+      "disclaimer": "This is a demo / beta build for testing purposes — not a finished production product."
+    }
   }
 }

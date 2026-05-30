@@ -120,6 +120,8 @@
   --accent-deep: #0e4824;
   --accent-soft: rgba(25, 101, 54, 0.1);
   --accent-ink: #f5f2e8;
+  /* Soft coloured drop-glow under primary CTAs (re-rooted to lime on felt). */
+  --accent-glow: rgba(25, 101, 54, 0.7);
 
   /* ── Brass (chrome accent) ────────────────────────────────────────── */
   --brass: #c9a876;
@@ -146,6 +148,13 @@
   --success: #196536;
   --warning: #9c7d4e;
   --danger: #8b2a1f;
+
+  /* ── Playing card — intrinsic colours, scope-stable (a card face is the
+       same cream on parchment and on felt, so these are NOT re-rooted by
+       `.felt-surface`/`.game-table`). Used by the marketing card graphics. */
+  --card-face: #fbf8ee;
+  --suit-red: #b3261d;
+  --suit-black: #16241c;
 
   /* ── Chat dock shadows — themeable so the felt-scoped dock can swap them
        for a heavier black drop shadow (see `.chat-dock-game`). ─────────── */
@@ -324,6 +333,76 @@
   --suit-red: #c62828;
   --suit-red-up: #ff8585;
   --suit-black: #1a1a1a;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Reusable dark-felt marketing surface — `.felt-surface`.
+
+   Re-roots the parchment palette to the felt palette using the SAME token
+   names as `:root` / `.game-table`, so any shared component dropped inside
+   (Button, Eyebrow, LanguageSelector…) auto-themes with no fork:
+     • <Button> default (bg-accent/text-accent-ink) → lime CTA on dark
+     • <LanguageSelector> (text-ink-dim, border-border) → light + brass border
+   Used by the landing hero, CTA band, footer, dark nav, and the FeltVignette.
+   brass-* and team-* are identical across scopes, so they inherit from :root.
+
+   `--felt-scene-*` drive the decorative radial scene gradients below; they
+   live here so the gradient utility classes resolve only inside the scope.
+   ────────────────────────────────────────────────────────────────────── */
+.felt-surface {
+  --bg: #0a1812;
+  --surface: #112a1d;
+  --surface-2: #16382a;
+  --surface-3: #0e2618;
+
+  --ink: #f5f2e8;
+  --ink-dim: #c8d5cd;
+  --ink-mute: rgba(245, 242, 232, 0.65);
+  --ink-off: rgba(245, 242, 232, 0.35);
+
+  --accent: #00e5a0;
+  --accent-deep: #00b07c;
+  --accent-soft: rgba(0, 229, 160, 0.18);
+  --accent-ink: #0a1812;
+  --accent-glow: rgba(0, 229, 160, 0.7);
+
+  --border: rgba(201, 168, 118, 0.25);
+  --border-2: #c9a876;
+
+  /* Decorative felt scene gradient stops (hero / CTA radials) + wood rim
+     for the felt-table vignette. */
+  --felt-scene-top: #1a5a3a;
+  --felt-scene-mid: #0d2c1d;
+  --felt-scene-deep: #0a1812;
+  --wood-rim: #3a2a16;
+
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* Top-anchored felt spotlight — landing hero. */
+.felt-hero-bg {
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 8%,
+    var(--felt-scene-top) 0%,
+    var(--felt-scene-mid) 48%,
+    var(--felt-scene-deep) 100%
+  );
+}
+
+/* Bottom-anchored felt spotlight — landing closing CTA band. */
+.felt-cta-bg {
+  background: radial-gradient(
+    ellipse 70% 90% at 50% 100%,
+    var(--felt-scene-top) 0%,
+    var(--felt-scene-mid) 55%,
+    var(--felt-scene-deep) 100%
+  );
+}
+
+/* Hand-carved wood rail — the 8px top edge of the hero. */
+.felt-rail {
+  background: linear-gradient(90deg, #2a1c0d, #4a341a, #2a1c0d);
 }
 
 /* ──────────────────────────────────────────────────────────────────────
