@@ -1,4 +1,14 @@
-import { ChevronDown, Clock, Crown, Shuffle, Sparkles, Trophy, Users, UserX, Zap } from "lucide-react";
+import {
+  ChevronDown,
+  Clock,
+  Crown,
+  Shuffle,
+  Sparkles,
+  Trophy,
+  Users,
+  UserX,
+  Zap,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
@@ -6,19 +16,12 @@ import { toast } from "sonner";
 
 import { RoomChatDock } from "@/features/lobby/components/RoomChatDock";
 import { SeatTile } from "@/features/lobby/components/SeatTile";
+import { KickPlayerDialog, TransferOwnershipDialog } from "@/features/lobby/OwnerConfirmDialogs";
 import { FetchError } from "@/shared/api/axiosClient";
 import { Avatar } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { CodeChip } from "@/shared/components/ui/code-chip";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -470,10 +473,7 @@ export function RoomLobby() {
 
   if (roomQuery.isError || (!storeRoom && !roomQuery.data)) {
     return (
-      <div
-        className="mx-auto max-w-230 px-8 py-12 text-center"
-        data-testid="room-lobby-error"
-      >
+      <div className="mx-auto max-w-230 px-8 py-12 text-center" data-testid="room-lobby-error">
         <p className="text-ink-dim mb-4 text-sm">{t("lobby.roomLobby.notFound")}</p>
         <Button variant="ghost" onClick={() => navigate("/lobby")} data-testid="back-to-lobby">
           {t("lobby.roomLobby.notFoundAction")}
@@ -484,10 +484,7 @@ export function RoomLobby() {
 
   if (isRoomClosed && !gameStarted) {
     return (
-      <div
-        className="mx-auto max-w-230 px-8 py-12 text-center"
-        data-testid="room-lobby-closed"
-      >
+      <div className="mx-auto max-w-230 px-8 py-12 text-center" data-testid="room-lobby-closed">
         <p className="font-display text-ink mb-2 text-lg font-semibold">
           {t("lobby.roomLobby.roomClosed")}
         </p>
@@ -562,6 +559,15 @@ export function RoomLobby() {
     if (p.seat === null || viewerSeat === null) return null;
     return resolveSeatMode(p.seat) === "us" ? "A" : "B";
   };
+
+  // Live player rows for the open owner-confirmation dialogs — re-derived from
+  // the roster so the dialog's seat/team chips reflect the current state.
+  const kickTarget = kickConfirm
+    ? (players.find((p) => p.userId === kickConfirm.userId) ?? null)
+    : null;
+  const transferTarget = transferConfirm
+    ? (players.find((p) => p.userId === transferConfirm.userId) ?? null)
+    : null;
 
   // Contextual tip under the seat diamond, keyed to the viewer's role.
   const tipKey =
@@ -673,7 +679,9 @@ export function RoomLobby() {
                           const ownerCanPromoteRow = ownerCanActOnRow && p.seat !== null;
                           const seated = p.seat !== null;
                           const seatLabel = seated
-                            ? t("lobby.roomLobby.inRoomList.seated", { seat: (p.seat as number) + 1 })
+                            ? t("lobby.roomLobby.inRoomList.seated", {
+                                seat: (p.seat as number) + 1,
+                              })
                             : t("lobby.roomLobby.inRoomList.notSeated");
                           return (
                             <li
@@ -1056,76 +1064,35 @@ export function RoomLobby() {
       <RoomChatDock roomId={room.id} />
 
       {/* Owner transfer-ownership confirmation dialog */}
-      <Dialog
+      <TransferOwnershipDialog
         open={transferConfirm !== null}
         onOpenChange={(open) => {
           if (!open) setTransferConfirm(null);
         }}
-      >
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>{t("lobby.roomLobby.transferConfirm.title")}</DialogTitle>
-            <DialogDescription>
-              {t("lobby.roomLobby.transferConfirm.body", {
-                username: transferConfirm?.username ?? "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setTransferConfirm(null)}
-              data-testid="transfer-cancel"
-            >
-              {t("lobby.roomLobby.transferConfirm.cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleTransferConfirm}
-              disabled={transferOwnershipMutation.isPending}
-              data-testid="transfer-confirm"
-            >
-              {t("lobby.roomLobby.transferConfirm.confirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onConfirm={handleTransferConfirm}
+        pending={transferOwnershipMutation.isPending}
+        fromName={currentUser?.username ?? ownerUsername}
+        target={{
+          name: transferConfirm?.username ?? "",
+          seat: transferTarget?.seat ?? null,
+          team: transferTarget ? rosterTeam(transferTarget) : null,
+        }}
+      />
 
       {/* Owner kick confirmation dialog */}
-      <Dialog
+      <KickPlayerDialog
         open={kickConfirm !== null}
         onOpenChange={(open) => {
           if (!open) setKickConfirm(null);
         }}
-      >
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>{t("lobby.roomLobby.kickConfirm.title")}</DialogTitle>
-            <DialogDescription>
-              {t("lobby.roomLobby.kickConfirm.body", {
-                username: kickConfirm?.username ?? "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setKickConfirm(null)}
-              data-testid="kick-cancel"
-            >
-              {t("lobby.roomLobby.kickConfirm.cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleKickConfirm}
-              disabled={kickPlayerMutation.isPending}
-              data-testid="kick-confirm"
-            >
-              {t("lobby.roomLobby.kickConfirm.confirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onConfirm={handleKickConfirm}
+        pending={kickPlayerMutation.isPending}
+        target={{
+          name: kickConfirm?.username ?? "",
+          seat: kickTarget?.seat ?? kickConfirm?.seat ?? null,
+          team: kickTarget ? rosterTeam(kickTarget) : null,
+        }}
+      />
     </div>
   );
 }

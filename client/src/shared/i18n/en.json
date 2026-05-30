@@ -274,8 +274,8 @@
       "autoStarting": "Starting game…",
       "kickIconLabel": "Kick {{username}}",
       "kickConfirm": {
-        "title": "Kick player?",
-        "body": "Kick {{username}} from the room?",
+        "title": "Kick <name>{{name}}</name> from the room?",
+        "lede": "This is a kick, not a ban — and <strong>{{name}}</strong> can rejoin any time. Their seat opens up right away, but it won't end the match in progress.",
         "confirm": "Kick",
         "cancel": "Cancel"
       },
@@ -286,10 +286,25 @@
       "leaveSeatLabel": "Leave seat (stay in room)",
       "promoteIconLabel": "Make {{username}} the host",
       "transferConfirm": {
-        "title": "Transfer host role?",
-        "body": "{{username}} will become the host. You will lose host controls.",
+        "title": "Transfer room ownership to another player?",
+        "lede": "You stay at the table, but <strong>{{toName}}</strong> becomes the host. Only a host can hand the ownership back — you can't take it yourself.",
         "confirm": "Make host",
         "cancel": "Cancel"
+      },
+      "ownerConfirm": {
+        "eyebrow": "Host action",
+        "close": "Close",
+        "seatLabel": "Seat {{n}}",
+        "standing": "Standing",
+        "youHost": "You · current host",
+        "newHost": "{{name}} · New host",
+        "handOver": "You'll hand over",
+        "capabilities": {
+          "start": "Starting the match",
+          "seats": "Swapping & arranging seats",
+          "players": "Kicking & promoting players",
+          "settings": "Room name, pace & settings"
+        }
       },
       "errors": {
         "seatFailed": "Failed to select seat — try again",

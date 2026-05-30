@@ -839,7 +839,7 @@ describe("RoomLobby", () => {
     await waitFor(() => {
       expect(screen.getByTestId("kick-confirm")).toBeInTheDocument();
     });
-    expect(screen.getByText(/Kick bob from the room\?/)).toBeInTheDocument();
+    expect(screen.getByTestId("kick-dialog-title")).toHaveTextContent("Kick bob from the room?");
 
     await user.click(screen.getByTestId("kick-confirm"));
 

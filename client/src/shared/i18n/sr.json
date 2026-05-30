@@ -274,8 +274,8 @@
       "autoStarting": "Igra počinje…",
       "kickIconLabel": "Izbaci {{username}}",
       "kickConfirm": {
-        "title": "Izbaciti igrača?",
-        "body": "Izbaciti {{username}} iz sobe?",
+        "title": "Izbaciti <name>{{name}}</name> iz sobe?",
+        "lede": "Ovo je izbacivanje, ne trajna zabrana — <strong>{{name}}</strong> može da se vrati bilo kada. Mesto se odmah oslobađa, ali to neće prekinuti partiju u toku.",
         "confirm": "Izbaci",
         "cancel": "Otkaži"
       },
@@ -286,10 +286,25 @@
       "leaveSeatLabel": "Napusti mesto (ostani u sobi)",
       "promoteIconLabel": "Postavi {{username}} za domaćina",
       "transferConfirm": {
-        "title": "Preneti ulogu domaćina?",
-        "body": "{{username}} će postati domaćin. Izgubićete kontrole domaćina.",
+        "title": "Preneti vlasništvo nad sobom drugom igraču?",
+        "lede": "Ostaješ za stolom, ali <strong>{{toName}}</strong> postaje domaćin. Samo domaćin može da vrati vlasništvo — ne možeš ga uzeti sam.",
         "confirm": "Postavi domaćina",
         "cancel": "Otkaži"
+      },
+      "ownerConfirm": {
+        "eyebrow": "Akcija domaćina",
+        "close": "Zatvori",
+        "seatLabel": "Mesto {{n}}",
+        "standing": "Stoji",
+        "youHost": "Ti · trenutni domaćin",
+        "newHost": "{{name}} · novi domaćin",
+        "handOver": "Predaješ",
+        "capabilities": {
+          "start": "Pokretanje partije",
+          "seats": "Zamenu i raspored mesta",
+          "players": "Izbacivanje i postavljanje igrača",
+          "settings": "Naziv sobe, tempo i podešavanja"
+        }
       },
       "errors": {
         "seatFailed": "Neuspešan izbor mesta — pokušajte ponovo",
