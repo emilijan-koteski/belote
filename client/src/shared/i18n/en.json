@@ -550,7 +550,9 @@
       "continue": "Continue"
     },
     "capot": {
-      "title": "CAPOT!"
+      "title": "CAPOT!",
+      "eyebrow": "Every trick · {{team}} swept the hand",
+      "bonus": "+{{points}} to {{team}}"
     },
     "matchResult": {
       "title": "Match Complete",

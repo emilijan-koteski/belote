@@ -550,7 +550,9 @@
       "continue": "Nastavi"
     },
     "capot": {
-      "title": "KAPOT!"
+      "title": "KAPOT!",
+      "eyebrow": "Svaki štih · {{team}} su pokupili sve",
+      "bonus": "+{{points}} za {{team}}"
     },
     "matchResult": {
       "title": "Meč završen",

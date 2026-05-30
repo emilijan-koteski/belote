@@ -431,3 +431,18 @@
 @utility animate-capot-scale {
   animation: capot-scale 2.5s ease-out forwards;
 }
+
+/* Capot word glow-pulse — drives `--cap-glow` set inline per team color. */
+@keyframes capot-shimmer {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 36px var(--cap-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 60px var(--cap-glow));
+  }
+}
+
+@utility animate-capot-shimmer {
+  animation: capot-shimmer 1.6s ease-in-out infinite;
+}

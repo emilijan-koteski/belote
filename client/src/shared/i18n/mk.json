@@ -550,7 +550,9 @@
       "continue": "Продолжи"
     },
     "capot": {
-      "title": "КАПОТ!"
+      "title": "КАПОТ!",
+      "eyebrow": "Секој штих · {{team}} зедоа сè",
+      "bonus": "+{{points}} за {{team}}"
     },
     "matchResult": {
       "title": "Мечот завршен",

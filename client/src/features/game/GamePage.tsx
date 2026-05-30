@@ -1375,7 +1375,12 @@ export function GamePage() {
       {overlayPhase === "capot_animation" &&
         scoreRevealData?.capotTeam !== null &&
         scoreRevealData?.capotTeam !== undefined && (
-          <CapotAnimation capotTeam={scoreRevealData.capotTeam} onComplete={handleCapotComplete} />
+          <CapotAnimation
+            capotTeam={scoreRevealData.capotTeam}
+            viewerSeat={myPlayerSeat}
+            capotBonus={scoreRevealData.capotBonus}
+            onComplete={handleCapotComplete}
+          />
         )}
 
       {/* Score reveal overlay */}
