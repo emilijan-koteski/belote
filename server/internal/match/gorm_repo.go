@@ -1,6 +1,30 @@
 package match
 
-import "gorm.io/gorm"
+import (
+	"math"
+	"time"
+
+	"gorm.io/gorm"
+)
+
+// viewerTeamCase maps the viewer's seat to their team index — 0 (team A) for
+// seats 0/2, 1 (team B) for seats 1/3 — given four userID bindings in
+// player1..player4 order. Mirrors game.TeamForSeat without coupling the match
+// package to the game engine. viewerTeamCaseM is the same expression with the
+// matches table qualified as `m` for use inside joins.
+const viewerTeamCase = `(CASE
+	WHEN player1_id = ? THEN 0
+	WHEN player2_id = ? THEN 1
+	WHEN player3_id = ? THEN 0
+	WHEN player4_id = ? THEN 1
+END)`
+
+const viewerTeamCaseM = `(CASE
+	WHEN m.player1_id = ? THEN 0
+	WHEN m.player2_id = ? THEN 1
+	WHEN m.player3_id = ? THEN 0
+	WHEN m.player4_id = ? THEN 1
+END)`
 
 // GormMatchRepository implements MatchRepository using GORM.
 type GormMatchRepository struct {
@@ -73,7 +97,7 @@ WHERE player1_id = ? OR player2_id = ? OR player3_id = ? OR player4_id = ?
 	return row.Wins, row.Losses, row.Abandoned, nil
 }
 
-func (r *GormMatchRepository) GetMatchesForUser(userID uint, limit, offset int) ([]Match, int64, error) {
+func (r *GormMatchRepository) GetMatchesForUser(userID uint, limit, offset int, outcome, sort string) ([]Match, int64, error) {
 	query := r.db.Model(&Match{}).
 		Where("status IN ?", []string{"completed", "abandoned"}).
 		Where(
@@ -81,9 +105,35 @@ func (r *GormMatchRepository) GetMatchesForUser(userID uint, limit, offset int) 
 			userID, userID, userID, userID,
 		)
 
+	// Viewer-relative outcome filter. The viewer's team per row is derived from
+	// their seat via the same CASE used by GetStatsForUser (seats 0/2 → 0,
+	// 1/3 → 1). Unknown / empty outcome leaves the completed+abandoned set.
+	switch outcome {
+	case "win":
+		query = query.Where(
+			"status = 'completed' AND winner_team = "+viewerTeamCase,
+			userID, userID, userID, userID,
+		)
+	case "loss":
+		query = query.Where(
+			"status = 'completed' AND winner_team <> "+viewerTeamCase,
+			userID, userID, userID, userID,
+		)
+	case "abandoned":
+		query = query.Where("status = 'abandoned'")
+	}
+
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
+	}
+
+	// "old" → oldest-first; default ("new") → newest-first. Tie-break by id in
+	// the same direction for a stable order. The literals are derived from a
+	// validated allowlist (see parseMatchesQuery) so there is no injection risk.
+	dir := "DESC"
+	if sort == "old" {
+		dir = "ASC"
 	}
 
 	var items []Match
@@ -91,8 +141,8 @@ func (r *GormMatchRepository) GetMatchesForUser(userID uint, limit, offset int) 
 		Preload("Hands", func(db *gorm.DB) *gorm.DB {
 			return db.Order("hand_number ASC")
 		}).
-		Order("completed_at DESC").
-		Order("id DESC").
+		Order("completed_at " + dir).
+		Order("id " + dir).
 		Limit(limit).
 		Offset(offset).
 		Find(&items).Error
@@ -101,4 +151,205 @@ func (r *GormMatchRepository) GetMatchesForUser(userID uint, limit, offset int) 
 	}
 
 	return items, total, nil
+}
+
+// GetCareerAggregatesForUser computes the viewer-relative career metrics across
+// every match the user participated in: capots won by their team, average
+// completed-match duration, the single best hand their team scored, and the
+// current win/loss streak. Each metric is a focused query; the streak's leading
+// run is counted in Go over a bounded newest-first window.
+func (r *GormMatchRepository) GetCareerAggregatesForUser(userID uint) (CareerAggregates, error) {
+	var agg CareerAggregates
+
+	// Capots won by the viewer's team (capot_team equals the viewer's team).
+	if err := r.db.Raw(`
+SELECT COUNT(*)
+FROM hand_results h
+JOIN matches m ON m.id = h.match_id
+WHERE (m.player1_id = ? OR m.player2_id = ? OR m.player3_id = ? OR m.player4_id = ?)
+  AND h.capot = true
+  AND h.capot_team = `+viewerTeamCaseM,
+		userID, userID, userID, userID,
+		userID, userID, userID, userID,
+	).Scan(&agg.Capots).Error; err != nil {
+		return CareerAggregates{}, err
+	}
+
+	// Average completed-match duration in seconds.
+	var avg float64
+	if err := r.db.Raw(`
+SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (completed_at - started_at))), 0)
+FROM matches
+WHERE status = 'completed'
+  AND (player1_id = ? OR player2_id = ? OR player3_id = ? OR player4_id = ?)`,
+		userID, userID, userID, userID,
+	).Scan(&avg).Error; err != nil {
+		return CareerAggregates{}, err
+	}
+	agg.AvgMatchSeconds = int(math.Round(avg))
+
+	// Most recent match (completed or abandoned) for the "last played" line.
+	var lp struct{ LastPlayed *time.Time }
+	if err := r.db.Raw(`
+SELECT MAX(completed_at) AS last_played
+FROM matches
+WHERE status IN ('completed', 'abandoned')
+  AND (player1_id = ? OR player2_id = ? OR player3_id = ? OR player4_id = ?)`,
+		userID, userID, userID, userID,
+	).Scan(&lp).Error; err != nil {
+		return CareerAggregates{}, err
+	}
+	if lp.LastPlayed != nil {
+		agg.HasLastPlayed = true
+		agg.LastPlayedAt = *lp.LastPlayed
+	}
+
+	// Best single hand the viewer's team ever scored.
+	var bh struct {
+		Points      int
+		HandNumber  int
+		CompletedAt time.Time
+	}
+	bestRes := r.db.Raw(`
+SELECT
+  (CASE WHEN `+viewerTeamCaseM+` = 0 THEN h.team_a_hand_total ELSE h.team_b_hand_total END) AS points,
+  h.hand_number AS hand_number,
+  m.completed_at AS completed_at
+FROM hand_results h
+JOIN matches m ON m.id = h.match_id
+WHERE (m.player1_id = ? OR m.player2_id = ? OR m.player3_id = ? OR m.player4_id = ?)
+ORDER BY points DESC
+LIMIT 1`,
+		userID, userID, userID, userID,
+		userID, userID, userID, userID,
+	).Scan(&bh)
+	if bestRes.Error != nil {
+		return CareerAggregates{}, bestRes.Error
+	}
+	if bestRes.RowsAffected > 0 && bh.Points > 0 {
+		agg.HasBestHand = true
+		agg.BestHandPoints = bh.Points
+		agg.BestHandNumber = bh.HandNumber
+		agg.BestHandAt = bh.CompletedAt
+	}
+
+	// Current streak — leading run of identical outcomes over completed matches,
+	// newest first. Abandoned matches are excluded (status filter), matching the
+	// client's historical streak rule. The 200-row window is far beyond any real
+	// streak length while keeping the query cheap.
+	var outcomes []struct{ Won bool }
+	if err := r.db.Raw(`
+SELECT (winner_team = `+viewerTeamCase+`) AS won
+FROM matches
+WHERE status = 'completed'
+  AND (player1_id = ? OR player2_id = ? OR player3_id = ? OR player4_id = ?)
+ORDER BY completed_at DESC, id DESC
+LIMIT 200`,
+		userID, userID, userID, userID,
+		userID, userID, userID, userID,
+	).Scan(&outcomes).Error; err != nil {
+		return CareerAggregates{}, err
+	}
+	if len(outcomes) == 0 {
+		agg.StreakKind = "none"
+	} else {
+		leading := outcomes[0].Won
+		length := 0
+		for _, o := range outcomes {
+			if o.Won != leading {
+				break
+			}
+			length++
+		}
+		if leading {
+			agg.StreakKind = "win"
+		} else {
+			agg.StreakKind = "loss"
+		}
+		agg.StreakLength = length
+	}
+
+	return agg, nil
+}
+
+// GetTopPartnersForUser returns the most-played teammates — the same-team seat
+// across each match — ordered by matches played together. wins counts only
+// completed matches the viewer's team won.
+func (r *GormMatchRepository) GetTopPartnersForUser(userID uint, limit int) ([]PartnerAggregate, error) {
+	var rows []PartnerAggregate
+	err := r.db.Raw(`
+WITH um AS (
+  SELECT
+    (CASE
+       WHEN player1_id = ? THEN player3_id
+       WHEN player2_id = ? THEN player4_id
+       WHEN player3_id = ? THEN player1_id
+       WHEN player4_id = ? THEN player2_id
+     END) AS teammate_id,
+    `+viewerTeamCase+` AS viewer_team,
+    status,
+    winner_team
+  FROM matches
+  WHERE (player1_id = ? OR player2_id = ? OR player3_id = ? OR player4_id = ?)
+    AND status IN ('completed', 'abandoned')
+)
+SELECT teammate_id AS user_id,
+       COUNT(*) AS played,
+       COUNT(*) FILTER (WHERE status = 'completed' AND winner_team = viewer_team) AS wins
+FROM um
+WHERE teammate_id IS NOT NULL
+GROUP BY teammate_id
+ORDER BY played DESC, wins DESC
+LIMIT ?`,
+		userID, userID, userID, userID,
+		userID, userID, userID, userID,
+		userID, userID, userID, userID,
+		limit,
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// GetTopRivalsForUser returns the most-faced opponents — the two opposite-team
+// seats, unpivoted into one row each — ordered by completed matches played
+// against them. wins/losses are viewer-relative.
+func (r *GormMatchRepository) GetTopRivalsForUser(userID uint, limit int) ([]RivalAggregate, error) {
+	var rows []RivalAggregate
+	err := r.db.Raw(`
+WITH um AS (
+  SELECT
+    `+viewerTeamCase+` AS viewer_team,
+    player1_id, player2_id, player3_id, player4_id,
+    winner_team
+  FROM matches
+  WHERE (player1_id = ? OR player2_id = ? OR player3_id = ? OR player4_id = ?)
+    AND status = 'completed'
+),
+opp AS (
+  SELECT (CASE WHEN viewer_team = 0 THEN player2_id ELSE player1_id END) AS opponent_id,
+         (winner_team = viewer_team) AS viewer_won
+  FROM um
+  UNION ALL
+  SELECT (CASE WHEN viewer_team = 0 THEN player4_id ELSE player3_id END) AS opponent_id,
+         (winner_team = viewer_team) AS viewer_won
+  FROM um
+)
+SELECT opponent_id AS user_id,
+       COUNT(*) FILTER (WHERE viewer_won) AS wins,
+       COUNT(*) FILTER (WHERE NOT viewer_won) AS losses
+FROM opp
+WHERE opponent_id IS NOT NULL
+GROUP BY opponent_id
+ORDER BY COUNT(*) DESC, wins DESC
+LIMIT ?`,
+		userID, userID, userID, userID,
+		userID, userID, userID, userID,
+		limit,
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }

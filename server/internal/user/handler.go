@@ -93,6 +93,53 @@ type MatchesListResponse struct {
 	Offset int             `json:"offset"`
 }
 
+// CareerStreak is the viewer's current win/loss streak. Kind is "win", "loss",
+// or "none" (no completed matches yet); Length is 0 when Kind is "none".
+type CareerStreak struct {
+	Kind   string `json:"kind"`
+	Length int    `json:"length"`
+}
+
+// BestHand is the single highest-scoring hand the viewer's team ever recorded.
+type BestHand struct {
+	Points      int       `json:"points"`
+	HandNumber  int       `json:"handNumber"`
+	CompletedAt time.Time `json:"completedAt"`
+}
+
+// PartnerStat is one most-played-teammate row in the career response.
+type PartnerStat struct {
+	UserID   uint   `json:"userId"`
+	Username string `json:"username"`
+	Played   int    `json:"played"`
+	Wins     int    `json:"wins"`
+}
+
+// RivalStat is one most-faced-opponent row in the career response.
+type RivalStat struct {
+	UserID   uint   `json:"userId"`
+	Username string `json:"username"`
+	Wins     int    `json:"wins"`
+	Losses   int    `json:"losses"`
+}
+
+// CareerResponse is the envelope returned by GET /users/:id/career — the
+// derived stats that power the profile hero (capots), streak callout,
+// milestones, partner spotlight, and rivalries.
+type CareerResponse struct {
+	Capots          int           `json:"capots"`
+	AvgMatchSeconds int           `json:"avgMatchSeconds"`
+	Streak          CareerStreak  `json:"streak"`
+	BestHand        *BestHand     `json:"bestHand,omitempty"`
+	LastPlayedAt    *time.Time    `json:"lastPlayedAt,omitempty"`
+	TopPartners     []PartnerStat `json:"topPartners"`
+	TopRivals       []RivalStat   `json:"topRivals"`
+}
+
+// careerListLimit caps how many partner / rival rows the career endpoint
+// returns (one featured + a short list, matching the profile sidebar design).
+const careerListLimit = 4
+
 type UserHandler struct {
 	userRepo  UserRepository
 	matchRepo match.MatchRepository
@@ -156,6 +203,129 @@ func (h *UserHandler) GetProfile(c echo.Context) error {
 	})
 }
 
+// GetCareer returns the derived career stats for the authenticated user:
+// capots won, average match length, current streak, best hand, and the
+// most-played partners / most-faced rivals. Authorisation mirrors GetProfile:
+// the :id path param must equal the authenticated user's ID. Like the other
+// user endpoints, only participant usernames + ids are exposed — never email,
+// password hash, or language preference.
+func (h *UserHandler) GetCareer(c echo.Context) error {
+	authUserID, err := getUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	paramID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || paramID == 0 {
+		return apperr.ErrBadRequest
+	}
+	if paramID != uint64(authUserID) {
+		return apperr.ErrForbidden
+	}
+
+	agg, err := h.matchRepo.GetCareerAggregatesForUser(authUserID)
+	if err != nil {
+		return fmt.Errorf("fetching career aggregates: %w", err)
+	}
+
+	partnerAggs, err := h.matchRepo.GetTopPartnersForUser(authUserID, careerListLimit)
+	if err != nil {
+		return fmt.Errorf("fetching career partners: %w", err)
+	}
+
+	rivalAggs, err := h.matchRepo.GetTopRivalsForUser(authUserID, careerListLimit)
+	if err != nil {
+		return fmt.Errorf("fetching career rivals: %w", err)
+	}
+
+	usernames, err := h.loadUsernamesForAggregates(partnerAggs, rivalAggs)
+	if err != nil {
+		return fmt.Errorf("loading career usernames: %w", err)
+	}
+
+	partners := make([]PartnerStat, 0, len(partnerAggs))
+	for _, p := range partnerAggs {
+		partners = append(partners, PartnerStat{
+			UserID:   p.UserID,
+			Username: usernames[p.UserID],
+			Played:   p.Played,
+			Wins:     p.Wins,
+		})
+	}
+
+	rivals := make([]RivalStat, 0, len(rivalAggs))
+	for _, r := range rivalAggs {
+		rivals = append(rivals, RivalStat{
+			UserID:   r.UserID,
+			Username: usernames[r.UserID],
+			Wins:     r.Wins,
+			Losses:   r.Losses,
+		})
+	}
+
+	var bestHand *BestHand
+	if agg.HasBestHand {
+		bestHand = &BestHand{
+			Points:      agg.BestHandPoints,
+			HandNumber:  agg.BestHandNumber,
+			CompletedAt: agg.BestHandAt,
+		}
+	}
+
+	var lastPlayedAt *time.Time
+	if agg.HasLastPlayed {
+		v := agg.LastPlayedAt
+		lastPlayedAt = &v
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": CareerResponse{
+			Capots:          agg.Capots,
+			AvgMatchSeconds: agg.AvgMatchSeconds,
+			Streak:          CareerStreak{Kind: agg.StreakKind, Length: agg.StreakLength},
+			BestHand:        bestHand,
+			LastPlayedAt:    lastPlayedAt,
+			TopPartners:     partners,
+			TopRivals:       rivals,
+		},
+	})
+}
+
+// loadUsernamesForAggregates batches the username lookup for all partner +
+// rival IDs into a single FindManyByIDs call, returning a map keyed by userID.
+func (h *UserHandler) loadUsernamesForAggregates(partners []match.PartnerAggregate, rivals []match.RivalAggregate) (map[uint]string, error) {
+	seen := make(map[uint]struct{}, len(partners)+len(rivals))
+	ids := make([]uint, 0, len(partners)+len(rivals))
+	add := func(id uint) {
+		if id == 0 {
+			return
+		}
+		if _, ok := seen[id]; ok {
+			return
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	for _, p := range partners {
+		add(p.UserID)
+	}
+	for _, r := range rivals {
+		add(r.UserID)
+	}
+	if len(ids) == 0 {
+		return map[uint]string{}, nil
+	}
+	users, err := h.userRepo.FindManyByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[uint]string, len(users))
+	for _, u := range users {
+		result[u.ID] = u.Username
+	}
+	return result, nil
+}
+
 func (h *UserHandler) UpdatePreferences(c echo.Context) error {
 	authUserID, err := getUserID(c)
 	if err != nil {
@@ -191,11 +361,13 @@ func (h *UserHandler) UpdatePreferences(c echo.Context) error {
 	})
 }
 
-// ListMatches returns a paginated, newest-first list of matches in which the
-// authenticated user participated. Query params:
+// ListMatches returns a paginated list of matches in which the authenticated
+// user participated. Query params:
 //
-//	limit  — 1..50 (default 20)
-//	offset — >= 0  (default 0)
+//	limit   — 1..50 (default 20)
+//	offset  — >= 0  (default 0)
+//	outcome — win | loss | abandoned | all (default all), viewer-relative
+//	sort    — new | old (default new)
 //
 // Authorisation mirrors GetProfile: the :id path param must equal the
 // authenticated user's ID. Responses never leak email, password hash, or
@@ -214,12 +386,12 @@ func (h *UserHandler) ListMatches(c echo.Context) error {
 		return apperr.ErrForbidden
 	}
 
-	limit, offset, err := parseMatchesPagination(c)
+	limit, offset, outcome, sort, err := parseMatchesQuery(c)
 	if err != nil {
 		return err
 	}
 
-	matches, total, err := h.matchRepo.GetMatchesForUser(authUserID, limit, offset)
+	matches, total, err := h.matchRepo.GetMatchesForUser(authUserID, limit, offset, outcome, sort)
 	if err != nil {
 		return fmt.Errorf("fetching matches: %w", err)
 	}
@@ -244,31 +416,51 @@ func (h *UserHandler) ListMatches(c echo.Context) error {
 	})
 }
 
-// parseMatchesPagination reads the limit/offset query params and applies the
-// documented bounds. Returns apperr.ErrBadRequest on any violation.
-func parseMatchesPagination(c echo.Context) (int, int, error) {
+// parseMatchesQuery reads the limit/offset/outcome/sort query params and applies
+// the documented bounds + allowlists. Returns apperr.ErrBadRequest on any
+// violation. outcome normalises "" / "all" to "" (no filter); sort normalises
+// "" to "new".
+func parseMatchesQuery(c echo.Context) (limit, offset int, outcome, sort string, err error) {
 	const defaultLimit = 20
 	const maxLimit = 50
 
-	limit := defaultLimit
+	limit = defaultLimit
 	if raw := c.QueryParam("limit"); raw != "" {
-		v, err := strconv.Atoi(raw)
-		if err != nil || v < 1 || v > maxLimit {
-			return 0, 0, apperr.ErrBadRequest
+		v, convErr := strconv.Atoi(raw)
+		if convErr != nil || v < 1 || v > maxLimit {
+			return 0, 0, "", "", apperr.ErrBadRequest
 		}
 		limit = v
 	}
 
-	offset := 0
+	offset = 0
 	if raw := c.QueryParam("offset"); raw != "" {
-		v, err := strconv.Atoi(raw)
-		if err != nil || v < 0 {
-			return 0, 0, apperr.ErrBadRequest
+		v, convErr := strconv.Atoi(raw)
+		if convErr != nil || v < 0 {
+			return 0, 0, "", "", apperr.ErrBadRequest
 		}
 		offset = v
 	}
 
-	return limit, offset, nil
+	switch raw := c.QueryParam("outcome"); raw {
+	case "", "all":
+		outcome = ""
+	case "win", "loss", "abandoned":
+		outcome = raw
+	default:
+		return 0, 0, "", "", apperr.ErrBadRequest
+	}
+
+	switch raw := c.QueryParam("sort"); raw {
+	case "", "new":
+		sort = "new"
+	case "old":
+		sort = "old"
+	default:
+		return 0, 0, "", "", apperr.ErrBadRequest
+	}
+
+	return limit, offset, outcome, sort, nil
 }
 
 // loadUsernamesForMatches gathers all participant IDs across the page and

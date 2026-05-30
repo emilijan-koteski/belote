@@ -20,27 +20,62 @@
   },
   "profile": {
     "title": "Profil",
+    "eyebrow": "Profil",
     "memberSince": "Član od {{date}}",
+    "winRate": "Procenat pobeda",
     "statsHeading": "Statistika",
+    "careerError": "Neuspešno učitavanje karijere — pokušaj ponovo",
+    "lastPlayed": {
+      "today": "Igrao/la danas",
+      "yesterday": "Igrao/la juče",
+      "daysAgo": "Igrao/la pre {{count}} dana"
+    },
+    "hero": {
+      "games": "partije",
+      "wins": "pobede",
+      "losses": "porazi",
+      "capots": "kapoti"
+    },
+    "streak": {
+      "winTitle": "Niz pobeda — {{count}} zaredom",
+      "lossTitle": "Hladni niz — {{count}} poraza",
+      "winSubtitle": "Samo tako nastavi — sledeći meč ulazi u niz.",
+      "lossSubtitle": "Otresi se — pokreni Brzu igru i prekini niz.",
+      "play": "Igraj"
+    },
     "stats": {
+      "eyebrow": "Karijera",
+      "sub": "Ukupni rezultati kroz sve mečeve — zvanja, kapoti, pali ugovori i sve ostalo.",
       "totalGamesPlayed": "Odigrane partije",
       "wins": "Pobede",
       "losses": "Porazi",
+      "abandoned": "Prekinuti",
       "winRate": "Procenat pobeda",
       "winRateEmpty": "—",
-      "error": "Neuspešno učitavanje statistike — pokušaj ponovo"
+      "error": "Neuspešno učitavanje statistike — pokušaj ponovo",
+      "outcomeSplit": "Odnos ishoda",
+      "legendWins": "{{count}} pobeda",
+      "legendLosses": "{{count}} poraza",
+      "legendAbandoned": "{{count}} prekinutih"
     },
     "matchHistory": {
+      "eyebrow": "Aktivnost",
       "title": "Istorija mečeva",
+      "sub": "Svaki odigrani meč — klikni na zapis za prikaz bodovanja po rukama, zvanja, kapota i palih ugovora.",
       "empty": "Nema mečeva — pokreni Brzu igru",
       "emptyCta": "U lobi",
+      "emptyFiltered": "Nema mečeva za ovaj filter.",
       "loading": "Učitavanje mečeva…",
       "error": "Neuspešno učitavanje istorije — pokušaj ponovo",
       "loadMore": "Učitaj još",
+      "showing": "Prikazano {{shown}} od {{total}} mečeva",
       "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
       "durationHms": "{{h}}:{{m}}:{{s}}",
       "durationMs": "{{m}}:{{s}}",
       "vs": "&",
+      "with": "sa",
+      "versus": "protiv",
+      "you": "Ti",
       "teammate": "Saigrač",
       "opponents": "Protivnici",
       "noHandDetails": "Nema detalja o deljenjima za ovaj meč",
@@ -49,6 +84,17 @@
       "outcomeAbandoned": "Prekinut",
       "expandRow": "Prikaži detalje ruku",
       "collapseRow": "Sakrij detalje ruku",
+      "filter": {
+        "all": "Svi",
+        "win": "Pobede",
+        "loss": "Porazi",
+        "abandoned": "Prekinuti"
+      },
+      "sort": {
+        "label": "Redosled",
+        "newest": "Najnovije prvo",
+        "oldest": "Najstarije prvo"
+      },
       "variant": {
         "bitola": "Bitola"
       },
@@ -62,8 +108,53 @@
         "lastTrickBonus": "Poslednji štih",
         "capot": "Kapot",
         "failedContract": "Pao",
-        "handTotal": "Ukupno ruka"
+        "handTotal": "Ukupno ruka",
+        "col": {
+          "number": "#",
+          "hand": "Ruka",
+          "cards": "Karte",
+          "declarations": "Zvanja",
+          "notes": "Beleške"
+        },
+        "desc": {
+          "capot": "Kapot ruka",
+          "failed": "Ugovor pao",
+          "weCalled": "Mi smo uzeli adut",
+          "theyCalled": "Oni su uzeli adut"
+        },
+        "note": {
+          "capot": "+{{points}} kapot",
+          "lastTrick": "+{{points}} poslednji štih",
+          "us": "mi",
+          "them": "oni",
+          "failedUs": "pao · mi",
+          "failedThem": "pao · oni"
+        }
       }
+    },
+    "partners": {
+      "eyebrow": "U fokusu",
+      "title": "Najčešći saigrač",
+      "matchesTogether": "{{count}} mečeva zajedno",
+      "empty": "Još nema stalnih saigrača — odigraj nekoliko mečeva."
+    },
+    "rivals": {
+      "eyebrow": "Rivalstvo",
+      "title": "S druge strane stola",
+      "empty": "Još nema rivala — odigraj nekoliko mečeva."
+    },
+    "milestones": {
+      "eyebrow": "Prekretnice",
+      "title": "Vrhunci karijere",
+      "capotsLabel": "Pozvani kapoti",
+      "capotsHint": "ruke s maksimumom",
+      "bestHandLabel": "Najbolja ruka",
+      "bestHandHint": "Ruka {{hand}} · {{date}}",
+      "bestHandHintEmpty": "još nema ruku",
+      "bestHandEmpty": "—",
+      "avgLengthLabel": "Pros. trajanje meča",
+      "avgLengthValue": "{{minutes}}m",
+      "avgLengthHint": "završeni mečevi"
     }
   },
   "language": {

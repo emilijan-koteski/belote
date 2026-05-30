@@ -1,141 +1,104 @@
 import { useTranslation } from "react-i18next";
 
+import type { MatchFilter } from "@/shared/api/matches";
+import { useCareerQuery } from "@/shared/hooks/queries/useCareer";
 import { useProfileQuery } from "@/shared/hooks/queries/useProfile";
-import { formatLocalizedDate } from "@/shared/lib/formatDate";
 import { useAuthStore } from "@/shared/stores/authStore";
 
+import { IdentityHero } from "./components/IdentityHero";
+import { Milestones } from "./components/Milestones";
+import { PartnerSpotlight } from "./components/PartnerSpotlight";
+import { Rivalries } from "./components/Rivalries";
+import { StatsGrid } from "./components/StatsGrid";
+import { StreakCallout } from "./components/StreakCallout";
 import { MatchHistory } from "./MatchHistory";
-
-function StatTile({
-  testId,
-  label,
-  value,
-  dataValue,
-  tone = "neutral",
-}: {
-  testId: string;
-  label: string;
-  value: string;
-  dataValue: string;
-  tone?: "neutral" | "success" | "muted";
-}) {
-  const toneClass =
-    tone === "success"
-      ? "text-success"
-      : tone === "muted"
-        ? "text-text-secondary"
-        : "text-text-primary";
-  return (
-    <div data-testid={testId} data-value={dataValue} className="rounded-lg bg-surface-elevated p-4">
-      <div className={`font-display text-4xl font-bold ${toneClass}`}>{value}</div>
-      <div className="mt-1 text-sm text-text-secondary">{label}</div>
-    </div>
-  );
-}
 
 export function ProfilePage() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { data: profile, isPending, isError } = useProfileQuery(user?.id);
+  const career = useCareerQuery(user?.id);
 
   if (isPending) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-8 md:px-8" data-testid="profile-loading">
-        <div className="h-8 w-48 animate-pulse rounded bg-surface" />
-        <div className="mt-4 h-5 w-32 animate-pulse rounded bg-surface" />
+      <div className="mx-auto max-w-[1320px] px-4 py-8 md:px-7" data-testid="profile-loading">
+        <div className="bg-surface h-40 animate-pulse rounded-[var(--radius-lg)]" />
+        <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-surface h-28 animate-pulse rounded-[var(--radius-lg)]" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  const displayName = profile?.username ?? user?.username ?? "";
+  const username = profile?.username ?? user?.username ?? "";
   const createdAt = profile?.createdAt ?? user?.createdAt ?? "";
-  const formattedDate = createdAt ? formatLocalizedDate(createdAt, t, "long") : "";
+  const wins = profile?.wins ?? 0;
+  const losses = profile?.losses ?? 0;
+  const abandoned = profile?.abandoned ?? 0;
+  const games = profile?.totalGamesPlayed ?? 0;
+  const winRate = games === 0 ? null : Math.round((wins / games) * 100);
+
+  const counts: Record<MatchFilter, number> = {
+    all: games,
+    win: wins,
+    loss: losses,
+    abandoned,
+  };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 md:px-8" data-testid="profile-page">
-      <h1
-        className="font-display text-2xl font-semibold text-text-primary"
-        data-testid="profile-username"
-      >
-        {displayName}
-      </h1>
+    <div className="mx-auto max-w-[1320px] px-4 py-8 pb-32 md:px-7" data-testid="profile-page">
+      <IdentityHero
+        username={username}
+        createdAt={createdAt}
+        lastPlayedAt={career.data?.lastPlayedAt}
+        games={games}
+        wins={wins}
+        losses={losses}
+        capots={career.data?.capots ?? 0}
+        winRate={winRate}
+      />
 
-      {formattedDate && (
-        <p className="mt-1 text-sm text-text-secondary" data-testid="profile-member-since">
-          {t("profile.memberSince", { date: formattedDate })}
-        </p>
-      )}
+      {career.data && <StreakCallout streak={career.data.streak} />}
 
-      <div className="mt-8 space-y-6">
+      {isError ? (
         <section
-          className="rounded-lg border border-border bg-surface p-6"
-          data-testid="profile-match-history"
-        >
-          <h2 className="font-display text-lg font-semibold text-text-primary">
-            {t("profile.matchHistory.title")}
-          </h2>
-          <div className="mt-4">
-            <MatchHistory userId={user?.id} />
-          </div>
-        </section>
-
-        <section
-          className="rounded-lg border border-border bg-surface p-6"
+          className="bg-surface border-border mb-5 rounded-[var(--radius-lg)] border p-6"
           data-testid="profile-stats"
         >
-          <h2 className="font-display text-lg font-semibold text-text-primary">
-            {t("profile.statsHeading")}
-          </h2>
-          {isError ? (
-            <p className="mt-4 text-sm text-destructive" data-testid="profile-stats-error">
-              {t("profile.stats.error")}
-            </p>
-          ) : (
-            (() => {
-              const wins = profile?.wins ?? 0;
-              const losses = profile?.losses ?? 0;
-              const totalGamesPlayed = profile?.totalGamesPlayed ?? 0;
-              // Denominator includes abandoned so "played" is consistent across all four tiles.
-              const rate =
-                totalGamesPlayed === 0 ? undefined : Math.round((wins / totalGamesPlayed) * 100);
-              const winRateDisplay =
-                rate === undefined ? t("profile.stats.winRateEmpty") : `${rate}%`;
-              const winRateTone: "success" | "muted" =
-                rate !== undefined && rate >= 50 ? "success" : "muted";
-              return (
-                <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
-                  <StatTile
-                    testId="profile-stat-games-played"
-                    label={t("profile.stats.totalGamesPlayed")}
-                    value={String(totalGamesPlayed)}
-                    dataValue={String(totalGamesPlayed)}
-                  />
-                  <StatTile
-                    testId="profile-stat-wins"
-                    label={t("profile.stats.wins")}
-                    value={String(wins)}
-                    dataValue={String(wins)}
-                    tone="success"
-                  />
-                  <StatTile
-                    testId="profile-stat-losses"
-                    label={t("profile.stats.losses")}
-                    value={String(losses)}
-                    dataValue={String(losses)}
-                    tone="muted"
-                  />
-                  <StatTile
-                    testId="profile-stat-win-rate"
-                    label={t("profile.stats.winRate")}
-                    value={winRateDisplay}
-                    dataValue={rate === undefined ? "" : String(rate)}
-                    tone={winRateTone}
-                  />
-                </div>
-              );
-            })()
-          )}
+          <p className="text-destructive text-sm" data-testid="profile-stats-error">
+            {t("profile.stats.error")}
+          </p>
         </section>
+      ) : (
+        <StatsGrid games={games} wins={wins} losses={losses} abandoned={abandoned} />
+      )}
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        <MatchHistory userId={user?.id} counts={counts} />
+
+        <aside className="flex flex-col gap-3.5 lg:sticky lg:top-20" data-testid="profile-sidebar">
+          {career.isError ? (
+            <p className="text-ink-mute text-sm" data-testid="profile-career-error">
+              {t("profile.careerError")}
+            </p>
+          ) : career.data ? (
+            <>
+              <PartnerSpotlight partners={career.data.topPartners} />
+              <Rivalries rivals={career.data.topRivals} />
+              <Milestones
+                capots={career.data.capots}
+                bestHand={career.data.bestHand}
+                avgMatchSeconds={career.data.avgMatchSeconds}
+              />
+            </>
+          ) : (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-surface h-36 animate-pulse rounded-[var(--radius-lg)]" />
+            ))
+          )}
+        </aside>
       </div>
     </div>
   );

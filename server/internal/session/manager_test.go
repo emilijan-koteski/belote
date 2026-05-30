@@ -59,16 +59,14 @@ func (r *mockMatchRepo) CreateWithHands(m *match.Match, hands []match.HandResult
 	return nil
 }
 
-func (r *mockMatchRepo) GetMatchesForUser(userID uint, limit, offset int) ([]match.Match, int64, error) {
+func (r *mockMatchRepo) GetMatchesForUser(userID uint, limit, offset int, outcome, sort string) ([]match.Match, int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.err != nil {
 		return nil, 0, r.err
 	}
 	// Not exercised by session-manager tests — return empty page.
-	_ = userID
-	_ = limit
-	_ = offset
+	_, _, _, _, _ = userID, limit, offset, outcome, sort
 	return nil, 0, nil
 }
 
@@ -81,6 +79,25 @@ func (r *mockMatchRepo) GetStatsForUser(userID uint) (int, int, int, error) {
 	// Not exercised by session-manager tests — return zero counts.
 	_ = userID
 	return 0, 0, 0, nil
+}
+
+// Career aggregates are not exercised by session-manager tests.
+func (r *mockMatchRepo) GetCareerAggregatesForUser(uint) (match.CareerAggregates, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return match.CareerAggregates{}, r.err
+}
+
+func (r *mockMatchRepo) GetTopPartnersForUser(uint, int) ([]match.PartnerAggregate, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return nil, r.err
+}
+
+func (r *mockMatchRepo) GetTopRivalsForUser(uint, int) ([]match.RivalAggregate, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return nil, r.err
 }
 
 func (r *mockMatchRepo) getMatches() []*match.Match {

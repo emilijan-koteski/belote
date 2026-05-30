@@ -8,6 +8,12 @@ type AvatarProps = {
   team?: AvatarTeam;
   owner?: boolean;
   you?: boolean;
+  /**
+   * "profile" gives the large profile-hero treatment: a surface gap + brass
+   * outer ring + soft felt drop shadow (instead of the thin role ring). Used by
+   * the profile Identity Hero.
+   */
+  halo?: "profile";
   className?: string;
 };
 
@@ -17,7 +23,7 @@ type AvatarProps = {
  * brass for owner, accent for "you", team color otherwise. Owner gets a soft
  * brass halo via box-shadow so they read at a glance across the diamond.
  */
-export function Avatar({ name, size = 36, team = null, owner, you, className }: AvatarProps) {
+export function Avatar({ name, size = 36, team = null, owner, you, halo, className }: AvatarProps) {
   const initial = (name || "?").charAt(0).toUpperCase();
 
   let background: string;
@@ -42,6 +48,18 @@ export function Avatar({ name, size = 36, team = null, owner, you, className }: 
   else if (team === "B") ringColor = "var(--team-b)";
   else ringColor = "var(--border-2)";
 
+  // Profile hero: surface gap + brass outer ring + soft felt drop shadow,
+  // rendered entirely via box-shadow so the gradient fill stays edge-to-edge.
+  const isProfile = halo === "profile";
+  const border = isProfile ? "none" : `2px solid ${ringColor}`;
+  let boxShadow = "none";
+  if (isProfile) {
+    boxShadow =
+      "0 0 0 4px var(--surface), 0 0 0 5px var(--brass), 0 16px 36px -16px rgba(25,101,54,0.55)";
+  } else if (owner) {
+    boxShadow = "0 0 0 3px rgba(201,168,118,0.20)";
+  }
+
   return (
     <div
       className={cn(
@@ -53,10 +71,10 @@ export function Avatar({ name, size = 36, team = null, owner, you, className }: 
         height: size,
         background,
         color: textColor,
-        border: `2px solid ${ringColor}`,
+        border,
         fontSize: Math.max(11, size * 0.42),
         letterSpacing: -0.3,
-        boxShadow: owner ? "0 0 0 3px rgba(201,168,118,0.20)" : "none",
+        boxShadow,
       }}
       aria-hidden="true"
     >

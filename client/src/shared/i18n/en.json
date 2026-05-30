@@ -20,27 +20,62 @@
   },
   "profile": {
     "title": "Profile",
+    "eyebrow": "Profile",
     "memberSince": "Member since {{date}}",
+    "winRate": "Win rate",
     "statsHeading": "Stats",
+    "careerError": "Could not load career stats — try again",
+    "lastPlayed": {
+      "today": "Played today",
+      "yesterday": "Played yesterday",
+      "daysAgo": "Played {{count}} days ago"
+    },
+    "hero": {
+      "games": "games",
+      "wins": "wins",
+      "losses": "losses",
+      "capots": "capots"
+    },
+    "streak": {
+      "winTitle": "Win streak — {{count}} in a row",
+      "lossTitle": "Cold streak — {{count}} losses",
+      "winSubtitle": "Keep it going — your next match counts toward the streak.",
+      "lossSubtitle": "Shake it off — Quick Play to break the run.",
+      "play": "Play"
+    },
     "stats": {
+      "eyebrow": "Career",
+      "sub": "Career totals across every match — declarations, capots, lost contracts and all.",
       "totalGamesPlayed": "Games played",
       "wins": "Wins",
       "losses": "Losses",
+      "abandoned": "Abandoned",
       "winRate": "Win rate",
       "winRateEmpty": "—",
-      "error": "Could not load stats — try again"
+      "error": "Could not load stats — try again",
+      "outcomeSplit": "Outcome split",
+      "legendWins": "{{count}} wins",
+      "legendLosses": "{{count}} losses",
+      "legendAbandoned": "{{count}} abandoned"
     },
     "matchHistory": {
-      "title": "Match History",
+      "eyebrow": "Activity",
+      "title": "Match history",
+      "sub": "Every completed match — open a row to see hand-by-hand scoring, declarations, capots and failed contracts.",
       "empty": "No games yet — Quick Play to get started",
       "emptyCta": "Go to lobby",
+      "emptyFiltered": "No matches match this filter yet.",
       "loading": "Loading matches…",
       "error": "Could not load match history — try again",
       "loadMore": "Load more",
+      "showing": "Showing {{shown}} of {{total}} matches",
       "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
       "durationHms": "{{h}}:{{m}}:{{s}}",
       "durationMs": "{{m}}:{{s}}",
       "vs": "&",
+      "with": "with",
+      "versus": "vs",
+      "you": "You",
       "teammate": "Teammate",
       "opponents": "Opponents",
       "noHandDetails": "No hand details for this match",
@@ -49,6 +84,17 @@
       "outcomeAbandoned": "Abandoned",
       "expandRow": "Show hand details",
       "collapseRow": "Hide hand details",
+      "filter": {
+        "all": "All",
+        "win": "Wins",
+        "loss": "Losses",
+        "abandoned": "Abandoned"
+      },
+      "sort": {
+        "label": "Sort",
+        "newest": "Newest first",
+        "oldest": "Oldest first"
+      },
       "variant": {
         "bitola": "Bitola"
       },
@@ -62,8 +108,53 @@
         "lastTrickBonus": "Last trick",
         "capot": "Capot",
         "failedContract": "Failed",
-        "handTotal": "Hand Total"
+        "handTotal": "Hand Total",
+        "col": {
+          "number": "#",
+          "hand": "Hand",
+          "cards": "Cards",
+          "declarations": "Declarations",
+          "notes": "Notes"
+        },
+        "desc": {
+          "capot": "Capot hand",
+          "failed": "Contract failed",
+          "weCalled": "We called trump",
+          "theyCalled": "They called trump"
+        },
+        "note": {
+          "capot": "+{{points}} capot",
+          "lastTrick": "+{{points}} last trick",
+          "us": "us",
+          "them": "them",
+          "failedUs": "failed · us",
+          "failedThem": "failed · them"
+        }
       }
+    },
+    "partners": {
+      "eyebrow": "Spotlight",
+      "title": "Most-played partner",
+      "matchesTogether": "{{count}} matches together",
+      "empty": "No regular partners yet — play a few matches."
+    },
+    "rivals": {
+      "eyebrow": "Rivalry",
+      "title": "Across the table",
+      "empty": "No rivals yet — play a few matches."
+    },
+    "milestones": {
+      "eyebrow": "Milestones",
+      "title": "Career highlights",
+      "capotsLabel": "Capots called",
+      "capotsHint": "max-points hands",
+      "bestHandLabel": "Best hand",
+      "bestHandHint": "Hand {{hand}} · {{date}}",
+      "bestHandHintEmpty": "no hands yet",
+      "bestHandEmpty": "—",
+      "avgLengthLabel": "Avg. match length",
+      "avgLengthValue": "{{minutes}}m",
+      "avgLengthHint": "completed matches"
     }
   },
   "language": {

@@ -96,12 +96,24 @@ func (r *timestampedRepo) CreateWithHands(m *match.Match, _ []match.HandResult) 
 	return nil
 }
 
-func (r *timestampedRepo) GetMatchesForUser(_ uint, _, _ int) ([]match.Match, int64, error) {
+func (r *timestampedRepo) GetMatchesForUser(_ uint, _, _ int, _, _ string) ([]match.Match, int64, error) {
 	return nil, 0, nil
 }
 
 func (r *timestampedRepo) GetStatsForUser(_ uint) (int, int, int, error) {
 	return 0, 0, 0, nil
+}
+
+func (r *timestampedRepo) GetCareerAggregatesForUser(_ uint) (match.CareerAggregates, error) {
+	return match.CareerAggregates{}, nil
+}
+
+func (r *timestampedRepo) GetTopPartnersForUser(_ uint, _ int) ([]match.PartnerAggregate, error) {
+	return nil, nil
+}
+
+func (r *timestampedRepo) GetTopRivalsForUser(_ uint, _ int) ([]match.RivalAggregate, error) {
+	return nil, nil
 }
 
 func (r *timestampedRepo) wasCalled() bool {

@@ -434,16 +434,16 @@ describe("ChatPanel (match channel)", () => {
     expect(mockSendMessage).not.toHaveBeenCalled();
   });
 
-  it("flips match-channel placeholder to 'Message…' after a successful send", () => {
+  it("keeps the match-channel placeholder as 'Message…' before and after a send", () => {
     render(<ChatPanel channel="match" matchId={42} />);
     const input = screen.getByTestId("chat-input") as HTMLInputElement;
-    expect(input.placeholder).toBe("Message your table\u2026");
+    expect(input.placeholder).toBe("Message\u2026");
     fireEvent.change(input, { target: { value: "gg" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(input.placeholder).toBe("Message\u2026");
   });
 
-  it("clearMatch resets the match placeholder — new match gets the invitation again", () => {
+  it("clearMatch keeps the match placeholder as 'Message…' for a new match", () => {
     useChatStore.setState({ hasSentMatch: true });
     const { rerender } = render(<ChatPanel channel="match" matchId={42} />);
     expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe(
@@ -452,7 +452,7 @@ describe("ChatPanel (match channel)", () => {
     act(() => useChatStore.getState().clearMatch());
     rerender(<ChatPanel channel="match" matchId={43} />);
     expect((screen.getByTestId("chat-input") as HTMLInputElement).placeholder).toBe(
-      "Message your table\u2026",
+      "Message\u2026",
     );
   });
 

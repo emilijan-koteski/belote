@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { CareerResponse } from "@/shared/api/career";
 import type { ProfileResponse } from "@/shared/api/profile";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { QueryWrapper } from "@/test-utils";
@@ -18,6 +19,11 @@ const mockGetProfile = vi.fn();
 vi.mock("@/shared/api/profile", () => ({
   getProfile: (...args: unknown[]) => mockGetProfile(...args),
   updatePreferences: vi.fn().mockResolvedValue({ languagePreference: "en" }),
+}));
+
+const mockGetCareer = vi.fn();
+vi.mock("@/shared/api/career", () => ({
+  getCareer: (...args: unknown[]) => mockGetCareer(...args),
 }));
 
 const mockGetUserMatches = vi.fn();
@@ -49,10 +55,23 @@ function profileFixture(overrides: Partial<ProfileResponse> = {}): ProfileRespon
   };
 }
 
+function careerFixture(overrides: Partial<CareerResponse> = {}): CareerResponse {
+  return {
+    capots: 0,
+    avgMatchSeconds: 0,
+    streak: { kind: "none", length: 0 },
+    topPartners: [],
+    topRivals: [],
+    ...overrides,
+  };
+}
+
 describe("ProfilePage", () => {
   beforeEach(() => {
     mockGetProfile.mockReset();
+    mockGetCareer.mockReset();
     mockGetUserMatches.mockReset();
+    mockGetCareer.mockResolvedValue(careerFixture());
     // Default: MatchHistory renders the empty state so existing tests need no per-case setup.
     mockGetUserMatches.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
     useAuthStore.setState({
@@ -94,8 +113,7 @@ describe("ProfilePage", () => {
       expect(screen.getByTestId("profile-member-since")).toBeInTheDocument();
     });
 
-    const memberSinceText = screen.getByTestId("profile-member-since").textContent;
-    expect(memberSinceText).toContain("2026");
+    expect(screen.getByTestId("profile-member-since").textContent).toContain("2026");
   });
 
   it("renders match-history section + four stat tiles", async () => {
@@ -104,19 +122,17 @@ describe("ProfilePage", () => {
     renderProfilePage();
 
     await waitFor(() => {
-      expect(screen.getByTestId("profile-match-history")).toBeInTheDocument();
+      expect(screen.getByTestId("match-history")).toBeInTheDocument();
     });
 
     expect(screen.getByTestId("profile-stats")).toBeInTheDocument();
-    // All four tiles exist with data-value="0" for a zero-games fixture.
     expect(screen.getByTestId("profile-stat-games-played")).toHaveAttribute("data-value", "0");
     expect(screen.getByTestId("profile-stat-wins")).toHaveAttribute("data-value", "0");
     expect(screen.getByTestId("profile-stat-losses")).toHaveAttribute("data-value", "0");
-    // Win-rate for zero games is the em-dash, data-value is empty string.
-    expect(screen.getByTestId("profile-stat-win-rate")).toHaveAttribute("data-value", "");
+    expect(screen.getByTestId("profile-stat-abandoned")).toHaveAttribute("data-value", "0");
   });
 
-  it("handles profile fetch error gracefully", async () => {
+  it("handles profile fetch error gracefully — falls back to auth store username", async () => {
     mockGetProfile.mockRejectedValueOnce(new Error("Network error"));
 
     renderProfilePage();
@@ -125,11 +141,10 @@ describe("ProfilePage", () => {
       expect(screen.getByTestId("profile-page")).toBeInTheDocument();
     });
 
-    // Falls back to auth store data
     expect(screen.getByTestId("profile-username")).toHaveTextContent("testuser");
   });
 
-  it("renders real stats when profile has played games", async () => {
+  it("renders real stats + win-rate ring when profile has played games", async () => {
     mockGetProfile.mockResolvedValueOnce(
       profileFixture({ totalGamesPlayed: 10, wins: 7, losses: 2, abandoned: 1 }),
     );
@@ -142,9 +157,11 @@ describe("ProfilePage", () => {
 
     expect(screen.getByTestId("profile-stat-wins")).toHaveAttribute("data-value", "7");
     expect(screen.getByTestId("profile-stat-losses")).toHaveAttribute("data-value", "2");
+    expect(screen.getByTestId("profile-stat-abandoned")).toHaveAttribute("data-value", "1");
     // Denominator is totalGamesPlayed (abandoned included): 7 / 10 = 70%.
-    expect(screen.getByTestId("profile-stat-win-rate")).toHaveAttribute("data-value", "70");
-    expect(screen.getByTestId("profile-stat-win-rate").textContent).toContain("70%");
+    const ring = screen.getByTestId("profile-win-rate-ring");
+    expect(ring).toHaveAttribute("data-rate", "70");
+    expect(ring.textContent).toContain("70%");
   });
 
   it("counts abandoned games in the win-rate denominator", async () => {
@@ -159,8 +176,9 @@ describe("ProfilePage", () => {
     });
 
     // 4 / 10 = 40% — NOT 4 / (4+3) = 57%.
-    expect(screen.getByTestId("profile-stat-win-rate")).toHaveAttribute("data-value", "40");
-    expect(screen.getByTestId("profile-stat-win-rate").textContent).toContain("40%");
+    const ring = screen.getByTestId("profile-win-rate-ring");
+    expect(ring).toHaveAttribute("data-rate", "40");
+    expect(ring.textContent).toContain("40%");
   });
 
   it("renders stats error state when profile query fails", async () => {
@@ -174,38 +192,49 @@ describe("ProfilePage", () => {
 
     // Error branch replaces the tile grid — numeric tiles must not render.
     expect(screen.queryByTestId("profile-stat-games-played")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("profile-stat-win-rate")).not.toBeInTheDocument();
   });
 
-  it("renders em-dash for win-rate when zero games played", async () => {
+  it("renders em-dash for the win-rate ring when zero games played", async () => {
     mockGetProfile.mockResolvedValueOnce(profileFixture());
 
     renderProfilePage();
 
     await waitFor(() => {
-      expect(screen.getByTestId("profile-stat-win-rate")).toBeInTheDocument();
+      expect(screen.getByTestId("profile-win-rate-ring")).toBeInTheDocument();
     });
 
-    const winRate = screen.getByTestId("profile-stat-win-rate");
-    expect(winRate).toHaveAttribute("data-value", "");
-    // Em-dash character, never "NaN%" or "0%".
-    expect(winRate.textContent).toContain("\u2014");
-    expect(winRate.textContent).not.toContain("NaN");
-    expect(winRate.textContent).not.toContain("0%");
+    const ring = screen.getByTestId("profile-win-rate-ring");
+    expect(ring).toHaveAttribute("data-rate", "");
+    expect(ring.textContent).toContain("—");
+    expect(ring.textContent).not.toContain("NaN");
+    expect(ring.textContent).not.toContain("0%");
   });
 
-  it("renders stats tiles alongside match-history empty state when user has no games", async () => {
-    mockGetProfile.mockResolvedValueOnce(profileFixture());
-    // MatchHistory empty state comes from mockGetUserMatches default in beforeEach.
+  it("renders the career sidebar (partners, rivals, milestones) when career loads", async () => {
+    mockGetProfile.mockResolvedValueOnce(
+      profileFixture({ totalGamesPlayed: 5, wins: 3, losses: 2 }),
+    );
+    mockGetCareer.mockResolvedValueOnce(
+      careerFixture({
+        capots: 2,
+        avgMatchSeconds: 1500,
+        streak: { kind: "win", length: 3 },
+        topPartners: [{ userId: 2, username: "partner_a", played: 4, wins: 3 }],
+        topRivals: [{ userId: 3, username: "rival_x", wins: 2, losses: 1 }],
+      }),
+    );
 
     renderProfilePage();
 
     await waitFor(() => {
-      expect(screen.getByTestId("match-history-empty")).toBeInTheDocument();
+      expect(screen.getByTestId("profile-partners")).toBeInTheDocument();
     });
 
-    // Both empty states coexist.
-    expect(screen.getByTestId("profile-stat-games-played")).toHaveAttribute("data-value", "0");
-    expect(screen.getByTestId("profile-stat-win-rate")).toHaveAttribute("data-value", "");
+    expect(screen.getByTestId("profile-rivals")).toBeInTheDocument();
+    expect(screen.getByTestId("profile-milestones")).toBeInTheDocument();
+    expect(screen.getByTestId("profile-partners")).toHaveTextContent("partner_a");
+    expect(screen.getByTestId("profile-rivals")).toHaveTextContent("rival_x");
+    // Win streak callout shows.
+    expect(screen.getByTestId("profile-streak")).toHaveAttribute("data-streak-kind", "win");
   });
 });

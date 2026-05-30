@@ -1,5 +1,42 @@
 package match
 
+import "time"
+
+// CareerAggregates holds the non-list profile metrics computed across all of a
+// user's matches: capot count (won by the viewer's team), average completed-
+// match duration, the single best hand the viewer's team ever scored, and the
+// current win/loss streak. Zero values are valid for a user with no matches.
+type CareerAggregates struct {
+	Capots          int
+	AvgMatchSeconds int
+	BestHandPoints  int
+	BestHandNumber  int
+	BestHandAt      time.Time
+	HasBestHand     bool
+	StreakKind      string // "win" | "loss" | "none"
+	StreakLength    int
+	LastPlayedAt    time.Time
+	HasLastPlayed   bool
+}
+
+// PartnerAggregate is one most-played teammate row: matches played together and
+// wins together (completed matches the viewer's team won). UserID still needs a
+// username lookup by the caller.
+type PartnerAggregate struct {
+	UserID uint
+	Played int
+	Wins   int
+}
+
+// RivalAggregate is one most-faced opponent row: the viewer's wins and losses
+// against that opponent across completed matches. UserID still needs a username
+// lookup by the caller.
+type RivalAggregate struct {
+	UserID uint
+	Wins   int
+	Losses int
+}
+
 // MatchRepository defines the persistence interface for match records.
 type MatchRepository interface {
 	// Create inserts a Match row without any per-hand detail. Retained for
@@ -15,11 +52,17 @@ type MatchRepository interface {
 	CreateWithHands(match *Match, hands []HandResult) error
 
 	// GetMatchesForUser returns a page of completed / abandoned matches in
-	// which the given userID appears in any of player1..player4 seats,
-	// ordered newest-first (completed_at DESC, id DESC). Hand results are
-	// preloaded and ordered by hand_number ASC. total is the count of all
-	// matching rows, regardless of limit/offset.
-	GetMatchesForUser(userID uint, limit, offset int) (items []Match, total int64, err error)
+	// which the given userID appears in any of player1..player4 seats. Hand
+	// results are preloaded and ordered by hand_number ASC. total is the count
+	// of all matching rows (after the outcome filter), regardless of
+	// limit/offset.
+	//
+	// outcome filters the result set viewer-relative: "win"/"loss" (completed
+	// matches where the viewer's team did / did not win), "abandoned", or "" /
+	// "all" for the unfiltered completed+abandoned set. sort controls ordering:
+	// "old" → completed_at ASC, anything else (default "new") → completed_at
+	// DESC, both tie-broken by id in the same direction.
+	GetMatchesForUser(userID uint, limit, offset int, outcome, sort string) (items []Match, total int64, err error)
 
 	// GetStatsForUser counts matches where userID appears in any of
 	// player1..player4 seats. wins = completed AND winnerTeam matches the
@@ -29,4 +72,17 @@ type MatchRepository interface {
 	// single round-trip via PostgreSQL FILTER aggregation so wins + losses +
 	// abandoned is a consistent snapshot of participation count.
 	GetStatsForUser(userID uint) (wins, losses, abandoned int, err error)
+
+	// GetCareerAggregatesForUser computes the viewer-relative career metrics
+	// (capots won, average completed-match duration, best single hand, current
+	// streak) across every match the user participated in.
+	GetCareerAggregatesForUser(userID uint) (CareerAggregates, error)
+
+	// GetTopPartnersForUser returns the most-played teammates (same-team seat)
+	// ordered by matches played together, capped at limit.
+	GetTopPartnersForUser(userID uint, limit int) ([]PartnerAggregate, error)
+
+	// GetTopRivalsForUser returns the most-faced opponents (opposite-team
+	// seats) ordered by completed matches played against them, capped at limit.
+	GetTopRivalsForUser(userID uint, limit int) ([]RivalAggregate, error)
 }

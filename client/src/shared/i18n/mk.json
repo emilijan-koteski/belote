@@ -20,35 +20,81 @@
   },
   "profile": {
     "title": "Профил",
+    "eyebrow": "Профил",
     "memberSince": "Член од {{date}}",
+    "winRate": "Процент на победи",
     "statsHeading": "Статистика",
+    "careerError": "Не успеа да се вчита кариерата — обиди се повторно",
+    "lastPlayed": {
+      "today": "Играл/а денес",
+      "yesterday": "Играл/а вчера",
+      "daysAgo": "Играл/а пред {{count}} дена"
+    },
+    "hero": {
+      "games": "партии",
+      "wins": "победи",
+      "losses": "порази",
+      "capots": "капоти"
+    },
+    "streak": {
+      "winTitle": "Низа на победи — {{count}} по ред",
+      "lossTitle": "Студена низа — {{count}} порази",
+      "winSubtitle": "Продолжи понатаму — следниот меч ќе се брои во низата.",
+      "lossSubtitle": "Стресни се — пушти Брза игра и прекини ја низата.",
+      "play": "Играј"
+    },
     "stats": {
+      "eyebrow": "Кариера",
+      "sub": "Вкупни резултати од сите мечеви — најави, капоти, паднати договори и сè друго.",
       "totalGamesPlayed": "Одиграни партии",
       "wins": "Победи",
       "losses": "Порази",
+      "abandoned": "Напуштени",
       "winRate": "Процент на победи",
       "winRateEmpty": "—",
-      "error": "Не успеа да се вчитаат статистиките — обиди се повторно"
+      "error": "Не успеа да се вчитаат статистиките — обиди се повторно",
+      "outcomeSplit": "Однос на исходи",
+      "legendWins": "{{count}} победи",
+      "legendLosses": "{{count}} порази",
+      "legendAbandoned": "{{count}} напуштени"
     },
     "matchHistory": {
+      "eyebrow": "Активност",
       "title": "Историја на мечеви",
+      "sub": "Секој одигран меч — кликни на запис за приказ на бодувањето по делења, најави, капоти и паднати договори.",
       "empty": "Сè уште нема мечеви — пушти Брза игра",
       "emptyCta": "Во лоби",
+      "emptyFiltered": "Сè уште нема мечеви за овој филтер.",
       "loading": "Се вчитуваат мечеви…",
       "error": "Не успеа да се вчита историјата — обиди се повторно",
       "loadMore": "Вчитај повеќе",
+      "showing": "Прикажани {{shown}} од {{total}} мечеви",
       "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
       "durationHms": "{{h}}:{{m}}:{{s}}",
       "durationMs": "{{m}}:{{s}}",
       "vs": "&",
+      "with": "со",
+      "versus": "против",
+      "you": "Ти",
       "teammate": "Соиграч",
       "opponents": "Противници",
       "noHandDetails": "Нема детали за делењата на овој меч",
       "outcomeWin": "Победа",
       "outcomeLoss": "Пораз",
-      "outcomeAbandoned": "Прекинат",
+      "outcomeAbandoned": "Напуштен",
       "expandRow": "Прикажи детали за делењата",
       "collapseRow": "Сокриј детали за делењата",
+      "filter": {
+        "all": "Сите",
+        "win": "Победи",
+        "loss": "Порази",
+        "abandoned": "Напуштени"
+      },
+      "sort": {
+        "label": "Подреди",
+        "newest": "Најнови прво",
+        "oldest": "Најстари прво"
+      },
       "variant": {
         "bitola": "Битола"
       },
@@ -62,8 +108,53 @@
         "lastTrickBonus": "Последен штих",
         "capot": "Капот",
         "failedContract": "Падна",
-        "handTotal": "Вкупно делење"
+        "handTotal": "Вкупно делење",
+        "col": {
+          "number": "#",
+          "hand": "Делење",
+          "cards": "Карти",
+          "declarations": "Најави",
+          "notes": "Белешки"
+        },
+        "desc": {
+          "capot": "Капот делење",
+          "failed": "Договорот падна",
+          "weCalled": "Ние зедовме адут",
+          "theyCalled": "Тие зедоа адут"
+        },
+        "note": {
+          "capot": "+{{points}} капот",
+          "lastTrick": "+{{points}} последен штих",
+          "us": "ние",
+          "them": "тие",
+          "failedUs": "падна · ние",
+          "failedThem": "падна · тие"
+        }
       }
+    },
+    "partners": {
+      "eyebrow": "Во фокус",
+      "title": "Најчест партнер",
+      "matchesTogether": "{{count}} мечеви заедно",
+      "empty": "Сè уште нема редовни соиграчи — одиграј неколку мечеви."
+    },
+    "rivals": {
+      "eyebrow": "Ривалство",
+      "title": "Од другата страна на масата",
+      "empty": "Сè уште нема ривали — одиграј неколку мечеви."
+    },
+    "milestones": {
+      "eyebrow": "Пресвртници",
+      "title": "Врвови во кариерата",
+      "capotsLabel": "Направени капоти",
+      "capotsHint": "делења со максимум поени",
+      "bestHandLabel": "Најдобро делење",
+      "bestHandHint": "Делење {{hand}} · {{date}}",
+      "bestHandHintEmpty": "сè уште нема делења",
+      "bestHandEmpty": "—",
+      "avgLengthLabel": "Просечно траење на меч",
+      "avgLengthValue": "{{minutes}}м",
+      "avgLengthHint": "завршени мечеви"
     }
   },
   "language": {

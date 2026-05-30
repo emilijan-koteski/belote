@@ -4,7 +4,12 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { BrowserRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MatchesListResponse, MatchHandView, MatchListItem } from "@/shared/api/matches";
+import type {
+  MatchesListResponse,
+  MatchFilter,
+  MatchHandView,
+  MatchListItem,
+} from "@/shared/api/matches";
 import { QueryWrapper } from "@/test-utils";
 
 import { MatchHistory } from "./MatchHistory";
@@ -14,11 +19,16 @@ vi.mock("@/shared/api/matches", () => ({
   getUserMatches: (...args: unknown[]) => mockGetUserMatches(...args),
 }));
 
-function renderMatchHistory(userId: number | undefined = 1) {
+const NONZERO_COUNTS: Record<MatchFilter, number> = { all: 99, win: 50, loss: 40, abandoned: 9 };
+
+function renderMatchHistory(
+  userId: number | undefined = 1,
+  counts: Record<MatchFilter, number> = NONZERO_COUNTS,
+) {
   return render(
     <QueryWrapper>
       <BrowserRouter>
-        <MatchHistory userId={userId} />
+        <MatchHistory userId={userId} counts={counts} />
       </BrowserRouter>
     </QueryWrapper>,
   );
@@ -92,13 +102,46 @@ describe("MatchHistory", () => {
     expect(screen.getByTestId("match-history-loading")).toBeInTheDocument();
   });
 
-  it("renders empty state with lobby link when total is 0", async () => {
+  it("renders empty state with lobby link when the user has no games", async () => {
     mockGetUserMatches.mockResolvedValueOnce(makeResponse([], 0));
-    renderMatchHistory();
+    renderMatchHistory(1, { all: 0, win: 0, loss: 0, abandoned: 0 });
     const empty = await screen.findByTestId("match-history-empty");
     expect(empty).toBeInTheDocument();
     const cta = screen.getByTestId("match-history-empty-cta");
     expect(cta).toHaveAttribute("href", "/lobby");
+  });
+
+  it("renders the filtered-empty state (not onboarding) when a filter matches nothing", async () => {
+    mockGetUserMatches.mockResolvedValueOnce(makeResponse([], 0));
+    // counts.all > 0 → the user has games, just none for this view.
+    renderMatchHistory(1, { all: 12, win: 0, loss: 0, abandoned: 0 });
+    expect(await screen.findByTestId("match-history-empty-filtered")).toBeInTheDocument();
+    expect(screen.queryByTestId("match-history-empty")).not.toBeInTheDocument();
+  });
+
+  it("re-queries with outcome + sort params when filter and sort change", async () => {
+    mockGetUserMatches.mockResolvedValue(makeResponse([makeMatch()], 1));
+    renderMatchHistory();
+    await screen.findByTestId("match-history-row");
+
+    // Initial fetch uses outcome "all", sort "new".
+    expect(mockGetUserMatches).toHaveBeenLastCalledWith(1, 20, 0, { outcome: "all", sort: "new" });
+
+    fireEvent.click(screen.getByTestId("match-history-filter-win"));
+    await waitFor(() => {
+      expect(mockGetUserMatches).toHaveBeenLastCalledWith(1, 20, 0, {
+        outcome: "win",
+        sort: "new",
+      });
+    });
+
+    fireEvent.click(screen.getByTestId("match-history-sort"));
+    await waitFor(() => {
+      expect(mockGetUserMatches).toHaveBeenLastCalledWith(1, 20, 0, {
+        outcome: "win",
+        sort: "old",
+      });
+    });
   });
 
   it("renders rows with teammate, opponents, outcome and viewer-first score", async () => {
@@ -199,11 +242,10 @@ describe("MatchHistory", () => {
     fireEvent.click(within(row).getByRole("button"));
 
     expect(screen.getByTestId("match-history-hand-capot")).toBeInTheDocument();
-    expect(screen.getByTestId("match-history-hand-failed")).toBeInTheDocument();
-    // Viewer is at seat 0 (teamA, index 0); contractingTeam is 0 → "Us"
-    const failed = screen.getByTestId("match-history-hand-failed-team");
-    expect(failed).toHaveTextContent("Us");
-    expect(failed).toHaveAttribute("data-team", "teamA");
+    // Viewer is at seat 0 (teamA, index 0); contractingTeam is 0 → "us" side failed.
+    const failed = screen.getByTestId("match-history-hand-failed");
+    expect(failed).toHaveTextContent(/us/);
+    expect(failed).not.toHaveTextContent(/them/);
   });
 
   it("renders failed-contract pill as 'Them' when viewer was NOT on the contracting team", async () => {
@@ -226,9 +268,9 @@ describe("MatchHistory", () => {
     const row = await screen.findByTestId("match-history-row");
     fireEvent.click(within(row).getByRole("button"));
 
-    const failed = screen.getByTestId("match-history-hand-failed-team");
-    expect(failed).toHaveTextContent("Them");
-    expect(failed).toHaveAttribute("data-team", "teamA");
+    // Viewer is teamB; teamA contracted and failed → "them" side failed.
+    const failed = screen.getByTestId("match-history-hand-failed");
+    expect(failed).toHaveTextContent(/them/);
   });
 
   it("shows Load more when total > loaded and appends rows on click", async () => {
@@ -273,7 +315,7 @@ describe("MatchHistory", () => {
     render(
       <QueryWrapper>
         <BrowserRouter>
-          <MatchHistory userId={undefined} />
+          <MatchHistory userId={undefined} counts={NONZERO_COUNTS} />
         </BrowserRouter>
       </QueryWrapper>,
     );
