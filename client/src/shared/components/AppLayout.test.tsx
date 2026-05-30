@@ -65,6 +65,14 @@ describe("AppLayout", () => {
     expect(screen.getByTestId("nav-rules")).toHaveTextContent("Rules");
   });
 
+  it("shows the Beljot logo before the wordmark", () => {
+    renderWithRouter("/lobby");
+
+    const logo = screen.getByTestId("app-logo");
+    expect(logo).toBeInTheDocument();
+    expect(logo).toHaveAttribute("src", "/beljot-logo.svg");
+  });
+
   it("highlights active tab for /lobby", () => {
     renderWithRouter("/lobby");
 

@@ -48,12 +48,21 @@ export function TopBar({
       className="sticky top-0 z-50 flex h-[60px] items-center border-b border-border bg-[rgba(245,242,232,0.85)] px-7 backdrop-blur-md"
       data-testid="app-nav"
     >
-      <span
-        className="font-display text-ink text-xl font-semibold tracking-tight"
-        data-testid="app-name"
-      >
-        {t("nav.appName")}
-      </span>
+      <div className="flex items-center gap-2.5">
+        <img
+          src="/beljot-logo.svg"
+          alt=""
+          aria-hidden="true"
+          className="size-7 shrink-0"
+          data-testid="app-logo"
+        />
+        <span
+          className="font-display text-ink text-xl font-semibold tracking-tight"
+          data-testid="app-name"
+        >
+          {t("nav.appName")}
+        </span>
+      </div>
 
       {showNav && (
         <div className="ml-7 flex h-full items-center">
