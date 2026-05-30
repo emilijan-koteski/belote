@@ -40,6 +40,14 @@ type StatsResponse struct {
 	Registered int64 `json:"registered"`
 }
 
+// PublicStatsResponse is the wire payload for the unauthenticated landing-page
+// stats endpoint (GET /api/v1/stats). Deliberately minimal — only the two
+// social-proof counts the marketing hero shows, nothing user-identifying.
+type PublicStatsResponse struct {
+	Online    int `json:"online"`    // currently-connected players (WS-live)
+	OpenRooms int `json:"openRooms"` // rooms accepting players (status="waiting")
+}
+
 // Handler serves lobby-scoped read endpoints.
 type Handler struct {
 	hub      ConnectionTracker
@@ -109,6 +117,27 @@ func (h *Handler) GetStats(c echo.Context) error {
 			InGame:     inGame,
 			Online:     online,
 			Registered: registered,
+		},
+	})
+}
+
+// GetPublicStats serves the landing page's social-proof counts WITHOUT auth:
+// total connected players and the number of open (waiting) rooms. Registered
+// on the bare echo instance so no JWT is required. Online mirrors GetStats'
+// connection-aware count; open rooms are those in "waiting" status — the same
+// set the lobby's default room list ("open tables") shows.
+func (h *Handler) GetPublicStats(c echo.Context) error {
+	online := len(h.hub.ConnectedUserIDs())
+
+	waiting, err := h.rooms.FindByStatus("waiting")
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": PublicStatsResponse{
+			Online:    online,
+			OpenRooms: len(waiting),
 		},
 	})
 }

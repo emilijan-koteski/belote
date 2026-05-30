@@ -37,7 +37,9 @@ func (s *fakeSessions) InGameUserIDs() []uint {
 }
 
 type fakeRoomRepo struct {
-	usersByStatus map[string][]uint
+	usersByStatus   map[string][]uint
+	roomsByStatus   map[string][]room.Room
+	findByStatusErr error
 }
 
 func (r *fakeRoomRepo) FindUserIDsByRoomStatus(status string) ([]uint, error) {
@@ -46,14 +48,16 @@ func (r *fakeRoomRepo) FindUserIDsByRoomStatus(status string) ([]uint, error) {
 
 // All other RoomRepository methods are unused by GetStats — panic loudly so a
 // regression that touches them shows up in test output.
-func (r *fakeRoomRepo) Create(*room.Room) error                           { panic("unused") }
-func (r *fakeRoomRepo) Update(*room.Room) error                           { panic("unused") }
-func (r *fakeRoomRepo) FindByID(uint) (*room.Room, error)                 { panic("unused") }
-func (r *fakeRoomRepo) FindByIDForUpdate(uint) (*room.Room, error)        { panic("unused") }
-func (r *fakeRoomRepo) FindByCode(string) (*room.Room, error)             { panic("unused") }
-func (r *fakeRoomRepo) FindByStatus(string) ([]room.Room, error)          { panic("unused") }
-func (r *fakeRoomRepo) AddPlayer(*room.RoomPlayer) error                  { panic("unused") }
-func (r *fakeRoomRepo) RemovePlayer(uint, uint) error                     { panic("unused") }
+func (r *fakeRoomRepo) Create(*room.Room) error                    { panic("unused") }
+func (r *fakeRoomRepo) Update(*room.Room) error                    { panic("unused") }
+func (r *fakeRoomRepo) FindByID(uint) (*room.Room, error)          { panic("unused") }
+func (r *fakeRoomRepo) FindByIDForUpdate(uint) (*room.Room, error) { panic("unused") }
+func (r *fakeRoomRepo) FindByCode(string) (*room.Room, error)      { panic("unused") }
+func (r *fakeRoomRepo) FindByStatus(status string) ([]room.Room, error) {
+	return r.roomsByStatus[status], r.findByStatusErr
+}
+func (r *fakeRoomRepo) AddPlayer(*room.RoomPlayer) error { panic("unused") }
+func (r *fakeRoomRepo) RemovePlayer(uint, uint) error    { panic("unused") }
 func (r *fakeRoomRepo) FindPlayersByRoomID(uint) ([]room.RoomPlayer, error) {
 	panic("unused")
 }
@@ -77,7 +81,7 @@ func (r *fakeRoomRepo) FindPlayersByRoomIDs([]uint) (map[uint][]room.RoomPlayer,
 }
 
 type fakeUserRepo struct {
-	count   int64
+	count    int64
 	countErr error
 }
 
@@ -186,4 +190,57 @@ func TestGetStats_UserCountErrorPropagates(t *testing.T) {
 	rec := httptest.NewRecorder()
 	err := h.GetStats(e.NewContext(req, rec))
 	assert.Error(t, err)
+}
+
+func decodePublicStats(t *testing.T, body []byte) lobby.PublicStatsResponse {
+	t.Helper()
+	var env struct {
+		Data lobby.PublicStatsResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(body, &env))
+	return env.Data
+}
+
+func TestGetPublicStats_CountsOnlineAndOpenRooms(t *testing.T) {
+	// 3 connected players; 2 rooms in "waiting" status (the "open tables").
+	hub := &fakeHub{connected: []uint{1, 2, 3}}
+	rooms := &fakeRoomRepo{
+		roomsByStatus: map[string][]room.Room{
+			"waiting": {{}, {}},
+		},
+	}
+	h := lobby.NewHandler(hub, &fakeSessions{}, rooms, &fakeUserRepo{})
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
+	rec := httptest.NewRecorder()
+
+	require.NoError(t, h.GetPublicStats(e.NewContext(req, rec)))
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	stats := decodePublicStats(t, rec.Body.Bytes())
+	assert.Equal(t, 3, stats.Online, "all connected players")
+	assert.Equal(t, 2, stats.OpenRooms, "rooms in waiting status")
+}
+
+func TestGetPublicStats_Empty(t *testing.T) {
+	h := lobby.NewHandler(&fakeHub{}, &fakeSessions{}, &fakeRoomRepo{}, &fakeUserRepo{})
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
+	rec := httptest.NewRecorder()
+
+	require.NoError(t, h.GetPublicStats(e.NewContext(req, rec)))
+
+	stats := decodePublicStats(t, rec.Body.Bytes())
+	assert.Equal(t, 0, stats.Online)
+	assert.Equal(t, 0, stats.OpenRooms)
+}
+
+func TestGetPublicStats_RoomRepoErrorPropagates(t *testing.T) {
+	rooms := &fakeRoomRepo{findByStatusErr: errors.New("db down")}
+	h := lobby.NewHandler(&fakeHub{connected: []uint{1}}, &fakeSessions{}, rooms, &fakeUserRepo{})
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
+	rec := httptest.NewRecorder()
+
+	assert.Error(t, h.GetPublicStats(e.NewContext(req, rec)))
 }

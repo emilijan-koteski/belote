@@ -187,6 +187,11 @@ func main() {
 	lobbyHandler := lobby.NewHandler(hub, sessionManager, roomRepo, userRepo)
 	api.GET("/lobby/stats", lobbyHandler.GetStats)
 
+	// Public landing-page stats — unauthenticated, registered on the bare echo
+	// instance (outside the auth-protected api group). Returns only aggregate
+	// counts (online players, open rooms), nothing user-identifying.
+	e.GET("/api/v1/stats", lobbyHandler.GetPublicStats)
+
 	// Graceful shutdown
 	go func() {
 		slog.Info("starting server", "port", cfg.Port)
