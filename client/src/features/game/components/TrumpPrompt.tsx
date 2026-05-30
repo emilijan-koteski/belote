@@ -13,6 +13,8 @@ interface TrumpPromptProps {
   trumpCandidate: Card | null;
   biddingRound: number;
   isActiveBidder: boolean;
+  /** Username of the player currently deciding trump — shown to everyone else. */
+  activePlayerName?: string | null;
   onPick: (suit?: Suit) => void;
   onPass: () => void;
   turnExpiresAt?: string | null;
@@ -42,6 +44,7 @@ export function TrumpPrompt({
   trumpCandidate,
   biddingRound,
   isActiveBidder,
+  activePlayerName,
   onPick,
   onPass,
   turnExpiresAt,
@@ -70,7 +73,9 @@ export function TrumpPrompt({
             className="font-body text-sm text-center"
             style={{ color: "var(--ink-light, #f5f2e8)", opacity: 0.85 }}
           >
-            {t("game.trumpPrompt.waiting")}
+            {biddingRound === 1
+              ? t("game.trumpPrompt.waitingRound1", { name: activePlayerName ?? "" })
+              : t("game.trumpPrompt.waitingRound2", { name: activePlayerName ?? "" })}
           </p>
         </div>
       </div>

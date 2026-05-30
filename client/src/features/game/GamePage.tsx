@@ -1267,6 +1267,9 @@ export function GamePage() {
               trumpCandidate={gameState.trumpCandidate}
               biddingRound={gameState.biddingRound}
               isActiveBidder={isActiveBidder}
+              activePlayerName={
+                gameState.players.find((p) => p.seat === gameState.activePlayerSeat)?.username ?? null
+              }
               onPick={handlePickTrump}
               onPass={handlePassTrump}
               turnExpiresAt={gameState.turnExpiresAt}

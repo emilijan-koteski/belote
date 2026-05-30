@@ -224,8 +224,7 @@
     }
   },
   "rules": {
-    "title": "Rules",
-    "comingSoon": "Rules reference coming soon"
+    "title": "Rules"
   },
   "legal": {
     "wipBadge": "Work in progress",
@@ -573,7 +572,8 @@
       "roundLabel": "Round {{round}} / 2",
       "pick": "Take",
       "pass": "Pass",
-      "waiting": "Waiting for bidder…"
+      "waitingRound1": "Waiting for {{name}} to take or pass the trump",
+      "waitingRound2": "Waiting for {{name}} to pick a suit or pass"
     },
     "deal": {
       "dealing": "Dealing cards…"
@@ -757,8 +757,6 @@
     },
     "rules": {
       "title": "Game rules",
-      "comingSoon": "Detailed rules are on the way — check back soon.",
-      "statusHint": "Bidding, declarations, and scoring guides land here next.",
       "close": "Close"
     }
   },

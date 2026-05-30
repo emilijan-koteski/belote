@@ -224,8 +224,7 @@
     }
   },
   "rules": {
-    "title": "Pravila",
-    "comingSoon": "Pravila uskoro stižu"
+    "title": "Pravila"
   },
   "legal": {
     "wipBadge": "U izradi",
@@ -573,7 +572,8 @@
       "roundLabel": "Krug {{round}} / 2",
       "pick": "Uzmi",
       "pass": "Dalje",
-      "waiting": "Čekanje na licitatora…"
+      "waitingRound1": "Čeka se da {{name}} uzme aduta ili propusti",
+      "waitingRound2": "Čeka se da {{name}} izabere boju ili propusti"
     },
     "deal": {
       "dealing": "Dijeljenje karata…"
@@ -757,8 +757,6 @@
     },
     "rules": {
       "title": "Pravila igre",
-      "comingSoon": "Detaljna pravila uskoro stižu — provjeri ponovno.",
-      "statusHint": "Vodiči za licitaciju, najave i bodovanje stižu sljedeći.",
       "close": "Zatvori"
     }
   },
