@@ -35,7 +35,7 @@ vi.mock("@/shared/api/rooms", () => ({
   transferOwnership: vi.fn(),
 }));
 
-// Mock WebSocket connection state + sendMessage hook (ChatPanel pulls both)
+// Mock WebSocket connection state + sendMessage hook (ChatDock pulls both)
 vi.mock("@/shared/providers/WebSocketContext", () => ({
   useWsConnectionState: () => "connected",
   useWsSendMessage: () => vi.fn(),
@@ -108,7 +108,7 @@ const defaultUser = {
 
 beforeEach(() => {
   mockLeaveRoom.mockResolvedValue(undefined);
-  // jsdom has no scrollIntoView — the nested ChatPanel calls it on mount.
+  // jsdom has no scrollIntoView — the nested ChatDock calls it on mount.
   Element.prototype.scrollIntoView = vi.fn();
   // jsdom has no matchMedia — RoomLobby reads `prefers-reduced-motion` to
   // decide between the rotation transition + delayed "your seat" label and

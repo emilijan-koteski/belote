@@ -23,7 +23,7 @@ export function SectionHeader({ eyebrow, title, sub, right }: SectionHeaderProps
         <h2 className="text-ink font-display m-0 text-[26px] font-semibold tracking-[-0.3px]">
           {title}
         </h2>
-        {sub && <p className="text-ink-dim m-0 mt-1 max-w-[640px] text-[13.5px]">{sub}</p>}
+        {sub && <p className="text-ink-dim m-0 mt-1 max-w-160 text-[13.5px]">{sub}</p>}
       </div>
       {right && <div className="ml-auto">{right}</div>}
     </div>

@@ -196,7 +196,7 @@ export function MatchmakingPage() {
   if (roomQuery.isLoading || !freshFetchSettled || (!storeRoom && !roomQuery.data)) {
     return (
       <div
-        className="mx-auto flex min-h-[60vh] max-w-[1320px] items-center justify-center px-7 py-10"
+        className="mx-auto flex min-h-[60vh] max-w-330 items-center justify-center px-7 py-10"
         data-testid="matchmaking-loading"
       >
         <div className="bg-surface-sunken size-24 animate-pulse rounded-full" />
@@ -219,7 +219,7 @@ export function MatchmakingPage() {
 
   return (
     <div
-      className="mx-auto flex min-h-[calc(100vh-160px)] max-w-[1320px] flex-col items-center justify-center px-7 py-10"
+      className="mx-auto flex min-h-[calc(100vh-160px)] max-w-330 flex-col items-center justify-center px-7 py-10"
       data-testid="matchmaking-page"
     >
       <MatchmakingDiagram

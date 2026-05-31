@@ -31,8 +31,8 @@ export function FilterRail({
 }: Props) {
   const { t } = useTranslation();
   return (
-    <div className="bg-surface mb-3.5 flex flex-wrap items-center gap-3.5 rounded-[var(--radius)] border border-border p-3.5">
-      <div className="bg-surface-elevated flex min-w-[200px] flex-1 items-center gap-2 rounded-[10px] border border-border px-2.5 py-1.5">
+    <div className="bg-surface mb-3.5 flex flex-wrap items-center gap-3.5 rounded-(--radius) border border-border p-3.5">
+      <div className="bg-surface-elevated flex min-w-50 flex-1 items-center gap-2 rounded-[10px] border border-border px-2.5 py-1.5">
         <Search className="text-ink-mute size-3.5" />
         <input
           value={search}

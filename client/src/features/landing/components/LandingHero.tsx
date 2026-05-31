@@ -32,7 +32,7 @@ export function LandingHero() {
             <br />
             {t("landing.hero.title2")}
           </h1>
-          <p className="text-ink-dim mt-6 max-w-[480px] text-[clamp(16px,1.6vw,19px)] leading-[1.6]">
+          <p className="text-ink-dim mt-6 max-w-120 text-[clamp(16px,1.6vw,19px)] leading-[1.6]">
             {t("landing.hero.subtitle")}
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3.5">

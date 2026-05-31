@@ -5,8 +5,8 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { FetchError } from "@/shared/api/axiosClient";
-import { cn } from "@/shared/lib/utils";
 import { useJoinByCodeMutation } from "@/shared/hooks/mutations/useRooms";
+import { cn } from "@/shared/lib/utils";
 
 const CODE_LENGTH = 6;
 

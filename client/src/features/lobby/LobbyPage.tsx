@@ -74,7 +74,9 @@ export function LobbyPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  const rooms = roomsQuery.data ?? [];
+  // Stabilise the array reference: `roomsQuery.data ?? []` would mint a fresh
+  // `[]` every render while data is undefined, busting the useMemos below.
+  const rooms = useMemo(() => roomsQuery.data ?? [], [roomsQuery.data]);
   const counts = useMemo(() => deriveCounts(rooms), [rooms]);
   const filtered = useMemo(
     () => filterAndSort(rooms, search, filter, sort),
@@ -137,7 +139,7 @@ export function LobbyPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1320px] px-7 py-8 pb-32">
+    <div className="mx-auto max-w-330 px-7 py-8 pb-32">
       <HeroBlock
         openCount={rooms.length}
         stats={statsQuery.data}

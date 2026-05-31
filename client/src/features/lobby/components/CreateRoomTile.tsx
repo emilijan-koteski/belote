@@ -14,7 +14,7 @@ export function CreateRoomTile({ onClick }: Props) {
     <button
       onClick={onClick}
       data-testid="create-room-card"
-      className="bg-surface text-ink hover:bg-surface-sunken hover:border-border-2 flex items-center gap-3 rounded-[var(--radius-lg)] border border-border px-4.5 py-4.5 text-left transition-colors"
+      className="bg-surface text-ink hover:bg-surface-sunken hover:border-border-2 flex items-center gap-3 rounded-lg border border-border px-4.5 py-4.5 text-left transition-colors"
     >
       <span className="bg-surface-sunken text-ink inline-flex size-9 items-center justify-center rounded-[10px] border border-border-2">
         <Plus className="size-4.5" strokeWidth={2} />

@@ -323,12 +323,6 @@
         "step3": "Once all four seats are filled, you start the match."
       }
     },
-    "roomList": {
-      "variantBitola": "Bitola",
-      "matchMode1001": "1001 pts",
-      "timerRelaxed": "Relaxed",
-      "timerPerMove": "{{seconds}}s timer"
-    },
     "roomLobby": {
       "waitingForPlayers": "Waiting for players",
       "backToLobby": "Back to Lobby",

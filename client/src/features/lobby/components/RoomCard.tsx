@@ -47,8 +47,8 @@ export function RoomCard({ room, onJoin, index = 0 }: Props) {
       data-testid="room-card"
       style={{ animationDelay: delay }}
       className={cn(
-        "bg-surface text-ink relative flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border transition-[transform,border-color,box-shadow]",
-        "[animation:card-in_.35s_ease_both] hover:-translate-y-0.5 hover:border-border-2 hover:shadow-[0_18px_40px_-22px_rgba(14,58,36,0.30)]",
+        "bg-surface text-ink relative flex flex-col overflow-hidden rounded-lg border border-border transition-[transform,border-color,box-shadow]",
+        "animate-[card-in_.35s_ease_both] hover:-translate-y-0.5 hover:border-border-2 hover:shadow-[0_18px_40px_-22px_rgba(14,58,36,0.30)]",
       )}
     >
       <div className="px-5 pt-4.5 pb-3">
@@ -57,8 +57,8 @@ export function RoomCard({ room, onJoin, index = 0 }: Props) {
             aria-hidden
             className={cn(
               "size-2 rounded-full",
-              full ? "bg-[var(--warning)]" : "bg-accent",
-              "[animation:pulse-dot_1.8s_ease-in-out_infinite]",
+              full ? "bg-warning" : "bg-accent",
+              "animate-[pulse-dot_1.8s_ease-in-out_infinite]",
             )}
           />
           <h3 className="font-display text-ink m-0 flex-1 min-w-0 truncate text-base font-semibold">
@@ -161,7 +161,7 @@ function TeamLabel({ team }: { team: "A" | "B" }) {
     <span
       className={cn(
         "pr-1 text-[10px] font-bold uppercase tracking-[1.2px]",
-        team === "A" ? "text-[var(--team-a)]" : "text-[var(--team-b)]",
+        team === "A" ? "text-team-a" : "text-team-b",
       )}
     >
       {team}

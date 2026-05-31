@@ -323,12 +323,6 @@
         "step3": "Kad se popune sva četiri mjesta, krećeš s mečom."
       }
     },
-    "roomList": {
-      "variantBitola": "Bitola",
-      "matchMode1001": "1001 bodova",
-      "timerRelaxed": "Opušteno",
-      "timerPerMove": "{{seconds}}s tajmer"
-    },
     "roomLobby": {
       "waitingForPlayers": "Čekanje igrača",
       "backToLobby": "Natrag u lobi",

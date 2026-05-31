@@ -21,11 +21,11 @@ export function ProfilePage() {
 
   if (isPending) {
     return (
-      <div className="mx-auto max-w-[1320px] px-4 py-8 md:px-7" data-testid="profile-loading">
-        <div className="bg-surface h-40 animate-pulse rounded-[var(--radius-lg)]" />
+      <div className="mx-auto max-w-330 px-4 py-8 md:px-7" data-testid="profile-loading">
+        <div className="bg-surface h-40 animate-pulse rounded-lg" />
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-surface h-28 animate-pulse rounded-[var(--radius-lg)]" />
+            <div key={i} className="bg-surface h-28 animate-pulse rounded-lg" />
           ))}
         </div>
       </div>
@@ -48,7 +48,7 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="mx-auto max-w-[1320px] px-4 py-8 pb-32 md:px-7" data-testid="profile-page">
+    <div className="mx-auto max-w-330 px-4 py-8 pb-32 md:px-7" data-testid="profile-page">
       <IdentityHero
         username={username}
         createdAt={createdAt}
@@ -64,7 +64,7 @@ export function ProfilePage() {
 
       {isError ? (
         <section
-          className="bg-surface border-border mb-5 rounded-[var(--radius-lg)] border p-6"
+          className="bg-surface border-border mb-5 rounded-lg border p-6"
           data-testid="profile-stats"
         >
           <p className="text-destructive text-sm" data-testid="profile-stats-error">
@@ -95,7 +95,7 @@ export function ProfilePage() {
             </>
           ) : (
             Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-surface h-36 animate-pulse rounded-[var(--radius-lg)]" />
+              <div key={i} className="bg-surface h-36 animate-pulse rounded-lg" />
             ))
           )}
         </aside>

@@ -60,7 +60,7 @@ export function DurationSlider({
         )}
       </div>
 
-      <div className="bg-surface-elevated border-border relative rounded-[10px] border px-3 py-[14px]">
+      <div className="bg-surface-elevated border-border relative rounded-[10px] border px-3 py-3.5">
         <div className="bg-surface-sunken border-border relative h-1.5 overflow-hidden rounded-[3px] border">
           <div
             className="absolute inset-y-0 left-0"

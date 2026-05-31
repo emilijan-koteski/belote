@@ -86,7 +86,7 @@ export function IdentityHero({
 
   return (
     <header
-      className="bg-surface border-border relative mb-5 grid grid-cols-1 items-center gap-6 overflow-hidden rounded-[var(--radius-lg)] border p-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-8"
+      className="bg-surface border-border relative mb-5 grid grid-cols-1 items-center gap-6 overflow-hidden rounded-lg border p-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-8"
       style={{
         background:
           "radial-gradient(circle at 88% 50%, rgba(25,101,54,0.10), transparent 55%), var(--surface)",

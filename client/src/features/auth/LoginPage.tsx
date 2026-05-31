@@ -152,7 +152,7 @@ export function LoginPage() {
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              className="h-[42px] pr-10"
+              className="h-10.5 pr-10"
               placeholder={t("auth.login.passwordPlaceholder")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}

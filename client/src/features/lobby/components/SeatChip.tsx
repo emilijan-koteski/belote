@@ -63,7 +63,7 @@ export function SeatChip({ username, team, testId }: Props) {
     >
       <span
         className={cn(
-          "inline-flex size-4.5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-[var(--brass-ink)]",
+          "inline-flex size-4.5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-brass-ink",
           tone.fill,
         )}
       >

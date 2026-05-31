@@ -6,9 +6,9 @@ import type { TeamString } from "@/shared/types/gameTypes";
 import type { MatchAbandonedPayload } from "@/shared/types/wsEvents";
 
 import { TEAM_GOLD, TEAM_SILVER, type TeamGradient } from "../lib/tableTheme";
+import { isCountdownUrgent, URGENT_FRACTION } from "../lib/turnCountdown";
 import { ClassicPanel } from "./overlay/ClassicPanel";
 import { OverlayBackdrop } from "./overlay/OverlayBackdrop";
-import { isCountdownUrgent, URGENT_FRACTION } from "./TimerRing";
 
 interface DisconnectedPlayerInfo {
   /** Display name for the chip. */

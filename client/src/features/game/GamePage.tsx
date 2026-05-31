@@ -55,13 +55,7 @@ import { SurrenderOpponentBanner } from "./components/SurrenderOpponentBanner";
 import { SurrenderPrompt } from "./components/SurrenderPrompt";
 import { TableAmbience } from "./components/TableAmbience";
 import { TableBackdrop } from "./components/TableBackdrop";
-import {
-  compassOffset,
-  SLOT_POSITIONS,
-  TRICK_SLOT_H,
-  TRICK_SLOT_W,
-  TrickArea,
-} from "./components/TrickArea";
+import { TRICK_SLOT_H, TRICK_SLOT_W, TrickArea } from "./components/TrickArea";
 import { TrumpIndicator } from "./components/TrumpIndicator";
 import { TrumpPrompt } from "./components/TrumpPrompt";
 import { TrumpReveal } from "./components/TrumpReveal";
@@ -69,6 +63,7 @@ import { Wordmark } from "./components/Wordmark";
 import { detectDeclarations } from "./lib/declarations";
 import { legalCardIds } from "./lib/legalCards";
 import { seatTeam } from "./lib/tableTheme";
+import { compassOffset, SLOT_POSITIONS } from "./lib/trickLayout";
 
 function rectFrom(el: Element | null): FlightRect | null {
   if (!el) return null;

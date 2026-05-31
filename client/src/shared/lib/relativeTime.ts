@@ -1,8 +1,9 @@
-import dayjs from "dayjs";
 import "dayjs/locale/en";
 import "dayjs/locale/hr";
 import "dayjs/locale/mk";
 import "dayjs/locale/sr";
+
+import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import updateLocale from "dayjs/plugin/updateLocale";
 

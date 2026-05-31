@@ -62,7 +62,7 @@ export function WinRateRing({ rate }: WinRateRingProps) {
         <span className="text-ink font-display text-[40px] leading-none font-bold tracking-[-1px] tabular-nums">
           {rate === null ? t("profile.stats.winRateEmpty") : `${rate}%`}
         </span>
-        <span className="text-brass-deep mt-1 max-w-[120px] text-center font-mono text-[11px] leading-tight font-semibold tracking-[2px] uppercase">
+        <span className="text-brass-deep mt-1 max-w-30 text-center font-mono text-[11px] leading-tight font-semibold tracking-[2px] uppercase">
           {t("profile.winRate")}
         </span>
       </div>

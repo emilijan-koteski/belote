@@ -34,7 +34,7 @@ export function HistoryFilters({
 
   return (
     <div
-      className="bg-surface border-border mb-3.5 flex flex-wrap items-center gap-2.5 rounded-[var(--radius-lg)] border px-4 py-3"
+      className="bg-surface border-border mb-3.5 flex flex-wrap items-center gap-2.5 rounded-lg border px-4 py-3"
       data-testid="match-history-filters"
     >
       <div className="flex flex-wrap gap-1.5">

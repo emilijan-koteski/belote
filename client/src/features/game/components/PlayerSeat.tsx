@@ -4,7 +4,8 @@ import { MOTION } from "@/shared/lib/motion";
 import type { PlayerState, Suit } from "@/shared/types/gameTypes";
 
 import { type SeatTeam, teamColors, teamLabelKey } from "../lib/tableTheme";
-import { isCountdownUrgent, TimerRing, useTurnCountdown } from "./TimerRing";
+import { isCountdownUrgent, useTurnCountdown } from "../lib/turnCountdown";
+import { TimerRing } from "./TimerRing";
 
 export type SeatOrientation = "bottom" | "left" | "top" | "right";
 

@@ -53,7 +53,7 @@ export function TopBar({
 
   return (
     <nav
-      className="sticky top-0 z-50 flex h-[60px] items-center border-b border-border bg-[rgba(245,242,232,0.85)] px-7 backdrop-blur-md"
+      className="sticky top-0 z-50 flex h-15 items-center border-b border-border bg-[rgba(245,242,232,0.85)] px-7 backdrop-blur-md"
       data-testid="app-nav"
     >
       <div className="flex items-center gap-2.5">
@@ -107,7 +107,7 @@ export function TopBar({
               data-testid="nav-user"
             >
               <span
-                className="bg-accent text-accent-ink flex size-[26px] items-center justify-center rounded-full text-xs font-bold"
+                className="bg-accent text-accent-ink flex size-6.5 items-center justify-center rounded-full text-xs font-bold"
                 aria-hidden="true"
               >
                 {(user.username.charAt(0) || "?").toUpperCase()}

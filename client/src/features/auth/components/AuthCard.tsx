@@ -32,7 +32,7 @@ type AuthCardProps = {
 export function AuthCard({ eyebrow, title, subtitle, children, footer }: AuthCardProps) {
   return (
     <div
-      className="bg-surface relative w-full max-w-[500px] rounded-[22px] border border-border px-10 pt-10 pb-8 shadow-[0_18px_44px_-28px_rgba(14,58,36,0.32),0_2px_0_rgba(255,255,255,0.6)_inset]"
+      className="bg-surface relative w-full max-w-125 rounded-[22px] border border-border px-10 pt-10 pb-8 shadow-[0_18px_44px_-28px_rgba(14,58,36,0.32),0_2px_0_rgba(255,255,255,0.6)_inset]"
       data-testid="auth-card"
     >
       {/* Top brass hairline accent */}
@@ -49,7 +49,7 @@ export function AuthCard({ eyebrow, title, subtitle, children, footer }: AuthCar
         {title}
       </h1>
 
-      <p className="text-ink-dim mt-2.5 mb-5.5 max-w-[380px] text-[14.5px] leading-[1.55]">
+      <p className="text-ink-dim mt-2.5 mb-5.5 max-w-95 text-[14.5px] leading-[1.55]">
         {subtitle}
       </p>
 
@@ -105,12 +105,12 @@ export function Checkbox({ checked, onChange, invalid, testId, children }: Check
   return (
     <label
       className={cn(
-        "text-ink-dim flex cursor-pointer items-start gap-2.5 text-[13px] leading-[1.5]",
+        "text-ink-dim flex cursor-pointer items-start gap-2.5 text-[13px] leading-normal",
       )}
     >
       {/* The real input sits transparently over the visual box so user-event
           can interact with it, and label-click ↔ input toggle works natively. */}
-      <span className="relative mt-px inline-block size-[18px] shrink-0">
+      <span className="relative mt-px inline-block size-4.5 shrink-0">
         <input
           type="checkbox"
           checked={checked}

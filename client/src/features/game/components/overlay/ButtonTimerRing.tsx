@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "re
 
 import { MOTION } from "@/shared/lib/motion";
 
-import { URGENT_FRACTION } from "../TimerRing";
+import { URGENT_FRACTION } from "../../lib/turnCountdown";
 
 interface ButtonTimerRingProps {
   /**

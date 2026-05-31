@@ -64,23 +64,23 @@ export function MatchmakingDiagram({
       }}
     >
       <Eyebrow tone="accent" className="gap-2">
-        <span className="bg-accent inline-block size-2 rounded-full [animation:pulse-dot_1.6s_ease-in-out_infinite]" />
+        <span className="bg-accent inline-block size-2 rounded-full animate-[pulse-dot_1.6s_ease-in-out_infinite]" />
         {t("lobby.matchmaking.eyebrow")}
       </Eyebrow>
 
       <h1 className="font-display text-ink mt-2.5 mb-1.5 text-center text-[34px] font-bold tracking-[-0.8px]">
         {t("lobby.matchmaking.title")}
       </h1>
-      <p className="text-ink-dim m-0 max-w-[520px] text-center text-[14.5px] leading-relaxed">
+      <p className="text-ink-dim m-0 max-w-130 text-center text-[14.5px] leading-relaxed">
         {t("lobby.matchmaking.subtitle")}
       </p>
 
       {/* Fixed-rules + elapsed strip */}
       <div className="mt-4 flex items-center gap-3">
-        <Badge tone="neutral" icon={<Trophy className="size-3 text-[var(--accent)]" />}>
+        <Badge tone="neutral" icon={<Trophy className="size-3 text-(--accent)" />}>
           {t("lobby.card.variantBitola")} · {t("lobby.card.matchMode1001")}
         </Badge>
-        <Badge tone="accent" icon={<Clock className="size-3 text-[var(--accent)]" />}>
+        <Badge tone="accent" icon={<Clock className="size-3 text-(--accent)" />}>
           {t("lobby.card.relaxed")}
         </Badge>
         <span className="text-ink-mute font-mono text-[11.5px] tracking-[0.5px]">
@@ -108,7 +108,7 @@ export function MatchmakingDiagram({
         />
         {/* Rotating sweep */}
         <div
-          className="absolute rounded-full [animation:spin_2.4s_linear_infinite]"
+          className="absolute rounded-full animate-[spin_2.4s_linear_infinite]"
           style={{
             inset: 40,
             background:
@@ -123,7 +123,7 @@ export function MatchmakingDiagram({
           <div className="relative">
             <Avatar name={currentUsername} size={64} you />
             <span
-              className="border-accent absolute rounded-full border-2 opacity-40 [animation:pulse-dot_1.6s_ease-in-out_infinite]"
+              className="border-accent absolute rounded-full border-2 opacity-40 animate-[pulse-dot_1.6s_ease-in-out_infinite]"
               style={{ inset: -6 }}
             />
           </div>
@@ -150,13 +150,13 @@ export function MatchmakingDiagram({
                 <Avatar name={occupant.username} size={52} team={team} />
               ) : (
                 <div
-                  className="bg-surface-elevated flex size-[52px] items-center justify-center rounded-full border-2 border-dashed"
+                  className="bg-surface-elevated flex size-13 items-center justify-center rounded-full border-2 border-dashed"
                   style={{
                     borderColor: isUs ? "var(--team-a-edge-soft)" : "var(--team-b-edge-soft)",
                   }}
                 >
                   <span
-                    className="size-2 rounded-full opacity-55 [animation:pulse-dot_1.4s_ease-in-out_infinite]"
+                    className="size-2 rounded-full opacity-55 animate-[pulse-dot_1.4s_ease-in-out_infinite]"
                     style={{ background: isUs ? "var(--team-a)" : "var(--team-b)" }}
                   />
                 </div>
@@ -179,7 +179,7 @@ export function MatchmakingDiagram({
       </div>
 
       {/* Progress line + cancel */}
-      <div className="mt-7 flex w-[420px] max-w-full flex-col items-center gap-4">
+      <div className="mt-7 flex w-105 max-w-full flex-col items-center gap-4">
         <div
           className="bg-surface-sunken border-border relative h-1.5 w-full overflow-hidden rounded-full border"
           role="progressbar"
@@ -188,7 +188,7 @@ export function MatchmakingDiagram({
           aria-valuemax={4}
         >
           <div
-            className="absolute inset-0 rounded-full [animation:shimmer_2.2s_linear_infinite]"
+            className="absolute inset-0 rounded-full animate-[shimmer_2.2s_linear_infinite]"
             style={{
               width: `${(found / 4) * 100}%`,
               background: "linear-gradient(90deg, var(--brass) 0%, var(--accent) 100%)",

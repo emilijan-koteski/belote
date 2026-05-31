@@ -323,12 +323,6 @@
         "step3": "Кога ќе се пополнат сите четири места, го почнуваш мечот."
       }
     },
-    "roomList": {
-      "variantBitola": "Битола",
-      "matchMode1001": "1001 поени",
-      "timerRelaxed": "Опуштено",
-      "timerPerMove": "{{seconds}}s тајмер"
-    },
     "roomLobby": {
       "waitingForPlayers": "Се чекаат играчи",
       "backToLobby": "Назад во лоби",

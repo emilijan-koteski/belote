@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-
 import { MOTION } from "@/shared/lib/motion";
+
+import { URGENT_FRACTION, useTurnCountdown } from "../lib/turnCountdown";
 
 interface TimerRingProps {
   turnExpiresAt: string | null;
@@ -21,42 +21,6 @@ interface TimerRingProps {
   secondsLeft?: number;
 }
 
-/**
- * Subscribes to the per-second countdown derived from `turnExpiresAt`. Returns
- * `0` when `turnExpiresAt` is null or already past. Pulled out so [PlayerSeat]
- * can render the seconds outside the ring without forcing a second source of
- * truth — both consumers tick on the same `MOTION.COUNTDOWN_TICK` cadence.
- */
-export function useTurnCountdown(turnExpiresAt: string | null): number {
-  const [secondsLeft, setSecondsLeft] = useState(0);
-
-  useEffect(() => {
-    if (!turnExpiresAt) {
-      setSecondsLeft(0);
-      return;
-    }
-
-    function computeRemaining() {
-      const expiryMs = new Date(turnExpiresAt!).getTime();
-      return Math.max(0, Math.ceil((expiryMs - Date.now()) / 1000));
-    }
-
-    setSecondsLeft(computeRemaining());
-
-    const interval = setInterval(() => {
-      const remaining = computeRemaining();
-      setSecondsLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(interval);
-      }
-    }, MOTION.COUNTDOWN_TICK);
-
-    return () => clearInterval(interval);
-  }, [turnExpiresAt]);
-
-  return secondsLeft;
-}
-
 const SIZE_CONFIG = {
   // 70px sits inside the avatar's 80px outer frame (avatar 64 + 16 padding)
   // so the countdown traces *just inside* the gold/silver team ring rather
@@ -66,13 +30,6 @@ const SIZE_CONFIG = {
   seat: { px: 70, strokeWidth: 2.5, labelClass: "text-xs" },
   button: { px: 36, strokeWidth: 2, labelClass: "text-[10px]" },
 } as const;
-
-// Urgency threshold expressed as a fraction of `totalDuration`. When ≤1/8 of
-// the turn timer remains, the ring + label flip from lime to red. The flip is
-// independent of team identity (Gold/Silver carry that channel separately).
-// Exported so ButtonTimerRing (and any future countdown widget) can stay in
-// lockstep instead of redeclaring 0.125 as a magic literal.
-export const URGENT_FRACTION = 0.125;
 
 const COLOR_LIME = "var(--turn-lime, #00e5a0)";
 const COLOR_URGENT = "var(--turn-urgent, #ef4444)";
@@ -177,15 +134,4 @@ export function TimerRing({
       )}
     </div>
   );
-}
-
-/**
- * Whether the countdown should read as urgent (≤1/8 of the total duration
- * remains, including 0). Exported so [PlayerSeat] colors the external label
- * the same way the ring does.
- */
-export function isCountdownUrgent(secondsLeft: number, totalDuration: number): boolean {
-  if (totalDuration <= 0) return false;
-  const progress = Math.min(1, Math.max(0, secondsLeft / totalDuration));
-  return progress <= URGENT_FRACTION;
 }

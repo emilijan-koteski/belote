@@ -45,11 +45,11 @@ import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
 import type { RoomPlayer } from "@/shared/types/apiTypes";
 
 const variantKeys: Record<string, string> = {
-  bitola: "lobby.roomList.variantBitola",
+  bitola: "lobby.card.variantBitola",
 };
 
 const matchModeKeys: Record<string, string> = {
-  "1001": "lobby.roomList.matchMode1001",
+  "1001": "lobby.card.matchMode1001",
 };
 
 // Cardinal positions for the diamond seat layout. In the waiting room seat
@@ -92,7 +92,7 @@ function LegendIndicator({ variant }: { variant: "neutral" | "us" | "them" }) {
       <span
         className={cn(
           "size-2 rounded-full",
-          tokens.pulse && "[animation:pulse-dot_1.6s_ease-in-out_infinite]",
+          tokens.pulse && "animate-[pulse-dot_1.6s_ease-in-out_infinite]",
         )}
         style={{ background: tokens.dot }}
       />
@@ -469,7 +469,7 @@ export function RoomLobby() {
   // Use query loading state for initial load
   if (roomQuery.isPending) {
     return (
-      <div className="mx-auto max-w-[1320px] px-8 py-8" data-testid="room-lobby-loading">
+      <div className="mx-auto max-w-330 px-8 py-8" data-testid="room-lobby-loading">
         <div className="bg-surface-sunken mb-6 h-8 w-48 animate-pulse rounded" />
         <div className="grid grid-cols-2 gap-6">
           {[0, 1, 2, 3].map((i) => (
@@ -485,7 +485,7 @@ export function RoomLobby() {
 
   if (roomQuery.isError || (!storeRoom && !roomQuery.data)) {
     return (
-      <div className="mx-auto max-w-[1320px] px-8 py-12 text-center" data-testid="room-lobby-error">
+      <div className="mx-auto max-w-330 px-8 py-12 text-center" data-testid="room-lobby-error">
         <p className="text-ink-dim mb-4 text-sm">{t("lobby.roomLobby.notFound")}</p>
         <Button variant="ghost" onClick={() => navigate("/lobby")} data-testid="back-to-lobby">
           {t("lobby.roomLobby.notFoundAction")}
@@ -496,7 +496,7 @@ export function RoomLobby() {
 
   if (isRoomClosed && !gameStarted) {
     return (
-      <div className="mx-auto max-w-[1320px] px-8 py-12 text-center" data-testid="room-lobby-closed">
+      <div className="mx-auto max-w-330 px-8 py-12 text-center" data-testid="room-lobby-closed">
         <p className="font-display text-ink mb-2 text-lg font-semibold">
           {t("lobby.roomLobby.roomClosed")}
         </p>
@@ -522,8 +522,8 @@ export function RoomLobby() {
   const matchModeLabel = t(matchModeKeys[room.matchMode] ?? room.matchMode);
   const timerLabel =
     room.timerStyle === "relaxed"
-      ? t("lobby.roomList.timerRelaxed")
-      : t("lobby.roomList.timerPerMove", { seconds: room.timerDurationSeconds ?? "?" });
+      ? t("lobby.card.relaxed")
+      : t("lobby.card.timerSeconds", { seconds: room.timerDurationSeconds ?? "?" });
 
   const isOwner = currentUser !== null && currentUser.id === room.ownerId;
   const seatedCount = players.filter((p) => p.seat !== null).length;
@@ -628,14 +628,14 @@ export function RoomLobby() {
   }
 
   return (
-    <div className="mx-auto max-w-[1320px] px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-330 px-4 py-6 md:px-8">
       <div data-testid="room-lobby">
         {/* Room info card — parchment chrome (brass top hairline + soft inset
             shadow). Left: name + meta row (host · roster · seated count).
             Right: game-mode badges + copy-code chip. No top back button —
             the bottom "Leave room" action returns to the lobby. */}
         <div
-          className="bg-surface border-border relative mb-6 rounded-[var(--radius-lg)] border p-6 shadow-[0_18px_44px_-28px_rgba(14,58,36,0.32),0_2px_0_rgba(255,255,255,0.6)_inset]"
+          className="bg-surface border-border relative mb-6 rounded-lg border p-6 shadow-[0_18px_44px_-28px_rgba(14,58,36,0.32),0_2px_0_rgba(255,255,255,0.6)_inset]"
           data-testid="room-info-card"
         >
           <div
@@ -841,7 +841,7 @@ export function RoomLobby() {
             two diagonal pairs read "Us {you + open} vs Them {open + open}",
             centred, with solid gold/silver square indicators. */}
         <div
-          className="border-border-2 bg-surface mb-3 rounded-[var(--radius)] border border-dashed px-4 py-3"
+          className="border-border-2 bg-surface mb-3 rounded-(--radius) border border-dashed px-4 py-3"
           data-testid="team-legend"
         >
           {viewerSeat === null ? (
@@ -855,7 +855,7 @@ export function RoomLobby() {
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12.5px]">
               <span className="inline-flex items-center gap-2" data-team="teamA">
                 <LegendIndicator variant="us" />
-                <span className="text-[var(--team-a)] font-semibold">
+                <span className="text-team-a font-semibold">
                   {t("lobby.roomLobby.legendUs")}
                 </span>
                 {renderSlots(yourPair)}
@@ -865,7 +865,7 @@ export function RoomLobby() {
               </span>
               <span className="inline-flex items-center gap-2" data-team="teamB">
                 <LegendIndicator variant="them" />
-                <span className="text-[var(--team-b)] font-semibold">
+                <span className="text-team-b font-semibold">
                   {t("lobby.roomLobby.legendThem")}
                 </span>
                 {renderSlots(otherPair)}
@@ -1005,7 +1005,7 @@ export function RoomLobby() {
               data-testid="table-center"
             >
               <div
-                className="flex size-[72px] items-center justify-center rounded-[14px] border-[1.5px]"
+                className="flex size-18 items-center justify-center rounded-[14px] border-[1.5px]"
                 style={{
                   transform: "rotate(45deg)",
                   background:
@@ -1040,7 +1040,7 @@ export function RoomLobby() {
             on the left; one primary CTA on the right whose state is resolved
             above (Start match / Finish swap to start / Waiting …). */}
         <div
-          className="border-border bg-surface flex items-center justify-between gap-3 rounded-[var(--radius)] border px-4 py-3"
+          className="border-border bg-surface flex items-center justify-between gap-3 rounded-(--radius) border px-4 py-3"
           data-testid="action-bar"
         >
           <div className="flex min-w-0 items-center gap-3">
