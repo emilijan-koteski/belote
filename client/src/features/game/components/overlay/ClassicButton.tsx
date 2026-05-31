@@ -28,7 +28,7 @@ export const ClassicButton = forwardRef<HTMLButtonElement, ClassicButtonProps>(
         ? "linear-gradient(180deg, var(--brass, #c9a876) 0%, var(--brass-deep, #9c7d4e) 100%)"
         : "linear-gradient(180deg, rgba(60,90,70,0.6), rgba(30,50,35,0.6))",
       color: isPrimary ? "var(--brass-ink, #2a1a08)" : "var(--ink-light, #f5f2e8)",
-      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontFamily: "var(--font-body)",
       fontSize: 14,
       fontWeight: 600,
       letterSpacing: 0.4,

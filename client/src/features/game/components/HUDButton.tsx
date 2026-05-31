@@ -40,7 +40,7 @@ export const HUDButton = forwardRef<HTMLButtonElement, HUDButtonProps>(function 
     borderRadius: 10,
     padding: isLabeled ? "0 14px" : 0,
     gap: 8,
-    fontFamily: "system-ui, sans-serif",
+    fontFamily: "var(--font-body)",
     fontSize: 12,
     fontWeight: 600,
     letterSpacing: 0.3,

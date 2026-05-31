@@ -100,7 +100,7 @@ function StatusChip({
         boxShadow: glowColor
           ? `0 2px 10px rgba(0,0,0,0.55), 0 0 12px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.6)`
           : "0 2px 10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.6)",
-        fontFamily: 'Georgia, "Times New Roman", serif',
+        fontFamily: "var(--font-suit)",
         fontWeight: 700,
         lineHeight: 1,
       }}

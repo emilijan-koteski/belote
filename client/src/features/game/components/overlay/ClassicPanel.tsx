@@ -53,7 +53,7 @@ export function ClassicPanel({
         border: "1px solid rgba(201,168,118,0.55)",
         boxShadow: `${glowShadow}${baseShadow}`,
         color: "var(--ink-light, #f5f2e8)",
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: "var(--font-body)",
         ...style,
       }}
     >
@@ -66,7 +66,7 @@ export function ClassicPanel({
         >
           <div
             style={{
-              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontFamily: "var(--font-body)",
               fontSize: 20,
               fontWeight: 600,
               letterSpacing: 0.3,

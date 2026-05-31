@@ -97,7 +97,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 className="flex items-center gap-2 text-xs uppercase"
                 style={{
                   color: BRASS,
-                  fontFamily: "Georgia, serif",
+                  fontFamily: "var(--font-body)",
                   letterSpacing: "0.18em",
                 }}
               >
@@ -133,7 +133,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       <span
                         className="font-body text-sm font-medium inline-flex items-center gap-2"
                         style={{
-                          fontFamily: 'Georgia, "Times New Roman", serif',
+                          fontFamily: "var(--font-body)",
                           letterSpacing: 0.2,
                         }}
                       >
@@ -154,7 +154,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       {selected && (
                         <span
                           className="text-xs uppercase tracking-wider"
-                          style={{ color: BRASS, fontFamily: "Georgia, serif" }}
+                          style={{ color: BRASS, fontFamily: "var(--font-body)" }}
                           aria-hidden
                         >
                           ✓

@@ -9,7 +9,7 @@ export function Wordmark() {
     <div
       className="pointer-events-none absolute top-5 left-1/2 -translate-x-1/2 z-[9] flex items-center gap-2 select-none"
       style={{
-        fontFamily: 'Georgia, "Times New Roman", serif',
+        fontFamily: "var(--font-body)",
         color: "var(--ink)",
         fontSize: 13,
         letterSpacing: 2,

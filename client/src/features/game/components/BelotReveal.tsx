@@ -89,7 +89,7 @@ export function BelotReveal({
           border: "1px solid rgba(201,168,118,0.55)",
           boxShadow: `0 12px 32px rgba(0,0,0,0.55), 0 0 0 2px ${glowColor}88, 0 0 24px ${glowColor}77, inset 0 1px 0 rgba(201,168,118,0.22)`,
           color: "var(--ink-light, #f5f2e8)",
-          fontFamily: "system-ui, sans-serif",
+          fontFamily: "var(--font-body)",
         }}
         data-team={team}
       >
@@ -98,7 +98,7 @@ export function BelotReveal({
         <div className="flex flex-col gap-1 min-w-50">
           <div
             className="text-[10px] uppercase tracking-[0.18em]"
-            style={{ color: "var(--brass, #c9a876)", fontFamily: "Georgia, serif" }}
+            style={{ color: "var(--brass, #c9a876)", fontFamily: "var(--font-body)" }}
             data-testid="belot-reveal-label"
           >
             {t(labelKey)}
@@ -106,7 +106,7 @@ export function BelotReveal({
           <div
             className="font-semibold leading-tight"
             style={{
-              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontFamily: "var(--font-body)",
               fontSize: 18,
               letterSpacing: 0.2,
             }}

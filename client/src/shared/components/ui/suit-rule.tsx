@@ -11,7 +11,7 @@ import * as React from "react";
  */
 export function SuitRule() {
   const glyphStyle: React.CSSProperties = {
-    fontFamily: '"Times New Roman", "DejaVu Serif", serif',
+    fontFamily: "var(--font-suit)",
     fontSize: 17,
     lineHeight: 1,
     display: "inline-block",

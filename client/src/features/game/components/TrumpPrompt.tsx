@@ -170,14 +170,14 @@ export function TrumpPrompt({
                       onClick={() => onPick(suit)}
                       aria-label={t(`game.suits.${suitName(suit)}`)}
                       data-testid={`trump-prompt-suit-${suit}`}
-                      className="flex items-center justify-center rounded-md transition-[filter,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brass) focus-visible:ring-offset-2 focus-visible:ring-offset-(--felt-deep,#072a14) disabled:cursor-not-allowed not-disabled:cursor-pointer not-disabled:hover:brightness-105 not-disabled:motion-safe:hover:-translate-y-0.5"
+                      className="flex items-center justify-center rounded-md transition-[filter,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-(--felt-deep,#072a14) disabled:cursor-not-allowed not-disabled:cursor-pointer not-disabled:hover:brightness-105 not-disabled:motion-safe:hover:-translate-y-0.5"
                       style={{
                         height: 52,
                         background: "linear-gradient(180deg, #fdfaf0 0%, #f4ecd8 100%)",
                         border: "1px solid rgba(0,0,0,0.15)",
                         boxShadow: "0 3px 6px rgba(0,0,0,0.3)",
                         color: SUIT_COLOR[suit],
-                        fontFamily: 'Georgia, "Times New Roman", serif',
+                        fontFamily: "var(--font-suit)",
                         fontSize: 28,
                         lineHeight: 1,
                         opacity: isLocked ? 0.4 : 1,

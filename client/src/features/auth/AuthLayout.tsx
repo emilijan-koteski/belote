@@ -33,7 +33,7 @@ export function AuthLayout() {
             suit: (
               <span
                 className="text-accent"
-                style={{ fontFamily: '"Times New Roman", "DejaVu Serif", serif' }}
+                style={{ fontFamily: "var(--font-suit)" }}
                 aria-hidden="true"
               />
             ),

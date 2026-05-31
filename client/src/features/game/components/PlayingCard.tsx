@@ -185,7 +185,7 @@ export function PlayingCard({
           className="absolute inset-0 flex items-center justify-center"
           style={{
             color: "var(--brass, #c9a876)",
-            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontFamily: "var(--font-suit)",
             fontSize: dims.width * 0.3,
             fontStyle: "italic",
             fontWeight: 700,
@@ -217,7 +217,7 @@ export function PlayingCard({
         background: "linear-gradient(180deg, #fdfaf0 0%, #f4ecd8 100%)",
         border: "1px solid rgba(0,0,0,0.15)",
         boxShadow: playableGlow,
-        fontFamily: 'Georgia, "Times New Roman", serif',
+        fontFamily: "var(--font-suit)",
       }}
     >
       {/* Top-left rank + suit */}
@@ -246,7 +246,7 @@ export function PlayingCard({
         }}
       >
         {face ? (
-          <span style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: "italic" }}>
+          <span style={{ fontFamily: "var(--font-suit)", fontStyle: "italic" }}>
             {card!.rank}
           </span>
         ) : (

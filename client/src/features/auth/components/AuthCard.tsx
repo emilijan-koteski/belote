@@ -26,7 +26,7 @@ type AuthCardProps = {
 
 /**
  * 440px parchment card with the design's signature top brass hairline,
- * micro-caps eyebrow, Space Grotesk display title, ink-dim subtitle and
+ * micro-caps eyebrow, Inter display title, ink-dim subtitle and
  * suit-pip divider before the form content.
  */
 export function AuthCard({ eyebrow, title, subtitle, children, footer }: AuthCardProps) {

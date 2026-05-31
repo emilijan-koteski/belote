@@ -22,12 +22,19 @@
    ────────────────────────────────────────────────────────────────────── */
 
 @theme {
-  /* Type — constant across all scopes */
-  --font-display: "Space Grotesk", system-ui, sans-serif;
+  /* Type — constant across all scopes.
+     One text family (Inter) carries body + display + headings; weight and
+     size do the work a second family used to. JetBrains Mono is kept only
+     for genuinely monospaced content (room codes, aligned figures).
+     --font-suit is NOT a UI font: it forces ♠♥♦♣ pips and the playing-card
+     faces to render as serif text glyphs (sans-serif risks colour-emoji
+     fallback for ♥/♦). */
+  --font-display: "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-heading: "Space Grotesk", system-ui, sans-serif;
+  --font-heading: "Inter", system-ui, sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
+  --font-suit: Georgia, "Times New Roman", "DejaVu Serif", serif;
 }
 
 @theme inline {

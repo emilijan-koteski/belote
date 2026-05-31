@@ -19,7 +19,7 @@ const SUIT: Record<SuitName, { ch: string; red: boolean }> = {
 
 // Serif stack renders the suit glyphs consistently across platforms, matching
 // the app's SuitRule / auth-footer convention.
-const SUIT_FONT = '"Times New Roman", "DejaVu Serif", serif';
+const SUIT_FONT = "var(--font-suit)";
 
 type SuitProps = {
   name: SuitName;

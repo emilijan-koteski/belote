@@ -111,7 +111,7 @@ export function DeclarationReveal({
           border: "1px solid rgba(201,168,118,0.55)",
           boxShadow: `0 12px 32px rgba(0,0,0,0.55), 0 0 0 2px ${glowColor}88, 0 0 24px ${glowColor}77, inset 0 1px 0 rgba(201,168,118,0.22)`,
           color: "var(--ink-light, #f5f2e8)",
-          fontFamily: "system-ui, sans-serif",
+          fontFamily: "var(--font-body)",
           padding: "20px 22px 18px",
         }}
         data-team={winnerTeamString}
@@ -131,7 +131,7 @@ export function DeclarationReveal({
             className="text-[11px] uppercase mb-2"
             style={{
               color: "var(--brass, #c9a876)",
-              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontFamily: "var(--font-body)",
               letterSpacing: 3,
               opacity: 0.85,
             }}
@@ -141,7 +141,7 @@ export function DeclarationReveal({
           <div
             className="flex items-center justify-center gap-2.5 font-semibold leading-tight"
             style={{
-              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontFamily: "var(--font-body)",
               fontSize: 22,
               letterSpacing: 0.3,
             }}
@@ -209,7 +209,7 @@ export function DeclarationReveal({
                     className="font-semibold truncate"
                     style={{
                       color: "var(--ink-light, #f5f2e8)",
-                      fontFamily: 'Georgia, "Times New Roman", serif',
+                      fontFamily: "var(--font-body)",
                       fontSize: 15,
                     }}
                     data-testid="declaration-reveal-meld-label"
@@ -229,7 +229,7 @@ export function DeclarationReveal({
                   className="font-bold tabular-nums shrink-0"
                   style={{
                     color: VALUE_COLOR,
-                    fontFamily: 'Georgia, "Times New Roman", serif',
+                    fontFamily: "var(--font-body)",
                     fontSize: 22,
                   }}
                   data-testid="declaration-reveal-meld-value"
@@ -256,7 +256,7 @@ export function DeclarationReveal({
               className="text-[10px] uppercase"
               style={{
                 color: "var(--brass, #c9a876)",
-                fontFamily: 'Georgia, "Times New Roman", serif',
+                fontFamily: "var(--font-body)",
                 letterSpacing: 1.8,
                 opacity: 0.85,
               }}
@@ -274,7 +274,7 @@ export function DeclarationReveal({
             className="font-bold tabular-nums"
             style={{
               color: VALUE_COLOR,
-              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontFamily: "var(--font-body)",
               fontSize: 30,
               letterSpacing: -0.5,
             }}

@@ -901,7 +901,7 @@ export function GamePage() {
             className="font-body text-base"
             style={{
               color: "var(--ink-light, #f5f2e8)",
-              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontFamily: "var(--font-body)",
               letterSpacing: 0.3,
               opacity: 0.85,
             }}
