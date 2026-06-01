@@ -31,13 +31,11 @@ func (s *stubStaleRoomRepo) FindByStatus(status string) ([]match.StaleRoom, erro
 	if s.findByStatus != nil {
 		return s.findByStatus(status)
 	}
+	// StaleRoom doesn't carry Status — "playing" is the only query we
+	// exercise. Return everything in the slice as-is (tests only populate
+	// rooms with the status they want FindByStatus("playing") to return).
 	out := make([]match.StaleRoom, 0, len(s.rooms))
-	for _, r := range s.rooms {
-		// StaleRoom doesn't carry Status — "playing" is the only query we
-		// exercise. Return everything in the slice as-is (tests only populate
-		// rooms with the status they want FindByStatus("playing") to return).
-		out = append(out, r)
-	}
+	out = append(out, s.rooms...)
 	return out, nil
 }
 
