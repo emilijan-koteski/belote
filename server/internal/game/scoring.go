@@ -79,7 +79,7 @@ func scoreHand(state *GameState) {
 	}
 
 	// Step 6: Populate LastHandResult for broadcast
-	state.LastHandResult = &HandResult{
+	state.LastHandResult = &HandScore{
 		TeamACardPoints: rawTeamACardPoints,
 		TeamBCardPoints: rawTeamBCardPoints,
 		TeamADeclPoints: state.DeclarationPoints[TeamA],

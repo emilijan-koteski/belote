@@ -48,7 +48,9 @@ function redirectToLogin(): void {
   if (authRedirect) {
     authRedirect();
   } else {
-    window.location.href = "/login";
+    // Fallback when no SPA redirect is registered — the public landing is the
+    // logged-out home (see useAuthInit's setAuthRedirect).
+    window.location.href = "/";
   }
 }
 

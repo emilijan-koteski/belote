@@ -1,4 +1,4 @@
-import { Globe } from "lucide-react";
+import { Check, ChevronDown, Globe } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { updatePreferences } from "@/shared/api/profile";
@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
+import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/shared/stores/authStore";
 
 // Order: Latin-script entries sorted ASC by native name (English, Hrvatski,
@@ -20,13 +21,34 @@ const languages = [
   { code: "mk", labelKey: "language.mk" },
 ] as const;
 
-export function LanguageSelector() {
+type LanguageSelectorProps = {
+  /**
+   * When true, the picked language is also pushed to the server via
+   * `updatePreferences` so it persists across devices. The authenticated
+   * `AppLayout` enables this; the pre-auth `AuthLayout` leaves it off
+   * (localStorage persistence is handled centrally by the
+   * `languageChanged` listener in i18n.ts).
+   */
+  persistToServer?: boolean;
+  /**
+   * Override the data-testid of the trigger + items. Preserves the
+   * pre-existing test ids for `auth-language-selector` and
+   * `language-selector` flows without forking the component.
+   */
+  testIdPrefix?: string;
+};
+
+export function LanguageSelector({
+  persistToServer = false,
+  testIdPrefix = "language",
+}: LanguageSelectorProps = {}) {
   const { t, i18n } = useTranslation();
 
   async function handleLanguageChange(lang: string) {
     if (lang === i18n.language) return;
-
     await i18n.changeLanguage(lang);
+
+    if (!persistToServer) return;
 
     const user = useAuthStore.getState().user;
     if (!user) return;
@@ -48,26 +70,46 @@ export function LanguageSelector() {
   }
 
   const currentLang = i18n.language.slice(0, 2).toUpperCase();
+  const triggerTestId = `${testIdPrefix}-selector`;
+  const optionTestId = (code: string) => `${testIdPrefix}-option-${code}`;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-text-secondary transition-colors hover:text-text-primary"
-        data-testid="language-selector"
+        className="text-ink-dim hover:bg-surface-sunken hover:text-ink inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-transparent px-2.5 text-sm font-medium transition-colors aria-expanded:bg-surface-sunken aria-expanded:text-ink"
+        aria-label={t("auth.languageSelector.label")}
+        data-testid={triggerTestId}
       >
-        <Globe className="h-4 w-4" />
-        <span>{currentLang}</span>
+        <Globe className="size-3.5" />
+        <span className="text-ink tracking-wider">{currentLang}</span>
+        <ChevronDown className="size-3 opacity-70" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-surface-elevated">
-        {languages.map((lang) => (
-          <DropdownMenuItem
-            key={lang.code}
-            onClick={() => handleLanguageChange(lang.code)}
-            data-testid={`language-option-${lang.code}`}
-          >
-            {t(lang.labelKey)}
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent
+        align="end"
+        className="bg-surface-elevated min-w-40 border border-border p-1 shadow-[0_14px_36px_-18px_rgba(14,58,36,0.30)]"
+      >
+        {languages.map((lang) => {
+          const active = lang.code === i18n.language;
+          return (
+            <DropdownMenuItem
+              key={lang.code}
+              onClick={() => handleLanguageChange(lang.code)}
+              data-testid={optionTestId(lang.code)}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors",
+                active
+                  ? "bg-accent-soft text-ink font-semibold"
+                  : "text-ink hover:bg-surface-sunken font-medium",
+              )}
+            >
+              <span className="text-ink-mute w-4 font-mono text-[10px] font-bold tracking-[1px]">
+                {lang.code.toUpperCase()}
+              </span>
+              <span className="flex-1 text-left">{t(lang.labelKey)}</span>
+              {active && <Check className="text-accent size-3.5" strokeWidth={2.4} />}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

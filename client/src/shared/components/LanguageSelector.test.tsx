@@ -19,7 +19,7 @@ vi.mock("@/shared/api/profile", () => ({
 }));
 
 function renderLanguageSelector() {
-  return render(<LanguageSelector />);
+  return render(<LanguageSelector persistToServer />);
 }
 
 describe("LanguageSelector", () => {

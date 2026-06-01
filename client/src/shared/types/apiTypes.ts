@@ -24,6 +24,19 @@ export interface Room {
   name: string;
   code: string;
   ownerId: number;
+  /**
+   * Display username of the room's owner, hydrated by the server via a JOIN
+   * to the `users` table at response time. Lets the lobby card render a host
+   * avatar without an extra round-trip per row.
+   */
+  ownerUsername: string;
+  /**
+   * Embedded players, populated only by the GET /rooms list endpoint so the
+   * lobby grid can render seat chips inline. The detail endpoint
+   * (GET /rooms/:id) keeps its own `{room, players}` envelope and leaves
+   * this field undefined on the inner room.
+   */
+  players?: RoomPlayer[];
   variant: string;
   matchMode: string;
   timerStyle: string;
@@ -60,11 +73,11 @@ export interface RoomDetail {
 
 export interface SelectSeatResponse {
   players: RoomPlayer[];
-  gameStarted: boolean;
+  matchStarted: boolean;
 }
 
 export interface QuickPlayResponse {
   room: Room;
   seat: number;
-  gameStarted: boolean;
+  matchStarted: boolean;
 }

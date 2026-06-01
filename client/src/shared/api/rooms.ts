@@ -44,12 +44,20 @@ export function transferOwnership(roomId: number, userId: number): Promise<{ own
   return axiosClient.post(`/rooms/${roomId}/transfer-ownership`, { userId });
 }
 
-export function startGame(roomId: number): Promise<Room> {
+export function startMatch(roomId: number): Promise<Room> {
   return axiosClient.post(`/rooms/${roomId}/start`);
 }
 
 export function quickPlay(signal?: AbortSignal): Promise<QuickPlayResponse> {
   return axiosClient.post("/rooms/quick-play", undefined, { signal });
+}
+
+// Joins a SPECIFIC quick-play room (the one tapped in the lobby grid),
+// auto-seating the player and running the auto-start check. Returns the same
+// shape as quickPlay so the caller can route to the matchmaking screen (or the
+// game when this join filled the last seat).
+export function quickJoin(id: number): Promise<QuickPlayResponse> {
+  return axiosClient.post(`/rooms/${id}/quick-join`);
 }
 
 export function kickPlayer(roomId: number, userId: number): Promise<{ playerCount: number }> {

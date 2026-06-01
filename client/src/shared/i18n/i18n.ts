@@ -1,12 +1,14 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import { applyDayjsLocale } from "@/shared/lib/relativeTime";
+
 import en from "./en.json";
 import hr from "./hr.json";
 import mk from "./mk.json";
 import sr from "./sr.json";
 
-// Same order as LanguageSelector / AuthLanguageSelector dropdowns: Latin-script
+// Same order as the LanguageSelector dropdown: Latin-script
 // entries sorted ASC by native name, then Cyrillic-script ASC. Order only
 // affects this allowlist's iteration (not display), but is kept aligned so
 // future contributors don't see a "second source of truth" with different ordering.
@@ -58,13 +60,20 @@ i18n.use(initReactI18next).init({
   },
 });
 
+// Sync dayjs's active locale with i18n at boot so the first <RelativeTime />
+// render in the stored language already speaks that language.
+applyDayjsLocale(initialLng);
+
 // Single write site for language persistence — fires for both the pre-auth
 // selector and the in-lobby LanguageSelector, so a logged-in user's choice
 // carries back to /login after logout. Region-tagged codes ("en-US") are
-// normalized to the short form before persisting.
+// normalized to the short form before persisting. The same listener keeps
+// dayjs's active locale in lock-step so chat + room-age timestamps localize
+// on every switch without a refresh.
 i18n.on("languageChanged", (lng) => {
   const normalized = normalizeLanguage(lng);
   if (!normalized) return;
+  applyDayjsLocale(normalized);
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);

@@ -2,13 +2,14 @@ import "@/shared/i18n/i18n";
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BrowserRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FetchError } from "@/shared/api/axiosClient";
 import { i18n } from "@/shared/i18n/i18n";
 import { QueryWrapper } from "@/test-utils";
 
+import { AuthLayout } from "./AuthLayout";
 import { RegisterPage } from "./RegisterPage";
 
 const mockNavigate = vi.fn();
@@ -28,9 +29,13 @@ vi.mock("@/shared/api/auth", () => ({
 function renderRegisterPage() {
   return render(
     <QueryWrapper>
-      <BrowserRouter>
-        <RegisterPage />
-      </BrowserRouter>
+      <MemoryRouter initialEntries={["/register"]}>
+        <Routes>
+          <Route element={<AuthLayout />}>
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
     </QueryWrapper>,
   );
 }

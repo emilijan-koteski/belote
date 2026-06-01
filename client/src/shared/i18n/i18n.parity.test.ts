@@ -4,7 +4,7 @@
 // directly at translation drift without unrelated i18n behaviour mixed in.
 //
 // Approach: deep-flatten en.json (the canonical source) and every supported
-// locale into dotted key paths (e.g. "lobby.roomLobby.startGame", "team.us")
+// locale into dotted key paths (e.g. "lobby.roomLobby.startMatch", "team.us")
 // and assert every locale's set is identical to en.json's. Sorted arrays
 // make the failure diff readable in CI logs. Also asserts every leaf is a
 // non-empty string so a stray `"key": ""` cannot pass parity (AC-005).

@@ -13,17 +13,17 @@ import (
 
 const (
 	maxMessageLength = 500
-	ChannelGlobal    = "global"
+	ChannelLobby     = "lobby"
 	ChannelMatch     = "match"
 	ChannelRoom      = "room"
 )
 
 // GameMembership reports whether a user is currently in an active game session
 // and resolves the four participants of a given match.
-// Wired to *session.Manager in main.go.
+// Wired to *match.Manager in main.go.
 type GameMembership interface {
-	IsUserInGame(userID uint) bool
-	MatchParticipants(matchID uint) ([4]uint, bool)
+	IsUserInMatch(userID uint) bool
+	MatchParticipants(roomID uint) ([4]uint, bool)
 }
 
 // RoomMembership resolves the member userIDs of a room for room-scoped chat.
@@ -53,7 +53,7 @@ type Handler struct {
 }
 
 // NewHandler creates a chat handler wired to the WebSocket broadcaster,
-// the user repository (for sender username lookup), the session manager
+// the user repository (for sender username lookup), the match manager
 // (for in-game membership + match participant checks), and the room
 // membership resolver (for room-scoped chat recipient lists).
 func NewHandler(
@@ -66,7 +66,7 @@ func NewHandler(
 }
 
 // HandleAction is the action handler entry point. Composed with
-// session.Manager.HandleAction in main.go via a dispatch closure.
+// match.Manager.HandleAction in main.go via a dispatch closure.
 // Returns silently for any msg.Type other than ws.ActionChatMessage so the
 // composite caller can safely route every action through it.
 func (h *Handler) HandleAction(client *ws.Client, msg ws.WSMessage) {
@@ -92,10 +92,10 @@ func (h *Handler) HandleAction(client *ws.Client, msg ws.WSMessage) {
 	}
 
 	switch req.Channel {
-	case ChannelGlobal:
+	case ChannelLobby:
 		h.handleGlobal(client.UserID, text)
 	case ChannelMatch:
-		h.handleMatch(client.UserID, req.MatchID, text)
+		h.handleMatch(client.UserID, req.RoomID, text)
 	case ChannelRoom:
 		h.handleRoom(client.UserID, req.RoomID, text)
 	default:
@@ -105,7 +105,7 @@ func (h *Handler) HandleAction(client *ws.Client, msg ws.WSMessage) {
 
 func (h *Handler) handleGlobal(senderID uint, text string) {
 	// Enforce "no global chat while in a game" — silently drop (AC #7).
-	if h.game.IsUserInGame(senderID) {
+	if h.game.IsUserInMatch(senderID) {
 		slog.Info("chat: global send dropped (sender in game)", "userID", senderID)
 		return
 	}
@@ -124,7 +124,7 @@ func (h *Handler) handleGlobal(senderID uint, text string) {
 		// effectively unique across the message stream — used as a stable
 		// React key on the client.
 		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
-		Scope:     ChannelGlobal,
+		Scope:     ChannelLobby,
 	}
 	msgBytes := buildMessage(ws.SystemChatMessage, payload)
 	if msgBytes == nil {
@@ -138,7 +138,7 @@ func (h *Handler) handleGlobal(senderID uint, text string) {
 	recipients := h.hub.ConnectedUserIDs()
 	eligible := make([]uint, 0, len(recipients))
 	for _, uid := range recipients {
-		if uid != senderID && h.game.IsUserInGame(uid) {
+		if uid != senderID && h.game.IsUserInMatch(uid) {
 			continue
 		}
 		eligible = append(eligible, uid)
@@ -146,16 +146,16 @@ func (h *Handler) handleGlobal(senderID uint, text string) {
 	h.hub.BroadcastToUsers(eligible, msgBytes)
 }
 
-func (h *Handler) handleMatch(senderID uint, matchID *uint, text string) {
-	if matchID == nil {
-		slog.Info("chat: match send dropped (missing matchId)", "userID", senderID)
+func (h *Handler) handleMatch(senderID uint, roomID *uint, text string) {
+	if roomID == nil {
+		slog.Info("chat: match send dropped (missing roomId)", "userID", senderID)
 		return
 	}
 
-	participants, ok := h.game.MatchParticipants(*matchID)
+	participants, ok := h.game.MatchParticipants(*roomID)
 	if !ok {
-		slog.Info("chat: match send dropped (unknown matchId)",
-			"userID", senderID, "matchID", *matchID)
+		slog.Info("chat: match send dropped (unknown roomId)",
+			"userID", senderID, "roomID", *roomID)
 		return
 	}
 
@@ -169,7 +169,7 @@ func (h *Handler) handleMatch(senderID uint, matchID *uint, text string) {
 	}
 	if !authorized {
 		slog.Info("chat: match send dropped (sender not in match)",
-			"userID", senderID, "matchID", *matchID)
+			"userID", senderID, "roomID", *roomID)
 		return
 	}
 

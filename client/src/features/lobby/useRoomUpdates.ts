@@ -1,54 +1,139 @@
-import { useEffect } from "react";
-
 import { queryClient } from "@/shared/api/queryClient";
 import { queryKeys } from "@/shared/api/queryKeys";
-import type { Room } from "@/shared/types/apiTypes";
-import type { RoomCreatedPayload, RoomUpdatedPayload, WsMessage } from "@/shared/types/wsEvents";
-import { SYSTEM_ROOM_CREATED, SYSTEM_ROOM_UPDATED } from "@/shared/types/wsEvents";
+import type { Room, RoomPlayer } from "@/shared/types/apiTypes";
+import type {
+  PlayerJoinedPayload,
+  PlayerLeftPayload,
+  RoomCreatedPayload,
+  RoomUpdatedPayload,
+  SeatUpdatedPayload,
+  WsMessage,
+} from "@/shared/types/wsEvents";
+import {
+  SYSTEM_PLAYER_JOINED,
+  SYSTEM_PLAYER_LEFT,
+  SYSTEM_ROOM_CREATED,
+  SYSTEM_ROOM_UPDATED,
+  SYSTEM_SEAT_UPDATED,
+} from "@/shared/types/wsEvents";
 
-// NOTE: This hook establishes the WebSocket event handler contract for room updates.
-// The WS hub is not yet wired end-to-end — these handlers will not receive events
-// until WebSocket infrastructure is connected in a future story.
-// The event type constants and handler logic are correct and ready for integration.
+const WAITING = queryKeys.rooms.list("waiting");
 
-export function useRoomUpdates() {
-  useEffect(() => {
-    // TODO: Replace with actual WebSocket instance from WS infrastructure (future story).
-    // When the WS hub is available, subscribe to the WebSocket connection here
-    // and attach handleWsMessage as the message handler.
-    // Example:
-    //   ws.addEventListener("message", handleWsMessage);
-    //   return () => ws.removeEventListener("message", handleWsMessage);
-    return undefined;
-  }, []);
+function update(updater: (rooms: Room[]) => Room[]) {
+  queryClient.setQueryData<Room[]>(WAITING, (old) => (old ? updater(old) : undefined));
 }
 
-// Exported for future WS integration and testing — will be wired as the
-// WebSocket "message" event handler once WS infrastructure is connected.
-export function handleWsMessage(event: MessageEvent) {
+/**
+ * Mutates the cached `["rooms", "waiting"]` list in response to WS room
+ * events so the lobby grid stays live without a manual refetch. The hook
+ * itself is no-op — the dispatcher (useWsDispatch.ts) calls handleWsMessage
+ * directly on each frame, and TanStack Query's subscribers re-render from
+ * the mutated cache.
+ */
+export function useRoomUpdates() {
+  // No-op — kept as a marker import so a future replacement of the dispatcher
+  // wiring has a single deprecation site to update.
+}
+
+export function handleWsMessage(event: MessageEvent): void {
   try {
     const message = JSON.parse(String(event.data)) as WsMessage;
 
-    if (message.type === SYSTEM_ROOM_CREATED) {
-      const payload = message.payload as RoomCreatedPayload;
-      queryClient.setQueryData<Room[]>(queryKeys.rooms.list("waiting"), (old) =>
-        old ? [...old, payload] : undefined,
-      );
-    }
+    switch (message.type) {
+      case SYSTEM_ROOM_CREATED: {
+        const payload = message.payload as RoomCreatedPayload;
+        update((rooms) => {
+          // De-dupe: WS race against an in-flight REST list query can deliver
+          // the same room twice. setQueryData runs after the list resolves, so
+          // we have to skip any id already in the cache.
+          if (rooms.some((r) => r.id === payload.id)) return rooms;
+          return [payload as unknown as Room, ...rooms];
+        });
+        return;
+      }
 
-    if (message.type === SYSTEM_ROOM_UPDATED) {
-      const payload = message.payload as RoomUpdatedPayload;
-      if (payload.status !== "waiting") {
-        queryClient.setQueryData<Room[]>(queryKeys.rooms.list("waiting"), (old) =>
-          old ? old.filter((r) => r.id !== payload.id) : undefined,
+      case SYSTEM_ROOM_UPDATED: {
+        const payload = message.payload as RoomUpdatedPayload;
+        if (payload.status !== "waiting") {
+          // Room transitioned out of "waiting" (game started, closed) — drop.
+          update((rooms) => rooms.filter((r) => r.id !== payload.id));
+          return;
+        }
+        update((rooms) =>
+          rooms.map((r) => {
+            if (r.id !== payload.id) return r;
+            // Prefer the payload's players[] when present (server includes
+            // them on every lifecycle event now), but fall back to whatever
+            // the cache already has so an older event without players still
+            // doesn't blank the seat chips.
+            const players = payload.players ?? r.players;
+            return { ...r, ...(payload as unknown as Partial<Room>), players };
+          }),
         );
-      } else {
-        queryClient.setQueryData<Room[]>(queryKeys.rooms.list("waiting"), (old) =>
-          old ? old.map((r) => (r.id === payload.id ? payload : r)) : undefined,
+        return;
+      }
+
+      case SYSTEM_PLAYER_JOINED: {
+        const payload = message.payload as PlayerJoinedPayload;
+        update((rooms) =>
+          rooms.map((r) => {
+            if (r.id !== payload.roomId) return r;
+            const next: RoomPlayer = {
+              id: payload.userId,
+              roomId: payload.roomId,
+              userId: payload.userId,
+              username: payload.username,
+              seat: null,
+              team: null,
+              createdAt: new Date().toISOString(),
+            };
+            const players = r.players ?? [];
+            if (players.some((p) => p.userId === payload.userId)) {
+              return { ...r, playerCount: payload.playerCount };
+            }
+            return {
+              ...r,
+              playerCount: payload.playerCount,
+              players: [...players, next],
+            };
+          }),
         );
+        return;
+      }
+
+      case SYSTEM_PLAYER_LEFT: {
+        const payload = message.payload as PlayerLeftPayload;
+        update((rooms) =>
+          rooms.map((r) => {
+            if (r.id !== payload.roomId) return r;
+            return {
+              ...r,
+              playerCount: payload.playerCount,
+              players: (r.players ?? []).filter((p) => p.userId !== payload.userId),
+              ownerId: payload.newOwnerId ?? r.ownerId,
+            };
+          }),
+        );
+        return;
+      }
+
+      case SYSTEM_SEAT_UPDATED: {
+        const payload = message.payload as SeatUpdatedPayload;
+        update((rooms) =>
+          rooms.map((r) => {
+            if (r.id !== payload.roomId) return r;
+            return {
+              ...r,
+              players: (r.players ?? []).map((p) =>
+                p.userId === payload.userId ? { ...p, seat: payload.seat, team: payload.team } : p,
+              ),
+            };
+          }),
+        );
+        return;
       }
     }
   } catch {
-    // Ignore non-JSON messages or parse errors
+    // Ignore non-JSON / parse errors — same defensive stance as the original.
   }
 }

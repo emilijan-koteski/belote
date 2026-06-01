@@ -12,17 +12,22 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 	"github.com/labstack/echo/v4"
-
-	"github.com/emilijan/beljot/server/internal/auth"
 )
 
 const authTimeout = 10 * time.Second
+
+// TokenValidator validates a JWT token string and returns the parsed audience
+// and subject (userID as string). Injected at construction time so the ws
+// package does not need to import auth (which would create an import cycle via
+// auth→user→match→ws).
+type TokenValidator func(token string) (audience []string, subject string, err error)
 
 // WSHandler handles WebSocket upgrade and authentication.
 type WSHandler struct {
 	Hub             *Hub
 	JWTSecret       string
 	AcceptedOrigins []string
+	ValidateToken   TokenValidator
 }
 
 // HandleWS upgrades the HTTP connection to WebSocket and performs
@@ -70,21 +75,21 @@ func (h *WSHandler) HandleWS(c echo.Context) error {
 		return nil
 	}
 
-	// Validate JWT
-	claims, err := auth.ValidateToken(payload.Token, h.JWTSecret)
+	// Validate JWT via injected validator (keeps ws free of auth import).
+	audience, subject, err := h.ValidateToken(payload.Token)
 	if err != nil {
 		sendError(conn, ErrorAuthFailed, "invalid or expired token")
 		conn.Close(websocket.StatusPolicyViolation, "token validation failed")
 		return nil
 	}
 
-	if !slices.Contains([]string(claims.Audience), "access") {
+	if !slices.Contains(audience, "access") {
 		sendError(conn, ErrorAuthFailed, "invalid token audience")
 		conn.Close(websocket.StatusPolicyViolation, "invalid token audience")
 		return nil
 	}
 
-	userID, err := strconv.ParseUint(claims.Subject, 10, 64)
+	userID, err := strconv.ParseUint(subject, 10, 64)
 	if err != nil {
 		sendError(conn, ErrorAuthFailed, "invalid token subject")
 		conn.Close(websocket.StatusPolicyViolation, "invalid token subject")

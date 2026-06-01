@@ -49,12 +49,25 @@ export interface MatchesListResponse {
   offset: number;
 }
 
+/** Viewer-relative outcome filter; "all" leaves the result set unfiltered. */
+export type MatchFilter = "all" | "win" | "loss" | "abandoned";
+
+/** Completed-at ordering: "new" (newest first, default) or "old". */
+export type MatchSort = "new" | "old";
+
+export interface MatchListParams {
+  outcome?: MatchFilter;
+  sort?: MatchSort;
+}
+
 export function getUserMatches(
   userId: number,
   limit: number,
   offset: number,
+  { outcome = "all", sort = "new" }: MatchListParams = {},
 ): Promise<MatchesListResponse> {
   return axiosClient.get(`/users/${userId}/matches`, {
-    params: { limit, offset },
+    // "all" is the server default, so it is omitted to keep the URL clean.
+    params: { limit, offset, outcome: outcome === "all" ? undefined : outcome, sort },
   });
 }

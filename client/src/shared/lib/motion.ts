@@ -71,8 +71,8 @@ export const MOTION = {
   RESHUFFLE_STAGGER: 100,
 
   // ─── Game-start splash ───────────────────────────────────────────
-  /** Minimum hold time for the "Game is starting…" splash on GamePage when
-   *  arriving from RoomLobby or from LobbyPage quick-play auto-start. 1500 ms
+  /** Minimum hold time for the "Game is starting…" splash on MatchPage when
+   *  arriving from RoomPage or from LobbyPage quick-play auto-start. 1500 ms
    *  is long enough for the brain to register a deliberate scene change
    *  without feeling like a spinner — slightly longer than
    *  `TRICK_RESOLVE_PAUSE` so the beat reads as a phase transition, not a
@@ -155,7 +155,7 @@ export const MOTION = {
 const FLAG_BUFFER_MS = 40;
 
 export const FLAG_LIFETIME = {
-  /** GamePage's `flyingCardId` — must outlive whichever throw animation runs.
+  /** MatchPage's `flyingCardId` — must outlive whichever throw animation runs.
    *  When the CardFlight overlay is active (the common case) this guards the
    *  full self-throw flight; when it falls back to the legacy hand-throw +
    *  trick-land sequence it still covers the longer of the two. */

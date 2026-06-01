@@ -18,7 +18,11 @@ export function ProtectedRoute() {
   }
 
   if (!token) {
-    return <Navigate to="/login" replace />;
+    // Unauthenticated → the public landing ("/"), the logged-out home (it has
+    // its own "Log in" CTA). Keeping this aligned with the logout navigation
+    // and the axios 401 redirect means a deliberate logout always lands on the
+    // landing, never racing to /login as the protected tree unmounts.
+    return <Navigate to="/" replace />;
   }
 
   return (

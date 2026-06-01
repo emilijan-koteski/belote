@@ -7,16 +7,16 @@ vi.mock("@/shared/api/auth", () => ({
 
 import { useAuthStore } from "./authStore";
 import { useChatStore } from "./chatStore";
-import { useGameStore } from "./gameStore";
-import { useRoomLobbyStore } from "./roomLobbyStore";
+import { useMatchStore } from "./matchStore";
+import { useRoomStore } from "./roomStore";
 
 describe("authStore", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useAuthStore.setState({ token: null, user: null, isLoading: false });
-    useGameStore.getState().clearGame();
-    useRoomLobbyStore.getState().reset();
-    useChatStore.getState().clearGlobal();
+    useMatchStore.getState().clearGame();
+    useRoomStore.getState().reset();
+    useChatStore.getState().clearLobby();
     useChatStore.getState().clearMatch();
     useChatStore.getState().clearRoom();
   });
@@ -49,41 +49,41 @@ describe("authStore", () => {
 
   // Story 8.5-1 AC6 (D66): logout must wipe session-scoped stores so a
   // re-login does not inherit stale state. Without this, the 401 →
-  // refresh-fail → logout path leaves gameStore.gameState populated and
+  // refresh-fail → logout path leaves matchStore.matchState populated and
   // useReconnectionRedirect navigates the freshly re-logged-in user to a
   // finished game's /game/{id} page.
-  it("clears gameStore on logout", () => {
-    // Bypass setGameState's normalization (which expects a full GameState
-    // shape) — the test only cares that gameState is non-null before logout
-    // and null after. Other tests cover the GameState shape.
-    useGameStore.setState({
-      gameState: {
+  it("clears matchStore on logout", () => {
+    // Bypass setMatchState's normalization (which expects a full MatchState
+    // shape) — the test only cares that matchState is non-null before logout
+    // and null after. Other tests cover the MatchState shape.
+    useMatchStore.setState({
+      matchState: {
         phase: "match_end",
         players: [],
-      } as unknown as Parameters<typeof useGameStore.setState>[0] extends infer S
-        ? S extends { gameState?: infer G }
+      } as unknown as Parameters<typeof useMatchStore.setState>[0] extends infer S
+        ? S extends { matchState?: infer G }
           ? G
           : never
         : never,
     });
-    expect(useGameStore.getState().gameState).not.toBeNull();
+    expect(useMatchStore.getState().matchState).not.toBeNull();
 
     useAuthStore.getState().logout();
 
-    expect(useGameStore.getState().gameState).toBeNull();
+    expect(useMatchStore.getState().matchState).toBeNull();
   });
 
-  it("resets roomLobbyStore on logout", () => {
-    useRoomLobbyStore
+  it("resets roomStore on logout", () => {
+    useRoomStore
       .getState()
       .setPlayers([{ id: 1, roomId: 1, userId: 10, username: "P1" }] as unknown as Parameters<
-        ReturnType<typeof useRoomLobbyStore.getState>["setPlayers"]
+        ReturnType<typeof useRoomStore.getState>["setPlayers"]
       >[0]);
-    expect(useRoomLobbyStore.getState().players.length).toBeGreaterThan(0);
+    expect(useRoomStore.getState().players.length).toBeGreaterThan(0);
 
     useAuthStore.getState().logout();
 
-    expect(useRoomLobbyStore.getState().players).toEqual([]);
+    expect(useRoomStore.getState().players).toEqual([]);
   });
 
   it("clears chatStore buffers on logout", () => {
@@ -92,18 +92,18 @@ describe("authStore", () => {
       username: "P1",
       message: "hello",
       timestamp: new Date().toISOString(),
-      scope: "global" as const,
+      scope: "lobby" as const,
     };
-    useChatStore.getState().appendGlobal(msg);
+    useChatStore.getState().appendLobby(msg);
     useChatStore.getState().appendMatch({ ...msg, scope: "match" as const });
     useChatStore.getState().appendRoom({ ...msg, scope: "room" as const });
-    expect(useChatStore.getState().globalMessages.length).toBe(1);
+    expect(useChatStore.getState().lobbyMessages.length).toBe(1);
     expect(useChatStore.getState().matchMessages.length).toBe(1);
     expect(useChatStore.getState().roomMessages.length).toBe(1);
 
     useAuthStore.getState().logout();
 
-    expect(useChatStore.getState().globalMessages).toEqual([]);
+    expect(useChatStore.getState().lobbyMessages).toEqual([]);
     expect(useChatStore.getState().matchMessages).toEqual([]);
     expect(useChatStore.getState().roomMessages).toEqual([]);
   });

@@ -32,6 +32,13 @@ func setupTestServer(t *testing.T) (*httptest.Server, *ws.Hub) {
 	wsHandler := &ws.WSHandler{
 		Hub:       hub,
 		JWTSecret: testSecret,
+		ValidateToken: func(token string) ([]string, string, error) {
+			claims, err := auth.ValidateToken(token, testSecret)
+			if err != nil {
+				return nil, "", err
+			}
+			return []string(claims.Audience), claims.Subject, nil
+		},
 	}
 	e.GET("/ws", wsHandler.HandleWS)
 
@@ -434,14 +441,14 @@ func TestHub_MultipleConcurrentUsers(t *testing.T) {
 
 	// Broadcast to all 4
 	testMsg, _ := json.Marshal(ws.WSMessage{
-		Type:    "event:game_state",
+		Type:    "event:match_state",
 		Payload: json.RawMessage(`{"phase":"bidding"}`),
 	})
 	hub.BroadcastToUsers([]uint{700, 701, 702, 703}, testMsg)
 
 	for i := range conns {
 		msg := readMessage(t, conns[i])
-		assert.Equal(t, "event:game_state", msg.Type)
+		assert.Equal(t, "event:match_state", msg.Type)
 	}
 }
 
@@ -456,6 +463,13 @@ func TestWSHandler_WithOriginPatterns(t *testing.T) {
 		Hub:             hub,
 		JWTSecret:       testSecret,
 		AcceptedOrigins: []string{"http://localhost:5173"},
+		ValidateToken: func(token string) ([]string, string, error) {
+			claims, err := auth.ValidateToken(token, testSecret)
+			if err != nil {
+				return nil, "", err
+			}
+			return []string(claims.Audience), claims.Subject, nil
+		},
 	}
 	e.GET("/ws", wsHandler.HandleWS)
 
@@ -487,6 +501,13 @@ func TestWSHandler_AuthFailed_Timeout(t *testing.T) {
 	wsHandler := &ws.WSHandler{
 		Hub:       hub,
 		JWTSecret: testSecret,
+		ValidateToken: func(token string) ([]string, string, error) {
+			claims, err := auth.ValidateToken(token, testSecret)
+			if err != nil {
+				return nil, "", err
+			}
+			return []string(claims.Audience), claims.Subject, nil
+		},
 	}
 	e.GET("/ws", wsHandler.HandleWS)
 

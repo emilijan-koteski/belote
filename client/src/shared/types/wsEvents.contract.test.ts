@@ -17,12 +17,12 @@ import autoActionGolden from "../../../../server/internal/ws/testdata/events/aut
 import belotAnnouncedGolden from "../../../../server/internal/ws/testdata/events/belot_announced.json";
 import cardPlayedGolden from "../../../../server/internal/ws/testdata/events/card_played.json";
 import declarationsResolvedGolden from "../../../../server/internal/ws/testdata/events/declarations_resolved.json";
-import eventGameStateGolden from "../../../../server/internal/ws/testdata/events/event_game_state.json";
 import eventHandScoredGolden from "../../../../server/internal/ws/testdata/events/event_hand_scored.json";
-import gamePausedGolden from "../../../../server/internal/ws/testdata/events/game_paused.json";
-import gameResumedGolden from "../../../../server/internal/ws/testdata/events/game_resumed.json";
+import eventMatchStateGolden from "../../../../server/internal/ws/testdata/events/event_match_state.json";
 import matchAbandonedGolden from "../../../../server/internal/ws/testdata/events/match_abandoned.json";
 import matchEndGolden from "../../../../server/internal/ws/testdata/events/match_end.json";
+import matchPausedGolden from "../../../../server/internal/ws/testdata/events/match_paused.json";
+import matchResumedGolden from "../../../../server/internal/ws/testdata/events/match_resumed.json";
 import playerDisconnectedGolden from "../../../../server/internal/ws/testdata/events/player_disconnected.json";
 import playerReconnectedGolden from "../../../../server/internal/ws/testdata/events/player_reconnected.json";
 import surrenderDeclinedGolden from "../../../../server/internal/ws/testdata/events/surrender_declined.json";
@@ -34,12 +34,12 @@ import {
   BelotAnnouncedPayloadSchema,
   CardPlayedPayloadSchema,
   DeclarationsResolvedPayloadSchema,
-  EventGameStateSchema,
-  GamePausedPayloadSchema,
-  GameResumedPayloadSchema,
+  EventMatchStateSchema,
   HandScoredPayloadSchema,
   MatchAbandonedPayloadSchema,
   MatchEndPayloadSchema,
+  MatchPausedPayloadSchema,
+  MatchResumedPayloadSchema,
   PlayerDisconnectedPayloadSchema,
   PlayerReconnectedPayloadSchema,
   SurrenderDeclinedPayloadSchema,
@@ -56,7 +56,7 @@ import {
 // "Unrecognized key(s) in object". A removed key fails with "Required".
 // Either way the spec's AC-006 "drift gate" works.
 const cases = [
-  ["EventGameState", EventGameStateSchema, eventGameStateGolden],
+  ["EventMatchState", EventMatchStateSchema, eventMatchStateGolden],
   ["CardPlayedPayload", CardPlayedPayloadSchema, cardPlayedGolden],
   ["TrickResolvedPayload", TrickResolvedPayloadSchema, trickResolvedGolden],
   ["HandScoredPayload", HandScoredPayloadSchema, eventHandScoredGolden],
@@ -65,8 +65,8 @@ const cases = [
   ["TrumpSelectedPayload", TrumpSelectedPayloadSchema, trumpSelectedGolden],
   ["DeclarationsResolvedPayload", DeclarationsResolvedPayloadSchema, declarationsResolvedGolden],
   ["BelotAnnouncedPayload", BelotAnnouncedPayloadSchema, belotAnnouncedGolden],
-  ["GamePausedPayload", GamePausedPayloadSchema, gamePausedGolden],
-  ["GameResumedPayload", GameResumedPayloadSchema, gameResumedGolden],
+  ["MatchPausedPayload", MatchPausedPayloadSchema, matchPausedGolden],
+  ["MatchResumedPayload", MatchResumedPayloadSchema, matchResumedGolden],
   ["AutoActionPayload", AutoActionPayloadSchema, autoActionGolden],
   ["PlayerDisconnectedPayload", PlayerDisconnectedPayloadSchema, playerDisconnectedGolden],
   ["PlayerReconnectedPayload", PlayerReconnectedPayloadSchema, playerReconnectedGolden],

@@ -15,20 +15,22 @@ import (
 
 	"github.com/emilijan/beljot/server/internal/apperr"
 	"github.com/emilijan/beljot/server/internal/auth"
+	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/room"
 )
 
 // --- Mock Repository ---
 
 type mockRoomRepo struct {
-	rooms   []*room.Room
-	players []*room.RoomPlayer
-	nextID  uint
-	nextPID uint
+	rooms          []*room.Room
+	players        []*room.RoomPlayer
+	nextID         uint
+	nextPID        uint
+	ownerUsernames map[uint]string
 }
 
 func newMockRoomRepo() *mockRoomRepo {
-	return &mockRoomRepo{nextID: 1, nextPID: 1}
+	return &mockRoomRepo{nextID: 1, nextPID: 1, ownerUsernames: map[uint]string{}}
 }
 
 func (m *mockRoomRepo) Create(r *room.Room) error {
@@ -230,6 +232,30 @@ func (m *mockRoomRepo) UpdateStatus(roomID uint, status string) error {
 	return nil
 }
 
+func (m *mockRoomRepo) LoadOwnerUsernames(rooms []*room.Room) error {
+	for _, rm := range rooms {
+		if rm == nil || rm.OwnerUsername != "" {
+			continue
+		}
+		if name, ok := m.ownerUsernames[rm.OwnerID]; ok {
+			rm.OwnerUsername = name
+		}
+	}
+	return nil
+}
+
+func (m *mockRoomRepo) FindPlayersByRoomIDs(roomIDs []uint) (map[uint][]room.RoomPlayer, error) {
+	out := make(map[uint][]room.RoomPlayer)
+	for _, id := range roomIDs {
+		for _, p := range m.players {
+			if p.RoomID == id {
+				out[id] = append(out[id], *p)
+			}
+		}
+	}
+	return out, nil
+}
+
 func (m *mockRoomRepo) RunInTransaction(fn func(room.RoomRepository) error) error {
 	return fn(m)
 }
@@ -297,10 +323,11 @@ func setupTest() (*echo.Echo, *mockRoomRepo) {
 	api.GET("/rooms/code/:code", handler.GetRoomByCode)
 	api.GET("/rooms/:id", handler.GetRoom)
 	api.POST("/rooms/:id/join", handler.JoinRoom)
+	api.POST("/rooms/:id/quick-join", handler.QuickJoin)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
 	api.POST("/rooms/:id/leave-seat", handler.LeaveSeat)
-	api.POST("/rooms/:id/start", handler.StartGame)
+	api.POST("/rooms/:id/start", handler.StartMatch)
 	api.POST("/rooms/:id/kick", handler.KickPlayer)
 	api.POST("/rooms/:id/swap-seats", handler.SwapSeats)
 	api.POST("/rooms/:id/transfer-ownership", handler.TransferOwnership)
@@ -322,10 +349,11 @@ func setupTestWithBroadcast() (*echo.Echo, *mockRoomRepo, *mockBroadcaster) {
 	api.GET("/rooms/code/:code", handler.GetRoomByCode)
 	api.GET("/rooms/:id", handler.GetRoom)
 	api.POST("/rooms/:id/join", handler.JoinRoom)
+	api.POST("/rooms/:id/quick-join", handler.QuickJoin)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
 	api.POST("/rooms/:id/leave-seat", handler.LeaveSeat)
-	api.POST("/rooms/:id/start", handler.StartGame)
+	api.POST("/rooms/:id/start", handler.StartMatch)
 	api.POST("/rooms/:id/kick", handler.KickPlayer)
 	api.POST("/rooms/:id/swap-seats", handler.SwapSeats)
 	api.POST("/rooms/:id/transfer-ownership", handler.TransferOwnership)
@@ -1331,7 +1359,7 @@ func TestSelectSeat_RoomNotWaiting(t *testing.T) {
 
 	var errResp map[string]map[string]string
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
-	assert.Equal(t, "GAME_NOT_STARTABLE", errResp["error"]["code"])
+	assert.Equal(t, "MATCH_NOT_STARTABLE", errResp["error"]["code"])
 }
 
 func TestSelectSeat_OwnCurrentSeat(t *testing.T) {
@@ -1456,7 +1484,7 @@ func TestStartGame_RoomNotWaiting(t *testing.T) {
 
 	var errResp map[string]map[string]string
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
-	assert.Equal(t, "GAME_NOT_STARTABLE", errResp["error"]["code"])
+	assert.Equal(t, "MATCH_NOT_STARTABLE", errResp["error"]["code"])
 }
 
 func TestStartGame_RoomNotFound(t *testing.T) {
@@ -1489,7 +1517,7 @@ func TestStartGame_RejectsQuickPlayRoom(t *testing.T) {
 
 	var errResp map[string]map[string]string
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
-	assert.Equal(t, "GAME_NOT_STARTABLE", errResp["error"]["code"])
+	assert.Equal(t, "MATCH_NOT_STARTABLE", errResp["error"]["code"])
 }
 
 // --- Quick Play Tests ---
@@ -1503,6 +1531,192 @@ func doQuickPlay(e *echo.Echo, token string) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	return rec
+}
+
+func doQuickJoin(e *echo.Echo, id string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+id+"/quick-join", nil)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
+}
+
+// seedQuickPlayRoom creates a waiting quick-play room owned by ownerID, who is
+// auto-seated at the lowest seats together with any extra occupants. Mirrors
+// the state QuickPlay leaves a partially-filled room in. Returns the room.
+func seedQuickPlayRoom(repo *mockRoomRepo, code string, seatedUserIDs ...uint) *room.Room {
+	r := &room.Room{
+		Name:        "Quick Play " + code,
+		Code:        code,
+		OwnerID:     seatedUserIDs[0],
+		Variant:     "bitola",
+		MatchMode:   "1001",
+		TimerStyle:  "relaxed",
+		IsQuickPlay: true,
+		Status:      "waiting",
+		PlayerCount: len(seatedUserIDs),
+	}
+	_ = repo.Create(r)
+	for i, uid := range seatedUserIDs {
+		seat := i
+		team := "teamA"
+		if seat%2 == 1 {
+			team = "teamB"
+		}
+		_ = repo.AddPlayer(&room.RoomPlayer{RoomID: r.ID, UserID: uid, Seat: &seat, Team: &team})
+	}
+	return r
+}
+
+func decodeQuickJoinData(t *testing.T, rec *httptest.ResponseRecorder) struct {
+	Room        room.Room `json:"room"`
+	Seat        int       `json:"seat"`
+	MatchStarted bool      `json:"matchStarted"`
+} {
+	t.Helper()
+	var resp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	var data struct {
+		Room        room.Room `json:"room"`
+		Seat        int       `json:"seat"`
+		MatchStarted bool      `json:"matchStarted"`
+	}
+	require.NoError(t, json.Unmarshal(resp["data"], &data))
+	return data
+}
+
+func TestQuickJoin_SeatsPlayerInTargetRoom(t *testing.T) {
+	e, repo := setupTest()
+	qpRoom := seedQuickPlayRoom(repo, "ABC123", 20)
+
+	rec := doQuickJoin(e, "1", validToken(30))
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	data := decodeQuickJoinData(t, rec)
+
+	assert.Equal(t, qpRoom.ID, data.Room.ID)
+	assert.Equal(t, 2, data.Room.PlayerCount)
+	// Joiner gets the next empty seat (1 → team B) since seat 0 is taken.
+	assert.Equal(t, 1, data.Seat)
+	assert.False(t, data.MatchStarted)
+
+	var seat *int
+	var team *string
+	for _, p := range repo.players {
+		if p.UserID == 30 {
+			seat, team = p.Seat, p.Team
+		}
+	}
+	require.NotNil(t, seat)
+	assert.Equal(t, 1, *seat)
+	require.NotNil(t, team)
+	assert.Equal(t, "teamB", *team)
+}
+
+func TestQuickJoin_FourthPlayerAutoStarts(t *testing.T) {
+	e, repo, broadcaster := setupTestWithBroadcast()
+	qpRoom := seedQuickPlayRoom(repo, "FILLED", 500, 501, 502)
+
+	rec := doQuickJoin(e, "1", validToken(503))
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	data := decodeQuickJoinData(t, rec)
+
+	assert.Equal(t, 3, data.Seat)
+	assert.True(t, data.MatchStarted)
+
+	updated, _ := repo.FindByID(qpRoom.ID)
+	assert.Equal(t, "playing", updated.Status)
+
+	gotMatchStarted := false
+	for _, call := range broadcaster.calls {
+		if strings.Contains(string(call.msg), "system:match_started") {
+			gotMatchStarted = true
+		}
+	}
+	assert.True(t, gotMatchStarted, "expected system:match_started broadcast")
+}
+
+func TestQuickJoin_AlreadyInRoom(t *testing.T) {
+	e, repo := setupTest()
+	seedQuickPlayRoom(repo, "ABC123", 20)
+	// User 30 is already in another room.
+	other := seedQuickPlayRoom(repo, "OTHER1", 30)
+	_ = other
+
+	rec := doQuickJoin(e, "1", validToken(30))
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ALREADY_IN_ROOM", resp["error"]["code"])
+}
+
+func TestQuickJoin_RoomNotQuickPlay(t *testing.T) {
+	e, repo := setupTest()
+	// A manual (custom) room — quick-join must be rejected.
+	manual := &room.Room{
+		Name: "Manual", Code: "MAN001", OwnerID: 50,
+		Variant: "bitola", MatchMode: "1001", TimerStyle: "relaxed",
+		IsQuickPlay: false, Status: "waiting", PlayerCount: 1,
+	}
+	_ = repo.Create(manual)
+	_ = repo.AddPlayer(&room.RoomPlayer{RoomID: manual.ID, UserID: 50})
+
+	rec := doQuickJoin(e, "1", validToken(60))
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ROOM_NOT_QUICK_PLAY", resp["error"]["code"])
+}
+
+func TestQuickJoin_RoomFull(t *testing.T) {
+	e, repo := setupTest()
+	seedQuickPlayRoom(repo, "FULL01", 70, 71, 72, 73)
+
+	rec := doQuickJoin(e, "1", validToken(80))
+
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ROOM_FULL", resp["error"]["code"])
+}
+
+func TestQuickJoin_RoomNotFound(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doQuickJoin(e, "999", validToken(1))
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ROOM_NOT_FOUND", resp["error"]["code"])
+}
+
+func TestQuickJoin_NotWaitingStatus(t *testing.T) {
+	e, repo := setupTest()
+	qpRoom := seedQuickPlayRoom(repo, "PLAY01", 90, 91, 92, 93)
+	qpRoom.Status = "playing"
+
+	rec := doQuickJoin(e, "1", validToken(95))
+
+	// Matches JoinRoom's convention: a non-waiting room reads as not found.
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	var resp map[string]map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "ROOM_NOT_FOUND", resp["error"]["code"])
+}
+
+func TestQuickJoin_Unauthorized(t *testing.T) {
+	e, _ := setupTest()
+
+	rec := doQuickJoin(e, "1", "")
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
 func TestQuickPlay_CreatesNewRoom(t *testing.T) {
@@ -1519,7 +1733,7 @@ func TestQuickPlay_CreatesNewRoom(t *testing.T) {
 	var data struct {
 		Room        room.Room `json:"room"`
 		Seat        int       `json:"seat"`
-		GameStarted bool      `json:"gameStarted"`
+		MatchStarted bool      `json:"matchStarted"`
 	}
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
@@ -1535,7 +1749,7 @@ func TestQuickPlay_CreatesNewRoom(t *testing.T) {
 
 	// Auto-seat: first joiner lands at seat 0 (team A).
 	assert.Equal(t, 0, data.Seat)
-	assert.False(t, data.GameStarted)
+	assert.False(t, data.MatchStarted)
 
 	require.Len(t, repo.players, 1)
 	require.NotNil(t, repo.players[0].Seat)
@@ -1576,7 +1790,7 @@ func TestQuickPlay_JoinsExistingRoom(t *testing.T) {
 	var data struct {
 		Room        room.Room `json:"room"`
 		Seat        int       `json:"seat"`
-		GameStarted bool      `json:"gameStarted"`
+		MatchStarted bool      `json:"matchStarted"`
 	}
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
@@ -1584,7 +1798,7 @@ func TestQuickPlay_JoinsExistingRoom(t *testing.T) {
 	assert.Equal(t, 2, data.Room.PlayerCount)
 	// Joiner gets the next empty seat (1 → team B) since seat 0 is taken.
 	assert.Equal(t, 1, data.Seat)
-	assert.False(t, data.GameStarted)
+	assert.False(t, data.MatchStarted)
 
 	// Verify the joining player record has seat 1 / team B.
 	var joinerSeat *int
@@ -1668,7 +1882,7 @@ func TestQuickPlay_SkipsNonQuickPlayRooms(t *testing.T) {
 	var data struct {
 		Room        room.Room `json:"room"`
 		Seat        int       `json:"seat"`
-		GameStarted bool      `json:"gameStarted"`
+		MatchStarted bool      `json:"matchStarted"`
 	}
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
@@ -1676,7 +1890,7 @@ func TestQuickPlay_SkipsNonQuickPlayRooms(t *testing.T) {
 	assert.NotEqual(t, manualRoom.ID, data.Room.ID)
 	assert.True(t, data.Room.IsQuickPlay)
 	assert.Equal(t, 0, data.Seat)
-	assert.False(t, data.GameStarted)
+	assert.False(t, data.MatchStarted)
 }
 
 func TestQuickPlay_FillsFirstEmptySeat(t *testing.T) {
@@ -1713,13 +1927,13 @@ func TestQuickPlay_FillsFirstEmptySeat(t *testing.T) {
 	var data struct {
 		Room        room.Room `json:"room"`
 		Seat        int       `json:"seat"`
-		GameStarted bool      `json:"gameStarted"`
+		MatchStarted bool      `json:"matchStarted"`
 	}
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
 	assert.Equal(t, qpRoom.ID, data.Room.ID)
 	assert.Equal(t, 1, data.Seat)
-	assert.False(t, data.GameStarted)
+	assert.False(t, data.MatchStarted)
 
 	var newJoinerSeat *int
 	var newJoinerTeam *string
@@ -1770,35 +1984,35 @@ func TestQuickPlay_AutoStartsOnFourthJoiner(t *testing.T) {
 	var data struct {
 		Room        room.Room `json:"room"`
 		Seat        int       `json:"seat"`
-		GameStarted bool      `json:"gameStarted"`
+		MatchStarted bool      `json:"matchStarted"`
 	}
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
 	assert.Equal(t, 3, data.Seat)
-	assert.True(t, data.GameStarted)
+	assert.True(t, data.MatchStarted)
 
 	updatedRoom, _ := repo.FindByID(qpRoom.ID)
 	assert.Equal(t, "playing", updatedRoom.Status)
 
-	// system:game_started must reach the room participants.
-	gotGameStarted := false
+	// system:match_started must reach the room participants.
+	gotMatchStarted := false
 	for _, call := range broadcaster.calls {
-		if strings.Contains(string(call.msg), "system:game_started") {
-			gotGameStarted = true
+		if strings.Contains(string(call.msg), "system:match_started") {
+			gotMatchStarted = true
 			break
 		}
 	}
-	assert.True(t, gotGameStarted, "expected system:game_started broadcast")
+	assert.True(t, gotMatchStarted, "expected system:match_started broadcast")
 }
 
-// TestLeaveRoom_ReturnsErrGameAlreadyStarted_WhenRoomPlaying locks in Story
+// TestLeaveRoom_ReturnsErrMatchAlreadyStarted_WhenRoomPlaying locks in Story
 // 8.5-1 AC3: the LeaveRoom transaction must re-fetch the room inside the tx
-// and reject with ErrGameAlreadyStarted (HTTP 409) when status != "waiting".
+// and reject with ErrMatchAlreadyStarted (HTTP 409) when status != "waiting".
 // This prevents the race where a leave observes status="waiting" pre-tx and
 // a concurrent auto-start tx flips status to "playing" between the read and
 // the RemovePlayer write — the rules-engine would then receive a seatInfo
 // snapshot containing a player who has already left.
-func TestLeaveRoom_ReturnsErrGameAlreadyStarted_WhenRoomPlaying(t *testing.T) {
+func TestLeaveRoom_ReturnsErrMatchAlreadyStarted_WhenRoomPlaying(t *testing.T) {
 	e, repo := setupTest()
 
 	// Room is already in "playing" status — simulates a concurrent auto-start
@@ -1829,7 +2043,7 @@ func TestLeaveRoom_ReturnsErrGameAlreadyStarted_WhenRoomPlaying(t *testing.T) {
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 
-	require.Equal(t, http.StatusConflict, rec.Code, "leave during playing must surface 409 GAME_ALREADY_STARTED")
+	require.Equal(t, http.StatusConflict, rec.Code, "leave during playing must surface 409 MATCH_ALREADY_STARTED")
 
 	var resp map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
@@ -1838,7 +2052,7 @@ func TestLeaveRoom_ReturnsErrGameAlreadyStarted_WhenRoomPlaying(t *testing.T) {
 		Message string `json:"message"`
 	}
 	require.NoError(t, json.Unmarshal(resp["error"], &errBody))
-	assert.Equal(t, "GAME_ALREADY_STARTED", errBody.Code)
+	assert.Equal(t, "MATCH_ALREADY_STARTED", errBody.Code)
 
 	// No player removed — the player count must remain 4 and the seat row
 	// for user 803 must still exist.
@@ -1858,19 +2072,19 @@ func TestLeaveRoom_ReturnsErrGameAlreadyStarted_WhenRoomPlaying(t *testing.T) {
 
 // --- Test fakes for Story 8.5-1 AC2 (gameStarter) ---
 
-type fakeGameStarter struct {
+type fakeMatchStarter struct {
 	called   int
 	lastRoom uint
 	err      error
 }
 
-func (g *fakeGameStarter) StartGame(roomID uint, _ string, _ string, _ [4]room.PlayerSeatInfo, _ string, _ int, _ uint, _ int) error {
+func (g *fakeMatchStarter) StartMatch(roomID uint, _ string, _ string, _ [4]match.PlayerSeatInfo, _ string, _ int, _ uint, _ int) error {
 	g.called++
 	g.lastRoom = roomID
 	return g.err
 }
 
-func setupTestWithStarter(starter room.GameStarter, broadcaster room.Broadcaster) (*echo.Echo, *mockRoomRepo) {
+func setupTestWithStarter(starter room.MatchStarter, broadcaster room.Broadcaster) (*echo.Echo, *mockRoomRepo) {
 	repo := newMockRoomRepo()
 	handler := room.NewRoomHandler(repo, starter, broadcaster)
 
@@ -1880,10 +2094,11 @@ func setupTestWithStarter(starter room.GameStarter, broadcaster room.Broadcaster
 	api.POST("/rooms", handler.CreateRoom)
 	api.POST("/rooms/quick-play", handler.QuickPlay)
 	api.POST("/rooms/:id/join", handler.JoinRoom)
+	api.POST("/rooms/:id/quick-join", handler.QuickJoin)
 	api.POST("/rooms/:id/leave", handler.LeaveRoom)
 	api.POST("/rooms/:id/seat", handler.SelectSeat)
 	api.POST("/rooms/:id/leave-seat", handler.LeaveSeat)
-	api.POST("/rooms/:id/start", handler.StartGame)
+	api.POST("/rooms/:id/start", handler.StartMatch)
 	return e, repo
 }
 
@@ -1910,9 +2125,9 @@ func containsString(haystack []string, needle string) bool {
 
 // TestSelectSeat_AutoStart_BroadcastsWhenStartGameSucceeds locks in Story
 // 8.5-1 AC2 success path: when the 4th seat fills and StartGame succeeds,
-// system:game_started is broadcast and the room status sticks at "playing".
+// system:match_started is broadcast and the room status sticks at "playing".
 func TestSelectSeat_AutoStart_BroadcastsWhenStartGameSucceeds(t *testing.T) {
-	starter := &fakeGameStarter{}
+	starter := &fakeMatchStarter{}
 	broadcaster := &mockBroadcaster{}
 	e, repo := setupTestWithStarter(starter, broadcaster)
 
@@ -1946,17 +2161,17 @@ func TestSelectSeat_AutoStart_BroadcastsWhenStartGameSucceeds(t *testing.T) {
 	assert.Equal(t, "playing", updated.Status, "room status must remain 'playing' on StartGame success")
 
 	types := broadcastTypes(t, broadcaster)
-	assert.True(t, containsString(types, "system:game_started"), "system:game_started must be broadcast on success")
-	assert.False(t, containsString(types, "error:game_start_failed"), "no error event on success")
+	assert.True(t, containsString(types, "system:match_started"), "system:match_started must be broadcast on success")
+	assert.False(t, containsString(types, "error:match_start_failed"), "no error event on success")
 }
 
 // TestSelectSeat_AutoStart_RevertsWhenStartGameFails locks in Story 8.5-1 AC2
 // failure path: when StartGame returns an error, the status flip is reverted
-// to "waiting", system:game_started is NOT broadcast, and
-// error:game_start_failed reaches the four would-be participants.
+// to "waiting", system:match_started is NOT broadcast, and
+// error:match_start_failed reaches the four would-be participants.
 // playerCount and seat assignments survive (no partial writes lost).
 func TestSelectSeat_AutoStart_RevertsWhenStartGameFails(t *testing.T) {
-	starter := &fakeGameStarter{err: errors.New("session manager unavailable")}
+	starter := &fakeMatchStarter{err: errors.New("session manager unavailable")}
 	broadcaster := &mockBroadcaster{}
 	e, repo := setupTestWithStarter(starter, broadcaster)
 
@@ -1992,20 +2207,20 @@ func TestSelectSeat_AutoStart_RevertsWhenStartGameFails(t *testing.T) {
 	assert.Equal(t, "waiting", updated.Status, "room status MUST be reverted to 'waiting' on StartGame failure")
 
 	types := broadcastTypes(t, broadcaster)
-	assert.False(t, containsString(types, "system:game_started"), "system:game_started MUST NOT be broadcast on StartGame failure")
-	assert.True(t, containsString(types, "error:game_start_failed"), "error:game_start_failed MUST be broadcast to participants")
+	assert.False(t, containsString(types, "system:match_started"), "system:match_started MUST NOT be broadcast on StartGame failure")
+	assert.True(t, containsString(types, "error:match_start_failed"), "error:match_start_failed MUST be broadcast to participants")
 
 	// Verify the error reached all four would-be participants.
 	gotErrUserIDs := map[uint]bool{}
 	for _, c := range broadcaster.calls {
-		if msgTypeOf(t, c.msg) == "error:game_start_failed" {
+		if msgTypeOf(t, c.msg) == "error:match_start_failed" {
 			for _, uid := range c.userIDs {
 				gotErrUserIDs[uid] = true
 			}
 		}
 	}
 	for _, expectedUID := range []uint{600, 601, 602, 603} {
-		assert.True(t, gotErrUserIDs[expectedUID], "user %d must receive error:game_start_failed", expectedUID)
+		assert.True(t, gotErrUserIDs[expectedUID], "user %d must receive error:match_start_failed", expectedUID)
 	}
 
 	// Seat assignments + player count survive the rollback: only the room
@@ -2019,7 +2234,7 @@ func TestSelectSeat_AutoStart_RevertsWhenStartGameFails(t *testing.T) {
 // TestQuickPlay_AutoStart_RevertsWhenStartGameFails locks in the same AC2
 // failure-path invariant for the QuickPlay last-seat auto-start path.
 func TestQuickPlay_AutoStart_RevertsWhenStartGameFails(t *testing.T) {
-	starter := &fakeGameStarter{err: errors.New("session manager unavailable")}
+	starter := &fakeMatchStarter{err: errors.New("session manager unavailable")}
 	broadcaster := &mockBroadcaster{}
 	e, repo := setupTestWithStarter(starter, broadcaster)
 
@@ -2052,8 +2267,8 @@ func TestQuickPlay_AutoStart_RevertsWhenStartGameFails(t *testing.T) {
 	assert.Equal(t, "waiting", updated.Status, "room status MUST be reverted to 'waiting' on StartGame failure")
 
 	types := broadcastTypes(t, broadcaster)
-	assert.False(t, containsString(types, "system:game_started"), "system:game_started MUST NOT be broadcast on StartGame failure")
-	assert.True(t, containsString(types, "error:game_start_failed"), "error:game_start_failed MUST be broadcast to participants")
+	assert.False(t, containsString(types, "system:match_started"), "system:match_started MUST NOT be broadcast on StartGame failure")
+	assert.True(t, containsString(types, "error:match_start_failed"), "error:match_start_failed MUST be broadcast to participants")
 }
 
 // TestQuickPlay_RetriesOnErrRoomFull locks in Story 8.5-1 AC5 / D29 symptom fix.
@@ -2108,14 +2323,14 @@ func TestQuickPlay_RetriesOnErrRoomFull(t *testing.T) {
 	var data struct {
 		Room        room.Room `json:"room"`
 		Seat        int       `json:"seat"`
-		GameStarted bool      `json:"gameStarted"`
+		MatchStarted bool      `json:"matchStarted"`
 	}
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
 	assert.NotEqual(t, driftedRoom.ID, data.Room.ID, "user must land in a different room than the drifted one")
 	assert.True(t, data.Room.IsQuickPlay)
 	assert.Equal(t, 0, data.Seat, "first joiner of the new room sits at seat 0")
-	assert.False(t, data.GameStarted)
+	assert.False(t, data.MatchStarted)
 }
 
 // --- SelectSeat Auto-Start Tests ---
@@ -2159,9 +2374,9 @@ func TestSelectSeat_QuickPlayAutoStart(t *testing.T) {
 	var data map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
-	var gameStarted bool
-	require.NoError(t, json.Unmarshal(data["gameStarted"], &gameStarted))
-	assert.True(t, gameStarted)
+	var matchStarted bool
+	require.NoError(t, json.Unmarshal(data["matchStarted"], &matchStarted))
+	assert.True(t, matchStarted)
 
 	// Room status should be "playing"
 	updatedRoom, _ := repo.FindByID(qpRoom.ID)
@@ -2206,9 +2421,9 @@ func TestSelectSeat_QuickPlayNoAutoStartWith3Seats(t *testing.T) {
 	var data map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
-	var gameStarted bool
-	require.NoError(t, json.Unmarshal(data["gameStarted"], &gameStarted))
-	assert.False(t, gameStarted)
+	var matchStarted bool
+	require.NoError(t, json.Unmarshal(data["matchStarted"], &matchStarted))
+	assert.False(t, matchStarted)
 
 	// Room status should still be "waiting"
 	updatedRoom, _ := repo.FindByID(qpRoom.ID)
@@ -2254,9 +2469,9 @@ func TestSelectSeat_ManualRoomNoAutoStart(t *testing.T) {
 	var data map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(resp["data"], &data))
 
-	var gameStarted bool
-	require.NoError(t, json.Unmarshal(data["gameStarted"], &gameStarted))
-	assert.False(t, gameStarted)
+	var matchStarted bool
+	require.NoError(t, json.Unmarshal(data["matchStarted"], &matchStarted))
+	assert.False(t, matchStarted)
 
 	// Room status should still be "waiting"
 	updatedRoom, _ := repo.FindByID(manualRoom.ID)
@@ -2410,10 +2625,10 @@ func TestStartGame_BroadcastsGameStarted(t *testing.T) {
 	rec := doStartGame(e, "1", token)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	// Should have at least one broadcast for game_started
-	require.GreaterOrEqual(t, len(broadcaster.calls), 1, "expected BroadcastToUsers call for game_started")
+	// Should have at least one broadcast for match_started
+	require.GreaterOrEqual(t, len(broadcaster.calls), 1, "expected BroadcastToUsers call for match_started")
 
-	// Find the game_started message
+	// Find the match_started message
 	found := false
 	for _, call := range broadcaster.calls {
 		var msg map[string]json.RawMessage
@@ -2424,14 +2639,14 @@ func TestStartGame_BroadcastsGameStarted(t *testing.T) {
 		if err := json.Unmarshal(msg["type"], &msgType); err != nil {
 			continue
 		}
-		if msgType == "system:game_started" {
+		if msgType == "system:match_started" {
 			found = true
 			// All 4 players should receive the broadcast
 			assert.ElementsMatch(t, []uint{100, 200, 300, 400}, call.userIDs)
 			break
 		}
 	}
-	assert.True(t, found, "expected system:game_started broadcast")
+	assert.True(t, found, "expected system:match_started broadcast")
 }
 
 func TestQuickPlayAutoStart_BroadcastsGameStarted(t *testing.T) {
@@ -2455,10 +2670,10 @@ func TestQuickPlayAutoStart_BroadcastsGameStarted(t *testing.T) {
 	rec := doSelectSeat(e, "1", `{"seat": 3}`, token)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	// Should have broadcasts for seat_updated AND game_started
-	require.GreaterOrEqual(t, len(broadcaster.calls), 2, "expected seat_updated + game_started broadcasts")
+	// Should have broadcasts for seat_updated AND match_started
+	require.GreaterOrEqual(t, len(broadcaster.calls), 2, "expected seat_updated + match_started broadcasts")
 
-	// Find the game_started message
+	// Find the match_started message
 	found := false
 	for _, call := range broadcaster.calls {
 		var msg map[string]json.RawMessage
@@ -2469,13 +2684,13 @@ func TestQuickPlayAutoStart_BroadcastsGameStarted(t *testing.T) {
 		if err := json.Unmarshal(msg["type"], &msgType); err != nil {
 			continue
 		}
-		if msgType == "system:game_started" {
+		if msgType == "system:match_started" {
 			found = true
 			assert.ElementsMatch(t, []uint{100, 200, 300, 400}, call.userIDs)
 			break
 		}
 	}
-	assert.True(t, found, "expected system:game_started broadcast for quick play auto-start")
+	assert.True(t, found, "expected system:match_started broadcast for quick play auto-start")
 }
 
 func TestCreateRoom_BroadcastsRoomCreated(t *testing.T) {
@@ -2788,9 +3003,12 @@ func TestSwapSeats_Success(t *testing.T) {
 		}
 	}
 
-	// Two ordered seat_updated broadcasts, no lobby-wide broadcast
+	// Two ordered seat_updated broadcasts to room members, plus a single
+	// lobby-wide room_updated snapshot so non-participant lobby viewers
+	// see the seat changes on the grid.
 	require.Len(t, broadcaster.calls, 2, "expected exactly two BroadcastToUsers calls")
-	assert.Empty(t, broadcaster.allCalls, "swap must NOT trigger room_updated lobby-wide broadcast")
+	require.Len(t, broadcaster.allCalls, 1, "swap should emit one lobby-wide room_updated snapshot")
+	assert.Equal(t, "system:room_updated", msgTypeOf(t, broadcaster.allCalls[0].msg))
 
 	for _, call := range broadcaster.calls {
 		assert.Equal(t, "system:seat_updated", msgTypeOf(t, call.msg))
@@ -2941,9 +3159,12 @@ func TestSwapSeats_MoveToEmptySeat(t *testing.T) {
 		}
 	}
 
-	// A move-to-empty emits exactly ONE seat_updated broadcast.
+	// A move-to-empty emits exactly ONE seat_updated broadcast to room
+	// members, plus one lobby-wide room_updated snapshot so non-participant
+	// viewers see the seat change on the grid.
 	require.Len(t, broadcaster.calls, 1, "expected exactly one BroadcastToUsers call for move-to-empty")
-	assert.Empty(t, broadcaster.allCalls, "move must NOT trigger room_updated lobby-wide broadcast")
+	require.Len(t, broadcaster.allCalls, 1, "move-to-empty should emit one lobby-wide room_updated snapshot")
+	assert.Equal(t, "system:room_updated", msgTypeOf(t, broadcaster.allCalls[0].msg))
 	assert.Equal(t, "system:seat_updated", msgTypeOf(t, broadcaster.calls[0].msg))
 	assert.ElementsMatch(t, []uint{100, 200}, broadcaster.calls[0].userIDs)
 

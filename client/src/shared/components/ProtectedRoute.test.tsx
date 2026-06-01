@@ -19,7 +19,7 @@ function renderWithRouter(initialPath: string) {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
-        <Route path="/login" element={<div data-testid="login-page">Login Page</div>} />
+        <Route path="/" element={<div data-testid="landing-page">Landing Page</div>} />
         <Route element={<ProtectedRoute />}>
           <Route path="/lobby" element={<div data-testid="lobby-page">Lobby Page</div>} />
         </Route>
@@ -33,10 +33,10 @@ describe("ProtectedRoute", () => {
     useAuthStore.setState({ token: null, user: null, isLoading: false });
   });
 
-  it("redirects to /login when no token", () => {
+  it("redirects to the landing (/) when no token", () => {
     renderWithRouter("/lobby");
 
-    expect(screen.getByTestId("login-page")).toBeInTheDocument();
+    expect(screen.getByTestId("landing-page")).toBeInTheDocument();
     expect(screen.queryByTestId("lobby-page")).not.toBeInTheDocument();
   });
 

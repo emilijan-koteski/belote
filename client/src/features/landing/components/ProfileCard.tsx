@@ -1,0 +1,100 @@
+// Profile snapshot card (parchment). Static marketing data — shows the shape
+// of the real profile page: identity, a streak badge, three career stats and a
+// short match history. Labels are translated; numbers are illustrative.
+
+export type ProfileLabels = {
+  member: string;
+  games: string;
+  winrate: string;
+  wins: string;
+  recent: string;
+  won: string;
+  lost: string;
+  with: string;
+};
+
+type Match = { won: boolean; a: string; b: string; withWho: string; when: string };
+
+const MATCHES: Match[] = [
+  { won: true, a: "1012", b: "743", withWho: "emilijan", when: "2d" },
+  { won: true, a: "1024", b: "911", withWho: "cvetanka", when: "3d" },
+  { won: false, a: "812", b: "1018", withWho: "ana", when: "4d" },
+];
+
+export function ProfileCard({ labels }: { labels: ProfileLabels }) {
+  const stats: [string, string][] = [
+    ["142", labels.games],
+    ["63%", labels.winrate],
+    ["89", labels.wins],
+  ];
+
+  return (
+    <div className="bg-surface-elevated border-border w-full max-w-95 overflow-hidden rounded-[18px] border shadow-[0_18px_40px_-22px_rgba(14,58,36,0.45)]">
+      {/* identity */}
+      <div className="flex items-center gap-3 px-4.5 pt-4.5 pb-4">
+        <span
+          className="font-display flex size-11 items-center justify-center rounded-full text-lg font-bold"
+          style={{
+            background: "var(--accent-deep)",
+            border: "2px solid var(--brass)",
+            color: "var(--bg)",
+          }}
+        >
+          K
+        </span>
+        <div className="leading-tight">
+          <div className="font-display text-ink text-[17px] font-semibold">kiro</div>
+          <div className="text-ink-mute text-xs">{labels.member}</div>
+        </div>
+      </div>
+
+      {/* career stats */}
+      <div className="border-border grid grid-cols-3 border-t border-b">
+        {stats.map(([value, label], i) => (
+          <div
+            key={label}
+            className="px-3 py-4 text-center"
+            style={i ? { borderLeft: "1px solid var(--border)" } : undefined}
+          >
+            <div className="font-display text-ink tabular text-[28px] font-bold tracking-[-0.5px]">
+              {value}
+            </div>
+            <div className="text-ink-mute mt-0.5 text-[11.5px]">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* recent matches */}
+      <div className="text-brass-deep font-mono px-4.5 pt-3 pb-1.5 text-[10.5px] font-semibold tracking-[1.5px] uppercase">
+        {labels.recent}
+      </div>
+      <div className="px-4.5 pb-3.5">
+        {MATCHES.map((m, i) => (
+          <div
+            key={i}
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-2.5"
+            style={i < MATCHES.length - 1 ? { borderBottom: "1px solid var(--border)" } : undefined}
+          >
+            <span
+              className="min-w-13 rounded-md px-2 py-1 text-center text-[11px] font-bold"
+              style={
+                m.won
+                  ? { background: "var(--accent-soft)", color: "var(--accent)" }
+                  : { background: "rgba(139,42,31,0.1)", color: "var(--danger)" }
+              }
+            >
+              {m.won ? labels.won : labels.lost}
+            </span>
+            <span className="font-mono text-ink tabular text-sm font-semibold">
+              {m.a} <span className="text-ink-off">–</span> {m.b}
+              <span className="font-body text-ink-mute ml-2 text-xs font-normal">
+                {labels.with} {m.withWho}
+              </span>
+            </span>
+            <span className="text-ink-mute text-xs">{m.when}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

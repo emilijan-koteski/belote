@@ -57,3 +57,6 @@ _review_diff.tmp
 
 #Playwright
 .playwright-mcp/
+
+# Claude superpowers artifacts (plans, specs, brainstorms, etc.)
+docs/superpowers/

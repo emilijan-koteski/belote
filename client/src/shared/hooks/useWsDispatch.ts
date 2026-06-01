@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import { handleWsMessage as handleRoomListMessage } from "@/features/lobby/useRoomUpdates";
 import { MOTION } from "@/shared/lib/motion";
 import { useChatStore } from "@/shared/stores/chatStore";
-import { useGameStore } from "@/shared/stores/gameStore";
-import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
-import type { GameState } from "@/shared/types/gameTypes";
+import { useMatchStore } from "@/shared/stores/matchStore";
+import { useRoomStore } from "@/shared/stores/roomStore";
+import type { MatchState } from "@/shared/types/matchTypes";
 import type {
   AutoActionPayload,
   BelotAnnouncedPayload,
@@ -15,11 +15,11 @@ import type {
   ChatMessagePayload,
   DeclarationsResolvedPayload,
   EmotePayload,
-  GameResumedPayload,
-  GameStartedPayload,
   HandScoredPayload,
   MatchAbandonedPayload,
   MatchEndPayload,
+  MatchResumedPayload,
+  MatchStartedPayload,
   PlayerDisconnectedPayload,
   PlayerJoinedPayload,
   PlayerLeftPayload,
@@ -36,9 +36,9 @@ import type {
 import {
   EMOTE_IDS,
   ERROR_AUTH_FAILED,
-  ERROR_GAME_START_FAILED,
   ERROR_ILLEGAL_PLAY,
   ERROR_INVALID_ACTION,
+  ERROR_MATCH_START_FAILED,
   ERROR_NO_ACTIVE_PAUSE,
   ERROR_NOT_ROOM_OWNER,
   ERROR_NOT_YOUR_TURN,
@@ -50,12 +50,12 @@ import {
   EVENT_BELOT_ANNOUNCED,
   EVENT_CARD_PLAYED,
   EVENT_DECLARATIONS_RESOLVED,
-  EVENT_GAME_PAUSED,
-  EVENT_GAME_RESUMED,
-  EVENT_GAME_STATE,
   EVENT_HAND_SCORED,
   EVENT_MATCH_ABANDONED,
   EVENT_MATCH_END,
+  EVENT_MATCH_PAUSED,
+  EVENT_MATCH_RESUMED,
+  EVENT_MATCH_STATE,
   EVENT_PLAYER_DISCONNECTED,
   EVENT_PLAYER_RECONNECTED,
   EVENT_SURRENDER_DECLINED,
@@ -65,7 +65,7 @@ import {
   SYSTEM_AUTHENTICATED,
   SYSTEM_CHAT_MESSAGE,
   SYSTEM_EMOTE,
-  SYSTEM_GAME_STARTED,
+  SYSTEM_MATCH_STARTED,
   SYSTEM_PLAYER_JOINED,
   SYSTEM_PLAYER_LEFT,
   SYSTEM_ROOM_CREATED,
@@ -106,12 +106,12 @@ export function useWsDispatch() {
 
 // Tracks whether the most recent dispatched event was a reveal event
 // (event:declarations_resolved / event:belot_announced). The server emits
-// these immediately followed by a trailing event:game_state for state sync;
+// these immediately followed by a trailing event:match_state for state sync;
 // the trailing snapshot must NOT wipe the reveal payload that was just set
 // (which would prevent the user from ever seeing the reveal). On reconnect
 // the server sends only the snapshot — the flag is false — and the stale
 // reveal clear runs as D69 / D71 require. The flag is consumed (reset to
-// false) on the next event:game_state regardless of branch, so two snapshots
+// false) on the next event:match_state regardless of branch, so two snapshots
 // in a row will clear on the second.
 let revealJustEmitted = false;
 
@@ -122,48 +122,48 @@ export function __resetWsDispatchStateForTests(): void {
 }
 
 function dispatchGameEvent(message: WsMessage): void {
-  const store = useGameStore.getState();
+  const store = useMatchStore.getState();
   const { type } = message;
 
-  if (type === EVENT_GAME_STATE) {
-    const gameState = message.payload as GameState;
+  if (type === EVENT_MATCH_STATE) {
+    const matchState = message.payload as MatchState;
     // D69 / D71: a reconnect during the 4–8s reveal window must not re-render
     // a stale reveal payload on top of the new snapshot. The reveal events
     // (event:declarations_resolved / event:belot_announced) are not replayed
     // by the server on reconnect, so the snapshot is treated as a clean slate
     // — UNLESS the snapshot is the trailing one that follows a reveal event
-    // in normal action flow (manager.go:513→554 / :609→614), in which case
+    // in normal action flow (see live_match.go), in which case
     // clearing would cancel the reveal that just rendered.
     if (!revealJustEmitted) {
       store.setDeclarationReveal(null);
       store.setBelotReveal(null);
     }
     // NOTE: pendingResolvedTrick is intentionally NOT cleared here. The
-    // server emits a trailing event:game_state ~immediately after every
-    // event:trick_resolved (manager.go:543); clearing the snapshot here
-    // would tear it down before the collect animation can run. GamePage's
+    // server emits a trailing event:match_state ~immediately after every
+    // event:trick_resolved (see live_match.go); clearing the snapshot here
+    // would tear it down before the collect animation can run. MatchPage's
     // pendingResolvedTrick effect installs a fallback clear timer scoped
     // to the animation duration, which also handles the reconnect-mid-
     // collect case (snapshot survives reconnect, the remounted effect
     // re-arms the timer and the snapshot clears within ~1.6s of remount).
     revealJustEmitted = false;
-    store.setGameState(gameState);
+    store.setMatchState(matchState);
     return;
   }
 
   if (type === EVENT_CARD_PLAYED) {
     // Card played is an incremental event — update trick only.
     // activePlayerSeat is NOT computed client-side (no local game logic).
-    // The server will send the authoritative state via event:game_state or
+    // The server will send the authoritative state via event:match_state or
     // the next action's broadcast will carry the correct active player.
     const payload = message.payload as CardPlayedPayload;
-    const current = store.gameState;
+    const current = store.matchState;
     if (current) {
       if (!payload.cardId || payload.cardId.length < 2) return;
       const rank = payload.cardId[0];
       const suit = payload.cardId[1];
       const isLocalAutoPlay = payload.autoPlayed && payload.playerSeat === store.myPlayerSeat;
-      store.setGameState({
+      store.setMatchState({
         ...current,
         currentTrick: [
           ...(current.currentTrick ?? []),
@@ -177,7 +177,7 @@ function dispatchGameEvent(message: WsMessage): void {
         ],
         // Optimistically clear pendingBelotSeat when the server auto-plays for
         // the local player while a Belot prompt is open. Without this, a stale
-        // click on Announce/Decline races against the trailing event:game_state
+        // click on Announce/Decline races against the trailing event:match_state
         // and lands on the server with a wrong-phase error toast.
         pendingBelotSeat: isLocalAutoPlay ? null : current.pendingBelotSeat,
       });
@@ -185,10 +185,10 @@ function dispatchGameEvent(message: WsMessage): void {
 
     // Auto-play toast notification
     if (payload.autoPlayed) {
-      toast.info(i18n.t("game.timer.autoPlayed", { card: payload.cardId }), {
+      toast.info(i18n.t("match.timer.autoPlayed", { card: payload.cardId }), {
         duration: MOTION.TOAST_INFO,
       });
-      // Signal GamePage to drive the same hand-throw animation that
+      // Signal MatchPage to drive the same hand-throw animation that
       // handlePlayCard runs for a manual click — otherwise the auto-played
       // card disappears from the local hand without an exit animation.
       if (payload.playerSeat === store.myPlayerSeat) {
@@ -200,7 +200,7 @@ function dispatchGameEvent(message: WsMessage): void {
 
   if (type === EVENT_TRICK_RESOLVED) {
     const payload = message.payload as TrickResolvedPayload;
-    const current = store.gameState;
+    const current = store.matchState;
     if (current) {
       // Snapshot the full 4-card trick BEFORE clearing currentTrick. By the
       // time this dispatcher runs, the preceding event:card_played for the
@@ -209,7 +209,7 @@ function dispatchGameEvent(message: WsMessage): void {
       // snapshot the UI sees currentTrick jump 3 → 0 and the collect
       // animation never has a chance to run. The snapshot decouples the
       // collect animation from currentTrick's authoritative-but-transient
-      // state. GamePage clears it after the take flight completes.
+      // state. MatchPage clears it after the take flight completes.
       if (current.currentTrick && current.currentTrick.length > 0) {
         store.setPendingResolvedTrick({
           trick: current.currentTrick,
@@ -217,11 +217,11 @@ function dispatchGameEvent(message: WsMessage): void {
         });
       }
       // Clear turnExpiresAt here so the previous active seat's TimerRing stops
-      // ticking the moment the trick resolves. The trailing event:game_state
+      // ticking the moment the trick resolves. The trailing event:match_state
       // will set the next turn's deadline; until then, no seat counts down.
       // Without this, the just-played seat keeps decrementing under the
       // trick-resolve animation and can flip urgent-red on a slow snapshot.
-      store.setGameState({
+      store.setMatchState({
         ...current,
         currentTrick: [],
         trickNumber: current.trickNumber + 1,
@@ -234,12 +234,12 @@ function dispatchGameEvent(message: WsMessage): void {
 
   if (type === EVENT_HAND_SCORED) {
     const payload = message.payload as HandScoredPayload;
-    const current = store.gameState;
+    const current = store.matchState;
     if (current) {
       // Clear per-hand fields here so the ScorePanel's "this hand" line disappears
-      // immediately. The follow-up event:game_state will replace them with the
+      // immediately. The follow-up event:match_state will replace them with the
       // new-hand defaults, but zeroing now avoids a flicker of stale potentials.
-      store.setGameState({
+      store.setMatchState({
         ...current,
         teamScores: [payload.teamAMatchScore, payload.teamBMatchScore],
         handPoints: [0, 0],
@@ -252,9 +252,9 @@ function dispatchGameEvent(message: WsMessage): void {
 
   if (type === EVENT_MATCH_END) {
     const payload = message.payload as MatchEndPayload;
-    const current = store.gameState;
+    const current = store.matchState;
     if (current) {
-      store.setGameState({
+      store.setMatchState({
         ...current,
         phase: "match_end",
         teamScores: [payload.teamAFinalScore, payload.teamBFinalScore],
@@ -265,7 +265,7 @@ function dispatchGameEvent(message: WsMessage): void {
   }
 
   if (type === EVENT_TRUMP_SELECTED) {
-    // Drives the table-wide TrumpReveal dialog. The full event:game_state that
+    // Drives the table-wide TrumpReveal dialog. The full event:match_state that
     // follows carries the persistent fields (trumpSuit, trumpCallerSeat, phase,
     // activePlayerSeat); the cardId here is the originally face-up
     // trumpCandidate the picker absorbed and lives only on this event.
@@ -281,10 +281,10 @@ function dispatchGameEvent(message: WsMessage): void {
   if (type === EVENT_DECLARATIONS_RESOLVED) {
     const payload = message.payload as DeclarationsResolvedPayload;
     store.setDeclarationReveal(payload);
-    // Mark that the trailing event:game_state must NOT wipe the reveal we
-    // just set. Cleared by the EVENT_GAME_STATE branch.
+    // Mark that the trailing event:match_state must NOT wipe the reveal we
+    // just set. Cleared by the EVENT_MATCH_STATE branch.
     revealJustEmitted = true;
-    // Full game state update follows via event:game_state
+    // Full game state update follows via event:match_state
     return;
   }
 
@@ -296,17 +296,17 @@ function dispatchGameEvent(message: WsMessage): void {
     store.setBelotReveal(payload);
     // Same trailing-snapshot suppression as declarations_resolved above.
     revealJustEmitted = true;
-    // Full state update follows via event:game_state
+    // Full state update follows via event:match_state
     return;
   }
 
-  if (type === EVENT_GAME_PAUSED) {
-    // Informational — the full event:game_state that follows carries pause state
+  if (type === EVENT_MATCH_PAUSED) {
+    // Informational — the full event:match_state that follows carries pause state
     return;
   }
 
   if (type === EVENT_AUTO_ACTION) {
-    if (store.gameState === null) return;
+    if (store.matchState === null) return;
     const payload = message.payload as AutoActionPayload;
     if (
       typeof payload?.playerSeat !== "number" ||
@@ -321,49 +321,49 @@ function dispatchGameEvent(message: WsMessage): void {
       return;
     }
     const playerName =
-      store.gameState.players[payload.playerSeat]?.username ?? `Player ${payload.playerSeat + 1}`;
+      store.matchState.players[payload.playerSeat]?.username ?? `Player ${payload.playerSeat + 1}`;
     const i18nKey =
       payload.type === "pass_trump"
-        ? "game.timer.autoPassed"
+        ? "match.timer.autoPassed"
         : payload.type === "skip_declare"
-          ? "game.timer.autoSkippedDeclare"
-          : "game.timer.autoSkippedBelot";
+          ? "match.timer.autoSkippedDeclare"
+          : "match.timer.autoSkippedBelot";
     toast.info(i18n.t(i18nKey, { player: playerName }), { duration: 3000 });
     return;
   }
 
-  if (type === EVENT_GAME_RESUMED) {
-    const payload = message.payload as GameResumedPayload;
+  if (type === EVENT_MATCH_RESUMED) {
+    const payload = message.payload as MatchResumedPayload;
     if (payload.ownerOverride) {
-      toast.info(i18n.t("game.pause.ownerResumedToast"), { duration: 3000 });
+      toast.info(i18n.t("match.pause.ownerResumedToast"), { duration: 3000 });
     }
-    // Full state update follows via event:game_state
+    // Full state update follows via event:match_state
     return;
   }
 
   if (type === EVENT_PLAYER_DISCONNECTED) {
     const payload = message.payload as PlayerDisconnectedPayload;
-    const current = store.gameState;
+    const current = store.matchState;
     const playerName =
       current?.players[payload.playerSeat]?.username ??
       payload.username ??
       `Player ${payload.playerSeat + 1}`;
-    toast.warning(i18n.t("game.disconnect.playerDisconnected", { player: playerName }), {
+    toast.warning(i18n.t("match.disconnect.playerDisconnected", { player: playerName }), {
       duration: MOTION.TOAST_LONG,
     });
-    // Full state update follows via event:game_state
+    // Full state update follows via event:match_state
     return;
   }
 
   if (type === EVENT_PLAYER_RECONNECTED) {
     const payload = message.payload as PlayerReconnectedPayload;
-    const current = store.gameState;
+    const current = store.matchState;
     const playerName =
       current?.players[payload.playerSeat]?.username ?? `Player ${payload.playerSeat + 1}`;
-    toast.success(i18n.t("game.disconnect.playerReconnected", { player: playerName }), {
+    toast.success(i18n.t("match.disconnect.playerReconnected", { player: playerName }), {
       duration: MOTION.TOAST_INFO,
     });
-    // Full state update follows via event:game_state
+    // Full state update follows via event:match_state
     return;
   }
 
@@ -376,20 +376,20 @@ function dispatchGameEvent(message: WsMessage): void {
   if (type === EVENT_SURRENDER_PROPOSED) {
     // Defence in depth: only surface a proposal if the user is in an active
     // match (Story 8.1 dispatcher hardening pattern).
-    if (store.gameState === null) return;
+    if (store.matchState === null) return;
     const payload = message.payload as SurrenderProposedPayload;
     store.setSurrenderProposed(payload);
-    // Full game state update follows via event:game_state — clears the
+    // Full game state update follows via event:match_state — clears the
     // pending flag on resolve.
     return;
   }
 
   if (type === EVENT_SURRENDER_DECLINED) {
-    if (store.gameState === null) return;
+    if (store.matchState === null) return;
     const payload = message.payload as SurrenderDeclinedPayload;
     store.setSurrenderDeclined(payload);
-    toast.info(i18n.t("game.surrender.declinedToast"), { duration: 3000 });
-    // Full game state update follows via event:game_state — clears
+    toast.info(i18n.t("match.surrender.declinedToast"), { duration: 3000 });
+    // Full game state update follows via event:match_state — clears
     // surrenderProposerSeat so the prompt/banner unmount.
     return;
   }
@@ -404,10 +404,23 @@ function dispatchSystemEvent(message: WsMessage): void {
     return;
   }
 
-  // Room lobby updates — dispatch to roomLobbyStore (only if event matches the currently viewed room)
+  // Lobby grid cache updates — keep the ["rooms","waiting"] cache live for
+  // playerCount + per-seat names without touching the roomStore path
+  // below (which only fires for the user's currently viewed room). Falls
+  // through so the roomStore branch still runs.
+  if (
+    type === SYSTEM_PLAYER_JOINED ||
+    type === SYSTEM_PLAYER_LEFT ||
+    type === SYSTEM_SEAT_UPDATED
+  ) {
+    handleRoomListMessage(new MessageEvent("message", { data: JSON.stringify(message) }));
+    // intentional fall-through to the per-room store dispatch below
+  }
+
+  // Room lobby updates — dispatch to roomStore (only if event matches the currently viewed room)
   if (type === SYSTEM_PLAYER_JOINED) {
     const payload = message.payload as PlayerJoinedPayload;
-    const store = useRoomLobbyStore.getState();
+    const store = useRoomStore.getState();
     if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
     store.addPlayer(
       {
@@ -426,7 +439,7 @@ function dispatchSystemEvent(message: WsMessage): void {
 
   if (type === SYSTEM_PLAYER_LEFT) {
     const payload = message.payload as PlayerLeftPayload;
-    const store = useRoomLobbyStore.getState();
+    const store = useRoomStore.getState();
     if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
     store.removePlayer(payload.userId, payload.playerCount, payload.newOwnerId);
     return;
@@ -434,23 +447,23 @@ function dispatchSystemEvent(message: WsMessage): void {
 
   if (type === SYSTEM_SEAT_UPDATED) {
     const payload = message.payload as SeatUpdatedPayload;
-    const store = useRoomLobbyStore.getState();
+    const store = useRoomStore.getState();
     if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
     store.updatePlayerSeat(payload.userId, payload.seat, payload.team, payload.previousSeat);
     return;
   }
 
-  if (type === SYSTEM_GAME_STARTED) {
-    const payload = message.payload as GameStartedPayload;
-    const store = useRoomLobbyStore.getState();
+  if (type === SYSTEM_MATCH_STARTED) {
+    const payload = message.payload as MatchStartedPayload;
+    const store = useRoomStore.getState();
     if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
-    store.setGameStarted(true);
+    store.setMatchStarted(true);
     return;
   }
 
   if (type === SYSTEM_ROOM_OWNER_CHANGED) {
     const payload = message.payload as RoomOwnerChangedPayload;
-    const store = useRoomLobbyStore.getState();
+    const store = useRoomStore.getState();
     if (store.currentRoomId !== null && store.currentRoomId !== payload.roomId) return;
     store.setRoomOwner(payload.newOwnerId);
     return;
@@ -458,7 +471,7 @@ function dispatchSystemEvent(message: WsMessage): void {
 
   if (type === SYSTEM_ROOM_KICKED) {
     const payload = message.payload as RoomKickedPayload;
-    const store = useRoomLobbyStore.getState();
+    const store = useRoomStore.getState();
     // Require a positive room match. A null currentRoomId means the user is
     // not currently viewing any room — processing the event would set a sticky
     // kickedFromRoomId that traps them on a later re-entry to the same room.
@@ -482,27 +495,27 @@ function dispatchSystemEvent(message: WsMessage): void {
       console.warn("WS: ignoring malformed system:chat_message payload", payload);
       return;
     }
-    if (payload.scope === "global") {
-      useChatStore.getState().appendGlobal(payload);
+    if (payload.scope === "lobby") {
+      useChatStore.getState().appendLobby(payload);
     } else if (payload.scope === "match") {
       // Defence in depth: server only broadcasts match chat to session
       // participants, but if a stale frame arrives after clearGame (or during
       // the race window before a fresh match state lands), drop it so the
       // next match doesn't see leaked history from the previous one.
-      if (useGameStore.getState().roomId === null) return;
+      if (useMatchStore.getState().roomId === null) return;
       useChatStore.getState().appendMatch(payload);
     } else if (payload.scope === "room") {
       // Defence in depth: drop stale room chat frames that arrive after the
       // user has left the room page, so they don't bleed into the next
       // room's history.
-      if (useRoomLobbyStore.getState().currentRoomId === null) return;
+      if (useRoomStore.getState().currentRoomId === null) return;
       useChatStore.getState().appendRoom(payload);
     }
     return;
   }
 
   // Emote events (Story 8.3) — ephemeral per-seat broadcast, not part of
-  // GameState. Mirrors the chat-message defensive-validation pattern.
+  // MatchState. Mirrors the chat-message defensive-validation pattern.
   if (type === SYSTEM_EMOTE) {
     const payload = message.payload as EmotePayload;
     if (
@@ -518,8 +531,8 @@ function dispatchSystemEvent(message: WsMessage): void {
     // Defence in depth (Story 8.1 dispatcher hardening): only commit when the
     // user is in an active match. A stray emote frame after clearGame() must
     // not seed the next match's bubble state.
-    if (useGameStore.getState().gameState === null) return;
-    useGameStore.getState().setActiveEmote(payload.playerSeat, payload.emote);
+    if (useMatchStore.getState().matchState === null) return;
+    useMatchStore.getState().setActiveEmote(payload.playerSeat, payload.emote);
     return;
   }
 }
@@ -544,8 +557,8 @@ function dispatchErrorEvent(message: WsMessage): void {
   // Mirror the GAME_ERROR_TYPES lastError write so debug/store consumers see
   // the event before the early return.
   if (message.type === ERROR_SURRENDER_EXHAUSTED) {
-    useGameStore.getState().setLastError(message.type);
-    toast.error(i18n.t("game.surrender.errors.exhausted"));
+    useMatchStore.getState().setLastError(message.type);
+    toast.error(i18n.t("match.surrender.errors.exhausted"));
     return;
   }
 
@@ -553,18 +566,18 @@ function dispatchErrorEvent(message: WsMessage): void {
   // four would-be participants know the room reverted to "waiting" rather
   // than navigating them to a non-existent /game/{roomId}. Defence in depth:
   // validate payload shape before showing the toast.
-  if (message.type === ERROR_GAME_START_FAILED) {
+  if (message.type === ERROR_MATCH_START_FAILED) {
     if (typeof payload?.message !== "string" || typeof payload?.roomId !== "number") {
-      console.warn("WS: ignoring malformed error:game_start_failed payload", payload);
+      console.warn("WS: ignoring malformed error:match_start_failed payload", payload);
       return;
     }
-    useGameStore.getState().setLastError(message.type);
-    toast.error(i18n.t("room.errors.gameStartFailed"), { duration: 5000 });
+    useMatchStore.getState().setLastError(message.type);
+    toast.error(i18n.t("room.errors.matchStartFailed"), { duration: 5000 });
     return;
   }
 
   if (GAME_ERROR_TYPES.has(message.type)) {
-    useGameStore.getState().setLastError(message.type);
+    useMatchStore.getState().setLastError(message.type);
   }
   console.warn("WS error:", message.type, payload.message ?? "");
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/emilijan/beljot/server/internal/lobby"
 	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/room"
-	"github.com/emilijan/beljot/server/internal/session"
 	"github.com/emilijan/beljot/server/internal/user"
 	"github.com/emilijan/beljot/server/internal/ws"
 )
@@ -98,6 +97,7 @@ func main() {
 	userHandler := user.NewUserHandler(userRepo, matchRepo)
 	api := e.Group("/api/v1", auth.AuthMiddleware(cfg.JWTSecret))
 	api.GET("/users/:id/profile", userHandler.GetProfile)
+	api.GET("/users/:id/career", userHandler.GetCareer)
 	api.GET("/users/:id/matches", userHandler.ListMatches)
 	api.PATCH("/users/:id/preferences", userHandler.UpdatePreferences)
 
@@ -111,12 +111,19 @@ func main() {
 		Hub:             hub,
 		JWTSecret:       cfg.JWTSecret,
 		AcceptedOrigins: cfg.CORSOrigins,
+		ValidateToken: func(token string) ([]string, string, error) {
+			claims, err := auth.ValidateToken(token, cfg.JWTSecret)
+			if err != nil {
+				return nil, "", err
+			}
+			return []string(claims.Audience), claims.Subject, nil
+		},
 	}
 	e.GET("/ws", wsHandler.HandleWS)
 
 	// Session manager + room repo (repo needed before handler wiring)
 	roomRepo := room.NewGormRepository(db)
-	sessionManager := session.NewManager(hub, matchRepo)
+	sessionManager := match.NewManager(hub, matchRepo)
 	sessionManager.SetRoomUpdater(&room.RoomStatusAdapter{Repo: roomRepo})
 
 	// Reconcile rooms left in status="playing" by a previous process. Sessions
@@ -125,7 +132,7 @@ func main() {
 	// quick-play / create-room on "no active room"). Best-effort: log + keep
 	// going if reconciliation fails so a transient DB hiccup doesn't block
 	// boot entirely.
-	if err := sessionManager.ReconcileStaleRooms(roomRepo); err != nil {
+	if err := sessionManager.ReconcileStaleRooms(&room.StaleRoomRepositoryAdapter{Repo: roomRepo}); err != nil {
 		slog.Error("startup reconciliation failed", "error", err)
 	}
 
@@ -172,10 +179,11 @@ func main() {
 	api.GET("/rooms/code/:code", roomHandler.GetRoomByCode)
 	api.GET("/rooms/:id", roomHandler.GetRoom)
 	api.POST("/rooms/:id/join", roomHandler.JoinRoom)
+	api.POST("/rooms/:id/quick-join", roomHandler.QuickJoin)
 	api.POST("/rooms/:id/leave", roomHandler.LeaveRoom)
 	api.POST("/rooms/:id/seat", roomHandler.SelectSeat)
 	api.POST("/rooms/:id/leave-seat", roomHandler.LeaveSeat)
-	api.POST("/rooms/:id/start", roomHandler.StartGame)
+	api.POST("/rooms/:id/start", roomHandler.StartMatch)
 	api.POST("/rooms/:id/kick", roomHandler.KickPlayer)
 	api.POST("/rooms/:id/swap-seats", roomHandler.SwapSeats)
 	api.POST("/rooms/:id/transfer-ownership", roomHandler.TransferOwnership)
@@ -184,6 +192,11 @@ func main() {
 	// in-room / in-game and reports registered totals.
 	lobbyHandler := lobby.NewHandler(hub, sessionManager, roomRepo, userRepo)
 	api.GET("/lobby/stats", lobbyHandler.GetStats)
+
+	// Public landing-page stats — unauthenticated, registered on the bare echo
+	// instance (outside the auth-protected api group). Returns only aggregate
+	// counts (online players, open rooms), nothing user-identifying.
+	e.GET("/api/v1/stats", lobbyHandler.GetPublicStats)
 
 	// Graceful shutdown
 	go func() {

@@ -5,7 +5,7 @@ import type { ChatMessagePayload } from "@/shared/types/wsEvents";
 const MAX_MESSAGES = 200;
 
 interface ChatState {
-  globalMessages: ChatMessagePayload[];
+  lobbyMessages: ChatMessagePayload[];
   matchMessages: ChatMessagePayload[];
   roomMessages: ChatMessagePayload[];
   // Monotonic count of match messages received since the last clear.
@@ -20,16 +20,16 @@ interface ChatState {
   // MAX_MESSAGES window, but the placeholder should still reflect "already
   // chatted". Reset by the corresponding clear* action so a new match or
   // room gets a fresh invitation placeholder.
-  hasSentGlobal: boolean;
+  hasSentLobby: boolean;
   hasSentMatch: boolean;
   hasSentRoom: boolean;
-  appendGlobal: (msg: ChatMessagePayload) => void;
+  appendLobby: (msg: ChatMessagePayload) => void;
   appendMatch: (msg: ChatMessagePayload) => void;
   appendRoom: (msg: ChatMessagePayload) => void;
-  markSentGlobal: () => void;
+  markSentLobby: () => void;
   markSentMatch: () => void;
   markSentRoom: () => void;
-  clearGlobal: () => void;
+  clearLobby: () => void;
   clearMatch: () => void;
   clearRoom: () => void;
 }
@@ -46,25 +46,25 @@ function appendWithCap(
 }
 
 export const useChatStore = create<ChatState>((set) => ({
-  globalMessages: [],
+  lobbyMessages: [],
   matchMessages: [],
   roomMessages: [],
   matchMessagesReceivedTotal: 0,
-  hasSentGlobal: false,
+  hasSentLobby: false,
   hasSentMatch: false,
   hasSentRoom: false,
-  appendGlobal: (msg) =>
-    set((state) => ({ globalMessages: appendWithCap(state.globalMessages, msg) })),
+  appendLobby: (msg) =>
+    set((state) => ({ lobbyMessages: appendWithCap(state.lobbyMessages, msg) })),
   appendMatch: (msg) =>
     set((state) => ({
       matchMessages: appendWithCap(state.matchMessages, msg),
       matchMessagesReceivedTotal: state.matchMessagesReceivedTotal + 1,
     })),
   appendRoom: (msg) => set((state) => ({ roomMessages: appendWithCap(state.roomMessages, msg) })),
-  markSentGlobal: () => set({ hasSentGlobal: true }),
+  markSentLobby: () => set({ hasSentLobby: true }),
   markSentMatch: () => set({ hasSentMatch: true }),
   markSentRoom: () => set({ hasSentRoom: true }),
-  clearGlobal: () => set({ globalMessages: [], hasSentGlobal: false }),
+  clearLobby: () => set({ lobbyMessages: [], hasSentLobby: false }),
   clearMatch: () => set({ matchMessages: [], matchMessagesReceivedTotal: 0, hasSentMatch: false }),
   clearRoom: () => set({ roomMessages: [], hasSentRoom: false }),
 }));

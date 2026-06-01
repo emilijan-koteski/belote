@@ -10,7 +10,7 @@ function makeMessage(overrides: Partial<ChatMessagePayload> = {}): ChatMessagePa
     username: "alice",
     message: "hello",
     timestamp: "2026-04-18T10:00:00Z",
-    scope: "global",
+    scope: "lobby",
     ...overrides,
   };
 }
@@ -18,50 +18,50 @@ function makeMessage(overrides: Partial<ChatMessagePayload> = {}): ChatMessagePa
 describe("chatStore", () => {
   beforeEach(() => {
     useChatStore.setState({
-      globalMessages: [],
+      lobbyMessages: [],
       matchMessages: [],
       roomMessages: [],
       matchMessagesReceivedTotal: 0,
-      hasSentGlobal: false,
+      hasSentLobby: false,
       hasSentMatch: false,
       hasSentRoom: false,
     });
   });
 
-  it("appendGlobal adds a message to the end of the list", () => {
-    useChatStore.getState().appendGlobal(makeMessage({ message: "first" }));
-    useChatStore.getState().appendGlobal(makeMessage({ message: "second" }));
+  it("appendLobby adds a message to the end of the list", () => {
+    useChatStore.getState().appendLobby(makeMessage({ message: "first" }));
+    useChatStore.getState().appendLobby(makeMessage({ message: "second" }));
 
-    const messages = useChatStore.getState().globalMessages;
+    const messages = useChatStore.getState().lobbyMessages;
     expect(messages).toHaveLength(2);
     expect(messages[0]!.message).toBe("first");
     expect(messages[1]!.message).toBe("second");
   });
 
-  it("appendGlobal drops oldest when exceeding 200-message cap", () => {
+  it("appendLobby drops oldest when exceeding 200-message cap", () => {
     for (let i = 0; i < 210; i++) {
-      useChatStore.getState().appendGlobal(makeMessage({ message: `msg-${i}` }));
+      useChatStore.getState().appendLobby(makeMessage({ message: `msg-${i}` }));
     }
 
-    const messages = useChatStore.getState().globalMessages;
+    const messages = useChatStore.getState().lobbyMessages;
     expect(messages).toHaveLength(200);
     expect(messages[0]!.message).toBe("msg-10");
     expect(messages[199]!.message).toBe("msg-209");
   });
 
-  it("clearGlobal resets the message list", () => {
-    useChatStore.getState().appendGlobal(makeMessage());
-    useChatStore.getState().appendGlobal(makeMessage());
-    expect(useChatStore.getState().globalMessages).toHaveLength(2);
+  it("clearLobby resets the message list", () => {
+    useChatStore.getState().appendLobby(makeMessage());
+    useChatStore.getState().appendLobby(makeMessage());
+    expect(useChatStore.getState().lobbyMessages).toHaveLength(2);
 
-    useChatStore.getState().clearGlobal();
-    expect(useChatStore.getState().globalMessages).toHaveLength(0);
+    useChatStore.getState().clearLobby();
+    expect(useChatStore.getState().lobbyMessages).toHaveLength(0);
   });
 
-  it("appendGlobal produces a new array reference (immutable updates)", () => {
-    const before = useChatStore.getState().globalMessages;
-    useChatStore.getState().appendGlobal(makeMessage());
-    const after = useChatStore.getState().globalMessages;
+  it("appendLobby produces a new array reference (immutable updates)", () => {
+    const before = useChatStore.getState().lobbyMessages;
+    useChatStore.getState().appendLobby(makeMessage());
+    const after = useChatStore.getState().lobbyMessages;
     expect(after).not.toBe(before);
   });
 
@@ -86,24 +86,24 @@ describe("chatStore", () => {
   });
 
   it("clearMatch resets only the match partition", () => {
-    useChatStore.getState().appendGlobal(makeMessage());
+    useChatStore.getState().appendLobby(makeMessage());
     useChatStore.getState().appendMatch(makeMessage({ scope: "match" }));
-    expect(useChatStore.getState().globalMessages).toHaveLength(1);
+    expect(useChatStore.getState().lobbyMessages).toHaveLength(1);
     expect(useChatStore.getState().matchMessages).toHaveLength(1);
 
     useChatStore.getState().clearMatch();
     expect(useChatStore.getState().matchMessages).toHaveLength(0);
-    expect(useChatStore.getState().globalMessages).toHaveLength(1);
+    expect(useChatStore.getState().lobbyMessages).toHaveLength(1);
   });
 
-  it("partitions are independent: appendGlobal does not touch matchMessages", () => {
-    useChatStore.getState().appendGlobal(makeMessage());
+  it("partitions are independent: appendLobby does not touch matchMessages", () => {
+    useChatStore.getState().appendLobby(makeMessage());
     expect(useChatStore.getState().matchMessages).toHaveLength(0);
   });
 
-  it("partitions are independent: appendMatch does not touch globalMessages", () => {
+  it("partitions are independent: appendMatch does not touch lobbyMessages", () => {
     useChatStore.getState().appendMatch(makeMessage({ scope: "match" }));
-    expect(useChatStore.getState().globalMessages).toHaveLength(0);
+    expect(useChatStore.getState().lobbyMessages).toHaveLength(0);
   });
 
   it("appendMatch increments matchMessagesReceivedTotal monotonically, even past the 200 cap", () => {
@@ -127,8 +127,8 @@ describe("chatStore", () => {
     expect(useChatStore.getState().matchMessagesReceivedTotal).toBe(0);
   });
 
-  it("appendGlobal does NOT affect matchMessagesReceivedTotal", () => {
-    useChatStore.getState().appendGlobal(makeMessage());
+  it("appendLobby does NOT affect matchMessagesReceivedTotal", () => {
+    useChatStore.getState().appendLobby(makeMessage());
     expect(useChatStore.getState().matchMessagesReceivedTotal).toBe(0);
   });
 
@@ -155,20 +155,20 @@ describe("chatStore", () => {
   });
 
   it("clearRoom resets only the room partition", () => {
-    useChatStore.getState().appendGlobal(makeMessage());
+    useChatStore.getState().appendLobby(makeMessage());
     useChatStore.getState().appendMatch(makeMessage({ scope: "match" }));
     useChatStore.getState().appendRoom(makeMessage({ scope: "room" }));
 
     useChatStore.getState().clearRoom();
     const state = useChatStore.getState();
     expect(state.roomMessages).toHaveLength(0);
-    expect(state.globalMessages).toHaveLength(1);
+    expect(state.lobbyMessages).toHaveLength(1);
     expect(state.matchMessages).toHaveLength(1);
   });
 
   it("partitions are independent: appendRoom does not touch global or match", () => {
     useChatStore.getState().appendRoom(makeMessage({ scope: "room" }));
-    expect(useChatStore.getState().globalMessages).toHaveLength(0);
+    expect(useChatStore.getState().lobbyMessages).toHaveLength(0);
     expect(useChatStore.getState().matchMessages).toHaveLength(0);
   });
 
@@ -180,9 +180,9 @@ describe("chatStore", () => {
   // --- hasSent* placeholder flags ---
 
   it("markSent flags are independent across channels", () => {
-    useChatStore.getState().markSentGlobal();
+    useChatStore.getState().markSentLobby();
     let state = useChatStore.getState();
-    expect(state.hasSentGlobal).toBe(true);
+    expect(state.hasSentLobby).toBe(true);
     expect(state.hasSentMatch).toBe(false);
     expect(state.hasSentRoom).toBe(false);
 
@@ -194,10 +194,10 @@ describe("chatStore", () => {
   });
 
   it("clear* resets the matching hasSent flag", () => {
-    useChatStore.setState({ hasSentGlobal: true, hasSentMatch: true, hasSentRoom: true });
+    useChatStore.setState({ hasSentLobby: true, hasSentMatch: true, hasSentRoom: true });
 
-    useChatStore.getState().clearGlobal();
-    expect(useChatStore.getState().hasSentGlobal).toBe(false);
+    useChatStore.getState().clearLobby();
+    expect(useChatStore.getState().hasSentLobby).toBe(false);
     expect(useChatStore.getState().hasSentMatch).toBe(true);
     expect(useChatStore.getState().hasSentRoom).toBe(true);
 

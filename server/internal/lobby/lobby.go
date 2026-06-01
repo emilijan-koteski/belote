@@ -1,5 +1,5 @@
 // Package lobby exposes lightweight lobby-scoped read endpoints. Today it only
-// serves aggregate player-state stats (in-lobby / in-room / in-game / online /
+// serves aggregate player-state stats (in-lobby / in-room / in-match / online /
 // registered) consumed by the lobby UI's activity panel.
 package lobby
 
@@ -19,25 +19,33 @@ type ConnectionTracker interface {
 }
 
 // SessionTracker reports the set of user IDs currently mapped to an active
-// game session. Implemented by *session.Manager.
+// game session. Implemented by *match.Manager.
 type SessionTracker interface {
-	InGameUserIDs() []uint
+	InMatchUserIDs() []uint
 }
 
 // StatsResponse is the wire payload returned by GET /lobby/stats.
 //
 // All values are connection-aware: a user is only counted in inLobby /
-// inRoom / inGame if they currently hold a live WebSocket connection. Stale
+// inRoom / inMatch if they currently hold a live WebSocket connection. Stale
 // DB rows (e.g. a user in room_players who has since dropped their socket)
 // do not appear in any bucket. By construction:
 //
-//	online == inLobby + inRoom + inGame
+//	online == inLobby + inRoom + inMatch
 type StatsResponse struct {
 	InLobby    int   `json:"inLobby"`
 	InRoom     int   `json:"inRoom"`
-	InGame     int   `json:"inGame"`
+	InMatch    int   `json:"inMatch"`
 	Online     int   `json:"online"`
 	Registered int64 `json:"registered"`
+}
+
+// PublicStatsResponse is the wire payload for the unauthenticated landing-page
+// stats endpoint (GET /api/v1/stats). Deliberately minimal — only the two
+// social-proof counts the marketing hero shows, nothing user-identifying.
+type PublicStatsResponse struct {
+	Online    int `json:"online"`    // currently-connected players (WS-live)
+	OpenRooms int `json:"openRooms"` // rooms accepting players (status="waiting")
 }
 
 // Handler serves lobby-scoped read endpoints.
@@ -53,11 +61,11 @@ func NewHandler(hub ConnectionTracker, sessions SessionTracker, rooms room.RoomR
 	return &Handler{hub: hub, sessions: sessions, rooms: rooms, users: users}
 }
 
-// GetStats bucket-counts every currently-connected user as in-game / in-room /
+// GetStats bucket-counts every currently-connected user as in-match / in-room /
 // in-lobby and returns the totals alongside the registered-user count.
 //
-// Bucketing precedence is in-game → in-room → in-lobby: a user mapped to an
-// active session is counted as in-game even if a stale DB row also places
+// Bucketing precedence is in-match → in-room → in-lobby: a user mapped to an
+// active session is counted as in-match even if a stale DB row also places
 // them in a waiting room (defensive — the session manager wins).
 func (h *Handler) GetStats(c echo.Context) error {
 	connected := h.hub.ConnectedUserIDs()
@@ -66,10 +74,10 @@ func (h *Handler) GetStats(c echo.Context) error {
 		connectedSet[uid] = struct{}{}
 	}
 
-	inGameSet := make(map[uint]struct{})
-	for _, uid := range h.sessions.InGameUserIDs() {
+	inMatchSet := make(map[uint]struct{})
+	for _, uid := range h.sessions.InMatchUserIDs() {
 		if _, online := connectedSet[uid]; online {
-			inGameSet[uid] = struct{}{}
+			inMatchSet[uid] = struct{}{}
 		}
 	}
 
@@ -83,7 +91,7 @@ func (h *Handler) GetStats(c echo.Context) error {
 			continue
 		}
 		// Defensive precedence: never double-count a user who is also in a session.
-		if _, inGame := inGameSet[uid]; inGame {
+		if _, inMatch := inMatchSet[uid]; inMatch {
 			continue
 		}
 		inRoomSet[uid] = struct{}{}
@@ -95,9 +103,9 @@ func (h *Handler) GetStats(c echo.Context) error {
 	}
 
 	online := len(connectedSet)
-	inGame := len(inGameSet)
+	inMatch := len(inMatchSet)
 	inRoom := len(inRoomSet)
-	inLobby := online - inGame - inRoom
+	inLobby := online - inMatch - inRoom
 	if inLobby < 0 {
 		inLobby = 0
 	}
@@ -106,9 +114,30 @@ func (h *Handler) GetStats(c echo.Context) error {
 		"data": StatsResponse{
 			InLobby:    inLobby,
 			InRoom:     inRoom,
-			InGame:     inGame,
+			InMatch:    inMatch,
 			Online:     online,
 			Registered: registered,
+		},
+	})
+}
+
+// GetPublicStats serves the landing page's social-proof counts WITHOUT auth:
+// total connected players and the number of open (waiting) rooms. Registered
+// on the bare echo instance so no JWT is required. Online mirrors GetStats'
+// connection-aware count; open rooms are those in "waiting" status — the same
+// set the lobby's default room list ("open tables") shows.
+func (h *Handler) GetPublicStats(c echo.Context) error {
+	online := len(h.hub.ConnectedUserIDs())
+
+	waiting, err := h.rooms.FindByStatus("waiting")
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": PublicStatsResponse{
+			Online:    online,
+			OpenRooms: len(waiting),
 		},
 	})
 }

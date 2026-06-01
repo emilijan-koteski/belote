@@ -18,10 +18,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Path aliases */
-    "baseUrl": ".",
+    /* Path aliases — resolved relative to this tsconfig's directory.
+       (No `baseUrl`: it's deprecated as of the TS 6.0 path and removed in 7.0;
+       `paths` works without it under moduleResolution "bundler".) */
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
 
     /* Linting */

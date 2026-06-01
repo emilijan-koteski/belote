@@ -6,7 +6,7 @@ import "time"
 // Buffered in session memory during play, then flushed transactionally alongside
 // the Match row via MatchRepository.CreateWithHands when the match ends.
 //
-// Distinct from game.HandResult (the in-memory broadcast struct): this type is
+// Distinct from game.HandScore (the in-memory broadcast struct): this type is
 // DB-facing and carries MatchID + HandNumber, not the match-lifecycle fields.
 type HandResult struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`

@@ -11,35 +11,70 @@
   },
   "nav": {
     "play": "Play",
-    "leaderboard": "Leaderboard",
     "profile": "Profile",
     "rules": "Rules",
     "appName": "Beljot",
-    "logout": "Log out"
+    "logout": "Log out",
+    "signedInAs": "Signed in as"
   },
   "profile": {
     "title": "Profile",
+    "eyebrow": "Profile",
     "memberSince": "Member since {{date}}",
+    "winRate": "Win rate",
     "statsHeading": "Stats",
+    "careerError": "Could not load career stats — try again",
+    "lastPlayed": {
+      "today": "Played today",
+      "yesterday": "Played yesterday",
+      "daysAgo": "Played {{count}} days ago"
+    },
+    "hero": {
+      "games": "matches",
+      "wins": "wins",
+      "losses": "losses",
+      "capots": "capots"
+    },
+    "streak": {
+      "winTitle": "Win streak — {{count}} in a row",
+      "lossTitle": "Cold streak — {{count}} losses",
+      "winSubtitle": "Keep it going — your next match counts toward the streak.",
+      "lossSubtitle": "Shake it off — Quick Play to break the run.",
+      "play": "Play"
+    },
     "stats": {
-      "totalGamesPlayed": "Games played",
+      "eyebrow": "Career",
+      "sub": "Career totals across every match — declarations, capots, lost contracts and all.",
+      "totalGamesPlayed": "Matches played",
       "wins": "Wins",
       "losses": "Losses",
+      "abandoned": "Abandoned",
       "winRate": "Win rate",
       "winRateEmpty": "—",
-      "error": "Could not load stats — try again"
+      "error": "Could not load stats — try again",
+      "outcomeSplit": "Outcome split",
+      "legendWins": "{{count}} wins",
+      "legendLosses": "{{count}} losses",
+      "legendAbandoned": "{{count}} abandoned"
     },
     "matchHistory": {
-      "title": "Match History",
+      "eyebrow": "Activity",
+      "title": "Match history",
+      "sub": "Every completed match — open a row to see hand-by-hand scoring, declarations, capots and failed contracts.",
       "empty": "No games yet — Quick Play to get started",
       "emptyCta": "Go to lobby",
+      "emptyFiltered": "No matches match this filter yet.",
       "loading": "Loading matches…",
       "error": "Could not load match history — try again",
       "loadMore": "Load more",
+      "showing": "Showing {{shown}} of {{total}} matches",
       "durationDhms": "{{d}}d {{h}}:{{m}}:{{s}}",
       "durationHms": "{{h}}:{{m}}:{{s}}",
       "durationMs": "{{m}}:{{s}}",
       "vs": "&",
+      "with": "with",
+      "versus": "vs",
+      "you": "You",
       "teammate": "Teammate",
       "opponents": "Opponents",
       "noHandDetails": "No hand details for this match",
@@ -48,6 +83,17 @@
       "outcomeAbandoned": "Abandoned",
       "expandRow": "Show hand details",
       "collapseRow": "Hide hand details",
+      "filter": {
+        "all": "All",
+        "win": "Wins",
+        "loss": "Losses",
+        "abandoned": "Abandoned"
+      },
+      "sort": {
+        "label": "Sort",
+        "newest": "Newest first",
+        "oldest": "Oldest first"
+      },
       "variant": {
         "bitola": "Bitola"
       },
@@ -61,8 +107,53 @@
         "lastTrickBonus": "Last trick",
         "capot": "Capot",
         "failedContract": "Failed",
-        "handTotal": "Hand Total"
+        "handTotal": "Hand Total",
+        "col": {
+          "number": "#",
+          "hand": "Hand",
+          "cards": "Cards",
+          "declarations": "Declarations",
+          "notes": "Notes"
+        },
+        "desc": {
+          "capot": "Capot hand",
+          "failed": "Contract failed",
+          "weCalled": "We called trump",
+          "theyCalled": "They called trump"
+        },
+        "note": {
+          "capot": "+{{points}} capot",
+          "lastTrick": "+{{points}} last trick",
+          "us": "us",
+          "them": "them",
+          "failedUs": "failed · us",
+          "failedThem": "failed · them"
+        }
       }
+    },
+    "partners": {
+      "eyebrow": "Spotlight",
+      "title": "Most-played partner",
+      "matchesTogether": "{{count}} matches together",
+      "empty": "No regular partners yet — play a few matches."
+    },
+    "rivals": {
+      "eyebrow": "Rivalry",
+      "title": "Across the table",
+      "empty": "No rivals yet — play a few matches."
+    },
+    "milestones": {
+      "eyebrow": "Milestones",
+      "title": "Career highlights",
+      "capotsLabel": "Capots called",
+      "capotsHint": "max-points hands",
+      "bestHandLabel": "Best hand",
+      "bestHandHint": "Hand {{hand}} · {{date}}",
+      "bestHandHintEmpty": "no hands yet",
+      "bestHandEmpty": "—",
+      "avgLengthLabel": "Avg. match length",
+      "avgLengthValue": "{{minutes}}m",
+      "avgLengthHint": "completed matches"
     }
   },
   "language": {
@@ -103,12 +194,8 @@
       "dec": "Dec"
     }
   },
-  "leaderboard": {
-    "title": "Leaderboard",
-    "comingSoon": "Leaderboard coming soon"
-  },
   "chat": {
-    "title": "Lobby Chat",
+    "title": "Lobby chat",
     "placeholder": "Say hi…",
     "placeholderAfterFirst": "Message…",
     "placeholderDisabled": "Reconnecting…",
@@ -120,17 +207,132 @@
   },
   "room": {
     "chat": {
-      "title": "Room Chat",
-      "placeholder": "Chat with the table…"
+      "title": "Room chat",
+      "placeholder": "Message…",
+      "openLabel": "Open room chat",
+      "closeLabel": "Close room chat",
+      "sendLabel": "Send message"
     },
     "errors": {
-      "gameStartFailed": "Failed to start the game. Please try again.",
-      "alreadyStarted": "The game has already started — you can't leave now."
+      "matchStartFailed": "Failed to start the match. Please try again.",
+      "alreadyStarted": "The match has already started — you can't leave now.",
+      "seatFailed": "Failed to select seat — try again",
+      "startFailed": "Failed to start the match — try again",
+      "notOwner": "Only the host can start the match",
+      "notOwnerAction": "Only the host can do that",
+      "notAllSeated": "All 4 players must be seated to start",
+      "roomStarted": "The match has already started — kick and seat-swap are no longer available.",
+      "seatNotOccupied": "Pick two seated players to swap.",
+      "kickFailed": "Failed to remove player — try again",
+      "swapFailed": "Failed to swap seats — try again",
+      "leaveSeatFailed": "Failed to leave seat — try again",
+      "leaveSeatQuickPlay": "You can't leave your seat in quick play — leave the room instead.",
+      "leaveSeatOwner": "The host can't leave their seat — leave the room instead.",
+      "transferFailed": "Failed to transfer the host role — try again",
+      "promoteUnseated": "The new host must be seated.",
+      "promoteNotInRoom": "That player is no longer in the room."
+    },
+    "waitingForPlayers": "Waiting for players",
+    "backToLobby": "Back to Lobby",
+    "copyLink": "Copy Link",
+    "copyLinkAriaLabel": "Copy room code {{code}}",
+    "copyLinkSuccess": "Room code copied!",
+    "copyLinkFailed": "Failed to copy — code: {{code}}",
+    "codeLabel": "Code",
+    "copied": "Copied!",
+    "leaveRoom": "Leave Room",
+    "seatEmpty": "Waiting…",
+    "seatYou": "You",
+    "seatYouInline": "you",
+    "seatOwner": "Host",
+    "ownerLine": "Hosted by <name>{{owner}}</name>",
+    "seatedCount": "{{current}} / {{max}} seated",
+    "inRoomCount": "{{count}} in room",
+    "inRoomList": {
+      "ariaLabel": "Show players in room",
+      "title": "Players in room",
+      "empty": "No players yet",
+      "seated": "Seat {{seat}}",
+      "notSeated": "Standing"
+    },
+    "yourSeat": "Your seat",
+    "loading": "Loading room…",
+    "notFound": "Room not found",
+    "notFoundAction": "Back to Lobby",
+    "roomClosed": "This room is closed.",
+    "returningToLobby": "Returning to lobby…",
+    "playerJoined": "{{username}} joined the room",
+    "playerLeft": "{{username}} left the room",
+    "startMatch": "Start match",
+    "startMatchDisabled": "All 4 players must be seated",
+    "waitingForOwner": "Waiting for host to start the match",
+    "seatTaken": "That seat is already taken",
+    "seatUpdated": "Seat updated",
+    "matchStarting": "Match starting…",
+    "autoStartMessage": "Match starts automatically once 4 seats fill",
+    "autoStarting": "Starting match…",
+    "kickIconLabel": "Kick {{username}}",
+    "kickConfirm": {
+      "title": "Kick <name>{{name}}</name> from the room?",
+      "lede": "This is a kick, not a ban — and <strong>{{name}}</strong> can rejoin any time. Their seat opens up right away, but it won't end the match in progress.",
+      "confirm": "Kick",
+      "cancel": "Cancel"
+    },
+    "kickedToast": "You were removed from room {{name}}",
+    "swapMode": {
+      "enter": "Pick a seat to swap with"
+    },
+    "leaveSeatLabel": "Leave seat (stay in room)",
+    "promoteIconLabel": "Make {{username}} the host",
+    "transferConfirm": {
+      "title": "Transfer room ownership to another player?",
+      "lede": "You stay in the room, but <strong>{{toName}}</strong> becomes the host. Only a host can hand the ownership back — you can't take it yourself.",
+      "confirm": "Make host",
+      "cancel": "Cancel"
+    },
+    "ownerConfirm": {
+      "eyebrow": "Host action",
+      "close": "Close",
+      "seatLabel": "Seat {{n}}",
+      "standing": "Standing",
+      "youHost": "You · current host",
+      "newHost": "{{name}} · New host",
+      "handOver": "You'll hand over",
+      "capabilities": {
+        "start": "Starting the match",
+        "seats": "Swapping & arranging seats",
+        "players": "Kicking & promoting players",
+        "settings": "Room name, pace & settings"
+      }
+    },
+    "legendNeutral": "Open seats · teams reveal once you sit down",
+    "legendOpen": "open",
+    "legendVs": "vs",
+    "legendUs": "Us",
+    "legendThem": "Them",
+    "actionBarSwap": "Swap mode · pick a seat",
+    "actionBarWaiting": "Waiting for players · {{current}}/{{max}} seated",
+    "actionBarFinishSwap": "Finish swap to start",
+    "tip": {
+      "unseated": "Take any seat to join — your partner sits diagonally across.",
+      "owner": "Click a seated player, then another seat to swap them — or an empty seat to move them. Hover a player to kick or make host.",
+      "seated": "Settle in — chat lives in the bottom-right. Type /cc to clear it."
+    },
+    "tableCenter": "Room",
+    "seatTile": {
+      "takeSeat": "Take this seat",
+      "moveHere": "Move here",
+      "swapHere": "Swap here",
+      "partner": "Partner",
+      "opponent": "Opponent",
+      "pickTarget": "To swap",
+      "partnerSeat": "Partner seat · open",
+      "opponentSeat": "Opponent seat · open",
+      "openSeat": "Open seat"
     }
   },
   "rules": {
-    "title": "Rules",
-    "comingSoon": "Rules reference coming soon"
+    "title": "Rules"
   },
   "legal": {
     "wipBadge": "Work in progress",
@@ -147,176 +349,169 @@
     }
   },
   "lobby": {
-    "title": "Lobby",
+    "title": "Open rooms",
     "quickPlay": "Quick Play",
-    "quickPlayDesc": "Jump into a game instantly",
-    "browseRooms": "Browse Rooms",
-    "browseRoomsDesc": "Find an open game to join",
-    "createRoom": "Create Room",
-    "createRoomDesc": "Set up a game your way",
-    "leaderboardPlaceholder": "Leaderboard coming soon",
     "stats": {
       "title": "Players",
       "loading": "Loading…",
-      "inLobby": "In lobby",
-      "inRoom": "In a room",
-      "inGame": "In a game",
+      "inLobby": "in lobby",
+      "inRoom": "in a room",
+      "inMatch": "playing",
       "totalActive": "Total online",
       "registered": "Registered",
       "activeRatio": "Online / Registered",
-      "activeRatioValue": "{{active}} / {{registered}}"
+      "activeRatioValue": "{{active}} / {{registered}}",
+      "online": "online"
     },
     "matchmaking": {
       "finding": "Finding match…",
       "cancel": "Cancel",
       "failed": "Could not find a match — try again",
-      "alreadyInRoom": "You're already in a room — leave it first"
+      "alreadyInRoom": "You're already in a room — leave it first",
+      "title": "Quick Play",
+      "subtitle": "You'll be seated as soon as three other players are ready. The match starts the moment the last seat fills.",
+      "eyebrow": "Searching for opponents",
+      "elapsed": "elapsed",
+      "seated": "{{found}} / 4 seated",
+      "remaining": "{{count}} more to go",
+      "cancelQueue": "Cancel queue",
+      "you": "You",
+      "searching": "searching",
+      "errors": {
+        "alreadyInRoom": "You are already in a room",
+        "generic": "Matchmaking failed. Try again."
+      }
     },
     "createRoomModal": {
-      "title": "Create a Game Room",
-      "roomName": "Room Name",
-      "roomNamePlaceholder": "Enter room name…",
-      "variant": "Game Variant",
+      "title": "Create a room",
+      "roomName": "Room name",
+      "roomNamePlaceholder": "Sunday Service…",
+      "variant": "Variant",
       "variantBitola": "Bitola",
-      "matchMode": "Match Mode",
+      "matchMode": "Match mode",
       "matchMode1001": "1001 points",
-      "timerStyle": "Timer Style",
-      "timerRelaxed": "Relaxed (no timer)",
-      "timerPerMove": "Per-move timer",
-      "timerDuration": "Timer Duration (seconds)",
-      "create": "Create Room",
+      "timerStyle": "Timer style",
+      "timerRelaxed": "Relaxed",
+      "timerPerMove": "Per move",
+      "timerDuration": "Move duration",
+      "create": "Create room",
       "cancel": "Cancel",
       "errors": {
         "nameRequired": "Room name is required",
-        "nameTaken": "A room with this name already exists",
-        "unexpected": "An unexpected error occurred"
+        "nameTaken": "That name is taken",
+        "unexpected": "Could not create room. Try again.",
+        "nameTooShort": "Name needs at least {{min}} characters"
+      },
+      "eyebrow": "New room",
+      "headline": "Create a room",
+      "subhead": "Give the room a name, pick a pace, then share the join code with friends. The list of rooms in the lobby updates the moment you create the room.",
+      "roomNameHint": "{{min}}–{{max}} characters",
+      "variantCroatia": "Croatian",
+      "matchMode501": "501 points",
+      "timerDurationSuffix": "seconds / move",
+      "timerDurationRange": "{{min}}s – {{max}}s",
+      "submit": "Create room",
+      "submitting": "Creating…",
+      "preview": {
+        "title": "Live preview · how the room appears in the lobby",
+        "placeholderName": "Untitled room",
+        "joinLabel": "Join",
+        "justNow": "just now",
+        "codeLabel": "CODE",
+        "seated": "{{current}}/4"
+      },
+      "variantHint": "Only Bitola for now",
+      "matchModeHint": "Only 1001 pts for now",
+      "timerHintRelaxed": "No timer",
+      "timerDurationHint": "10–120s · default 30s",
+      "nextSteps": {
+        "title": "What happens next",
+        "step1": "You land in the new room as <strong>owner</strong> with seat 1.",
+        "step2": "Share the <code>CODE</code> with friends — or wait for the lobby list.",
+        "step3": "Once all four seats are filled, you start the match."
       }
     },
-    "roomDetail": {
-      "emptySlot": "Empty",
-      "notSeated": "Not seated"
+    "footnote": "Showing {{shown}} of {{total}} open rooms · refreshes live",
+    "actions": {
+      "quickPlay": {
+        "title": "Quick Play",
+        "subtitle": "Drop into the next opening",
+        "cta": "Play"
+      },
+      "createRoom": {
+        "title": "Create room",
+        "subtitle": "Set your own rules & timer"
+      },
+      "joinByCode": {
+        "placeholder": "Have a code?",
+        "cta": "Join"
+      }
     },
-    "roomList": {
-      "searchPlaceholder": "Search rooms by name or code…",
-      "backToOptions": "Back",
-      "variant": "Variant",
+    "filters": {
+      "all": "All",
+      "open": "Has seats",
+      "relaxed": "Relaxed",
+      "timed": "Timed"
+    },
+    "sort": {
+      "label": "Sort",
+      "newest": "Newest first",
+      "filling": "Filling up first"
+    },
+    "search": {
+      "placeholder": "Search by room name or code…"
+    },
+    "empty": {
+      "title": "No open rooms match your filters",
+      "description": "Try clearing filters, hit Quick Play to drop into the next opening, or create a room and invite your friends.",
+      "clear": "Clear search"
+    },
+    "card": {
+      "join": "Join",
+      "joinQueue": "Join queue",
+      "quickPlay": "Quick Play",
+      "full": "Full",
+      "relaxed": "Relaxed",
+      "timerSeconds": "{{seconds}}s timer",
+      "occupancy": "{{seated}}/4",
+      "empty": "empty",
+      "joining": "Joining \"{{name}}\"…",
       "variantBitola": "Bitola",
-      "mode": "Mode",
-      "matchMode1001": "1001 pts",
-      "players": "{{current}}/{{max}}",
-      "timerRelaxed": "Relaxed",
-      "timerPerMove": "{{seconds}}s timer",
-      "join": "Join",
-      "loading": "Loading rooms…",
-      "emptyNoRooms": "No open rooms — Create one or try Quick Play",
-      "emptyNoMatch": "No rooms match '{{query}}' —",
-      "clearSearch": "Clear search",
-      "errors": {
-        "roomFull": "Room is full — try another",
-        "alreadyInRoom": "You're already in a room",
-        "joinFailed": "Failed to join room — try again"
-      }
+      "matchMode1001": "1001 pts"
     },
-    "joinByCode": {
-      "label": "Have a room code?",
-      "placeholder": "Enter code…",
-      "join": "Join",
-      "notFound": "Room not found — check the code and try again"
+    "chat": {
+      "title": "Lobby chat",
+      "placeholder": "Message…",
+      "openLabel": "Open lobby chat",
+      "closeLabel": "Close lobby chat",
+      "sendLabel": "Send message"
     },
-    "roomLobby": {
-      "waitingForPlayers": "Waiting for players…",
-      "backToLobby": "Back to Lobby",
-      "copyLink": "Copy Link",
-      "copyLinkAriaLabel": "Copy room code {{code}}",
-      "copyLinkSuccess": "Room code copied!",
-      "copyLinkFailed": "Failed to copy — code: {{code}}",
-      "codeLabel": "Code",
-      "copied": "Copied!",
-      "leaveRoom": "Leave Room",
-      "seatEmpty": "Waiting…",
-      "seatYou": "You",
-      "seatOwner": "Owner",
-      "ownerLine": "Hosted by {{owner}}",
-      "seatedCount": "{{current}} / {{max}} seated",
-      "inRoomCount": "{{count}} in room",
-      "inRoomList": {
-        "ariaLabel": "Show players in room",
-        "title": "Players in room",
-        "empty": "No players yet",
-        "seated": "Seat {{seat}}",
-        "notSeated": "Not seated"
-      },
-      "yourSeat": "Your seat",
-      "loading": "Loading room…",
-      "notFound": "Room not found",
-      "notFoundAction": "Back to Lobby",
-      "roomClosed": "This room is closed.",
-      "returningToLobby": "Returning to lobby…",
-      "playerJoined": "{{username}} joined the room",
-      "playerLeft": "{{username}} left the room",
-      "startGame": "Start Game",
-      "startGameDisabled": "All 4 players must be seated",
-      "waitingForOwner": "Waiting for {{owner}} to start the game…",
-      "seatTaken": "That seat is already taken",
-      "seatUpdated": "Seat updated",
-      "gameStarting": "Game starting…",
-      "autoStartMessage": "Game starts automatically when all players are seated",
-      "autoStarting": "Starting game…",
-      "kickIconLabel": "Kick {{username}}",
-      "kickConfirm": {
-        "title": "Kick player?",
-        "body": "Kick {{username}} from the room?",
-        "confirm": "Kick",
-        "cancel": "Cancel"
-      },
-      "kickedToast": "You were removed from room {{name}}",
-      "swapMode": {
-        "enter": "Pick a seat to swap with"
-      },
-      "leaveSeatLabel": "Leave seat (stay in room)",
-      "promoteIconLabel": "Make {{username}} the room owner",
-      "transferConfirm": {
-        "title": "Transfer room ownership?",
-        "body": "{{username}} will become the new room owner. You will lose owner controls.",
-        "confirm": "Transfer ownership",
-        "cancel": "Cancel"
-      },
-      "errors": {
-        "seatFailed": "Failed to select seat — try again",
-        "startFailed": "Failed to start game — try again",
-        "notOwner": "Only the room owner can start the game",
-        "notOwnerAction": "Only the room owner can do that",
-        "notAllSeated": "All 4 players must be seated to start",
-        "roomStarted": "The game has already started — kick and seat-swap are no longer available.",
-        "seatNotOccupied": "Pick two seated players to swap.",
-        "kickFailed": "Failed to remove player — try again",
-        "swapFailed": "Failed to swap seats — try again",
-        "leaveSeatFailed": "Failed to leave seat — try again",
-        "leaveSeatQuickPlay": "You can't leave your seat in quick play — leave the room instead.",
-        "leaveSeatOwner": "The room owner can't leave their seat — leave the room instead.",
-        "transferFailed": "Failed to transfer ownership — try again",
-        "promoteUnseated": "The new owner must be seated.",
-        "promoteNotInRoom": "That player is no longer in the room."
-      }
+    "errors": {
+      "roomFull": "Room is full",
+      "roomNotFound": "Room not found",
+      "alreadyInRoom": "You are already in a room",
+      "joinFailed": "Could not join. Try another room.",
+      "matchmakingFailed": "Matchmaking failed. Try again."
     }
   },
-  "game": {
+  "match": {
     "seat": {
       "waiting": "Waiting…",
       "you": "You"
     },
     "chat": {
-      "title": "Match Chat",
-      "placeholder": "Message your table…",
+      "title": "Match chat",
+      "placeholder": "Message…",
       "toggleOpen": "Open match chat",
-      "toggleClose": "Close match chat"
+      "toggleClose": "Close match chat",
+      "sendLabel": "Send message"
     },
     "trump": "Trump: {{suit}}",
-    "starting": "Game is starting…",
+    "starting": "Match is starting…",
     "reconnecting": "Reconnecting to the game…",
-    "noActiveSession": "Match no longer active. Returning to lobby…",
+    "noActiveMatch": "Match no longer active. Returning to lobby…",
     "notMember": "You're not a player in this match. Returning to lobby…",
-    "roomNotFound": "Game room not found. Returning to lobby…",
+    "roomNotFound": "Match not found. Returning to lobby…",
     "leaveConfirm": "Leave the game? You may lose your progress.",
     "suits": {
       "spades": "Spades",
@@ -341,12 +536,12 @@
       "labelWithCaller": "Trump suit: {{suit}} · {{team}} — {{name}}"
     },
     "trumpReveal": {
-      "title": "{{name}} took trump",
       "unknownPlayer": "Trump taken",
       "eyebrow": "Trump taken",
       "eyebrowFreeChoice": "Trump taken · free pick",
-      "subtitle": "trump for this hand",
-      "candidateLabel": "candidate: {{rank}} of {{suit}}",
+      "isTrump": "<suit>{{suit}}</suit> is trump this hand",
+      "chose": "chose <suit>{{suit}}</suit>",
+      "candidateOnTable": "{{rank}} of {{suit}} was on the table",
       "dismiss": "Dismiss"
     },
     "dealerIndicator": {
@@ -362,7 +557,8 @@
       "roundLabel": "Round {{round}} / 2",
       "pick": "Take",
       "pass": "Pass",
-      "waiting": "Waiting for bidder…"
+      "waitingRound1": "Waiting for {{name}} to take or pass the trump",
+      "waitingRound2": "Waiting for {{name}} to pick a suit or pass"
     },
     "deal": {
       "dealing": "Dealing cards…"
@@ -376,16 +572,16 @@
       "skip": "Skip",
       "pts": "pts",
       "total": "Total",
-      "sequence": "Sequence of {{count}} — {{points}} pts",
-      "fourOfAKind": "Four of a Kind — {{points}} pts",
-      "sequenceShort": "Sequence of {{count}}",
-      "fourOfAKindShort": "Four of a Kind",
+      "tierce": "Tierce",
+      "quarte": "Quarte",
+      "quint": "Quint",
+      "carre": "Carré",
       "resolved": "Declarations",
       "teamDeclared": "{{team}} declared",
-      "headline": "{{team}} won the declarations",
+      "headlineUs": "We won the declarations",
+      "headlineThem": "They won the declarations",
       "tiebreaker": "{{player}}'s {{label}} — highest meld at the table",
       "byPlayer": "by {{name}}",
-      "awardedTo": "Awarded to {{team}}",
       "addedToHand": "Added to this hand's score",
       "dismiss": "Dismiss"
     },
@@ -454,11 +650,14 @@
       "continue": "Continue"
     },
     "capot": {
-      "title": "CAPOT!"
+      "title": "CAPOT!",
+      "eyebrow": "Every trick · {{team}} swept the hand",
+      "bonus": "+{{points}} to {{team}}"
     },
     "matchResult": {
       "title": "Match Complete",
-      "winner": "{{team}} Wins!",
+      "winnerUs": "We Won!",
+      "winnerThem": "They Won!",
       "duration": "Match Duration",
       "returnToLobby": "Return to Lobby",
       "surrenderNote": "{{username}} surrendered the match"
@@ -505,8 +704,9 @@
       "unknownProposer": "your opponent"
     },
     "pause": {
-      "title": "Game Paused",
+      "title": "Match Paused",
       "pausedBy": "{{player}} paused the game",
+      "pausedByMany": "{{player}} paused the game",
       "waitingToResume": "Waiting for players to resume…",
       "resume": "Resume",
       "pauseButton": "Pause",
@@ -543,9 +743,7 @@
       "close": "Close"
     },
     "rules": {
-      "title": "Game rules",
-      "comingSoon": "Detailed rules are on the way — check back soon.",
-      "statusHint": "Bidding, declarations, and scoring guides land here next.",
+      "title": "Match rules",
       "close": "Close"
     }
   },
@@ -562,33 +760,35 @@
       "label": "Language"
     },
     "login": {
-      "title": "Log In",
+      "title": "Log in",
       "emailLabel": "Email",
       "emailPlaceholder": "your@email.com",
       "passwordLabel": "Password",
       "passwordPlaceholder": "Enter your password",
-      "submitButton": "Log In",
+      "submitButton": "Log in",
       "submitting": "Logging in…",
-      "registerLink": "Don't have an account? Create one",
       "errors": {
         "emailRequired": "Email is required",
         "emailInvalid": "Enter a valid email address",
         "passwordRequired": "Password is required",
         "invalidCredentials": "Invalid email or password",
         "loginFailed": "Login failed. Please try again."
-      }
+      },
+      "eyebrow": "Welcome back",
+      "subtitle": "Sit back down at the table — your seat's still warm.",
+      "altPrompt": "New to Beljot?",
+      "altCta": "Create an account"
     },
     "register": {
-      "title": "Create Account",
+      "title": "Create account",
       "emailLabel": "Email",
       "emailPlaceholder": "your@email.com",
       "usernameLabel": "Username",
       "usernamePlaceholder": "Choose a username",
       "passwordLabel": "Password",
       "passwordPlaceholder": "Minimum 8 characters",
-      "submitButton": "Create Account",
+      "submitButton": "Create account",
       "submitting": "Creating…",
-      "loginLink": "Already have an account? Log in",
       "consent": {
         "prefix": "I agree to the ",
         "termsLink": "Terms of Service",
@@ -610,7 +810,94 @@
         "passwordTooLong": "Password must be at most 72 characters",
         "consentRequired": "You must accept the Terms of Service and Privacy Policy",
         "registrationFailed": "Registration failed. Please try again."
-      }
+      },
+      "eyebrow": "Pull up a chair",
+      "subtitle": "Pick a name, get a seat. Four players to a table, two to a team.",
+      "altPrompt": "Already have an account?",
+      "altCta": "Log in"
+    },
+    "footer": {
+      "credit": "Crafted with <suit>♣</suit> by <name>Emilijan Koteski</name>"
+    }
+  },
+  "landing": {
+    "nav": {
+      "login": "Log in",
+      "signup": "Create free account"
+    },
+    "hero": {
+      "eyebrow": "Beljot Online · 2 v 2 · Free to play",
+      "title1": "Sit down at",
+      "title2": "the table.",
+      "subtitle": "Beljot is the classic four-player card game — two teams, race to 1001. Find a room in seconds, or invite your usual four with a code.",
+      "cta": "Create free account",
+      "playing": "playing right now",
+      "openTables": "open rooms"
+    },
+    "how": {
+      "eyebrow": "Three steps to the first trick",
+      "title": "You're dealt in before the kettle boils.",
+      "s1t": "Make a free account",
+      "s1b": "Pick a name, no downloads. You're in the lobby in under a minute.",
+      "s2t": "Take a seat",
+      "s2b": "Hit Quick Play and we'll matchmake your four, or open a custom room and share the code with friends.",
+      "s3t": "Call trump & play",
+      "s3b": "Bid for the trump suit, win tricks alongside your partner, and race your team to 1001 points."
+    },
+    "feat": {
+      "f1tag": "The lobby · live",
+      "f1title": "Watch the rooms fill in real time",
+      "f1body": "Every open room, every seat, updated as it happens. Filter by timer style or points, search by code, or just hit Quick Play and let us seat you.",
+      "f2tag": "Teams · gold vs silver",
+      "f2title": "It's a partnership, not a free-for-all",
+      "f2body": "Two against two, the way Beljot is built. Sit across from your partner, read the declarations, and play the long game to 1001. Built-in chat and emotes keep the table talking.",
+      "f3tag": "Profile · match history",
+      "f3title": "Every hand counts toward your record",
+      "f3body": "Track your games played, win rate and streak, with a full match history hand by hand. See who you win alongside and how tonight stacked up."
+    },
+    "room": {
+      "join": "Join",
+      "empty": "empty",
+      "r1title": "Saturday night long game",
+      "r1meta": "Bitola · 1001 pts · 30s",
+      "r1ago": "4m ago",
+      "r2title": "Quick 501 — no timer",
+      "r2meta": "Croatia · 501 pts · relaxed",
+      "r2ago": "just now"
+    },
+    "vig": {
+      "trump": "Trump",
+      "opponent": "opponent",
+      "partner": "partner"
+    },
+    "prof": {
+      "member": "Member since 2024",
+      "games": "matches",
+      "winrate": "win rate",
+      "wins": "wins",
+      "recent": "Recent matches",
+      "won": "Won",
+      "lost": "Lost",
+      "with": "with"
+    },
+    "cta": {
+      "eyebrow": "The table's set",
+      "title": "Your four are waiting.",
+      "body": "Free forever. No download. Deal the first hand tonight.",
+      "cta": "Create free account"
+    },
+    "foot": {
+      "rules": "Rules",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "contact": "Contact",
+      "copyright": "© 2026 Beljot.online"
+    },
+    "contact": {
+      "title": "Contact",
+      "lead": "Beljot is built by Emilijan Koteski. Questions, bug reports and feedback are welcome.",
+      "linkedin": "LinkedIn",
+      "disclaimer": "This is a beta build for testing purposes — not a finished production product."
     }
   }
 }

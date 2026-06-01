@@ -2,6 +2,14 @@ package match
 
 import "time"
 
+// PlayerSeatInfo holds the player info needed for live-match initialization.
+// Defined here (not in room) to avoid an import cycle: match←→room via auth←user.
+type PlayerSeatInfo struct {
+	UserID   uint
+	Username string
+	Seat     int
+}
+
 // Match represents a completed game match record persisted to the database.
 type Match struct {
 	ID            uint         `gorm:"primaryKey" json:"id"`

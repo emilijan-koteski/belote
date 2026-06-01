@@ -2,7 +2,7 @@ import "@/shared/i18n/i18n";
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BrowserRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FetchError } from "@/shared/api/axiosClient";
@@ -10,6 +10,7 @@ import { i18n } from "@/shared/i18n/i18n";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { QueryWrapper } from "@/test-utils";
 
+import { AuthLayout } from "./AuthLayout";
 import { LoginPage } from "./LoginPage";
 
 const mockNavigate = vi.fn();
@@ -41,9 +42,13 @@ import { toast } from "sonner";
 function renderLoginPage() {
   return render(
     <QueryWrapper>
-      <BrowserRouter>
-        <LoginPage />
-      </BrowserRouter>
+      <MemoryRouter initialEntries={["/login"]}>
+        <Routes>
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
     </QueryWrapper>,
   );
 }
@@ -65,7 +70,7 @@ describe("LoginPage", () => {
     expect(screen.getByTestId("email-input")).toBeInTheDocument();
     expect(screen.getByTestId("password-input")).toBeInTheDocument();
     expect(screen.getByTestId("submit-button")).toBeInTheDocument();
-    expect(screen.getByTestId("login-title")).toHaveTextContent("Log In");
+    expect(screen.getByTestId("login-title")).toHaveTextContent("Log in");
   });
 
   it("shows validation errors on blur for empty fields", async () => {

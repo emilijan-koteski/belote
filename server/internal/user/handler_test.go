@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"sort"
+	sortpkg "sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -35,6 +35,15 @@ type mockMatchRepo struct {
 	statsErr        error
 	getStatsCalls   int
 	lastStatsUserID uint
+
+	// Career-path overrides drive the GetCareer handler without full SQL.
+	careerAgg      match.CareerAggregates
+	careerErr      error
+	partners       []match.PartnerAggregate
+	partnersErr    error
+	rivals         []match.RivalAggregate
+	rivalsErr      error
+	getCareerCalls int
 }
 
 func newMockMatchRepo() *mockMatchRepo {
@@ -45,24 +54,55 @@ func (r *mockMatchRepo) Create(*match.Match) error { return nil }
 
 func (r *mockMatchRepo) CreateWithHands(*match.Match, []match.HandResult) error { return nil }
 
-func (r *mockMatchRepo) GetMatchesForUser(userID uint, limit, offset int) ([]match.Match, int64, error) {
+func (r *mockMatchRepo) GetMatchesForUser(userID uint, limit, offset int, outcome, sort string) ([]match.Match, int64, error) {
 	if r.err != nil {
 		return nil, 0, r.err
+	}
+	viewerWon := func(m match.Match) bool {
+		seats := [4]uint{m.Player1ID, m.Player2ID, m.Player3ID, m.Player4ID}
+		for i, id := range seats {
+			if id == userID {
+				return m.WinnerTeam == i%2
+			}
+		}
+		return false
 	}
 	var filtered []match.Match
 	for _, m := range r.matches {
 		if m.Status != "completed" && m.Status != "abandoned" {
 			continue
 		}
-		if m.Player1ID == userID || m.Player2ID == userID || m.Player3ID == userID || m.Player4ID == userID {
-			filtered = append(filtered, m)
+		if m.Player1ID != userID && m.Player2ID != userID && m.Player3ID != userID && m.Player4ID != userID {
+			continue
 		}
+		// Viewer-relative outcome filter mirroring the production SQL.
+		switch outcome {
+		case "win":
+			if m.Status != "completed" || !viewerWon(m) {
+				continue
+			}
+		case "loss":
+			if m.Status != "completed" || viewerWon(m) {
+				continue
+			}
+		case "abandoned":
+			if m.Status != "abandoned" {
+				continue
+			}
+		}
+		filtered = append(filtered, m)
 	}
-	// Mirror the production query's ORDER BY completed_at DESC, id DESC so
-	// tests assert behaviour against the real ordering contract.
-	sort.SliceStable(filtered, func(i, j int) bool {
+	// Mirror the production query's ORDER BY completed_at <dir>, id <dir>.
+	asc := sort == "old"
+	sortpkg.SliceStable(filtered, func(i, j int) bool {
 		if !filtered[i].CompletedAt.Equal(filtered[j].CompletedAt) {
+			if asc {
+				return filtered[i].CompletedAt.Before(filtered[j].CompletedAt)
+			}
 			return filtered[i].CompletedAt.After(filtered[j].CompletedAt)
+		}
+		if asc {
+			return filtered[i].ID < filtered[j].ID
 		}
 		return filtered[i].ID > filtered[j].ID
 	})
@@ -75,6 +115,34 @@ func (r *mockMatchRepo) GetMatchesForUser(userID uint, limit, offset int) ([]mat
 		end = len(filtered)
 	}
 	return filtered[offset:end], total, nil
+}
+
+func (r *mockMatchRepo) GetCareerAggregatesForUser(userID uint) (match.CareerAggregates, error) {
+	r.getCareerCalls++
+	if r.careerErr != nil {
+		return match.CareerAggregates{}, r.careerErr
+	}
+	return r.careerAgg, nil
+}
+
+func (r *mockMatchRepo) GetTopPartnersForUser(userID uint, limit int) ([]match.PartnerAggregate, error) {
+	if r.partnersErr != nil {
+		return nil, r.partnersErr
+	}
+	if limit < len(r.partners) {
+		return r.partners[:limit], nil
+	}
+	return r.partners, nil
+}
+
+func (r *mockMatchRepo) GetTopRivalsForUser(userID uint, limit int) ([]match.RivalAggregate, error) {
+	if r.rivalsErr != nil {
+		return nil, r.rivalsErr
+	}
+	if limit < len(r.rivals) {
+		return r.rivals[:limit], nil
+	}
+	return r.rivals, nil
 }
 
 // GetStatsForUser returns the test-controlled stats override if set, else
@@ -246,10 +314,21 @@ func setupUserHandlerWithMatches() (*mockUserRepo, *mockMatchRepo, *echo.Echo) {
 
 	api := e.Group("/api/v1", auth.AuthMiddleware(testJWTSecret))
 	api.GET("/users/:id/profile", handler.GetProfile)
+	api.GET("/users/:id/career", handler.GetCareer)
 	api.GET("/users/:id/matches", handler.ListMatches)
 	api.PATCH("/users/:id/preferences", handler.UpdatePreferences)
 
 	return repo, matchRepo, e
+}
+
+func doGetCareer(e *echo.Echo, userID string, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/"+userID+"/career", nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
 }
 
 func doGetProfile(e *echo.Echo, userID string, token string) *httptest.ResponseRecorder {
@@ -922,4 +1001,193 @@ func TestGetProfile_Forbidden_WraparoundID(t *testing.T) {
 	rec := doGetProfile(e, "4294967297", token)
 	assert.Equal(t, http.StatusForbidden, rec.Code,
 		"wraparound ID must not bypass auth check (D86)")
+}
+
+// --- ListMatches outcome filter + sort ---
+
+func TestListMatches_OutcomeFilter(t *testing.T) {
+	repo, matchRepo, e := setupUserHandlerWithMatches()
+	viewer := repo.addUser("viewer", "v@example.com", "en")
+	_ = repo.addUser("p2", "p2@example.com", "en")
+	_ = repo.addUser("p3", "p3@example.com", "en")
+	_ = repo.addUser("p4", "p4@example.com", "en")
+
+	seats := [4]uint{viewer.ID, 2, 3, 4} // viewer seat 0 → team A
+	base := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	ab := uint(2)
+	matchRepo.matches = []match.Match{
+		seedMatch(1, base, base.Add(20*time.Minute), seats, "completed", 0, nil, "bitola", "1001", 1010, 600, nil),                                // win
+		seedMatch(2, base.Add(-1*time.Hour), base.Add(-1*time.Hour+20*time.Minute), seats, "completed", 1, nil, "bitola", "1001", 700, 1010, nil), // loss
+		seedMatch(3, base.Add(-2*time.Hour), base.Add(-2*time.Hour+5*time.Minute), seats, "abandoned", 0, &ab, "bitola", "1001", 300, 200, nil),   // abandoned
+	}
+
+	token, err := auth.GenerateAccessToken(viewer.ID, testJWTSecret)
+	require.NoError(t, err)
+
+	cases := []struct {
+		outcome string
+		want    int
+		expect  string
+	}{
+		{"win", 1, "win"},
+		{"loss", 1, "loss"},
+		{"abandoned", 1, "abandoned"},
+		{"all", 3, ""},
+		{"", 3, ""},
+	}
+	for _, tc := range cases {
+		t.Run("outcome="+tc.outcome, func(t *testing.T) {
+			rec := doListMatches(e, strconvUint(viewer.ID), "outcome="+tc.outcome, token)
+			require.Equal(t, http.StatusOK, rec.Code)
+			resp := decodeMatchesResponse(t, rec.Body.Bytes())
+			require.Len(t, resp.Items, tc.want)
+			assert.Equal(t, int64(tc.want), resp.Total)
+			if tc.expect != "" {
+				assert.Equal(t, tc.expect, resp.Items[0].Outcome)
+			}
+		})
+	}
+}
+
+func TestListMatches_SortOrder(t *testing.T) {
+	repo, matchRepo, e := setupUserHandlerWithMatches()
+	viewer := repo.addUser("viewer", "v@example.com", "en")
+	_ = repo.addUser("p2", "p2@example.com", "en")
+	_ = repo.addUser("p3", "p3@example.com", "en")
+	_ = repo.addUser("p4", "p4@example.com", "en")
+
+	seats := [4]uint{viewer.ID, 2, 3, 4}
+	base := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	matchRepo.matches = []match.Match{
+		seedMatch(10, base, base.Add(5*time.Minute), seats, "completed", 0, nil, "bitola", "1001", 1001, 500, nil),
+		seedMatch(11, base.Add(1*time.Hour), base.Add(1*time.Hour+5*time.Minute), seats, "completed", 0, nil, "bitola", "1001", 1001, 500, nil),
+		seedMatch(12, base.Add(2*time.Hour), base.Add(2*time.Hour+5*time.Minute), seats, "completed", 0, nil, "bitola", "1001", 1001, 500, nil),
+	}
+
+	token, err := auth.GenerateAccessToken(viewer.ID, testJWTSecret)
+	require.NoError(t, err)
+
+	rec := doListMatches(e, strconvUint(viewer.ID), "sort=old", token)
+	require.Equal(t, http.StatusOK, rec.Code)
+	resp := decodeMatchesResponse(t, rec.Body.Bytes())
+	require.Len(t, resp.Items, 3)
+	assert.Equal(t, uint(10), resp.Items[0].ID, "oldest first")
+	assert.Equal(t, uint(12), resp.Items[2].ID)
+}
+
+func TestListMatches_BadRequest_InvalidOutcomeOrSort(t *testing.T) {
+	repo, _, e := setupUserHandlerWithMatches()
+	u := repo.addUser("alice", "alice@example.com", "en")
+	token, err := auth.GenerateAccessToken(u.ID, testJWTSecret)
+	require.NoError(t, err)
+
+	for _, q := range []string{"outcome=bogus", "sort=sideways"} {
+		rec := doListMatches(e, strconvUint(u.ID), q, token)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, "query %q should be 400", q)
+	}
+}
+
+// --- GetCareer ---
+
+func TestGetCareer_Success(t *testing.T) {
+	repo, matchRepo, e := setupUserHandlerWithMatches()
+	viewer := repo.addUser("viewer", "v@example.com", "en")
+	mate := repo.addUser("mate", "m@example.com", "en")
+	rival := repo.addUser("rival", "r@example.com", "en")
+
+	matchRepo.careerAgg = match.CareerAggregates{
+		Capots:          3,
+		AvgMatchSeconds: 1500,
+		HasBestHand:     true,
+		BestHandPoints:  252,
+		BestHandNumber:  4,
+		BestHandAt:      time.Date(2026, 5, 1, 18, 0, 0, 0, time.UTC),
+		StreakKind:      "win",
+		StreakLength:    5,
+	}
+	matchRepo.partners = []match.PartnerAggregate{{UserID: mate.ID, Played: 8, Wins: 6}}
+	matchRepo.rivals = []match.RivalAggregate{{UserID: rival.ID, Wins: 4, Losses: 2}}
+
+	token, err := auth.GenerateAccessToken(viewer.ID, testJWTSecret)
+	require.NoError(t, err)
+
+	rec := doGetCareer(e, strconvUint(viewer.ID), token)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	var data user.CareerResponse
+	require.NoError(t, json.Unmarshal(resp["data"], &data))
+
+	assert.Equal(t, 3, data.Capots)
+	assert.Equal(t, 1500, data.AvgMatchSeconds)
+	assert.Equal(t, "win", data.Streak.Kind)
+	assert.Equal(t, 5, data.Streak.Length)
+	require.NotNil(t, data.BestHand)
+	assert.Equal(t, 252, data.BestHand.Points)
+	require.Len(t, data.TopPartners, 1)
+	assert.Equal(t, "mate", data.TopPartners[0].Username)
+	assert.Equal(t, 8, data.TopPartners[0].Played)
+	require.Len(t, data.TopRivals, 1)
+	assert.Equal(t, "rival", data.TopRivals[0].Username)
+	assert.Equal(t, 4, data.TopRivals[0].Wins)
+
+	// No PII leak in the career response either.
+	body := rec.Body.String()
+	assert.NotContains(t, body, "@example.com")
+	assert.NotContains(t, body, "passwordHash")
+}
+
+func TestGetCareer_EmptyOmitsBestHand(t *testing.T) {
+	repo, matchRepo, e := setupUserHandlerWithMatches()
+	viewer := repo.addUser("viewer", "v@example.com", "en")
+	matchRepo.careerAgg = match.CareerAggregates{StreakKind: "none"}
+
+	token, err := auth.GenerateAccessToken(viewer.ID, testJWTSecret)
+	require.NoError(t, err)
+
+	rec := doGetCareer(e, strconvUint(viewer.ID), token)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	var data user.CareerResponse
+	require.NoError(t, json.Unmarshal(resp["data"], &data))
+
+	assert.Nil(t, data.BestHand, "bestHand omitted when there is none")
+	assert.Equal(t, "none", data.Streak.Kind)
+	assert.NotNil(t, data.TopPartners, "must be an empty slice, not null")
+	assert.NotNil(t, data.TopRivals, "must be an empty slice, not null")
+}
+
+func TestGetCareer_AuthFailures_DoNotQuery(t *testing.T) {
+	t.Run("missing token", func(t *testing.T) {
+		_, matchRepo, e := setupUserHandlerWithMatches()
+		rec := doGetCareer(e, "1", "")
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+		assert.Zero(t, matchRepo.getCareerCalls)
+	})
+
+	t.Run("foreign id", func(t *testing.T) {
+		repo, matchRepo, e := setupUserHandlerWithMatches()
+		repo.addUser("alice", "alice@example.com", "en")
+		repo.addUser("bob", "bob@example.com", "en")
+		token, err := auth.GenerateAccessToken(1, testJWTSecret)
+		require.NoError(t, err)
+		rec := doGetCareer(e, "2", token)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Zero(t, matchRepo.getCareerCalls)
+	})
+}
+
+func TestGetCareer_DBError(t *testing.T) {
+	repo, matchRepo, e := setupUserHandlerWithMatches()
+	u := repo.addUser("alice", "alice@example.com", "en")
+	matchRepo.careerErr = errors.New("db boom")
+
+	token, err := auth.GenerateAccessToken(u.ID, testJWTSecret)
+	require.NoError(t, err)
+
+	rec := doGetCareer(e, strconvUint(u.ID), token)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }

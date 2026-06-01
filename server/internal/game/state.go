@@ -23,10 +23,10 @@ type TrickCard struct {
 	PlayerSeat int  `json:"playerSeat"`
 }
 
-// HandResult captures the scoring breakdown for a completed hand.
+// HandScore captures the scoring breakdown for a completed hand.
 // Populated by scoreHand() before startNewHand() or PhaseMatchEnd,
-// so the session manager can broadcast the full breakdown to clients.
-type HandResult struct {
+// so the match manager can broadcast the full breakdown to clients.
+type HandScore struct {
 	TeamACardPoints int  `json:"teamACardPoints"` // Trick-taking card points (Team A) before bonus
 	TeamBCardPoints int  `json:"teamBCardPoints"` // Trick-taking card points (Team B) before bonus
 	TeamADeclPoints int  `json:"teamADeclPoints"` // Declaration points (Team A)
@@ -88,7 +88,7 @@ type GameState struct {
 	PendingBelotSeat  *int        `json:"pendingBelotSeat"`
 	BelotAnnounced    bool        `json:"belotAnnounced"`
 	WinnerTeam        *int        `json:"winnerTeam"`
-	LastHandResult    *HandResult `json:"lastHandResult"`
+	LastHandResult    *HandScore `json:"lastHandResult"`
 
 	// Timer state
 	ActivePlayerSeat int        `json:"activePlayerSeat"`

@@ -4,8 +4,8 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAuthStore } from "@/shared/stores/authStore";
-import { useGameStore } from "@/shared/stores/gameStore";
-import type { GameState } from "@/shared/types/gameTypes";
+import { useMatchStore } from "@/shared/stores/matchStore";
+import type { MatchState } from "@/shared/types/matchTypes";
 
 import { useReconnectionRedirect } from "./useReconnectionRedirect";
 
@@ -29,7 +29,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
 }
 
-const minimalGameState: GameState = {
+const minimalMatchState: MatchState = {
   id: 1,
   roomId: 42,
   variant: "bitola",
@@ -119,20 +119,20 @@ describe("useReconnectionRedirect", () => {
   beforeEach(() => {
     mockNavigate.mockClear();
     currentPathname = "/lobby";
-    useGameStore.setState({ gameState: null, roomId: null });
+    useMatchStore.setState({ matchState: null, roomId: null });
   });
 
   it("redirects to game page when game state arrives while on lobby", () => {
-    useGameStore.setState({ gameState: minimalGameState, roomId: 42 });
+    useMatchStore.setState({ matchState: minimalMatchState, roomId: 42 });
 
     renderHook(() => useReconnectionRedirect(), { wrapper });
 
-    expect(mockNavigate).toHaveBeenCalledWith("/game/42", { replace: true });
+    expect(mockNavigate).toHaveBeenCalledWith("/match/42", { replace: true });
   });
 
   it("does not redirect when already on game page", () => {
-    currentPathname = "/game/42";
-    useGameStore.setState({ gameState: minimalGameState, roomId: 42 });
+    currentPathname = "/match/42";
+    useMatchStore.setState({ matchState: minimalMatchState, roomId: 42 });
 
     renderHook(() => useReconnectionRedirect(), { wrapper });
 
@@ -146,8 +146,8 @@ describe("useReconnectionRedirect", () => {
   });
 
   it("does not redirect when game phase is match_end", () => {
-    const endedState = { ...minimalGameState, phase: "match_end" as const };
-    useGameStore.setState({ gameState: endedState, roomId: 42 });
+    const endedState = { ...minimalMatchState, phase: "match_end" as const };
+    useMatchStore.setState({ matchState: endedState, roomId: 42 });
 
     renderHook(() => useReconnectionRedirect(), { wrapper });
 
@@ -155,13 +155,13 @@ describe("useReconnectionRedirect", () => {
   });
 
   // Story 8.5-1 AC6 (D66): regression coverage. Before the fix, a 401 on a
-  // finished match → refresh-fail → authStore.logout left gameStore.gameState
+  // finished match → refresh-fail → authStore.logout left matchStore.matchState
   // populated, and on the next login this hook would redirect the freshly
   // re-logged-in user to the (no-longer-existing) /game/{roomId}. The fix is
-  // store-level: authStore.logout() now wipes gameStore. After logout, this
+  // store-level: authStore.logout() now wipes matchStore. After logout, this
   // hook MUST observe a clean store and NOT navigate.
   it("does not redirect after logout (D66 regression)", () => {
-    useGameStore.setState({ gameState: minimalGameState, roomId: 42 });
+    useMatchStore.setState({ matchState: minimalMatchState, roomId: 42 });
     useAuthStore.setState({ token: "expired", user: null, isLoading: false });
 
     useAuthStore.getState().logout();
@@ -169,6 +169,6 @@ describe("useReconnectionRedirect", () => {
     renderHook(() => useReconnectionRedirect(), { wrapper });
 
     expect(mockNavigate).not.toHaveBeenCalled();
-    expect(useGameStore.getState().gameState).toBeNull();
+    expect(useMatchStore.getState().matchState).toBeNull();
   });
 });

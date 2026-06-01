@@ -8,14 +8,16 @@ import {
   kickPlayer,
   leaveRoom,
   leaveSeat,
+  quickJoin,
   quickPlay,
   selectSeat,
-  startGame,
+  startMatch,
   swapSeats,
   transferOwnership,
 } from "@/shared/api/rooms";
 import type {
   CreateRoomRequest,
+  QuickPlayResponse,
   Room,
   RoomPlayer,
   SelectSeatResponse,
@@ -69,15 +71,25 @@ export function useTransferOwnershipMutation() {
   });
 }
 
-export function useStartGameMutation() {
+export function useStartMatchMutation() {
   return useMutation({
-    mutationFn: (roomId: number) => startGame(roomId),
+    mutationFn: (roomId: number) => startMatch(roomId),
   });
 }
 
 export function useQuickPlayMutation() {
   return useMutation({
     mutationFn: (signal?: AbortSignal) => quickPlay(signal),
+  });
+}
+
+export function useQuickJoinMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<QuickPlayResponse, Error, number>({
+    mutationFn: (id: number) => quickJoin(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.rooms.all });
+    },
   });
 }
 

@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
+import { AltLink, AuthCard, Checkbox, Field } from "@/features/auth/components/AuthCard";
 import { FetchError } from "@/shared/api/axiosClient";
-import { AuthLanguageSelector } from "@/shared/components/AuthLanguageSelector";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { useRegisterMutation } from "@/shared/hooks/mutations/useAuth";
@@ -13,6 +13,7 @@ import { normalizeLanguage } from "@/shared/i18n/i18n";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+const USERNAME_MAX = 20;
 
 interface FieldErrors {
   email?: string;
@@ -42,7 +43,7 @@ export function RegisterPage() {
   function validateUsername(value: string): string | undefined {
     if (!value) return t("auth.register.errors.usernameRequired");
     if (value.length < 3) return t("auth.register.errors.usernameTooShort");
-    if (value.length > 20) return t("auth.register.errors.usernameTooLong");
+    if (value.length > USERNAME_MAX) return t("auth.register.errors.usernameTooLong");
     if (!USERNAME_REGEX.test(value)) return t("auth.register.errors.usernameInvalidChars");
     return undefined;
   }
@@ -88,9 +89,9 @@ export function RegisterPage() {
         email,
         username,
         password,
-        // Normalize so a region-tagged i18n.language ("en-US") doesn't
-        // get silently downgraded by the server to "en" — send the short
-        // code we already display.
+        // Normalize so a region-tagged i18n.language ("en-US") doesn't get
+        // silently downgraded by the server to "en" — send the short code we
+        // already display.
         languagePreference: normalizeLanguage(i18n.language) ?? "en",
       });
       navigate("/lobby");
@@ -122,143 +123,145 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background">
-      <div className="absolute top-4 right-4">
-        <AuthLanguageSelector />
-      </div>
-      <div className="w-full max-w-100 rounded-xl bg-surface p-8">
-        <h1
-          className="mb-6 text-center font-display text-2xl font-bold text-text-primary"
-          data-testid="register-title"
+    <AuthCard
+      eyebrow={t("auth.register.eyebrow")}
+      title={t("auth.register.title")}
+      subtitle={t("auth.register.subtitle")}
+      footer={
+        <AltLink
+          prompt={t("auth.register.altPrompt")}
+          cta={t("auth.register.altCta")}
+          to="/login"
+          testId="login-link"
+        />
+      }
+    >
+      <h1 data-testid="register-title" className="sr-only">
+        {t("auth.register.title")}
+      </h1>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3.5" data-testid="register-form">
+        <Field
+          label={t("auth.register.emailLabel")}
+          htmlFor="email"
+          error={errors.email}
+          errorTestId="email-error"
         >
-          {t("auth.register.title")}
-        </h1>
+          <Input
+            id="email"
+            type="email"
+            className="h-10.5"
+            placeholder={t("auth.register.emailPlaceholder")}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => handleBlur("email")}
+            aria-invalid={!!errors.email}
+            data-testid="email-input"
+          />
+        </Field>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" data-testid="register-form">
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm text-text-secondary">
-              {t("auth.register.emailLabel")}
-            </label>
+        <Field
+          label={t("auth.register.usernameLabel")}
+          htmlFor="username"
+          hint={
+            <span className="tabular-nums">
+              {username.length}/{USERNAME_MAX}
+            </span>
+          }
+          error={errors.username}
+          errorTestId="username-error"
+        >
+          <Input
+            id="username"
+            type="text"
+            className="h-10.5"
+            placeholder={t("auth.register.usernamePlaceholder")}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            onBlur={() => handleBlur("username")}
+            aria-invalid={!!errors.username}
+            data-testid="username-input"
+          />
+        </Field>
+
+        <Field
+          label={t("auth.register.passwordLabel")}
+          htmlFor="password"
+          hint={<span>min 8</span>}
+          error={errors.password}
+          errorTestId="password-error"
+        >
+          <div className="relative">
             <Input
-              id="email"
-              type="email"
-              placeholder={t("auth.register.emailPlaceholder")}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => handleBlur("email")}
-              aria-invalid={!!errors.email}
-              data-testid="email-input"
+              id="password"
+              type={showPassword ? "text" : "password"}
+              className="h-10.5 pr-10"
+              placeholder={t("auth.register.passwordPlaceholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onBlur={() => handleBlur("password")}
+              aria-invalid={!!errors.password}
+              data-testid="password-input"
             />
-            {errors.email && (
-              <p className="mt-1 text-xs text-destructive" data-testid="email-error">
-                {errors.email}
-              </p>
-            )}
+            <button
+              type="button"
+              tabIndex={-1}
+              className="text-ink-mute hover:text-ink absolute top-1/2 right-2.5 -translate-y-1/2 p-1.5"
+              onClick={() => setShowPassword(!showPassword)}
+              data-testid="password-toggle"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
           </div>
+        </Field>
 
-          <div>
-            <label htmlFor="username" className="mb-1 block text-sm text-text-secondary">
-              {t("auth.register.usernameLabel")}
-            </label>
-            <Input
-              id="username"
-              type="text"
-              placeholder={t("auth.register.usernamePlaceholder")}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              onBlur={() => handleBlur("username")}
-              aria-invalid={!!errors.username}
-              data-testid="username-input"
-            />
-            {errors.username && (
-              <p className="mt-1 text-xs text-destructive" data-testid="username-error">
-                {errors.username}
-              </p>
-            )}
-          </div>
+        <div className="mt-1">
+          <Checkbox
+            checked={acceptedTerms}
+            onChange={(next) => {
+              setAcceptedTerms(next);
+              if (next) {
+                setErrors((prev) => ({ ...prev, consent: undefined }));
+              }
+            }}
+            invalid={!!errors.consent}
+            testId="consent-checkbox"
+          >
+            {t("auth.register.consent.prefix")}
+            <Link
+              to="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent border-accent/30 border-b hover:underline"
+              data-testid="terms-link"
+            >
+              {t("auth.register.consent.termsLink")}
+            </Link>
+            {t("auth.register.consent.and")}
+            <Link
+              to="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent border-accent/30 border-b hover:underline"
+              data-testid="privacy-link"
+            >
+              {t("auth.register.consent.privacyLink")}
+            </Link>
+            {t("auth.register.consent.suffix")}
+          </Checkbox>
+          {errors.consent && (
+            <p className="text-destructive mt-1.5 text-xs font-medium" data-testid="consent-error">
+              {errors.consent}
+            </p>
+          )}
+        </div>
 
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm text-text-secondary">
-              {t("auth.register.passwordLabel")}
-            </label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder={t("auth.register.passwordPlaceholder")}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onBlur={() => handleBlur("password")}
-                aria-invalid={!!errors.password}
-                data-testid="password-input"
-              />
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
-                onClick={() => setShowPassword(!showPassword)}
-                data-testid="password-toggle"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </div>
-            {errors.password && (
-              <p className="mt-1 text-xs text-destructive" data-testid="password-error">
-                {errors.password}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="flex cursor-pointer items-start gap-2 text-sm text-text-secondary">
-              <input
-                type="checkbox"
-                className="mt-0.5 size-4 cursor-pointer accent-primary"
-                checked={acceptedTerms}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setAcceptedTerms(checked);
-                  if (checked) {
-                    setErrors((prev) => ({ ...prev, consent: undefined }));
-                  }
-                }}
-                aria-invalid={!!errors.consent}
-                data-testid="consent-checkbox"
-              />
-              <span>
-                {t("auth.register.consent.prefix")}
-                <Link
-                  to="/terms"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                  data-testid="terms-link"
-                >
-                  {t("auth.register.consent.termsLink")}
-                </Link>
-                {t("auth.register.consent.and")}
-                <Link
-                  to="/privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                  data-testid="privacy-link"
-                >
-                  {t("auth.register.consent.privacyLink")}
-                </Link>
-                {t("auth.register.consent.suffix")}
-              </span>
-            </label>
-            {errors.consent && (
-              <p className="mt-1 text-xs text-destructive" data-testid="consent-error">
-                {errors.consent}
-              </p>
-            )}
-          </div>
-
+        <div className="mt-2">
           <Button
             type="submit"
-            className="mt-2 h-10 w-full bg-primary text-primary-foreground font-semibold hover:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed"
+            size="cta"
+            className="w-full"
             disabled={registerMutation.isPending || !acceptedTerms}
             data-testid="submit-button"
           >
@@ -266,18 +269,8 @@ export function RegisterPage() {
               ? t("auth.register.submitting")
               : t("auth.register.submitButton")}
           </Button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-text-secondary">
-          <Link to="/login" className="text-primary hover:underline" data-testid="login-link">
-            {t("auth.register.loginLink")}
-          </Link>
-        </p>
-      </div>
-
-      <p className="absolute bottom-4 left-0 right-0 text-center text-xs text-text-secondary">
-        Crafted with 💚 by Emilijan Koteski
-      </p>
-    </div>
+        </div>
+      </form>
+    </AuthCard>
   );
 }

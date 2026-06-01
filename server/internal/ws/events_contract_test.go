@@ -120,9 +120,9 @@ func TestEventsJSONContract(t *testing.T) {
 		goldenFile string
 	}{
 		{
-			name:       "EventGameState",
+			name:       "EventMatchState",
 			sample:     gameStateSample(),
-			goldenFile: "event_game_state.json",
+			goldenFile: "event_match_state.json",
 		},
 		{
 			name: "CardPlayedPayload",
@@ -193,20 +193,20 @@ func TestEventsJSONContract(t *testing.T) {
 			goldenFile: "belot_announced.json",
 		},
 		{
-			name: "GamePausedPayload",
-			sample: ws.GamePausedPayload{
+			name: "MatchPausedPayload",
+			sample: ws.MatchPausedPayload{
 				PausedBy:      1,
 				PausedPlayers: [4]bool{false, true, false, false},
 			},
-			goldenFile: "game_paused.json",
+			goldenFile: "match_paused.json",
 		},
 		{
-			name: "GameResumedPayload",
-			sample: ws.GameResumedPayload{
+			name: "MatchResumedPayload",
+			sample: ws.MatchResumedPayload{
 				ResumedBy:     1,
 				OwnerOverride: false,
 			},
-			goldenFile: "game_resumed.json",
+			goldenFile: "match_resumed.json",
 		},
 		{
 			name: "AutoActionPayload",

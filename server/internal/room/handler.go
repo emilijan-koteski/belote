@@ -10,11 +10,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
 	"github.com/emilijan/beljot/server/internal/apperr"
 	"github.com/emilijan/beljot/server/internal/auth"
+	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/ws"
 )
 
@@ -22,7 +24,7 @@ var (
 	validVariants    = map[string]bool{"bitola": true}
 	validMatchModes  = map[string]bool{"1001": true}
 	validTimerStyles = map[string]bool{"relaxed": true, "per-move": true}
-	validStatuses    = map[string]bool{"waiting": true, "playing": true, "finished": true, "completed": true}
+	validStatuses    = map[string]bool{"waiting": true, "playing": true, "completed": true}
 )
 
 const (
@@ -40,19 +42,12 @@ type CreateRoomRequest struct {
 	ReconnectWindowSec   *int   `json:"reconnectWindowSec"`
 }
 
-// GameStarter is the interface the room handler uses to start a game session.
-type GameStarter interface {
-	StartGame(roomID uint, variant string, matchMode string, players [4]PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint, reconnectWindowSec int) error
+// MatchStarter is the interface the room handler uses to start a live match.
+type MatchStarter interface {
+	StartMatch(roomID uint, variant string, matchMode string, players [4]match.PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint, reconnectWindowSec int) error
 }
 
-// PlayerSeatInfo holds the player info needed for game session initialization.
-type PlayerSeatInfo struct {
-	UserID   uint
-	Username string
-	Seat     int
-}
-
-// RoomStatusAdapter implements session.RoomStatusUpdater using the room repository.
+// RoomStatusAdapter implements match.RoomStatusUpdater using the room repository.
 type RoomStatusAdapter struct {
 	Repo RoomRepository
 }
@@ -69,13 +64,13 @@ type Broadcaster interface {
 }
 
 type RoomHandler struct {
-	repo        RoomRepository
-	gameStarter GameStarter
-	hub         Broadcaster
+	repo         RoomRepository
+	matchStarter MatchStarter
+	hub          Broadcaster
 }
 
-func NewRoomHandler(repo RoomRepository, gameStarter GameStarter, hub Broadcaster) *RoomHandler {
-	return &RoomHandler{repo: repo, gameStarter: gameStarter, hub: hub}
+func NewRoomHandler(repo RoomRepository, matchStarter MatchStarter, hub Broadcaster) *RoomHandler {
+	return &RoomHandler{repo: repo, matchStarter: matchStarter, hub: hub}
 }
 
 // broadcastToRoom sends a WebSocket message to all players in a room.
@@ -132,13 +127,37 @@ func (h *RoomHandler) broadcastToAll(msgType string, payload interface{}) {
 	h.hub.BroadcastAll(msg)
 }
 
-// broadcastRoomUpdated sends a system:room_updated event to all connected clients.
-func (h *RoomHandler) broadcastRoomUpdated(r *Room) {
-	h.broadcastToAll(ws.SystemRoomUpdated, map[string]interface{}{
+// roomLifecyclePayload builds the WS payload shared by `system:room_created`
+// and `system:room_updated`. Ensures `ownerUsername` is hydrated so the lobby
+// grid can render host avatars without an extra round-trip per row, embeds
+// `players` so seat chips render correctly the instant the card appears, and
+// always carries `createdAt`/`updatedAt` so the client's <RelativeTime>
+// component has a valid ISO to format.
+func (h *RoomHandler) roomLifecyclePayload(r *Room) map[string]any {
+	if r.OwnerUsername == "" {
+		if err := h.repo.LoadOwnerUsernames([]*Room{r}); err != nil {
+			slog.Error("broadcast: failed to load owner username", "roomID", r.ID, "error", err)
+		}
+	}
+	// Always include `players` — even an empty slice — so the client can rely
+	// on the field's presence and never end up with `undefined` seat chips on
+	// a freshly-broadcast room.
+	players := r.Players
+	if players == nil {
+		fetched, err := h.repo.FindPlayersByRoomID(r.ID)
+		if err != nil {
+			slog.Error("broadcast: failed to load room players", "roomID", r.ID, "error", err)
+			fetched = []RoomPlayer{}
+		}
+		players = fetched
+	}
+	return map[string]any{
 		"id":                   r.ID,
 		"name":                 r.Name,
 		"code":                 r.Code,
 		"ownerId":              r.OwnerID,
+		"ownerUsername":        r.OwnerUsername,
+		"players":              players,
 		"variant":              r.Variant,
 		"matchMode":            r.MatchMode,
 		"timerStyle":           r.TimerStyle,
@@ -146,7 +165,28 @@ func (h *RoomHandler) broadcastRoomUpdated(r *Room) {
 		"playerCount":          r.PlayerCount,
 		"status":               r.Status,
 		"isQuickPlay":          r.IsQuickPlay,
-	})
+		"createdAt":            r.CreatedAt.UTC().Format(time.RFC3339),
+		"updatedAt":            r.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+}
+
+// broadcastRoomUpdated sends a system:room_updated event to all connected clients.
+func (h *RoomHandler) broadcastRoomUpdated(r *Room) {
+	h.broadcastToAll(ws.SystemRoomUpdated, h.roomLifecyclePayload(r))
+}
+
+// broadcastRoomSeatSnapshot pushes a system:room_updated event to every
+// connected client with the freshly-fetched players[] so lobby grid seat
+// chips stay in sync after seat changes. Without this, system:seat_updated
+// (which only fans out to room participants) leaves third-party lobby
+// watchers showing stale empty chips.
+func (h *RoomHandler) broadcastRoomSeatSnapshot(roomID uint, players []RoomPlayer) {
+	r, err := h.repo.FindByID(roomID)
+	if err != nil || r == nil {
+		return
+	}
+	r.Players = players
+	h.broadcastRoomUpdated(r)
 }
 
 func (h *RoomHandler) CreateRoom(c echo.Context) error {
@@ -268,20 +308,10 @@ func (h *RoomHandler) CreateRoom(c echo.Context) error {
 		return createErr
 	}
 
-	// Broadcast system:room_created to all connected clients (lobby-wide)
-	h.broadcastToAll(ws.SystemRoomCreated, map[string]interface{}{
-		"id":                   room.ID,
-		"name":                 room.Name,
-		"code":                 room.Code,
-		"ownerId":              room.OwnerID,
-		"variant":              room.Variant,
-		"matchMode":            room.MatchMode,
-		"timerStyle":           room.TimerStyle,
-		"timerDurationSeconds": room.TimerDurationSeconds,
-		"playerCount":          room.PlayerCount,
-		"status":               room.Status,
-		"isQuickPlay":          room.IsQuickPlay,
-	})
+	// Broadcast system:room_created to all connected clients (lobby-wide).
+	// roomLifecyclePayload also populates room.OwnerUsername so the JSON
+	// response immediately below carries it.
+	h.broadcastToAll(ws.SystemRoomCreated, h.roomLifecyclePayload(room))
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{"data": room})
 }
@@ -299,6 +329,26 @@ func (h *RoomHandler) ListRooms(c echo.Context) error {
 	rooms, err := h.repo.FindByStatus(status)
 	if err != nil {
 		return fmt.Errorf("listing rooms: %w", err)
+	}
+
+	// Hydrate `ownerUsername` + `players` on each row via two batch queries
+	// so the lobby grid renders host avatars + seat chips in a single fetch
+	// (no N+1 per visible card).
+	roomPtrs := make([]*Room, len(rooms))
+	roomIDs := make([]uint, len(rooms))
+	for i := range rooms {
+		roomPtrs[i] = &rooms[i]
+		roomIDs[i] = rooms[i].ID
+	}
+	if err := h.repo.LoadOwnerUsernames(roomPtrs); err != nil {
+		slog.Error("list rooms: failed to load owner usernames", "error", err)
+	}
+	if playersByRoom, perr := h.repo.FindPlayersByRoomIDs(roomIDs); perr != nil {
+		slog.Error("list rooms: failed to load players", "error", perr)
+	} else {
+		for i := range rooms {
+			rooms[i].Players = playersByRoom[rooms[i].ID]
+		}
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": rooms})
@@ -328,6 +378,10 @@ func (h *RoomHandler) GetRoom(c echo.Context) error {
 		return fmt.Errorf("finding room players: %w", err)
 	}
 
+	if err := h.repo.LoadOwnerUsernames([]*Room{room}); err != nil {
+		slog.Error("get room: failed to load owner username", "roomID", room.ID, "error", err)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": RoomDetailResponse{
 			Room:    room,
@@ -353,6 +407,10 @@ func (h *RoomHandler) GetRoomByCode(c echo.Context) error {
 	players, err := h.repo.FindPlayersByRoomID(room.ID)
 	if err != nil {
 		return fmt.Errorf("finding room players: %w", err)
+	}
+
+	if err := h.repo.LoadOwnerUsernames([]*Room{room}); err != nil {
+		slog.Error("get room by code: failed to load owner username", "roomID", room.ID, "error", err)
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -491,13 +549,13 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 		if freshRoom == nil {
 			return apperr.ErrRoomNotFound
 		}
-		// Only block leaves while a game is actively in progress. Allow leaves
-		// on "finished"/"completed" rooms so post-match unmount auto-leave
-		// (RoomLobby unmount cleanup) does not log spurious 409s — and a
-		// manual click on Leave for a finished game does what the user
+		// Only block leaves while a match is actively in progress. Allow leaves
+		// on "completed" rooms so post-match unmount auto-leave
+		// (room-page unmount cleanup) does not log spurious 409s — and a
+		// manual click on Leave for a completed match does what the user
 		// expects.
 		if freshRoom.Status == "playing" {
-			return apperr.ErrGameAlreadyStarted
+			return apperr.ErrMatchAlreadyStarted
 		}
 		if err := tx.RemovePlayer(uint(roomID), userID); err != nil {
 			return err
@@ -532,7 +590,7 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 	}); err != nil {
 		if errors.Is(err, apperr.ErrNotInRoom) ||
 			errors.Is(err, apperr.ErrRoomNotFound) ||
-			errors.Is(err, apperr.ErrGameAlreadyStarted) {
+			errors.Is(err, apperr.ErrMatchAlreadyStarted) {
 			return err
 		}
 		return fmt.Errorf("leaving room: %w", err)
@@ -540,9 +598,8 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 
 	// Broadcast system:player_left to remaining room participants (not the leaving player)
 	remainingPlayers, broadcastErr := h.repo.FindPlayersByRoomID(uint(roomID))
+	postRoom, postErr := h.repo.FindByID(uint(roomID))
 	if broadcastErr == nil && len(remainingPlayers) > 0 {
-		// Re-fetch room after transaction to get accurate playerCount
-		postRoom, postErr := h.repo.FindByID(uint(roomID))
 		actualPlayerCount := len(remainingPlayers)
 		if postErr == nil && postRoom != nil {
 			actualPlayerCount = postRoom.PlayerCount
@@ -561,11 +618,14 @@ func (h *RoomHandler) LeaveRoom(c echo.Context) error {
 			payload["newOwnerId"] = *newOwnerID
 		}
 		h.broadcastToUsers(userIDs, ws.SystemPlayerLeft, payload)
+	}
 
-		// Broadcast system:room_updated to lobby browse page
-		if postErr == nil && postRoom != nil {
-			h.broadcastRoomUpdated(postRoom)
-		}
+	// Broadcast system:room_updated to ALL lobby browsers — even when the
+	// room emptied out and was flipped to "completed". Without this, a
+	// lobby grid that received the room_created event has no way to learn
+	// the room closed, so the stale tile lingers forever.
+	if postErr == nil && postRoom != nil {
+		h.broadcastRoomUpdated(postRoom)
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]string{"message": "left room"}})
@@ -624,7 +684,7 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 			return apperr.ErrRoomNotFound
 		}
 		if room.Status != "waiting" {
-			return apperr.ErrGameNotStartable
+			return apperr.ErrMatchNotStartable
 		}
 
 		// Check if seat is already taken
@@ -666,7 +726,7 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 		return nil
 	}); err != nil {
 		if errors.Is(err, apperr.ErrSeatTaken) || errors.Is(err, apperr.ErrNotInRoom) ||
-			errors.Is(err, apperr.ErrRoomNotFound) || errors.Is(err, apperr.ErrGameNotStartable) {
+			errors.Is(err, apperr.ErrRoomNotFound) || errors.Is(err, apperr.ErrMatchNotStartable) {
 			return err
 		}
 		return fmt.Errorf("selecting seat: %w", err)
@@ -695,94 +755,36 @@ func (h *RoomHandler) SelectSeat(c echo.Context) error {
 			"previousSeat": previousSeat,
 		}
 		h.broadcastToRoom(uint(roomID), ws.SystemSeatUpdated, seatPayload)
+		h.broadcastRoomSeatSnapshot(uint(roomID), players)
 	}
 
-	// Check if Quick Play room should auto-start (wrapped in transaction to prevent double-start)
-	gameStarted := false
-	var autoStartRoom *Room
-	var autoStartPlayers []RoomPlayer
-	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
-		// Story 8.5-1 AC3 + P1: row-lock the room AND re-fetch players INSIDE
-		// the auto-start tx. The outside-tx players slice can go stale if a
-		// concurrent LeaveRoom commits between the seat-update tx and this
-		// auto-start tx — leading the rules engine to receive a seatInfo
-		// snapshot containing a player who has already left.
-		r, err := tx.FindByIDForUpdate(uint(roomID))
-		if err != nil {
-			return fmt.Errorf("fetching room for auto-start check: %w", err)
-		}
-		if r == nil || !r.IsQuickPlay || r.Status != "waiting" {
-			return nil
-		}
-		freshPlayers, err := tx.FindPlayersByRoomID(uint(roomID))
-		if err != nil {
-			return fmt.Errorf("fetching players for auto-start check: %w", err)
-		}
-		seatedCount := 0
-		for _, p := range freshPlayers {
-			if p.Seat != nil {
-				seatedCount++
-			}
-		}
-		if seatedCount < 4 {
-			return nil
-		}
-		r.Status = "playing"
-		if err := tx.Update(r); err != nil {
-			return fmt.Errorf("auto-starting quick play room: %w", err)
-		}
-		gameStarted = true
-		autoStartRoom = r
-		autoStartPlayers = freshPlayers
-		return nil
-	}); err != nil {
-		return fmt.Errorf("auto-start check: %w", err)
-	}
-
-	if gameStarted && autoStartRoom != nil {
-		// Story 8.5-1 AC2: gate system:game_started AND the playing-status
-		// broadcast on gameStarter.StartGame success. If StartGame returns an
-		// error, revert the room status to "waiting" so the room is not stuck
-		// in a permanent "playing" state with no live session, and broadcast
-		// error:game_start_failed to the four would-be participants instead of
-		// navigating them to a non-existent /game/{roomID}.
-		startErr := h.startAutoStartedGame(autoStartRoom, autoStartPlayers)
-		if startErr != nil {
-			slog.Error("failed to start game session for quick play", "roomID", roomID, "error", startErr)
-			h.revertAutoStart(uint(roomID), autoStartRoom, autoStartPlayers)
-			gameStarted = false
-		} else {
-			// Broadcast system:game_started to all room participants
-			h.broadcastToRoom(uint(roomID), ws.SystemGameStarted, map[string]interface{}{
-				"roomId": roomID,
-			})
-
-			// Broadcast system:room_updated to lobby browse page
-			h.broadcastRoomUpdated(autoStartRoom)
-		}
+	// Check if Quick Play room should auto-start now that a seat was taken.
+	matchStarted, err := h.autoStartIfFull(uint(roomID))
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": map[string]interface{}{
-			"players":     players,
-			"gameStarted": gameStarted,
+			"players":      players,
+			"matchStarted": matchStarted,
 		},
 	})
 }
 
-// startAutoStartedGame invokes gameStarter.StartGame for an auto-start path
+// startAutoStartedMatch invokes matchStarter.StartMatch for an auto-start path
 // that has already flipped room.Status to "playing" inside its tx. Returns
-// nil when no gameStarter is wired (test setups skip this) or when StartGame
+// nil when no matchStarter is wired (test setups skip this) or when StartMatch
 // succeeds. The caller is responsible for reverting the status flip when this
 // returns a non-nil error (Story 8.5-1 AC2).
-func (h *RoomHandler) startAutoStartedGame(autoStartRoom *Room, players []RoomPlayer) error {
-	if h.gameStarter == nil {
+func (h *RoomHandler) startAutoStartedMatch(autoStartRoom *Room, players []RoomPlayer) error {
+	if h.matchStarter == nil {
 		return nil
 	}
-	var seatInfo [4]PlayerSeatInfo
+	var seatInfo [4]match.PlayerSeatInfo
 	for _, p := range players {
 		if p.Seat != nil {
-			seatInfo[*p.Seat] = PlayerSeatInfo{
+			seatInfo[*p.Seat] = match.PlayerSeatInfo{
 				UserID:   p.UserID,
 				Username: p.Username,
 				Seat:     *p.Seat,
@@ -794,11 +796,11 @@ func (h *RoomHandler) startAutoStartedGame(autoStartRoom *Room, players []RoomPl
 		timerDuration = *autoStartRoom.TimerDurationSeconds
 	}
 	reconnectWindow := resolveReconnectWindow(autoStartRoom.ReconnectWindowSec)
-	return h.gameStarter.StartGame(autoStartRoom.ID, autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration, autoStartRoom.OwnerID, reconnectWindow)
+	return h.matchStarter.StartMatch(autoStartRoom.ID, autoStartRoom.Variant, autoStartRoom.MatchMode, seatInfo, autoStartRoom.TimerStyle, timerDuration, autoStartRoom.OwnerID, reconnectWindow)
 }
 
-// revertAutoStart compensates for a failed gameStarter.StartGame: it flips
-// the room status back to "waiting" and broadcasts error:game_start_failed
+// revertAutoStart compensates for a failed matchStarter.StartMatch: it flips
+// the room status back to "waiting" and broadcasts error:match_start_failed
 // to the four would-be participants so their clients keep them on the
 // room-lobby page instead of navigating to a non-existent /game/{id}.
 // Story 8.5-1 AC2.
@@ -834,7 +836,7 @@ func (h *RoomHandler) revertAutoStart(roomID uint, autoStartRoom *Room, players 
 	})
 	if revertErr != nil {
 		// Bail out on revert-tx failure: room is stuck in "playing" with no
-		// live session, broadcasting error:game_start_failed AND telling
+		// live session, broadcasting error:match_start_failed AND telling
 		// clients to stay on the room-lobby page would just compound the
 		// problem (every subsequent action rejects on status != "waiting").
 		// Logging is the best we can do here; a follow-up health check or
@@ -859,7 +861,7 @@ func (h *RoomHandler) revertAutoStart(roomID uint, autoStartRoom *Room, players 
 		userIDs = append(userIDs, p.UserID)
 	}
 	if len(userIDs) > 0 {
-		h.broadcastToUsers(userIDs, ws.ErrorGameStartFailed, map[string]interface{}{
+		h.broadcastToUsers(userIDs, ws.ErrorMatchStartFailed, map[string]interface{}{
 			"roomId":  roomID,
 			"message": "Failed to start the game. Please try again.",
 		})
@@ -870,6 +872,103 @@ func (h *RoomHandler) revertAutoStart(roomID uint, autoStartRoom *Room, players 
 	if autoStartRoom.Status == "waiting" {
 		h.broadcastRoomUpdated(autoStartRoom)
 	}
+}
+
+// seatPlayerIntoQuickRoom adds the player to an existing quick play room and
+// auto-assigns the lowest empty seat. It MUST be called inside a transaction.
+// Returns the assigned seat/team and a fresh copy of the room. Shared by the
+// QuickPlay "found existing room" branch and the QuickJoin handler.
+func seatPlayerIntoQuickRoom(tx RoomRepository, roomID, userID uint) (seat int, team string, room *Room, err error) {
+	rp := &RoomPlayer{RoomID: roomID, UserID: userID}
+	if err = tx.AddPlayer(rp); err != nil {
+		return 0, "", nil, err
+	}
+	if err = tx.IncrementPlayerCount(roomID); err != nil {
+		return 0, "", nil, fmt.Errorf("incrementing player count: %w", err)
+	}
+	seat, err = pickFirstEmptySeat(tx, roomID)
+	if err != nil {
+		return 0, "", nil, err
+	}
+	team = teamForSeat(seat)
+	if err = tx.UpdatePlayerSeat(roomID, userID, seat, team); err != nil {
+		return 0, "", nil, fmt.Errorf("auto-seating player: %w", err)
+	}
+	room, err = tx.FindByID(roomID)
+	if err != nil {
+		return 0, "", nil, fmt.Errorf("re-fetching room after join: %w", err)
+	}
+	return seat, team, room, nil
+}
+
+// autoStartIfFull row-locks the room and, when it is a quick play room in
+// "waiting" status with all four seats filled, flips it to "playing" and
+// starts the game session. On a successful start it broadcasts
+// system:match_started to room participants and system:room_updated to the
+// lobby and returns true. If the session fails to start it reverts the status
+// flip (Story 8.5-1 AC2) and returns false. Returns false (no error) when the
+// room is not yet ready to start. This is the single source of truth for the
+// auto-start transition shared by SelectSeat, QuickPlay, and QuickJoin.
+func (h *RoomHandler) autoStartIfFull(roomID uint) (bool, error) {
+	matchStarted := false
+	var autoStartRoom *Room
+	var autoStartPlayers []RoomPlayer
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		// Story 8.5-1 AC3 + P1: row-lock the room AND re-fetch players INSIDE
+		// the auto-start tx so a concurrent LeaveRoom committing between the
+		// seat-update tx and this tx can never leak a departed player into the
+		// rules-engine seat snapshot.
+		r, err := tx.FindByIDForUpdate(roomID)
+		if err != nil {
+			return fmt.Errorf("fetching room for auto-start check: %w", err)
+		}
+		if r == nil || !r.IsQuickPlay || r.Status != "waiting" {
+			return nil
+		}
+		freshPlayers, err := tx.FindPlayersByRoomID(roomID)
+		if err != nil {
+			return fmt.Errorf("fetching players for auto-start check: %w", err)
+		}
+		seatedCount := 0
+		for _, p := range freshPlayers {
+			if p.Seat != nil {
+				seatedCount++
+			}
+		}
+		if seatedCount < 4 {
+			return nil
+		}
+		r.Status = "playing"
+		if err := tx.Update(r); err != nil {
+			return fmt.Errorf("auto-starting quick play room: %w", err)
+		}
+		matchStarted = true
+		autoStartRoom = r
+		autoStartPlayers = freshPlayers
+		return nil
+	}); err != nil {
+		return false, fmt.Errorf("auto-start check: %w", err)
+	}
+
+	if matchStarted && autoStartRoom != nil {
+		// Story 8.5-1 AC2: gate system:match_started AND the playing-status
+		// broadcast on matchStarter.StartMatch success. On failure, revert the
+		// status flip so the room is not stranded in "playing" with no live
+		// session and tell the four would-be participants to stay put.
+		startErr := h.startAutoStartedMatch(autoStartRoom, autoStartPlayers)
+		if startErr != nil {
+			slog.Error("failed to start auto-started game session", "roomID", roomID, "error", startErr)
+			h.revertAutoStart(roomID, autoStartRoom, autoStartPlayers)
+			matchStarted = false
+		} else {
+			h.broadcastToRoom(roomID, ws.SystemMatchStarted, map[string]interface{}{
+				"roomId": roomID,
+			})
+			h.broadcastRoomUpdated(autoStartRoom)
+		}
+	}
+
+	return matchStarted, nil
 }
 
 type KickPlayerRequest struct {
@@ -1253,6 +1352,9 @@ func (h *RoomHandler) SwapSeats(c echo.Context) error {
 			"previousSeat": swapB.previousSeat,
 		})
 	}
+	// Single snapshot broadcast after both per-room events so lobby viewers
+	// see the final state in one cache update, not two intermediate ones.
+	h.broadcastRoomSeatSnapshot(uint(roomID), players)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": PlayersResponse{Players: players},
@@ -1346,13 +1448,14 @@ func (h *RoomHandler) LeaveSeat(c echo.Context) error {
 		"team":         nil,
 		"previousSeat": previousSeat,
 	})
+	h.broadcastRoomSeatSnapshot(uint(roomID), players)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": PlayersResponse{Players: players},
 	})
 }
 
-func (h *RoomHandler) StartGame(c echo.Context) error {
+func (h *RoomHandler) StartMatch(c echo.Context) error {
 	userID, err := auth.GetUserID(c)
 	if err != nil {
 		return apperr.ErrUnauthorized
@@ -1374,11 +1477,11 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 		}
 
 		if room.Status != "waiting" {
-			return apperr.ErrGameNotStartable
+			return apperr.ErrMatchNotStartable
 		}
 
 		if room.IsQuickPlay {
-			return apperr.ErrGameNotStartable
+			return apperr.ErrMatchNotStartable
 		}
 
 		if room.OwnerID != userID {
@@ -1408,23 +1511,23 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 		updatedRoom = room
 		return nil
 	}); err != nil {
-		if errors.Is(err, apperr.ErrRoomNotFound) || errors.Is(err, apperr.ErrGameNotStartable) ||
+		if errors.Is(err, apperr.ErrRoomNotFound) || errors.Is(err, apperr.ErrMatchNotStartable) ||
 			errors.Is(err, apperr.ErrNotRoomOwner) || errors.Is(err, apperr.ErrNotAllSeated) {
 			return err
 		}
 		return fmt.Errorf("starting game: %w", err)
 	}
 
-	// Start game session via session manager
-	if h.gameStarter != nil {
+	// Start match via match starter
+	if h.matchStarter != nil {
 		players, err := h.repo.FindPlayersByRoomID(uint(roomID))
 		if err != nil {
 			slog.Error("failed to load players for game start", "roomID", roomID, "error", err)
 		} else {
-			var seatInfo [4]PlayerSeatInfo
+			var seatInfo [4]match.PlayerSeatInfo
 			for _, p := range players {
 				if p.Seat != nil {
-					seatInfo[*p.Seat] = PlayerSeatInfo{
+					seatInfo[*p.Seat] = match.PlayerSeatInfo{
 						UserID:   p.UserID,
 						Username: p.Username,
 						Seat:     *p.Seat,
@@ -1436,14 +1539,14 @@ func (h *RoomHandler) StartGame(c echo.Context) error {
 				timerDuration = *updatedRoom.TimerDurationSeconds
 			}
 			reconnectWindow := resolveReconnectWindow(updatedRoom.ReconnectWindowSec)
-			if err := h.gameStarter.StartGame(uint(roomID), updatedRoom.Variant, updatedRoom.MatchMode, seatInfo, updatedRoom.TimerStyle, timerDuration, updatedRoom.OwnerID, reconnectWindow); err != nil {
+			if err := h.matchStarter.StartMatch(uint(roomID), updatedRoom.Variant, updatedRoom.MatchMode, seatInfo, updatedRoom.TimerStyle, timerDuration, updatedRoom.OwnerID, reconnectWindow); err != nil {
 				slog.Error("failed to start game session", "roomID", roomID, "error", err)
 			}
 		}
 	}
 
-	// Broadcast system:game_started to all room participants
-	h.broadcastToRoom(uint(roomID), ws.SystemGameStarted, map[string]interface{}{
+	// Broadcast system:match_started to all room participants
+	h.broadcastToRoom(uint(roomID), ws.SystemMatchStarted, map[string]interface{}{
 		"roomId": roomID,
 	})
 
@@ -1491,27 +1594,12 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 
 			if available != nil {
 				lastTriedRoomID = available.ID
-				rp := &RoomPlayer{RoomID: available.ID, UserID: userID}
-				if err := tx.AddPlayer(rp); err != nil {
-					return err
-				}
-				if err := tx.IncrementPlayerCount(available.ID); err != nil {
-					return fmt.Errorf("incrementing player count: %w", err)
-				}
-				seat, err := pickFirstEmptySeat(tx, available.ID)
+				seat, team, r, err := seatPlayerIntoQuickRoom(tx, available.ID, userID)
 				if err != nil {
 					return err
-				}
-				team := teamForSeat(seat)
-				if err := tx.UpdatePlayerSeat(available.ID, userID, seat, team); err != nil {
-					return fmt.Errorf("auto-seating player: %w", err)
 				}
 				assignedSeat = seat
 				assignedTeam = team
-				r, err := tx.FindByID(available.ID)
-				if err != nil {
-					return fmt.Errorf("re-fetching room after join: %w", err)
-				}
 				resultRoom = r
 				createdNew = false
 				return nil
@@ -1601,105 +1689,151 @@ func (h *RoomHandler) QuickPlay(c echo.Context) error {
 	}
 
 	// Mirror JoinRoom's broadcasts so existing room members see the QuickPlay
-	// joiner appear: player_joined seeds the player into their roomLobbyStore,
-	// then seat_updated places that player in the auto-assigned seat. Multi-event
-	// sequences are sent as separate ordered messages, never batched.
-	roomPlayers, broadcastErr := h.repo.FindPlayersByRoomID(resultRoom.ID)
-	if broadcastErr != nil {
-		slog.Error("quick play: loading players for join broadcast", "roomID", resultRoom.ID, "error", broadcastErr)
-	} else {
-		var username string
-		for _, p := range roomPlayers {
-			if p.UserID == userID {
-				username = p.Username
-				break
-			}
-		}
-		userIDs := make([]uint, 0, len(roomPlayers))
-		for _, p := range roomPlayers {
-			userIDs = append(userIDs, p.UserID)
-		}
-		h.broadcastToUsers(userIDs, ws.SystemPlayerJoined, map[string]interface{}{
-			"roomId":      resultRoom.ID,
-			"userId":      userID,
-			"username":    username,
-			"playerCount": resultRoom.PlayerCount,
-		})
-		h.broadcastToUsers(userIDs, ws.SystemSeatUpdated, map[string]interface{}{
-			"roomId":       resultRoom.ID,
-			"userId":       userID,
-			"username":     username,
-			"seat":         assignedSeat,
-			"team":         assignedTeam,
-			"previousSeat": nil,
-		})
-	}
+	// joiner appear in their seat.
+	h.broadcastQuickPlayerSeated(resultRoom, userID, assignedSeat, assignedTeam)
 
 	// Auto-start when all four seats are filled (4th joiner closes the room).
-	gameStarted := false
-	var autoStartRoom *Room
-	var autoStartPlayers []RoomPlayer
-	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
-		// Story 8.5-1 AC3 + AC2: row-lock the room and capture the in-tx
-		// players slice for the post-tx StartGame call so we never start a
-		// session referencing a player who has already left.
-		r, err := tx.FindByIDForUpdate(resultRoom.ID)
-		if err != nil {
-			return fmt.Errorf("fetching room for auto-start check: %w", err)
-		}
-		if r == nil || !r.IsQuickPlay || r.Status != "waiting" {
-			return nil
-		}
-		players, err := tx.FindPlayersByRoomID(resultRoom.ID)
-		if err != nil {
-			return fmt.Errorf("fetching players for auto-start check: %w", err)
-		}
-		seatedCount := 0
-		for _, p := range players {
-			if p.Seat != nil {
-				seatedCount++
-			}
-		}
-		if seatedCount < 4 {
-			return nil
-		}
-		r.Status = "playing"
-		if err := tx.Update(r); err != nil {
-			return fmt.Errorf("auto-starting quick play room: %w", err)
-		}
-		gameStarted = true
-		autoStartRoom = r
-		autoStartPlayers = players
-		return nil
-	}); err != nil {
-		return fmt.Errorf("auto-start check: %w", err)
-	}
-
-	if gameStarted && autoStartRoom != nil {
-		// Story 8.5-1 AC2: gate broadcasts on gameStarter.StartGame success.
-		// On failure, revert the room status to "waiting" and tell the four
-		// would-be participants to stay on the room-lobby page rather than
-		// strand them in a permanent "playing" state with no live session.
-		startErr := h.startAutoStartedGame(autoStartRoom, autoStartPlayers)
-		if startErr != nil {
-			slog.Error("failed to start game session for quick play", "roomID", resultRoom.ID, "error", startErr)
-			h.revertAutoStart(resultRoom.ID, autoStartRoom, autoStartPlayers)
-			gameStarted = false
-		} else {
-			h.broadcastToRoom(resultRoom.ID, ws.SystemGameStarted, map[string]interface{}{
-				"roomId": resultRoom.ID,
-			})
-			h.broadcastRoomUpdated(autoStartRoom)
-		}
+	matchStarted, err := h.autoStartIfFull(resultRoom.ID)
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": map[string]interface{}{
-			"room":        resultRoom,
-			"seat":        assignedSeat,
-			"gameStarted": gameStarted,
+			"room":         resultRoom,
+			"seat":         assignedSeat,
+			"matchStarted": matchStarted,
 		},
 	})
+}
+
+// QuickJoin seats the caller into a SPECIFIC quick play room (the one they
+// clicked in the lobby grid) and runs the auto-start check, returning the same
+// {room, seat, matchStarted} shape as QuickPlay. Custom (non quick-play) rooms
+// are rejected — they go through JoinRoom + manual seat selection. The frontend
+// ports the joiner to the matchmaking screen rather than the in-room seat grid.
+func (h *RoomHandler) QuickJoin(c echo.Context) error {
+	userID, err := auth.GetUserID(c)
+	if err != nil {
+		return apperr.ErrUnauthorized
+	}
+
+	roomID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		return apperr.ErrRoomNotFound
+	}
+
+	// Reject if the user is already in a room (mirrors QuickPlay).
+	existing, err := h.repo.FindPlayerRoom(userID)
+	if err != nil {
+		return fmt.Errorf("checking existing room: %w", err)
+	}
+	if existing != nil {
+		return apperr.ErrAlreadyInRoom
+	}
+
+	var resultRoom *Room
+	var assignedSeat int
+	var assignedTeam string
+	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
+		// Row-lock the room to serialize against concurrent joiners and the
+		// auto-start transition.
+		r, err := tx.FindByIDForUpdate(uint(roomID))
+		if err != nil {
+			return fmt.Errorf("finding room: %w", err)
+		}
+		if r == nil {
+			return apperr.ErrRoomNotFound
+		}
+		if !r.IsQuickPlay {
+			return apperr.ErrRoomNotQuickPlay
+		}
+		// Match JoinRoom's convention: a non-waiting room reads as not found.
+		if r.Status != "waiting" {
+			return apperr.ErrRoomNotFound
+		}
+		if r.PlayerCount >= 4 {
+			return apperr.ErrRoomFull
+		}
+		seat, team, joined, err := seatPlayerIntoQuickRoom(tx, uint(roomID), userID)
+		if err != nil {
+			return err
+		}
+		assignedSeat = seat
+		assignedTeam = team
+		resultRoom = joined
+		return nil
+	}); err != nil {
+		// ErrRoomFull also surfaces from pickFirstEmptySeat's drift guard
+		// (player_count<4 but every seat taken). The user picked one specific
+		// table, so we cannot retry into another — return ROOM_FULL honestly
+		// rather than an opaque 5xx.
+		if errors.Is(err, apperr.ErrAlreadyInRoom) || errors.Is(err, apperr.ErrRoomNotFound) ||
+			errors.Is(err, apperr.ErrRoomNotQuickPlay) || errors.Is(err, apperr.ErrRoomFull) {
+			return err
+		}
+		return fmt.Errorf("quick joining room: %w", err)
+	}
+
+	// Joined an existing room — refresh the lobby grid, then mirror JoinRoom's
+	// room-scoped player_joined + seat_updated broadcasts.
+	h.broadcastRoomUpdated(resultRoom)
+	h.broadcastQuickPlayerSeated(resultRoom, userID, assignedSeat, assignedTeam)
+
+	// Auto-start when this join filled the last seat.
+	matchStarted, err := h.autoStartIfFull(resultRoom.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": map[string]interface{}{
+			"room":         resultRoom,
+			"seat":         assignedSeat,
+			"matchStarted": matchStarted,
+		},
+	})
+}
+
+// broadcastQuickPlayerSeated mirrors JoinRoom's broadcasts for a player who was
+// auto-seated into a quick play room: player_joined seeds them into existing
+// members' roomStore, seat_updated places them in the auto-assigned seat,
+// and a fresh room snapshot updates every lobby viewer's grid card. Multi-event
+// sequences are sent as separate ordered messages, never batched.
+func (h *RoomHandler) broadcastQuickPlayerSeated(r *Room, userID uint, seat int, team string) {
+	roomPlayers, err := h.repo.FindPlayersByRoomID(r.ID)
+	if err != nil {
+		slog.Error("quick play: loading players for join broadcast", "roomID", r.ID, "error", err)
+		return
+	}
+	var username string
+	for _, p := range roomPlayers {
+		if p.UserID == userID {
+			username = p.Username
+			break
+		}
+	}
+	userIDs := make([]uint, 0, len(roomPlayers))
+	for _, p := range roomPlayers {
+		userIDs = append(userIDs, p.UserID)
+	}
+	h.broadcastToUsers(userIDs, ws.SystemPlayerJoined, map[string]interface{}{
+		"roomId":      r.ID,
+		"userId":      userID,
+		"username":    username,
+		"playerCount": r.PlayerCount,
+	})
+	h.broadcastToUsers(userIDs, ws.SystemSeatUpdated, map[string]interface{}{
+		"roomId":       r.ID,
+		"userId":       userID,
+		"username":     username,
+		"seat":         seat,
+		"team":         team,
+		"previousSeat": nil,
+	})
+	// Seat broadcast above is room-scoped; push a fresh room snapshot to every
+	// lobby viewer so the auto-assigned seat appears on grid cards.
+	h.broadcastRoomSeatSnapshot(r.ID, roomPlayers)
 }
 
 // pickFirstEmptySeat returns the lowest seat index 0..3 currently unoccupied
