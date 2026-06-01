@@ -25,12 +25,7 @@ export function StatPill({ icon, label, value, tone = "neutral", testId }: Props
     >
       <span className={isAccent ? "text-accent" : "text-ink-mute"}>{icon}</span>
       <span>{label}</span>
-      <span
-        className={cn(
-          "tabular-nums font-semibold",
-          isAccent ? "text-accent" : "text-ink",
-        )}
-      >
+      <span className={cn("tabular-nums font-semibold", isAccent ? "text-accent" : "text-ink")}>
         {value}
       </span>
     </span>

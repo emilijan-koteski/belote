@@ -103,7 +103,9 @@ export function ScoreReveal({
     subtitle = t("match.scoreReveal.subtitleFailed", { team: beneficiaryLabel });
   } else if (trumpSuitName && callerTeam) {
     subtitle = t(
-      callerWasViewer ? "match.scoreReveal.subtitleHeldYour" : "match.scoreReveal.subtitleHeldTheir",
+      callerWasViewer
+        ? "match.scoreReveal.subtitleHeldYour"
+        : "match.scoreReveal.subtitleHeldTheir",
       { suit: trumpSuitName },
     );
   }

@@ -165,11 +165,7 @@ export function MatchmakingDiagram({
               <span
                 className="font-mono text-[9.5px] font-semibold tracking-[1.4px] uppercase"
                 style={{
-                  color: occupant
-                    ? isUs
-                      ? "var(--team-a)"
-                      : "var(--team-b)"
-                    : "var(--ink-mute)",
+                  color: occupant ? (isUs ? "var(--team-a)" : "var(--team-b)") : "var(--ink-mute)",
                 }}
               >
                 {occupant ? occupant.username : t("lobby.matchmaking.searching")}
@@ -198,9 +194,7 @@ export function MatchmakingDiagram({
           />
         </div>
         <div className="text-ink-mute flex w-full items-center justify-between font-mono text-[11px] tracking-[1.4px] uppercase">
-          <span data-testid="matchmaking-seated">
-            {t("lobby.matchmaking.seated", { found })}
-          </span>
+          <span data-testid="matchmaking-seated">{t("lobby.matchmaking.seated", { found })}</span>
           <span>{t("lobby.matchmaking.remaining", { count: remaining })}</span>
         </div>
         <Button

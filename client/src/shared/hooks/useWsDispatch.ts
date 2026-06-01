@@ -132,7 +132,7 @@ function dispatchGameEvent(message: WsMessage): void {
     // (event:declarations_resolved / event:belot_announced) are not replayed
     // by the server on reconnect, so the snapshot is treated as a clean slate
     // — UNLESS the snapshot is the trailing one that follows a reveal event
-    // in normal action flow (manager.go:513→554 / :609→614), in which case
+    // in normal action flow (see live_match.go), in which case
     // clearing would cancel the reveal that just rendered.
     if (!revealJustEmitted) {
       store.setDeclarationReveal(null);
@@ -140,7 +140,7 @@ function dispatchGameEvent(message: WsMessage): void {
     }
     // NOTE: pendingResolvedTrick is intentionally NOT cleared here. The
     // server emits a trailing event:match_state ~immediately after every
-    // event:trick_resolved (manager.go:543); clearing the snapshot here
+    // event:trick_resolved (see live_match.go); clearing the snapshot here
     // would tear it down before the collect animation can run. MatchPage's
     // pendingResolvedTrick effect installs a fallback clear timer scoped
     // to the animation duration, which also handles the reconnect-mid-

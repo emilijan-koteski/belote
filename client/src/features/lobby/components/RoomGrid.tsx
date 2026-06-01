@@ -32,9 +32,7 @@ export function RoomGrid({ rooms, onJoin, hasSearch, onClearSearch }: Props) {
         <h3 className="font-display text-ink m-0 text-lg font-semibold">
           {t("lobby.empty.title")}
         </h3>
-        <p className="text-ink-dim m-0 max-w-90 text-xs">
-          {t("lobby.empty.description")}
-        </p>
+        <p className="text-ink-dim m-0 max-w-90 text-xs">{t("lobby.empty.description")}</p>
         {hasSearch && onClearSearch && (
           <button
             onClick={onClearSearch}

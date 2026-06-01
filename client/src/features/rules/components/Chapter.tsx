@@ -37,11 +37,26 @@ export function Chapter({ idx, section, registerRef }: Props) {
         </div>
         <h2
           className="font-display"
-          style={{ margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.15, color: "var(--ink)" }}
+          style={{
+            margin: 0,
+            fontSize: 28,
+            fontWeight: 700,
+            letterSpacing: -0.6,
+            lineHeight: 1.15,
+            color: "var(--ink)",
+          }}
         >
           {section.title}
         </h2>
-        <p style={{ margin: "4px 0 0", fontSize: 16, lineHeight: 1.55, color: "var(--ink-dim)", maxWidth: 620 }}>
+        <p
+          style={{
+            margin: "4px 0 0",
+            fontSize: 16,
+            lineHeight: 1.55,
+            color: "var(--ink-dim)",
+            maxWidth: 620,
+          }}
+        >
           {section.lede}
         </p>
       </header>

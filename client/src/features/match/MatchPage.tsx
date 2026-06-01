@@ -1034,7 +1034,9 @@ export function MatchPage() {
         lastTrickBonus={scoreRevealData?.lastTrickBonus}
         lastTrickTeam={scoreRevealData?.lastTrickTeam}
         handNumber={matchState.handNumber}
-        variantLabel={t(`match.variants.${matchState.variant}`, { defaultValue: matchState.variant })}
+        variantLabel={t(`match.variants.${matchState.variant}`, {
+          defaultValue: matchState.variant,
+        })}
       />
 
       {/* Trump indicator - top right. Gated to play phases (AC 4.4.5) and
@@ -1133,7 +1135,9 @@ export function MatchPage() {
           <HUDButton
             icon={<Pause className="h-4 w-4" aria-hidden="true" />}
             label={
-              matchState.pauseUsed?.[myPlayerSeat] ? t("match.pause.pauseUsed") : t("match.hud.pause")
+              matchState.pauseUsed?.[myPlayerSeat]
+                ? t("match.pause.pauseUsed")
+                : t("match.hud.pause")
             }
             onClick={handlePause}
             disabled={!canPause}
@@ -1271,7 +1275,8 @@ export function MatchPage() {
               biddingRound={matchState.biddingRound}
               isActiveBidder={isActiveBidder}
               activePlayerName={
-                matchState.players.find((p) => p.seat === matchState.activePlayerSeat)?.username ?? null
+                matchState.players.find((p) => p.seat === matchState.activePlayerSeat)?.username ??
+                null
               }
               onPick={handlePickTrump}
               onPass={handlePassTrump}

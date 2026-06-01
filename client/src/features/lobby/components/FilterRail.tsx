@@ -20,15 +20,7 @@ type Props = {
 
 const FILTERS: LobbyFilter[] = ["all", "open", "relaxed", "timed"];
 
-export function FilterRail({
-  search,
-  setSearch,
-  filter,
-  setFilter,
-  sort,
-  setSort,
-  counts,
-}: Props) {
+export function FilterRail({ search, setSearch, filter, setFilter, sort, setSort, counts }: Props) {
   const { t } = useTranslation();
   return (
     <div className="bg-surface mb-3.5 flex flex-wrap items-center gap-3.5 rounded-(--radius) border border-border p-3.5">

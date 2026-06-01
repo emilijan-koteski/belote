@@ -14,10 +14,7 @@ vi.mock("react-i18next", () => ({
         "match.pause.waitingToResume": "Waiting for players to resume...",
         "match.pause.resumeAll": "Resume All",
       };
-      if (
-        (key === "match.pause.pausedBy" || key === "match.pause.pausedByMany") &&
-        opts?.player
-      ) {
+      if ((key === "match.pause.pausedBy" || key === "match.pause.pausedByMany") && opts?.player) {
         return `${opts.player} paused the game`;
       }
       return translations[key] ?? key;

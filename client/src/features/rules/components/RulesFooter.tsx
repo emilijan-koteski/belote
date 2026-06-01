@@ -22,7 +22,10 @@ export function RulesFooter() {
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 240 }}>
-        <span className="font-display" style={{ fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>
+        <span
+          className="font-display"
+          style={{ fontSize: 18, fontWeight: 600, color: "var(--ink)" }}
+        >
           {ui.footerTitle}
         </span>
         <span style={{ fontSize: 13.5, color: "var(--ink-dim)" }}>{ui.footerBody}</span>

@@ -23,9 +23,7 @@ export function CreateRoomTile({ onClick }: Props) {
         <span className="font-display text-sm font-semibold">
           {t("lobby.actions.createRoom.title")}
         </span>
-        <span className="text-ink-dim text-xs">
-          {t("lobby.actions.createRoom.subtitle")}
-        </span>
+        <span className="text-ink-dim text-xs">{t("lobby.actions.createRoom.subtitle")}</span>
       </span>
     </button>
   );

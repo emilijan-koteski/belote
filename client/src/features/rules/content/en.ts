@@ -2,7 +2,16 @@
 import type { RulesLangData } from "./types";
 
 export const en: RulesLangData = {
-  cardNames: { J: "Jack", "9": "9", A: "Ace", "10": "10", K: "King", Q: "Queen", "8": "8", "7": "7" },
+  cardNames: {
+    J: "Jack",
+    "9": "9",
+    A: "Ace",
+    "10": "10",
+    K: "King",
+    Q: "Queen",
+    "8": "8",
+    "7": "7",
+  },
   trumpNotes: { J: "Strongest in trump", "7": "Weakest" },
   plainNotes: { A: "Strongest off-trump", "7": "Weakest" },
 
@@ -22,7 +31,8 @@ export const en: RulesLangData = {
     kvarta: {
       name: "Quarte",
       summary: "Four cards in a row, all the same suit.",
-      detail: "A quarte always beats any tierce the other team holds, no matter which suits are in play.",
+      detail:
+        "A quarte always beats any tierce the other team holds, no matter which suits are in play.",
     },
     kvinta: {
       name: "Quint",

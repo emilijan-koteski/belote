@@ -121,7 +121,12 @@ export function FeltVignette({
         </div>
       </div>
 
-      <Seat name="Kiro" sub={`Lvl 32 · ${labels.opponent}`} team="b" pos={{ left: 22, top: "40%" }} />
+      <Seat
+        name="Kiro"
+        sub={`Lvl 32 · ${labels.opponent}`}
+        team="b"
+        pos={{ left: 22, top: "40%" }}
+      />
       <Seat
         name="Irena"
         sub={`Lvl 28 · ${labels.opponent}`}

@@ -27,9 +27,7 @@ export function QuickPlayTile({ onClick, disabled }: Props) {
         <span className="font-display text-base font-semibold">
           {t("lobby.actions.quickPlay.title")}
         </span>
-        <span className="text-ink-dim text-xs">
-          {t("lobby.actions.quickPlay.subtitle")}
-        </span>
+        <span className="text-ink-dim text-xs">{t("lobby.actions.quickPlay.subtitle")}</span>
       </span>
       <span className="text-accent ml-auto inline-flex items-center gap-1.5 text-xs font-semibold">
         {t("lobby.actions.quickPlay.cta")}

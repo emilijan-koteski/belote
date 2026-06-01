@@ -224,9 +224,9 @@ export const ERROR_PLAYER_DISCONNECTED = "error:player_disconnected" as const;
 export const ERROR_SURRENDER_EXHAUSTED = "error:surrender_exhausted" as const;
 
 // Story 8.5-1 AC2: broadcast to the four would-be participants of an auto-start
-// whose gameStarter.StartGame call returned an error. The room is reverted to
+// whose matchStarter.StartMatch call returned an error. The room is reverted to
 // "waiting" server-side; clients should surface a toast and stay on the
-// room-lobby page rather than navigate to /game/{id}.
+// room-lobby page rather than navigate to /match/{roomId}.
 export const ERROR_MATCH_START_FAILED = "error:match_start_failed" as const;
 
 export interface MatchErrorPayload {

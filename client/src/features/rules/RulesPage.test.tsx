@@ -32,7 +32,9 @@ afterEach(async () => {
 describe("RulesPage", () => {
   it("renders the hero and all six chapter headings", () => {
     renderRules();
-    expect(screen.getByRole("heading", { level: 1, name: "Learn Beljot in one sitting" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Learn Beljot in one sitting" }),
+    ).toBeInTheDocument();
     for (const title of [
       "Race your team to 1001",
       "Shuffle, deal, call trump",
@@ -83,7 +85,9 @@ describe("RulesPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Научи Бељот во неколку минути" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "Трка до 1001 со твојот тим" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Трка до 1001 со твојот тим" }),
+    ).toBeInTheDocument();
   });
 
   it("renders Croatian and Serbian hero titles", async () => {
@@ -91,10 +95,14 @@ describe("RulesPage", () => {
     await act(async () => {
       await i18n.changeLanguage("hr");
     });
-    expect(screen.getByRole("heading", { level: 1, name: "Nauči Beljot u jednom sjedenju" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Nauči Beljot u jednom sjedenju" }),
+    ).toBeInTheDocument();
     await act(async () => {
       await i18n.changeLanguage("sr");
     });
-    expect(screen.getByRole("heading", { level: 1, name: "Nauči Beljot u jednom sedenju" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Nauči Beljot u jednom sedenju" }),
+    ).toBeInTheDocument();
   });
 });

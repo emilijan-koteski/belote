@@ -94,27 +94,11 @@ export function RoomCard({ room, onJoin, index = 0 }: Props) {
 
       <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-1.5 px-5 pb-3.5">
         <TeamLabel team="A" />
-        <SeatChip
-          username={seatOf(room.players, 0)}
-          team="A"
-          testId={`room-${room.id}-seat-0`}
-        />
-        <SeatChip
-          username={seatOf(room.players, 2)}
-          team="A"
-          testId={`room-${room.id}-seat-2`}
-        />
+        <SeatChip username={seatOf(room.players, 0)} team="A" testId={`room-${room.id}-seat-0`} />
+        <SeatChip username={seatOf(room.players, 2)} team="A" testId={`room-${room.id}-seat-2`} />
         <TeamLabel team="B" />
-        <SeatChip
-          username={seatOf(room.players, 1)}
-          team="B"
-          testId={`room-${room.id}-seat-1`}
-        />
-        <SeatChip
-          username={seatOf(room.players, 3)}
-          team="B"
-          testId={`room-${room.id}-seat-3`}
-        />
+        <SeatChip username={seatOf(room.players, 1)} team="B" testId={`room-${room.id}-seat-1`} />
+        <SeatChip username={seatOf(room.players, 3)} team="B" testId={`room-${room.id}-seat-3`} />
       </div>
 
       <div className="mt-auto flex items-center gap-2.5 border-t border-border bg-[rgba(14,58,36,0.03)] px-5 py-3">

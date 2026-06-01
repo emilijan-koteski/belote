@@ -125,9 +125,7 @@ export function handleWsMessage(event: MessageEvent): void {
             return {
               ...r,
               players: (r.players ?? []).map((p) =>
-                p.userId === payload.userId
-                  ? { ...p, seat: payload.seat, team: payload.team }
-                  : p,
+                p.userId === payload.userId ? { ...p, seat: payload.seat, team: payload.team } : p,
               ),
             };
           }),

@@ -64,18 +64,10 @@ export function ChatDock(props: ChatDockProps) {
   const { t } = useTranslation();
 
   const messages = useChatStore((s) =>
-    variant === "match"
-      ? s.matchMessages
-      : variant === "room"
-        ? s.roomMessages
-        : s.lobbyMessages,
+    variant === "match" ? s.matchMessages : variant === "room" ? s.roomMessages : s.lobbyMessages,
   );
   const markSent = useChatStore((s) =>
-    variant === "match"
-      ? s.markSentMatch
-      : variant === "room"
-        ? s.markSentRoom
-        : s.markSentLobby,
+    variant === "match" ? s.markSentMatch : variant === "room" ? s.markSentRoom : s.markSentLobby,
   );
   const me = useAuthStore((s) => s.user);
   const sendWs = useWsSendMessage();
@@ -316,9 +308,7 @@ function peekPayload(messages: ChatMessagePayload[], myId: number | undefined) {
     const m = messages[i];
     if (!m || m.userId === myId) continue;
     const text =
-      m.message.length > PEEK_MAX_CHARS
-        ? `${m.message.slice(0, PEEK_MAX_CHARS - 1)}…`
-        : m.message;
+      m.message.length > PEEK_MAX_CHARS ? `${m.message.slice(0, PEEK_MAX_CHARS - 1)}…` : m.message;
     return { userId: m.userId, username: m.username, text };
   }
   return null;

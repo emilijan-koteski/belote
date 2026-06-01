@@ -13,12 +13,12 @@ import (
 	"github.com/emilijan/beljot/server/internal/ws"
 )
 
-// Session holds the live game state and player mapping for one active game.
+// LiveMatch holds the live game state and player mapping for one active game.
 type LiveMatch struct {
-	gameState           *game.GameState
-	playerIDs           [4]uint // index = seat
-	roomID              uint
-	startedAt           time.Time
+	gameState                *game.GameState
+	playerIDs                [4]uint // index = seat
+	roomID                   uint
+	startedAt                time.Time
 	timerStyle               string         // "relaxed" or "per-move"
 	timerDurationSec         int            // seconds per move (only used when timerStyle == "per-move")
 	turnTimer                *time.Timer    // current per-move timer (nil when inactive)
@@ -51,7 +51,7 @@ type Broadcaster interface {
 // calls the rules engine, broadcasts results, and persists completed matches.
 type Manager struct {
 	sessions         map[uint]*LiveMatch // keyed by roomID
-	userToRoom       map[uint]uint     // userID → roomID for quick lookup
+	userToRoom       map[uint]uint       // userID → roomID for quick lookup
 	hub              Broadcaster
 	matchRepo        MatchRepository
 	roomUpdater      RoomStatusUpdater
@@ -590,7 +590,7 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		// match is persisted. The persist-before-broadcast invariant guarantees
 		// a client that receives match_end and immediately reads the match row
 		// will find it. handleMatchEnd preserves the (match_end → match_state)
-		// client-facing order so GamePage's stale-state redirect does not race
+		// client-facing order so MatchPage's stale-state redirect does not race
 		// the matchEndData arrival.
 		if newState.Phase == game.PhaseMatchEnd {
 			return
@@ -831,7 +831,7 @@ func (m *Manager) bufferHandResultIfScored(session *LiveMatch, oldState, newStat
 //     participants are not stranded on the table forever. Persist failures
 //     are logged via slog.Error but do not block the broadcast.
 //  3. event:match_state follows event:match_end so the (match_end → match_state)
-//     client-facing order is preserved (GamePage redirects to /lobby when it
+//     client-facing order is preserved (MatchPage redirects to /lobby when it
 //     observes phase=="match_end" with matchEndData==null; sending match_state
 //     first would race that redirect against matchEndData arrival).
 func (m *Manager) handleMatchEnd(session *LiveMatch, finalState *game.GameState, surrenderedBy *uint, matchEndPayload ws.MatchEndPayload) {

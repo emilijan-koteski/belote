@@ -64,9 +64,9 @@ type Broadcaster interface {
 }
 
 type RoomHandler struct {
-	repo        RoomRepository
+	repo         RoomRepository
 	matchStarter MatchStarter
-	hub         Broadcaster
+	hub          Broadcaster
 }
 
 func NewRoomHandler(repo RoomRepository, matchStarter MatchStarter, hub Broadcaster) *RoomHandler {
@@ -910,7 +910,7 @@ func seatPlayerIntoQuickRoom(tx RoomRepository, roomID, userID uint) (seat int, 
 // room is not yet ready to start. This is the single source of truth for the
 // auto-start transition shared by SelectSeat, QuickPlay, and QuickJoin.
 func (h *RoomHandler) autoStartIfFull(roomID uint) (bool, error) {
-	gameStarted := false
+	matchStarted := false
 	var autoStartRoom *Room
 	var autoStartPlayers []RoomPlayer
 	if err := h.repo.RunInTransaction(func(tx RoomRepository) error {
@@ -942,7 +942,7 @@ func (h *RoomHandler) autoStartIfFull(roomID uint) (bool, error) {
 		if err := tx.Update(r); err != nil {
 			return fmt.Errorf("auto-starting quick play room: %w", err)
 		}
-		gameStarted = true
+		matchStarted = true
 		autoStartRoom = r
 		autoStartPlayers = freshPlayers
 		return nil
@@ -950,7 +950,7 @@ func (h *RoomHandler) autoStartIfFull(roomID uint) (bool, error) {
 		return false, fmt.Errorf("auto-start check: %w", err)
 	}
 
-	if gameStarted && autoStartRoom != nil {
+	if matchStarted && autoStartRoom != nil {
 		// Story 8.5-1 AC2: gate system:match_started AND the playing-status
 		// broadcast on matchStarter.StartMatch success. On failure, revert the
 		// status flip so the room is not stranded in "playing" with no live
@@ -959,7 +959,7 @@ func (h *RoomHandler) autoStartIfFull(roomID uint) (bool, error) {
 		if startErr != nil {
 			slog.Error("failed to start auto-started game session", "roomID", roomID, "error", startErr)
 			h.revertAutoStart(roomID, autoStartRoom, autoStartPlayers)
-			gameStarted = false
+			matchStarted = false
 		} else {
 			h.broadcastToRoom(roomID, ws.SystemMatchStarted, map[string]interface{}{
 				"roomId": roomID,
@@ -968,7 +968,7 @@ func (h *RoomHandler) autoStartIfFull(roomID uint) (bool, error) {
 		}
 	}
 
-	return gameStarted, nil
+	return matchStarted, nil
 }
 
 type KickPlayerRequest struct {
@@ -1518,7 +1518,7 @@ func (h *RoomHandler) StartMatch(c echo.Context) error {
 		return fmt.Errorf("starting game: %w", err)
 	}
 
-	// Start game session via session manager
+	// Start match via match starter
 	if h.matchStarter != nil {
 		players, err := h.repo.FindPlayersByRoomID(uint(roomID))
 		if err != nil {

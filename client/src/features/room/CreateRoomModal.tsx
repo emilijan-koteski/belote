@@ -221,9 +221,7 @@ export function CreateRoomModal({ open, onOpenChange }: CreateRoomModalProps) {
               <Field
                 label={t("lobby.createRoomModal.timerStyle")}
                 hint={
-                  timerStyle === "relaxed"
-                    ? t("lobby.createRoomModal.timerHintRelaxed")
-                    : undefined
+                  timerStyle === "relaxed" ? t("lobby.createRoomModal.timerHintRelaxed") : undefined
                 }
               >
                 <Segmented
@@ -344,9 +342,7 @@ function PreviewCard({
       ? t("lobby.card.variantBitola")
       : t("lobby.createRoomModal.variantCroatia");
   const matchLabel =
-    matchMode === "1001"
-      ? t("lobby.card.matchMode1001")
-      : t("lobby.createRoomModal.matchMode501");
+    matchMode === "1001" ? t("lobby.card.matchMode1001") : t("lobby.createRoomModal.matchMode501");
   const timerLabel =
     timerStyle === "relaxed"
       ? t("lobby.card.relaxed")

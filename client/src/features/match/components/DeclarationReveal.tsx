@@ -153,9 +153,7 @@ export function DeclarationReveal({
               }}
             />
             <span>
-              {isUs
-                ? t("match.declaration.headlineUs")
-                : t("match.declaration.headlineThem")}
+              {isUs ? t("match.declaration.headlineUs") : t("match.declaration.headlineThem")}
             </span>
           </div>
           {showTiebreaker && highestDeclarer && highestLabel && (

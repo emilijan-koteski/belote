@@ -115,18 +115,14 @@ export function SeatTile({
                 {isSwapSource && (
                   <Badge
                     tone="accent"
-                    icon={
-                      <Shuffle className="size-2.5" style={{ color: "var(--accent-deep)" }} />
-                    }
+                    icon={<Shuffle className="size-2.5" style={{ color: "var(--accent-deep)" }} />}
                   >
                     {t("room.seatTile.pickTarget")}
                   </Badge>
                 )}
                 {!isYou && !isHost && !isSwapSource && mode !== "neutral" && (
                   <Badge tone={mode === "us" ? "teamA" : "teamB"}>
-                    {mode === "us"
-                      ? t("room.seatTile.partner")
-                      : t("room.seatTile.opponent")}
+                    {mode === "us" ? t("room.seatTile.partner") : t("room.seatTile.opponent")}
                   </Badge>
                 )}
               </div>
@@ -145,9 +141,7 @@ export function SeatTile({
             </div>
             <div className="text-center">
               <div className="font-display text-ink-dim text-[13.5px] font-semibold">
-                {swapMode
-                  ? t("room.seatTile.moveHere")
-                  : t("room.seatTile.takeSeat")}
+                {swapMode ? t("room.seatTile.moveHere") : t("room.seatTile.takeSeat")}
               </div>
               <div className="text-ink-mute mt-0.5 text-[11px]">
                 {mode === "us"

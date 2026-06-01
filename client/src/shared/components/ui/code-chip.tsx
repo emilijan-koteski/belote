@@ -63,7 +63,11 @@ export function CodeChip({
         <span data-testid={codeTestId}>{code}</span>
         {interactive && (
           <span className={cn("inline-flex", copied ? "text-accent" : "text-ink-mute")}>
-            {copied ? <Check className="size-3.5" strokeWidth={2.4} /> : <Copy className="size-3.5" />}
+            {copied ? (
+              <Check className="size-3.5" strokeWidth={2.4} />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
           </span>
         )}
       </Comp>
@@ -72,7 +76,9 @@ export function CodeChip({
 
   return (
     <Comp
-      {...(interactive ? { type: "button" as const, onClick: onCopy, "aria-label": ariaLabel } : {})}
+      {...(interactive
+        ? { type: "button" as const, onClick: onCopy, "aria-label": ariaLabel }
+        : {})}
       data-testid={testId}
       className={cn(
         "inline-flex items-stretch overflow-hidden rounded-[10px] border transition-[background-color,border-color,box-shadow]",
@@ -107,7 +113,11 @@ export function CodeChip({
         {code}
         {interactive && (
           <span className={cn("inline-flex", copied ? "text-accent" : "text-ink-mute")}>
-            {copied ? <Check className="size-3.5" strokeWidth={2.4} /> : <Copy className="size-3.5" />}
+            {copied ? (
+              <Check className="size-3.5" strokeWidth={2.4} />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
           </span>
         )}
       </span>

@@ -39,10 +39,7 @@ export function Segmented<T extends string>({
       role="radiogroup"
       aria-label={ariaLabel}
       data-testid={testId}
-      className={cn(
-        "bg-surface-sunken border-border flex rounded-[10px] border p-0.75",
-        className,
-      )}
+      className={cn("bg-surface-sunken border-border flex rounded-[10px] border p-0.75", className)}
     >
       {options.map((o) => {
         const active = o.value === value;

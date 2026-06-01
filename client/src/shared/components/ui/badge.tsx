@@ -11,10 +11,7 @@ type BadgeProps = {
   children: React.ReactNode;
 };
 
-const toneStyles: Record<
-  BadgeTone,
-  { bg: string; color: string; border: string }
-> = {
+const toneStyles: Record<BadgeTone, { bg: string; color: string; border: string }> = {
   neutral: {
     bg: "var(--surface-3)",
     color: "var(--ink-dim)",

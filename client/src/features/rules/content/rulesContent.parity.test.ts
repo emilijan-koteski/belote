@@ -41,7 +41,10 @@ describe("rules content parity", () => {
   it("has identical section ids and order across locales", () => {
     const refIds = reference.sections.map((s) => s.id);
     for (const lang of LANGS) {
-      expect(RULES_CONTENT[lang].sections.map((s) => s.id), `${lang} section ids`).toEqual(refIds);
+      expect(
+        RULES_CONTENT[lang].sections.map((s) => s.id),
+        `${lang} section ids`,
+      ).toEqual(refIds);
     }
   });
 

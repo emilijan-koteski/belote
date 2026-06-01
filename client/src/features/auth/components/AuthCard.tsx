@@ -49,9 +49,7 @@ export function AuthCard({ eyebrow, title, subtitle, children, footer }: AuthCar
         {title}
       </h1>
 
-      <p className="text-ink-dim mt-2.5 mb-5.5 max-w-95 text-[14.5px] leading-[1.55]">
-        {subtitle}
-      </p>
+      <p className="text-ink-dim mt-2.5 mb-5.5 max-w-95 text-[14.5px] leading-[1.55]">{subtitle}</p>
 
       <SuitRule />
 

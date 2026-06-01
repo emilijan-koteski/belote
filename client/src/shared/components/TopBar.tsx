@@ -94,10 +94,7 @@ export function TopBar({
       )}
 
       <div className="ml-auto flex items-center gap-2.5">
-        <LanguageSelector
-          persistToServer={persistLanguage}
-          testIdPrefix={languageTestIdPrefix}
-        />
+        <LanguageSelector persistToServer={persistLanguage} testIdPrefix={languageTestIdPrefix} />
 
         {showUserMenu && user && (
           <DropdownMenu>

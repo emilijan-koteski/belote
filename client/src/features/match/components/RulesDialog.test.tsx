@@ -34,7 +34,9 @@ describe("RulesDialog (in-game)", () => {
     expect(screen.getByTestId("rules-toc-goal")).toHaveTextContent("The goal");
     expect(screen.getByTestId("rules-toc-scoring")).toHaveTextContent("Scoring");
     // Content: a chapter heading, a card value, and a declaration.
-    expect(screen.getByRole("heading", { name: "Trump plays by its own rules" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Trump plays by its own rules" }),
+    ).toBeInTheDocument();
     const carreJ = screen.getByTestId("rules-meld-carreJ");
     expect(within(carreJ).getByText("Carré of Jacks")).toBeInTheDocument();
     expect(within(carreJ).getByText("+200")).toBeInTheDocument();
@@ -70,6 +72,8 @@ describe("RulesDialog (in-game)", () => {
       await i18n.changeLanguage("mk");
     });
     expect(screen.getByText("Правила на Бељот")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Адутот игра по свои правила" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Адутот игра по свои правила" }),
+    ).toBeInTheDocument();
   });
 });

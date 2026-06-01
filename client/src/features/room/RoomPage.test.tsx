@@ -1061,7 +1061,9 @@ describe("RoomPage", () => {
     await user.click(screen.getByTestId("kick-confirm"));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("match has already started"));
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining("match has already started"),
+      );
     });
   });
 

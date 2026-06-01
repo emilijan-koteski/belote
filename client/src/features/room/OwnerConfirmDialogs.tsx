@@ -315,11 +315,7 @@ function PlayerRow({ name, seat, team }: DialogTarget) {
       </div>
       {seated && relation && (
         <Badge tone={relation === "partner" ? "teamA" : "teamB"}>
-          {t(
-            relation === "partner"
-              ? "room.seatTile.partner"
-              : "room.seatTile.opponent",
-          )}
+          {t(relation === "partner" ? "room.seatTile.partner" : "room.seatTile.opponent")}
         </Badge>
       )}
     </div>

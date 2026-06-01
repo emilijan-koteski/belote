@@ -53,7 +53,7 @@ type Handler struct {
 }
 
 // NewHandler creates a chat handler wired to the WebSocket broadcaster,
-// the user repository (for sender username lookup), the session manager
+// the user repository (for sender username lookup), the match manager
 // (for in-game membership + match participant checks), and the room
 // membership resolver (for room-scoped chat recipient lists).
 func NewHandler(

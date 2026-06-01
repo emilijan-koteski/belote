@@ -19,10 +19,7 @@ type SidePanelProps = {
 export function SidePanel({ eyebrow, title, children, className, testId }: SidePanelProps) {
   return (
     <section
-      className={cn(
-        "bg-surface border-border flex flex-col rounded-lg border",
-        className,
-      )}
+      className={cn("bg-surface border-border flex flex-col rounded-lg border", className)}
       data-testid={testId}
     >
       <div className="px-4 pt-3.5 pb-2.5">

@@ -30,7 +30,13 @@ function Fact({ label, value, caption }: FactData) {
       </span>
       <span
         className="font-display tabular-nums"
-        style={{ fontSize: 26, fontWeight: 700, color: "var(--ink)", letterSpacing: -0.6, lineHeight: 1.1 }}
+        style={{
+          fontSize: 26,
+          fontWeight: 700,
+          color: "var(--ink)",
+          letterSpacing: -0.6,
+          lineHeight: 1.1,
+        }}
       >
         {value}
       </span>
@@ -59,12 +65,21 @@ export function RulesHero() {
 
       <h1
         className="font-display"
-        style={{ margin: 0, fontSize: 48, fontWeight: 700, letterSpacing: -1.4, lineHeight: 1.05, color: "var(--ink)" }}
+        style={{
+          margin: 0,
+          fontSize: 48,
+          fontWeight: 700,
+          letterSpacing: -1.4,
+          lineHeight: 1.05,
+          color: "var(--ink)",
+        }}
       >
         {ui.heroTitle}
       </h1>
 
-      <p style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: "var(--ink-dim)", maxWidth: 640 }}>
+      <p
+        style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: "var(--ink-dim)", maxWidth: 640 }}
+      >
         {ui.heroIntro}
       </p>
 

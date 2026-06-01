@@ -4,7 +4,13 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { getRulesContent } from "@/features/rules/content/rulesContent";
-import type { CardRow, Declaration, RuleBlock, RulesContent,RuleSection } from "@/features/rules/content/types";
+import type {
+  CardRow,
+  Declaration,
+  RuleBlock,
+  RulesContent,
+  RuleSection,
+} from "@/features/rules/content/types";
 import { useFocusTrap } from "@/shared/hooks/useFocusTrap";
 
 import { ClassicButton } from "./overlay/ClassicButton";
@@ -296,7 +302,9 @@ function DarkBlock({ block }: { block: RuleBlock }) {
 
   switch (block.kind) {
     case "p":
-      return <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: TEXT }}>{block.text}</p>;
+      return (
+        <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: TEXT }}>{block.text}</p>
+      );
 
     case "rule":
       return (
@@ -309,7 +317,15 @@ function DarkBlock({ block }: { block: RuleBlock }) {
             borderRadius: 8,
           }}
         >
-          <div style={{ fontFamily: "var(--font-body)", fontSize: 13.5, fontWeight: 600, color: INK, marginBottom: 3 }}>
+          <div
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: 13.5,
+              fontWeight: 600,
+              color: INK,
+              marginBottom: 3,
+            }}
+          >
             {block.title}
           </div>
           <div style={{ fontSize: 12.5, lineHeight: 1.55, color: TEXT_DIM }}>{block.text}</div>
@@ -349,7 +365,16 @@ function DarkBlock({ block }: { block: RuleBlock }) {
 
     case "steps":
       return (
-        <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+        <ol
+          style={{
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
           {block.items.map((it, i) => (
             <li
               key={i}
@@ -383,7 +408,15 @@ function DarkBlock({ block }: { block: RuleBlock }) {
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div>
-                <div style={{ fontFamily: "var(--font-body)", fontSize: 13.5, fontWeight: 600, color: INK, marginBottom: 2 }}>
+                <div
+                  style={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    color: INK,
+                    marginBottom: 2,
+                  }}
+                >
                   {it.t}
                 </div>
                 <div style={{ fontSize: 12.5, lineHeight: 1.55, color: TEXT_DIM }}>{it.d}</div>
@@ -408,8 +441,20 @@ function DarkCardLadders() {
   const { cardsTrump, cardsPlain, ui } = useDarkRules();
   return (
     <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
-      <DarkCardLadder title={ui.ladderTrumpTitle} eyebrow={ui.ladderTrumpEyebrow} accent={GREEN} rows={cardsTrump} colPts={ui.colPoints} />
-      <DarkCardLadder title={ui.ladderPlainTitle} eyebrow={ui.ladderPlainEyebrow} accent={BRASS} rows={cardsPlain} colPts={ui.colPoints} />
+      <DarkCardLadder
+        title={ui.ladderTrumpTitle}
+        eyebrow={ui.ladderTrumpEyebrow}
+        accent={GREEN}
+        rows={cardsTrump}
+        colPts={ui.colPoints}
+      />
+      <DarkCardLadder
+        title={ui.ladderPlainTitle}
+        eyebrow={ui.ladderPlainEyebrow}
+        accent={BRASS}
+        rows={cardsPlain}
+        colPts={ui.colPoints}
+      />
     </div>
   );
 }
@@ -436,11 +481,32 @@ function DarkCardLadder({
         overflow: "hidden",
       }}
     >
-      <header style={{ padding: "10px 12px 8px", borderBottom: "1px solid rgba(201,168,118,0.18)" }}>
-        <div style={{ fontFamily: "var(--font-body)", fontSize: 9.5, letterSpacing: 1.8, textTransform: "uppercase", color: accent, fontWeight: 700 }}>
+      <header
+        style={{ padding: "10px 12px 8px", borderBottom: "1px solid rgba(201,168,118,0.18)" }}
+      >
+        <div
+          style={{
+            fontFamily: "var(--font-body)",
+            fontSize: 9.5,
+            letterSpacing: 1.8,
+            textTransform: "uppercase",
+            color: accent,
+            fontWeight: 700,
+          }}
+        >
           {eyebrow}
         </div>
-        <div style={{ fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 600, color: INK, marginTop: 1 }}>{title}</div>
+        <div
+          style={{
+            fontFamily: "var(--font-body)",
+            fontSize: 13,
+            fontWeight: 600,
+            color: INK,
+            marginTop: 1,
+          }}
+        >
+          {title}
+        </div>
       </header>
       <div style={{ padding: "4px 0" }}>
         {rows.map((r, i) => {
@@ -476,14 +542,29 @@ function DarkCardLadder({
               >
                 {r.rank}
               </span>
-              <span style={{ marginLeft: 10, fontSize: 12.5, color: top ? INK : "rgba(245,242,232,0.78)", fontWeight: top ? 600 : 500 }}>
+              <span
+                style={{
+                  marginLeft: 10,
+                  fontSize: 12.5,
+                  color: top ? INK : "rgba(245,242,232,0.78)",
+                  fontWeight: top ? 600 : 500,
+                }}
+              >
                 {r.name}
-                {r.note ? <span style={{ color: TEXT_FAINT, fontStyle: "italic" }}> · {r.note}</span> : null}
+                {r.note ? (
+                  <span style={{ color: TEXT_FAINT, fontStyle: "italic" }}> · {r.note}</span>
+                ) : null}
               </span>
               <span
                 aria-label={colPts}
                 className="tabular-nums"
-                style={{ textAlign: "right", fontFamily: "var(--font-body)", fontSize: 12.5, fontWeight: 600, color: r.pts > 0 ? INK : "rgba(245,242,232,0.4)" }}
+                style={{
+                  textAlign: "right",
+                  fontFamily: "var(--font-body)",
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  color: r.pts > 0 ? INK : "rgba(245,242,232,0.4)",
+                }}
               >
                 {r.pts}
               </span>
@@ -506,7 +587,15 @@ function DarkMeldsGrid() {
   );
 }
 
-function DarkMeldChip({ meld, ptsLabel, kindLabel }: { meld: Declaration; ptsLabel: string; kindLabel: string }) {
+function DarkMeldChip({
+  meld,
+  ptsLabel,
+  kindLabel,
+}: {
+  meld: Declaration;
+  ptsLabel: string;
+  kindLabel: string;
+}) {
   const jackpot = meld.tier === 2;
   const accent = jackpot ? GREEN : BRASS;
   return (
@@ -523,20 +612,44 @@ function DarkMeldChip({ meld, ptsLabel, kindLabel }: { meld: Declaration; ptsLab
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontFamily: "var(--font-body)", fontSize: 13.5, fontWeight: 600, color: INK, flex: "1 1 auto", minWidth: 0, lineHeight: 1.2 }}>
+        <span
+          style={{
+            fontFamily: "var(--font-body)",
+            fontSize: 13.5,
+            fontWeight: 600,
+            color: INK,
+            flex: "1 1 auto",
+            minWidth: 0,
+            lineHeight: 1.2,
+          }}
+        >
           {meld.name}
         </span>
         <span className="inline-flex shrink-0 items-baseline gap-1">
-          <span className="tabular-nums" style={{ fontFamily: "var(--font-body)", fontSize: 17, fontWeight: 700, color: accent }}>
+          <span
+            className="tabular-nums"
+            style={{ fontFamily: "var(--font-body)", fontSize: 17, fontWeight: 700, color: accent }}
+          >
             +{meld.pts}
           </span>
           <span style={{ fontSize: 10, color: TEXT_FAINT }}>{ptsLabel}</span>
         </span>
       </div>
-      <div style={{ fontFamily: "var(--font-body)", fontSize: 9.5, letterSpacing: 1.6, textTransform: "uppercase", color: jackpot ? accent : BRASS, fontWeight: 600 }}>
+      <div
+        style={{
+          fontFamily: "var(--font-body)",
+          fontSize: 9.5,
+          letterSpacing: 1.6,
+          textTransform: "uppercase",
+          color: jackpot ? accent : BRASS,
+          fontWeight: 600,
+        }}
+      >
         {kindLabel}
       </div>
-      <div style={{ fontSize: 11.5, lineHeight: 1.45, color: "rgba(245,242,232,0.72)" }}>{meld.summary}</div>
+      <div style={{ fontSize: 11.5, lineHeight: 1.45, color: "rgba(245,242,232,0.72)" }}>
+        {meld.summary}
+      </div>
     </div>
   );
 }

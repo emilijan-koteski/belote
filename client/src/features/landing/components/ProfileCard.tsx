@@ -73,9 +73,7 @@ export function ProfileCard({ labels }: { labels: ProfileLabels }) {
           <div
             key={i}
             className="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-2.5"
-            style={
-              i < MATCHES.length - 1 ? { borderBottom: "1px solid var(--border)" } : undefined
-            }
+            style={i < MATCHES.length - 1 ? { borderBottom: "1px solid var(--border)" } : undefined}
           >
             <span
               className="min-w-13 rounded-md px-2 py-1 text-center text-[11px] font-bold"

@@ -246,9 +246,7 @@ export function PlayingCard({
         }}
       >
         {face ? (
-          <span style={{ fontFamily: "var(--font-suit)", fontStyle: "italic" }}>
-            {card!.rank}
-          </span>
+          <span style={{ fontFamily: "var(--font-suit)", fontStyle: "italic" }}>{card!.rank}</span>
         ) : (
           glyph
         )}

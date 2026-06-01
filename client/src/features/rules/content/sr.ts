@@ -25,7 +25,8 @@ export const sr: RulesLangData = {
     terca: {
       name: "Terca",
       summary: "Tri karte u nizu, sve iste boje.",
-      detail: "Za najave redosled ide 7, 8, 9, 10, Žandar, Baba, Kralj, Kec — i nema vraćanja od Keca nazad na 7.",
+      detail:
+        "Za najave redosled ide 7, 8, 9, 10, Žandar, Baba, Kralj, Kec — i nema vraćanja od Keca nazad na 7.",
     },
     kvarta: {
       name: "Kvarta",

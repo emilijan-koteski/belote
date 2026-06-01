@@ -77,7 +77,11 @@ function CardBlock() {
 export function RuleBlock({ block }: { block: RuleBlockType }) {
   switch (block.kind) {
     case "p":
-      return <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65, color: "var(--ink-dim)" }}>{block.text}</p>;
+      return (
+        <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65, color: "var(--ink-dim)" }}>
+          {block.text}
+        </p>
+      );
 
     case "rule":
       return (
@@ -99,7 +103,9 @@ export function RuleBlock({ block }: { block: RuleBlockType }) {
           >
             {block.title}
           </div>
-          <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ink-dim)" }}>{block.text}</div>
+          <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ink-dim)" }}>
+            {block.text}
+          </div>
         </div>
       );
 
@@ -108,7 +114,16 @@ export function RuleBlock({ block }: { block: RuleBlockType }) {
 
     case "steps":
       return (
-        <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 10 }}>
+        <ol
+          style={{
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
           {block.items.map((it, i) => (
             <li
               key={i}
@@ -143,11 +158,18 @@ export function RuleBlock({ block }: { block: RuleBlockType }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 <span
                   className="font-display"
-                  style={{ fontSize: 14.5, fontWeight: 600, color: "var(--ink)", letterSpacing: -0.1 }}
+                  style={{
+                    fontSize: 14.5,
+                    fontWeight: 600,
+                    color: "var(--ink)",
+                    letterSpacing: -0.1,
+                  }}
                 >
                   {it.t}
                 </span>
-                <span style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ink-dim)" }}>{it.d}</span>
+                <span style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ink-dim)" }}>
+                  {it.d}
+                </span>
               </div>
             </li>
           ))}

@@ -113,7 +113,13 @@ export function CardLadder({ title, accent, rows, suit, testId }: Props) {
           </span>
           <span
             className="font-display"
-            style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: -0.1, marginTop: 1 }}
+            style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: "var(--ink)",
+              letterSpacing: -0.1,
+              marginTop: 1,
+            }}
           >
             {title}
           </span>
@@ -155,7 +161,11 @@ export function CardLadder({ title, accent, rows, suit, testId }: Props) {
             >
               <span
                 className="font-mono"
-                style={{ fontSize: 11.5, color: top ? accent.ink : "var(--ink-mute)", fontWeight: 600 }}
+                style={{
+                  fontSize: 11.5,
+                  color: top ? accent.ink : "var(--ink-mute)",
+                  fontWeight: 600,
+                }}
               >
                 {String(r.strength).padStart(2, "0")}
               </span>
@@ -185,7 +195,11 @@ export function CardLadder({ title, accent, rows, suit, testId }: Props) {
                 </span>
                 {r.note && (
                   <span
-                    style={{ fontSize: 11.5, color: top ? accent.ink : "var(--ink-mute)", fontStyle: "italic" }}
+                    style={{
+                      fontSize: 11.5,
+                      color: top ? accent.ink : "var(--ink-mute)",
+                      fontStyle: "italic",
+                    }}
                   >
                     · {r.note}
                   </span>

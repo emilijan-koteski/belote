@@ -63,9 +63,7 @@ export function HeroBlock({
           <StatPill
             icon={<Activity className={ICON_CLS} />}
             label={t("lobby.stats.online")}
-            value={
-              stats ? `${stats.online} / ${stats.registered.toLocaleString()}` : "—"
-            }
+            value={stats ? `${stats.online} / ${stats.registered.toLocaleString()}` : "—"}
             testId="stats-active-ratio"
           />
         </div>

@@ -497,12 +497,8 @@ export function RoomPage() {
   if (isRoomClosed && !matchStarted) {
     return (
       <div className="mx-auto max-w-330 px-8 py-12 text-center" data-testid="room-page-closed">
-        <p className="font-display text-ink mb-2 text-lg font-semibold">
-          {t("room.roomClosed")}
-        </p>
-        <p className="text-ink-dim animate-pulse text-sm">
-          {t("room.returningToLobby")}
-        </p>
+        <p className="font-display text-ink mb-2 text-lg font-semibold">{t("room.roomClosed")}</p>
+        <p className="text-ink-dim animate-pulse text-sm">{t("room.returningToLobby")}</p>
       </div>
     );
   }
@@ -589,11 +585,7 @@ export function RoomPage() {
 
   // Contextual tip under the seat diamond, keyed to the viewer's role.
   const tipKey =
-    viewerSeat === null
-      ? "room.tip.unseated"
-      : isOwner
-        ? "room.tip.owner"
-        : "room.tip.seated";
+    viewerSeat === null ? "room.tip.unseated" : isOwner ? "room.tip.owner" : "room.tip.seated";
 
   // Action-bar CTA — one primary felt-green button whose label/enabled state is
   // driven by swap mode, quick-play auto-start, and ownership. Only the owner's
@@ -605,13 +597,9 @@ export function RoomPage() {
   let ctaOnClick: (() => void) | undefined;
   let ctaTestId = "room-cta";
   if (inSwapMode) {
-    ctaLabel = allSeated
-      ? t("room.actionBarFinishSwap")
-      : t("room.waitingForPlayers");
+    ctaLabel = allSeated ? t("room.actionBarFinishSwap") : t("room.waitingForPlayers");
   } else if (room.isQuickPlay) {
-    ctaLabel = allSeated
-      ? t("room.autoStarting")
-      : t("room.waitingForPlayers");
+    ctaLabel = allSeated ? t("room.autoStarting") : t("room.waitingForPlayers");
   } else if (isOwner) {
     ctaTestId = "start-game";
     ctaDisabled = !allSeated || startGameMutation.isPending;
@@ -622,9 +610,7 @@ export function RoomPage() {
         ? t("room.startMatch")
         : t("room.waitingForPlayers");
   } else {
-    ctaLabel = allSeated
-      ? t("room.waitingForOwner")
-      : t("room.waitingForPlayers");
+    ctaLabel = allSeated ? t("room.waitingForOwner") : t("room.waitingForPlayers");
   }
 
   return (
@@ -847,17 +833,13 @@ export function RoomPage() {
           {viewerSeat === null ? (
             <div className="flex items-center justify-center gap-2.5">
               <LegendIndicator variant="neutral" />
-              <span className="text-ink-dim text-[12.5px]">
-                {t("room.legendNeutral")}
-              </span>
+              <span className="text-ink-dim text-[12.5px]">{t("room.legendNeutral")}</span>
             </div>
           ) : (
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12.5px]">
               <span className="inline-flex items-center gap-2" data-team="teamA">
                 <LegendIndicator variant="us" />
-                <span className="text-team-a font-semibold">
-                  {t("room.legendUs")}
-                </span>
+                <span className="text-team-a font-semibold">{t("room.legendUs")}</span>
                 {renderSlots(yourPair)}
               </span>
               <span className="text-ink-off" aria-hidden>
@@ -865,9 +847,7 @@ export function RoomPage() {
               </span>
               <span className="inline-flex items-center gap-2" data-team="teamB">
                 <LegendIndicator variant="them" />
-                <span className="text-team-b font-semibold">
-                  {t("room.legendThem")}
-                </span>
+                <span className="text-team-b font-semibold">{t("room.legendThem")}</span>
                 {renderSlots(otherPair)}
               </span>
             </div>
@@ -1066,11 +1046,7 @@ export function RoomPage() {
             size="cta"
             onClick={ctaOnClick}
             disabled={ctaDisabled}
-            title={
-              !inSwapMode && isOwner && !allSeated
-                ? t("room.startMatchDisabled")
-                : undefined
-            }
+            title={!inSwapMode && isOwner && !allSeated ? t("room.startMatchDisabled") : undefined}
             data-testid={ctaTestId}
             className="shrink-0"
           >

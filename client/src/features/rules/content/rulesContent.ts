@@ -7,12 +7,7 @@
 import { en } from "./en";
 import { hr } from "./hr";
 import { mk } from "./mk";
-import {
-  type CardBase,
-  DECLARATIONS_BASE,
-  PLAIN_ROWS,
-  TRUMP_ROWS,
-} from "./shared";
+import { type CardBase, DECLARATIONS_BASE, PLAIN_ROWS, TRUMP_ROWS } from "./shared";
 import { sr } from "./sr";
 import type { CardRow, Declaration, RulesContent, RulesLang, RulesLangData } from "./types";
 

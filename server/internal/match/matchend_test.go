@@ -186,7 +186,7 @@ func TestHandleMatchEnd_PersistsBeforeBroadcast(t *testing.T) {
 	)
 
 	// match_state must follow match_end (preserves client-facing order so
-	// GamePage's stale-state redirect does not race matchEndData arrival).
+	// MatchPage's stale-state redirect does not race matchEndData arrival).
 	require.Greater(t, len(calls), matchEndIdx+1, "event:match_state must follow event:match_end")
 	assert.True(t,
 		containsType(calls[matchEndIdx+1].msg, "event:match_state"),

@@ -4,12 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import {
-  AltLink,
-  AuthCard,
-  Checkbox,
-  Field,
-} from "@/features/auth/components/AuthCard";
+import { AltLink, AuthCard, Checkbox, Field } from "@/features/auth/components/AuthCard";
 import { FetchError } from "@/shared/api/axiosClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -145,11 +140,7 @@ export function RegisterPage() {
         {t("auth.register.title")}
       </h1>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-3.5"
-        data-testid="register-form"
-      >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3.5" data-testid="register-form">
         <Field
           label={t("auth.register.emailLabel")}
           htmlFor="email"
@@ -260,10 +251,7 @@ export function RegisterPage() {
             {t("auth.register.consent.suffix")}
           </Checkbox>
           {errors.consent && (
-            <p
-              className="text-destructive mt-1.5 text-xs font-medium"
-              data-testid="consent-error"
-            >
+            <p className="text-destructive mt-1.5 text-xs font-medium" data-testid="consent-error">
               {errors.consent}
             </p>
           )}
