@@ -27,12 +27,12 @@ func (h *fakeHub) ConnectedUserIDs() []uint {
 }
 
 type fakeSessions struct {
-	inGame []uint
+	inMatch []uint
 }
 
-func (s *fakeSessions) InGameUserIDs() []uint {
-	out := make([]uint, len(s.inGame))
-	copy(out, s.inGame)
+func (s *fakeSessions) InMatchUserIDs() []uint {
+	out := make([]uint, len(s.inMatch))
+	copy(out, s.inMatch)
 	return out
 }
 
@@ -110,7 +110,7 @@ func TestGetStats_BucketsConnectedUsers(t *testing.T) {
 	// 1, 2, 3, 4, 5 online. 1+2 in a game, 3 in a waiting room, 4+5 idle.
 	// 6 in a waiting room but offline → must NOT be counted (connection-aware).
 	hub := &fakeHub{connected: []uint{1, 2, 3, 4, 5}}
-	sessions := &fakeSessions{inGame: []uint{1, 2}}
+	sessions := &fakeSessions{inMatch: []uint{1, 2}}
 	rooms := &fakeRoomRepo{
 		usersByStatus: map[string][]uint{
 			"waiting": {3, 6},
@@ -128,20 +128,20 @@ func TestGetStats_BucketsConnectedUsers(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 
 	stats := decodeStats(t, rec.Body.Bytes())
-	assert.Equal(t, 2, stats.InGame, "users 1 and 2")
+	assert.Equal(t, 2, stats.InMatch, "users 1 and 2")
 	assert.Equal(t, 1, stats.InRoom, "user 3 only — 6 is offline")
 	assert.Equal(t, 2, stats.InLobby, "users 4 and 5")
 	assert.Equal(t, 5, stats.Online)
 	assert.Equal(t, int64(100), stats.Registered)
 	// Invariant: online == sum of buckets.
-	assert.Equal(t, stats.Online, stats.InLobby+stats.InRoom+stats.InGame)
+	assert.Equal(t, stats.Online, stats.InLobby+stats.InRoom+stats.InMatch)
 }
 
-func TestGetStats_InGameWinsOverInRoom(t *testing.T) {
+func TestGetStats_InMatchWinsOverInRoom(t *testing.T) {
 	// User 7 appears in both the session manager (in game) and the
 	// room_players table (waiting). Stale waiting row must not double-count.
 	hub := &fakeHub{connected: []uint{7}}
-	sessions := &fakeSessions{inGame: []uint{7}}
+	sessions := &fakeSessions{inMatch: []uint{7}}
 	rooms := &fakeRoomRepo{usersByStatus: map[string][]uint{"waiting": {7}}}
 	users := &fakeUserRepo{count: 1}
 
@@ -152,7 +152,7 @@ func TestGetStats_InGameWinsOverInRoom(t *testing.T) {
 	require.NoError(t, h.GetStats(e.NewContext(req, rec)))
 
 	stats := decodeStats(t, rec.Body.Bytes())
-	assert.Equal(t, 1, stats.InGame)
+	assert.Equal(t, 1, stats.InMatch)
 	assert.Equal(t, 0, stats.InRoom)
 	assert.Equal(t, 0, stats.InLobby)
 	assert.Equal(t, 1, stats.Online)
@@ -160,7 +160,7 @@ func TestGetStats_InGameWinsOverInRoom(t *testing.T) {
 
 func TestGetStats_EmptyHub(t *testing.T) {
 	hub := &fakeHub{connected: nil}
-	sessions := &fakeSessions{inGame: nil}
+	sessions := &fakeSessions{inMatch: nil}
 	rooms := &fakeRoomRepo{usersByStatus: nil}
 	users := &fakeUserRepo{count: 42}
 
@@ -174,7 +174,7 @@ func TestGetStats_EmptyHub(t *testing.T) {
 	assert.Equal(t, 0, stats.Online)
 	assert.Equal(t, 0, stats.InLobby)
 	assert.Equal(t, 0, stats.InRoom)
-	assert.Equal(t, 0, stats.InGame)
+	assert.Equal(t, 0, stats.InMatch)
 	assert.Equal(t, int64(42), stats.Registered)
 }
 

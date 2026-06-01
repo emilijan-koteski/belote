@@ -1,4 +1,4 @@
-package session_test
+package match_test
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/emilijan/beljot/server/internal/game"
 	"github.com/emilijan/beljot/server/internal/game/testfixtures"
-	"github.com/emilijan/beljot/server/internal/session"
+	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/ws"
 )
 
@@ -20,14 +20,14 @@ func newGameReconnectingFixture(seat int) *game.GameState {
 // setupDisconnectedGame creates a game session with per-move timer, picks trump
 // to reach playing phase, then disconnects the specified seat. Returns the manager
 // and the userID of the disconnected player.
-func setupDisconnectedGame(t *testing.T, hub *ws.Hub, disconnectSeat int) (*session.Manager, uint) {
+func setupDisconnectedGame(t *testing.T, hub *ws.Hub, disconnectSeat int) (*match.Manager, uint) {
 	t.Helper()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 
 	// Start game with per-move timer (1s short for tests) and 120s reconnect window
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 120)
+	err := mgr.StartMatch(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 120)
 	require.NoError(t, err)
 
 	state := mgr.GetStateSnapshot(100)
@@ -117,10 +117,10 @@ func TestHandleReconnect_RejectsExpiredWindow(t *testing.T) {
 	defer hub.Shutdown()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 
 	// Start game with very short reconnect window (1 second)
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 1)
+	err := mgr.StartMatch(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 1)
 	require.NoError(t, err)
 
 	// Pick trump to reach playing phase
@@ -285,7 +285,7 @@ func TestHandleReconnect_NoOpForNonGameUser(t *testing.T) {
 	defer hub.Shutdown()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 
 	// No session exists — calling HandleReconnect should not panic
 	mgr.HandleReconnect(uint(999))
@@ -298,9 +298,9 @@ func TestHandleReconnect_NoOpWhenNotDisconnectedPhase(t *testing.T) {
 	defer hub.Shutdown()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120)
+	err := mgr.StartMatch(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120)
 	require.NoError(t, err)
 
 	// Game is in bidding phase, not disconnected
@@ -344,10 +344,10 @@ func TestHandleReconnect_RelaxedTimer_NoTimerRestore(t *testing.T) {
 	defer hub.Shutdown()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 
 	// Start with relaxed timer (no per-move timer)
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120)
+	err := mgr.StartMatch(100, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120)
 	require.NoError(t, err)
 
 	// Pick trump to reach playing phase
@@ -398,14 +398,14 @@ func TestNewGameReconnectingFixture(t *testing.T) {
 
 // setupDisconnectedGameShortWindow creates a game with a 1-second reconnect window
 // and disconnects the specified seat. The reconnect timer fires after ~1s.
-func setupDisconnectedGameShortWindow(t *testing.T, hub *ws.Hub, disconnectSeat int) (*session.Manager, *mockMatchRepo, uint) {
+func setupDisconnectedGameShortWindow(t *testing.T, hub *ws.Hub, disconnectSeat int) (*match.Manager, *mockMatchRepo, uint) {
 	t.Helper()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 
 	// Start game with 1-second reconnect window for fast timeout
-	err := mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 1)
+	err := mgr.StartMatch(100, "bitola", "1001", defaultPlayers(), "per-move", 30, 10, 1)
 	require.NoError(t, err)
 
 	state := mgr.GetStateSnapshot(100)

@@ -1,4 +1,4 @@
-package session
+package match
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ import (
 // invariant a future patch that adds work above handleTimerExpiry's switch
 // could fire spuriously after a cancel.
 func TestCancelTurnTimer_BumpsGeneration(t *testing.T) {
-	s := &Session{timerGeneration: 7}
+	s := &LiveMatch{timerGeneration: 7}
 
 	s.mu.Lock()
 	before := s.timerGeneration
@@ -32,7 +32,7 @@ func TestCancelTurnTimer_BumpsGeneration(t *testing.T) {
 // happens even when an active *time.Timer is being stopped (the original case
 // the staleness guard was designed for).
 func TestCancelTurnTimer_BumpsGeneration_WithActiveTimer(t *testing.T) {
-	s := &Session{timerGeneration: 0}
+	s := &LiveMatch{timerGeneration: 0}
 	// Schedule far enough out that Stop() succeeds before it fires.
 	s.turnTimer = time.AfterFunc(time.Hour, func() {})
 

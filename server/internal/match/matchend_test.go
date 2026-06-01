@@ -1,4 +1,4 @@
-package session_test
+package match_test
 
 import (
 	"errors"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/emilijan/beljot/server/internal/game"
 	"github.com/emilijan/beljot/server/internal/match"
-	"github.com/emilijan/beljot/server/internal/session"
 	"github.com/emilijan/beljot/server/internal/ws"
 )
 
@@ -137,10 +136,10 @@ func (r *timestampedRepo) at() time.Time {
 func TestHandleMatchEnd_PersistsBeforeBroadcast(t *testing.T) {
 	repo := &timestampedRepo{}
 	hub := &hubSpy{}
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 
 	roomID := uint(100)
-	require.NoError(t, mgr.StartGame(roomID, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+	require.NoError(t, mgr.StartMatch(roomID, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
 	t.Cleanup(func() { mgr.RemoveSession(roomID) })
 
 	// Build a final state and a payload that look like a real match end.
@@ -186,12 +185,12 @@ func TestHandleMatchEnd_PersistsBeforeBroadcast(t *testing.T) {
 		broadcastAt, persistAt,
 	)
 
-	// game_state must follow match_end (preserves client-facing order so
+	// match_state must follow match_end (preserves client-facing order so
 	// GamePage's stale-state redirect does not race matchEndData arrival).
-	require.Greater(t, len(calls), matchEndIdx+1, "event:game_state must follow event:match_end")
+	require.Greater(t, len(calls), matchEndIdx+1, "event:match_state must follow event:match_end")
 	assert.True(t,
-		containsType(calls[matchEndIdx+1].msg, "event:game_state"),
-		"call after event:match_end must be event:game_state",
+		containsType(calls[matchEndIdx+1].msg, "event:match_state"),
+		"call after event:match_end must be event:match_state",
 	)
 }
 
@@ -201,10 +200,10 @@ func TestHandleMatchEnd_PersistsBeforeBroadcast(t *testing.T) {
 func TestHandleMatchEnd_BroadcastsEvenIfPersistFails(t *testing.T) {
 	repo := &timestampedRepo{err: errors.New("simulated DB outage")}
 	hub := &hubSpy{}
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 
 	roomID := uint(101)
-	require.NoError(t, mgr.StartGame(roomID, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
+	require.NoError(t, mgr.StartMatch(roomID, "bitola", "1001", defaultPlayers(), "relaxed", 0, 10, 120))
 	t.Cleanup(func() { mgr.RemoveSession(roomID) })
 
 	finalState := mgr.GetStateSnapshot(roomID)

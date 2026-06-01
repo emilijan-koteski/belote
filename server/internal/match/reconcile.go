@@ -1,13 +1,35 @@
-package session
+package match
 
 import (
 	"fmt"
 	"log/slog"
 	"time"
-
-	"github.com/emilijan/beljot/server/internal/match"
-	"github.com/emilijan/beljot/server/internal/room"
 )
+
+// StaleRoom is the subset of room data that ReconcileStaleRooms needs from the
+// repository. The narrow type keeps the match package free of a room import
+// (which would create an import cycle via room→auth→user→match).
+type StaleRoom struct {
+	ID        uint
+	Variant   string
+	MatchMode string
+	UpdatedAt time.Time
+}
+
+// StaleRoomPlayer is the seat-occupancy data ReconcileStaleRooms needs.
+type StaleRoomPlayer struct {
+	Seat   *int
+	UserID uint
+}
+
+// StaleRoomRepository is the narrow subset of room.RoomRepository that
+// ReconcileStaleRooms uses. *room.GormRepository satisfies it at the call
+// site in main.go without any import of room from this package.
+type StaleRoomRepository interface {
+	FindByStatus(status string) ([]StaleRoom, error)
+	FindPlayersByRoomID(roomID uint) ([]StaleRoomPlayer, error)
+	UpdateStatus(roomID uint, status string) error
+}
 
 // ReconcileStaleRooms cleans up rooms left in status="playing" by a previous
 // process. Sessions live only in process memory, so any "playing" row at boot
@@ -20,7 +42,7 @@ import (
 // (b) flip room.status to "completed" so the lobby treats those players as
 // free again. Idempotent: a no-op when nothing is stale, safe to call on
 // every boot.
-func (m *Manager) ReconcileStaleRooms(roomRepo room.RoomRepository) error {
+func (m *Manager) ReconcileStaleRooms(roomRepo StaleRoomRepository) error {
 	rooms, err := roomRepo.FindByStatus("playing")
 	if err != nil {
 		return fmt.Errorf("listing playing rooms: %w", err)
@@ -37,7 +59,7 @@ func (m *Manager) ReconcileStaleRooms(roomRepo room.RoomRepository) error {
 	return nil
 }
 
-func (m *Manager) reconcileStaleRoom(roomRepo room.RoomRepository, r room.Room) error {
+func (m *Manager) reconcileStaleRoom(roomRepo StaleRoomRepository, r StaleRoom) error {
 	players, err := roomRepo.FindPlayersByRoomID(r.ID)
 	if err != nil {
 		return fmt.Errorf("loading players: %w", err)
@@ -57,9 +79,9 @@ func (m *Manager) reconcileStaleRoom(roomRepo room.RoomRepository, r room.Room) 
 	}
 	if m.matchRepo != nil && seatedCount == 4 {
 		// No precise game-start timestamp survives the restart — the room's
-		// UpdatedAt is the best proxy (StartGame is the last writer for a
+		// UpdatedAt is the best proxy (StartMatch is the last writer for a
 		// "playing" row that hasn't moved on).
-		record := &match.Match{
+		record := &Match{
 			RoomID:      r.ID,
 			Player1ID:   seated[0],
 			Player2ID:   seated[1],

@@ -1,11 +1,10 @@
-package session
+package match
 
 import (
 	"log/slog"
 	"time"
 
 	"github.com/emilijan/beljot/server/internal/game"
-	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/ws"
 )
 
@@ -44,7 +43,7 @@ func recomputeEarliestReconnectExpiryLocked(gs *game.GameState) {
 // don't share a clock — Player B dropping mid-Player-A's window gets the full
 // `reconnectWindowSec` from B's drop, regardless of how much time A had left.
 // The hub abandons the match the moment ANY seat's timer fires.
-func (m *Manager) startSeatReconnectTimerLocked(session *Session, seat int) {
+func (m *Manager) startSeatReconnectTimerLocked(session *LiveMatch, seat int) {
 	session.cancelSeatReconnectTimer(seat) // bumps generation + nils any prior timer
 	gen := session.seatReconnectGenerations[seat]
 	session.seatReconnectTimers[seat] = time.AfterFunc(
@@ -206,7 +205,7 @@ func (m *Manager) HandleDisconnect(userID uint) {
 	}
 
 	disconnectMsg := buildMessage(ws.EventPlayerDisconnected, disconnectPayload)
-	stateMsg := buildMessage(ws.EventGameState, gs)
+	stateMsg := buildMessage(ws.EventMatchState, gs)
 
 	var surrenderDeclinedMsg []byte
 	if clearedSurrenderProposer >= 0 {
@@ -242,7 +241,7 @@ func (m *Manager) HandleDisconnect(userID uint) {
 // independent of any seat that dropped earlier. The earliest-expiry view in
 // gs.DisconnectedSeat / gs.ReconnectExpiresAt is recomputed afterwards so
 // the dialog's "soonest abandon" pointer stays correct.
-func (m *Manager) handleConcurrentDisconnectLocked(session *Session, gs *game.GameState, userID uint) {
+func (m *Manager) handleConcurrentDisconnectLocked(session *LiveMatch, gs *game.GameState, userID uint) {
 	seat := -1
 	for i, uid := range session.playerIDs {
 		if uid == userID {
@@ -279,7 +278,7 @@ func (m *Manager) handleConcurrentDisconnectLocked(session *Session, gs *game.Ga
 		ReconnectExpiresAt: reconnectExpiry.UTC().Format(time.RFC3339Nano),
 	}
 	disconnectMsg := buildMessage(ws.EventPlayerDisconnected, disconnectPayload)
-	stateMsg := buildMessage(ws.EventGameState, gs)
+	stateMsg := buildMessage(ws.EventMatchState, gs)
 
 	playerIDs := session.playerIDs
 	session.mu.Unlock()
@@ -427,7 +426,7 @@ func (m *Manager) HandleReconnect(userID uint) {
 	playerIDs := session.playerIDs
 	reconnectPayload := ws.PlayerReconnectedPayload{PlayerSeat: mySeat}
 	reconnectMsg := buildMessage(ws.EventPlayerReconnected, reconnectPayload)
-	stateMsg := buildMessage(ws.EventGameState, gs)
+	stateMsg := buildMessage(ws.EventMatchState, gs)
 
 	session.mu.Unlock()
 
@@ -441,7 +440,7 @@ func (m *Manager) HandleReconnect(userID uint) {
 // persists the match record, broadcasts event:match_abandoned to all players,
 // and cleans up the session. Called once per per-seat timer — generation
 // staleness check ensures a cancelled timer's queued callback is a no-op.
-func (m *Manager) handleSeatReconnectTimeout(session *Session, seat int, generation uint64) {
+func (m *Manager) handleSeatReconnectTimeout(session *LiveMatch, seat int, generation uint64) {
 	session.mu.Lock()
 
 	// Guard: session closed, seat out of range, or generation stale
@@ -495,7 +494,7 @@ func (m *Manager) handleSeatReconnectTimeout(session *Session, seat int, generat
 	matchMode := gs.MatchMode
 	// Snapshot any hands scored before the abandonment so they persist alongside
 	// the match row. Empty when abandonment fires before hand 1 completed.
-	handsCopy := make([]match.HandResult, len(session.handResults))
+	handsCopy := make([]HandResult, len(session.handResults))
 	copy(handsCopy, session.handResults)
 
 	abandonedPayload := ws.MatchAbandonedPayload{
@@ -505,7 +504,7 @@ func (m *Manager) handleSeatReconnectTimeout(session *Session, seat int, generat
 		MatchDurationSec:  int(time.Since(startedAt).Seconds()),
 	}
 	abandonedMsg := buildMessage(ws.EventMatchAbandoned, abandonedPayload)
-	stateMsg := buildMessage(ws.EventGameState, gs)
+	stateMsg := buildMessage(ws.EventMatchState, gs)
 
 	session.mu.Unlock()
 
@@ -521,7 +520,7 @@ func (m *Manager) handleSeatReconnectTimeout(session *Session, seat int, generat
 	)
 
 	// Persist match record with abandoned status
-	matchRecord := &match.Match{
+	matchRecord := &Match{
 		RoomID:      roomID,
 		Player1ID:   playerIDs[0],
 		Player2ID:   playerIDs[1],

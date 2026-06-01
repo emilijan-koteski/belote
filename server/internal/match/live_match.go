@@ -1,4 +1,4 @@
-package session
+package match
 
 import (
 	"encoding/json"
@@ -10,13 +10,11 @@ import (
 
 	"github.com/emilijan/beljot/server/internal/apperr"
 	"github.com/emilijan/beljot/server/internal/game"
-	"github.com/emilijan/beljot/server/internal/match"
-	"github.com/emilijan/beljot/server/internal/room"
 	"github.com/emilijan/beljot/server/internal/ws"
 )
 
 // Session holds the live game state and player mapping for one active game.
-type Session struct {
+type LiveMatch struct {
 	gameState           *game.GameState
 	playerIDs           [4]uint // index = seat
 	roomID              uint
@@ -32,7 +30,7 @@ type Session struct {
 	// handResults buffers per-hand scoring rows during the match. Flushed via
 	// matchRepo.CreateWithHands when the match completes (normal end) or is
 	// abandoned. Mutated only under session.mu.Lock.
-	handResults []match.HandResult
+	handResults []HandResult
 	mu          sync.RWMutex
 }
 
@@ -52,19 +50,19 @@ type Broadcaster interface {
 // Manager orchestrates game sessions: receives actions via WebSocket,
 // calls the rules engine, broadcasts results, and persists completed matches.
 type Manager struct {
-	sessions         map[uint]*Session // keyed by roomID
+	sessions         map[uint]*LiveMatch // keyed by roomID
 	userToRoom       map[uint]uint     // userID → roomID for quick lookup
 	hub              Broadcaster
-	matchRepo        match.MatchRepository
+	matchRepo        MatchRepository
 	roomUpdater      RoomStatusUpdater
 	userRemovedHooks []func(userID uint)
 	mu               sync.RWMutex
 }
 
 // NewManager creates a session manager wired to the WebSocket hub and match repository.
-func NewManager(hub Broadcaster, matchRepo match.MatchRepository) *Manager {
+func NewManager(hub Broadcaster, matchRepo MatchRepository) *Manager {
 	return &Manager{
-		sessions:   make(map[uint]*Session),
+		sessions:   make(map[uint]*LiveMatch),
 		userToRoom: make(map[uint]uint),
 		hub:        hub,
 		matchRepo:  matchRepo,
@@ -85,8 +83,8 @@ func (m *Manager) AddUserRemovedHook(fn func(userID uint)) {
 	m.userRemovedHooks = append(m.userRemovedHooks, fn)
 }
 
-// StartGame creates a new game session from room data and broadcasts the initial state.
-func (m *Manager) StartGame(roomID uint, variant string, matchMode string, players [4]room.PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint, reconnectWindowSec int) error {
+// StartMatch creates a new game session from room data and broadcasts the initial state.
+func (m *Manager) StartMatch(roomID uint, variant string, matchMode string, players [4]PlayerSeatInfo, timerStyle string, timerDurationSec int, ownerID uint, reconnectWindowSec int) error {
 	m.mu.Lock()
 	if _, exists := m.sessions[roomID]; exists {
 		m.mu.Unlock()
@@ -112,7 +110,7 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 		}
 	}
 
-	session := &Session{
+	session := &LiveMatch{
 		gameState:          gs,
 		playerIDs:          playerIDs,
 		roomID:             roomID,
@@ -131,7 +129,7 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 	slog.Info("session: game started", "roomID", roomID, "players", playerIDs)
 
 	// Broadcast dealing-phase state (client shows deal animation)
-	m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventGameState, gs))
+	m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventMatchState, gs))
 
 	// Auto-transition to bidding phase (client's DealAnimation handles visual timing)
 	if gs.Phase == game.PhaseDealing {
@@ -140,7 +138,7 @@ func (m *Manager) StartGame(roomID uint, variant string, matchMode string, playe
 		m.setTurnExpiry(session, gs)
 		m.startTimerLocked(session, gs.ActivePlayerSeat)
 		session.mu.Unlock()
-		m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventGameState, gs))
+		m.hub.BroadcastToUsers(playerIDs[:], buildMessage(ws.EventMatchState, gs))
 	}
 
 	return nil
@@ -368,19 +366,19 @@ func (m *Manager) HasSession(roomID uint) bool {
 	return ok
 }
 
-// IsUserInGame returns true if the user is currently part of an active game session.
+// IsUserInMatch returns true if the user is currently part of an active game session.
 // Used by the chat handler to enforce the "no global chat while in a game" rule.
-func (m *Manager) IsUserInGame(userID uint) bool {
+func (m *Manager) IsUserInMatch(userID uint) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	_, ok := m.userToRoom[userID]
 	return ok
 }
 
-// InGameUserIDs returns a snapshot of every userID currently mapped to an
+// InMatchUserIDs returns a snapshot of every userID currently mapped to an
 // active game session. Used by the lobby stats endpoint to bucket connected
 // users into "in game" vs other states. Order is unspecified.
-func (m *Manager) InGameUserIDs() []uint {
+func (m *Manager) InMatchUserIDs() []uint {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	ids := make([]uint, 0, len(m.userToRoom))
@@ -430,8 +428,8 @@ func (m *Manager) MatchParticipantsByUser(userID uint) ([4]uint, int, bool) {
 }
 
 // parseAction converts a WS message into a game.Action for the rules engine.
-func (m *Manager) parseAction(userID uint, session *Session, msg ws.WSMessage) (game.Action, error) {
-	// Find seat for this user (playerIDs is immutable after StartGame)
+func (m *Manager) parseAction(userID uint, session *LiveMatch, msg ws.WSMessage) (game.Action, error) {
+	// Find seat for this user (playerIDs is immutable after StartMatch)
 	seat := -1
 	for i, uid := range session.playerIDs {
 		if uid == userID {
@@ -497,7 +495,7 @@ func (m *Manager) parseAction(userID uint, session *Session, msg ws.WSMessage) (
 // autoPlayed indicates whether the card was played by the timer auto-play system.
 //
 // Story 8.5-1 AC4: match-end broadcasts (event:match_end and the trailing
-// event:game_state) are emitted by handleMatchEnd AFTER persistence; this
+// event:match_state) are emitted by handleMatchEnd AFTER persistence; this
 // function returns early in those branches.
 func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *game.GameState, action game.Action, autoPlayed bool) {
 	userIDs := playerIDs[:]
@@ -560,7 +558,7 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		// resolveTrickWithDeclarations, which runs under ActionPlayCard — not
 		// under ActionDeclare. Broadcast the reveal event here so the client's
 		// DeclarationReveal fires at start of trick 2. Must precede the
-		// authoritative event:game_state below so the reveal handler sets
+		// authoritative event:match_state below so the reveal handler sets
 		// declarationReveal before any follow-up state logic runs.
 		m.broadcastDeclarationsResolvedIfTransition(oldState, newState, userIDs)
 
@@ -588,10 +586,10 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		}
 
 		// Story 8.5-1 AC4: when phase is match_end, the event:match_end and the
-		// trailing event:game_state are emitted by handleMatchEnd AFTER the
+		// trailing event:match_state are emitted by handleMatchEnd AFTER the
 		// match is persisted. The persist-before-broadcast invariant guarantees
 		// a client that receives match_end and immediately reads the match row
-		// will find it. handleMatchEnd preserves the (match_end → game_state)
+		// will find it. handleMatchEnd preserves the (match_end → match_state)
 		// client-facing order so GamePage's stale-state redirect does not race
 		// the matchEndData arrival.
 		if newState.Phase == game.PhaseMatchEnd {
@@ -603,7 +601,7 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		// awaitingDeclaration / pendingBelotSeat flags. event:card_played only
 		// mutates the trick on the client — without this the next player never
 		// learns it's their turn.
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	case game.ActionPickTrump:
 		if newState.TrumpSuit != nil {
@@ -629,10 +627,10 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		// sync activePlayerSeat/phase/trumpCallerSeat. Without this, a
 		// successful pick leaves the client stuck on TrumpPrompt and every
 		// subsequent click returns error:wrong_phase.
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	case game.ActionPassTrump:
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	case game.ActionDeclare, game.ActionSkipDeclare:
 		// In Bitola, DeclarationsResolved cannot actually flip here — declarations
@@ -643,7 +641,7 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		// Always follow with full state so the client clears awaitingDeclaration,
 		// advances activePlayerSeat, and picks up declarationsResolved. The
 		// event:declarations_resolved handler is reveal-only and does not sync state.
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	case game.ActionAnnounceBelot, game.ActionSkipBelot:
 		if newState.BelotAnnounced && !oldState.BelotAnnounced {
@@ -663,15 +661,15 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 		// Always follow with full state so the client clears pendingBelotSeat,
 		// advances activePlayerSeat, and resolves the trick if the belot action
 		// came after the 4th card. event:belot_announced is informational only.
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	case game.ActionPause:
-		paused := ws.GamePausedPayload{
+		paused := ws.MatchPausedPayload{
 			PausedBy:      action.PlayerSeat,
 			PausedPlayers: newState.PausedPlayers,
 		}
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGamePaused, paused))
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchPaused, paused))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	case game.ActionSurrenderRequest:
 		// Story 8.2 — broadcast typed proposed payload, then authoritative
@@ -689,7 +687,7 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 			PartnerSeat:      (proposerSeat + 2) % 4,
 		}
 		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventSurrenderProposed, proposed))
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	case game.ActionSurrenderDecline:
 		// Proposer is no longer in newState (cleared on decline) — read it
@@ -708,34 +706,34 @@ func (m *Manager) broadcastActionResult(playerIDs [4]uint, oldState, newState *g
 			slog.Warn("session: surrender_declined broadcast suppressed; oldState.SurrenderProposerSeat is nil",
 				"decliningSeat", action.PlayerSeat)
 		}
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	case game.ActionSurrenderAccept:
 		// Story 8.5-1 AC4: match-end transition emits event:match_end AND the
-		// trailing event:game_state from handleMatchEnd, AFTER persistence.
-		// The (match_end → game_state) client-facing order is preserved.
+		// trailing event:match_state from handleMatchEnd, AFTER persistence.
+		// The (match_end → match_state) client-facing order is preserved.
 		if newState.Phase == game.PhaseMatchEnd {
 			return
 		}
 		// Defensive fallback for the (currently unreachable) case where surrender
 		// accept does not reach match_end — emit authoritative state so clients
 		// pick up the cleared SurrenderProposerSeat.
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	case game.ActionUnpause, game.ActionOwnerUnpause:
-		resumed := ws.GameResumedPayload{
+		resumed := ws.MatchResumedPayload{
 			ResumedBy:     action.PlayerSeat,
 			OwnerOverride: action.Type == game.ActionOwnerUnpause,
 		}
 		// Only send resumed event if game actually left paused phase
 		if newState.Phase != game.PhasePaused {
-			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameResumed, resumed))
+			m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchResumed, resumed))
 		}
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 
 	default:
 		// For any other action, broadcast full state
-		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, newState))
+		m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, newState))
 	}
 }
 
@@ -774,14 +772,14 @@ func (m *Manager) broadcastDeclarationsResolvedIfTransition(oldState, newState *
 	m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventDeclarationsResolved, payload))
 }
 
-// bufferHandResultIfScored appends a match.HandResult to session.handResults
+// bufferHandResultIfScored appends a HandResult to session.handResults
 // when the provided state transition represents a scored hand (hand number
 // advanced OR match ended) AND LastHandResult is populated. The completed
 // hand's number is oldState.HandNumber — on normal hand completion newState
 // has already been advanced by startNewHand, and on match-end startNewHand
 // does not run so oldState.HandNumber still identifies the final hand. Safe
 // to call on every state transition; no-op when the condition is not met.
-func (m *Manager) bufferHandResultIfScored(session *Session, oldState, newState *game.GameState) {
+func (m *Manager) bufferHandResultIfScored(session *LiveMatch, oldState, newState *game.GameState) {
 	if oldState == nil || newState == nil || newState.LastHandResult == nil {
 		return
 	}
@@ -796,7 +794,7 @@ func (m *Manager) bufferHandResultIfScored(session *Session, oldState, newState 
 		v := *hr.CapotTeam
 		capotTeam = &v
 	}
-	row := match.HandResult{
+	row := HandResult{
 		HandNumber:      oldState.HandNumber,
 		TeamACardPoints: hr.TeamACardPoints,
 		TeamBCardPoints: hr.TeamBCardPoints,
@@ -818,7 +816,7 @@ func (m *Manager) bufferHandResultIfScored(session *Session, oldState, newState 
 }
 
 // handleMatchEnd persists the match record, updates room status, broadcasts
-// event:match_end and the trailing event:game_state, and removes the session.
+// event:match_end and the trailing event:match_state, and removes the session.
 // Uses the passed finalState (not session.gameState) to avoid data races.
 // surrenderedBy is the userID of the player who initiated the accepted surrender,
 // or nil for natural match-end. The match Status stays "completed" in both cases —
@@ -832,17 +830,17 @@ func (m *Manager) bufferHandResultIfScored(session *Session, oldState, newState 
 //  2. event:match_end ALWAYS fires — even if persistence failed — so the four
 //     participants are not stranded on the table forever. Persist failures
 //     are logged via slog.Error but do not block the broadcast.
-//  3. event:game_state follows event:match_end so the (match_end → game_state)
+//  3. event:match_state follows event:match_end so the (match_end → match_state)
 //     client-facing order is preserved (GamePage redirects to /lobby when it
-//     observes phase=="match_end" with matchEndData==null; sending game_state
+//     observes phase=="match_end" with matchEndData==null; sending match_state
 //     first would race that redirect against matchEndData arrival).
-func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState, surrenderedBy *uint, matchEndPayload ws.MatchEndPayload) {
+func (m *Manager) handleMatchEnd(session *LiveMatch, finalState *game.GameState, surrenderedBy *uint, matchEndPayload ws.MatchEndPayload) {
 	winnerTeam := 0
 	if finalState.WinnerTeam != nil {
 		winnerTeam = *finalState.WinnerTeam
 	}
 
-	matchRecord := &match.Match{
+	matchRecord := &Match{
 		RoomID:        session.roomID,
 		Player1ID:     session.playerIDs[0],
 		Player2ID:     session.playerIDs[1],
@@ -861,7 +859,7 @@ func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState, s
 
 	// Copy buffered hand results under RLock to avoid holding the lock during I/O.
 	session.mu.RLock()
-	handsCopy := make([]match.HandResult, len(session.handResults))
+	handsCopy := make([]HandResult, len(session.handResults))
 	copy(handsCopy, session.handResults)
 	session.mu.RUnlock()
 
@@ -878,11 +876,11 @@ func (m *Manager) handleMatchEnd(session *Session, finalState *game.GameState, s
 		}
 	}
 
-	// Broadcast match_end → game_state AFTER persistence completes. Both fire
+	// Broadcast match_end → match_state AFTER persistence completes. Both fire
 	// regardless of persist outcome (clients must not be stranded on the table).
 	userIDs := session.playerIDs[:]
 	m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchEnd, matchEndPayload))
-	m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventGameState, finalState))
+	m.hub.BroadcastToUsers(userIDs, buildMessage(ws.EventMatchState, finalState))
 
 	m.RemoveSession(session.roomID)
 }
@@ -938,7 +936,7 @@ func buildMessage(eventType string, payload interface{}) []byte {
 // setTurnExpiry sets TurnExpiresAt on the game state based on timer config.
 // For "per-move" style, sets an absolute expiry timestamp. For "relaxed", sets nil.
 // Must be called under session.mu.Lock().
-func (m *Manager) setTurnExpiry(session *Session, gs *game.GameState) {
+func (m *Manager) setTurnExpiry(session *LiveMatch, gs *game.GameState) {
 	if session.timerStyle == "per-move" && session.timerDurationSec > 0 {
 		expiry := time.Now().Add(time.Duration(session.timerDurationSec) * time.Second)
 		gs.TurnExpiresAt = &expiry
@@ -957,7 +955,7 @@ func (m *Manager) setTurnExpiry(session *Session, gs *game.GameState) {
 // session.gameState has been reassigned to the post-action state. Reading
 // session.gameState here would capture the pre-action seat and the timer would
 // fire for the wrong player.
-func (m *Manager) startTimerLocked(session *Session, expectedSeat int) {
+func (m *Manager) startTimerLocked(session *LiveMatch, expectedSeat int) {
 	if session.timerStyle != "per-move" || session.timerDurationSec <= 0 {
 		return
 	}
@@ -975,7 +973,7 @@ func (m *Manager) startTimerLocked(session *Session, expectedSeat int) {
 // handleTimerExpiry is called when a per-move timer fires. It auto-plays for the
 // active player and broadcasts the result. The generation counter prevents stale
 // timer callbacks from acting on the wrong turn.
-func (m *Manager) handleTimerExpiry(session *Session, generation uint64, expectedSeat int) {
+func (m *Manager) handleTimerExpiry(session *LiveMatch, generation uint64, expectedSeat int) {
 	session.mu.Lock()
 
 	// Guard: session closed or timer is stale (turn already advanced)

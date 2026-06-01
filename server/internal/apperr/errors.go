@@ -70,7 +70,7 @@ var (
 	ErrSeatTaken                 = NewAppError("SEAT_TAKEN", "seat is already occupied", http.StatusConflict)
 	ErrInvalidSeat               = NewAppError("INVALID_SEAT", "seat must be 0, 1, 2, or 3", http.StatusBadRequest)
 	ErrNotAllSeated              = NewAppError("NOT_ALL_SEATED", "all 4 players must be seated to start", http.StatusBadRequest)
-	ErrGameNotStartable          = NewAppError("GAME_NOT_STARTABLE", "room is not in waiting status", http.StatusConflict)
+	ErrMatchNotStartable         = NewAppError("MATCH_NOT_STARTABLE", "room is not in waiting status", http.StatusConflict)
 	ErrReconnectWindowOutOfRange = NewAppError("RECONNECT_WINDOW_OUT_OF_RANGE", "reconnect window must be between 30 and 300 seconds", http.StatusBadRequest)
 	ErrRoomNotWaiting            = NewAppError("ROOM_NOT_WAITING", "this action is only available before the game starts", http.StatusConflict)
 	ErrCannotKickSelf            = NewAppError("CANNOT_KICK_SELF", "the room owner cannot kick themselves", http.StatusBadRequest)
@@ -81,7 +81,7 @@ var (
 	ErrOwnerCannotLeaveSeat      = NewAppError("OWNER_CANNOT_LEAVE_SEAT", "the room owner cannot leave their seat — leave the room instead", http.StatusConflict)
 	ErrCannotTransferToSelf      = NewAppError("CANNOT_TRANSFER_TO_SELF", "ownership cannot be transferred to yourself", http.StatusBadRequest)
 	ErrCannotPromoteUnseated     = NewAppError("CANNOT_PROMOTE_UNSEATED", "the new owner must be seated", http.StatusConflict)
-	ErrGameAlreadyStarted        = NewAppError("GAME_ALREADY_STARTED", "the game has already started", http.StatusConflict)
+	ErrMatchAlreadyStarted       = NewAppError("MATCH_ALREADY_STARTED", "the match has already started", http.StatusConflict)
 
 	// Game domain errors
 	ErrWrongPhase              = NewAppError("WRONG_PHASE", "action not valid in current game phase", http.StatusBadRequest)

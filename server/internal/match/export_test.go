@@ -1,10 +1,9 @@
-package session
+package match
 
 import (
 	"time"
 
 	"github.com/emilijan/beljot/server/internal/game"
-	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/ws"
 )
 
@@ -14,12 +13,12 @@ import (
 // match completion.
 func (m *Manager) HandleMatchEndForTest(roomID uint, finalState *game.GameState, surrenderedBy *uint, payload ws.MatchEndPayload) {
 	m.mu.RLock()
-	session, ok := m.sessions[roomID]
+	lm, ok := m.sessions[roomID]
 	m.mu.RUnlock()
 	if !ok {
 		return
 	}
-	m.handleMatchEnd(session, finalState, surrenderedBy, payload)
+	m.handleMatchEnd(lm, finalState, surrenderedBy, payload)
 }
 
 // AutoActionTypeFor exposes autoActionTypeFor for tests in the external
@@ -33,63 +32,63 @@ func AutoActionTypeFor(actionType string) (ws.AutoActionType, bool) {
 // external session_test package.
 func (m *Manager) BufferHandResultIfScored(roomID uint, oldState, newState *game.GameState) {
 	m.mu.RLock()
-	session, ok := m.sessions[roomID]
+	lm, ok := m.sessions[roomID]
 	m.mu.RUnlock()
 	if !ok {
 		return
 	}
-	m.bufferHandResultIfScored(session, oldState, newState)
+	m.bufferHandResultIfScored(lm, oldState, newState)
 }
 
-// HandResults returns a copy of the session's buffered hand results for tests.
-func (m *Manager) HandResults(roomID uint) []match.HandResult {
+// HandResults returns a copy of the lm's buffered hand results for tests.
+func (m *Manager) HandResults(roomID uint) []HandResult {
 	m.mu.RLock()
-	session, ok := m.sessions[roomID]
+	lm, ok := m.sessions[roomID]
 	m.mu.RUnlock()
 	if !ok {
 		return nil
 	}
-	session.mu.RLock()
-	defer session.mu.RUnlock()
-	out := make([]match.HandResult, len(session.handResults))
-	copy(out, session.handResults)
+	lm.mu.RLock()
+	defer lm.mu.RUnlock()
+	out := make([]HandResult, len(lm.handResults))
+	copy(out, lm.handResults)
 	return out
 }
 
-// SetGameStateForTest replaces the session's game state. Used to drive
+// SetGameStateForTest replaces the lm's game state. Used to drive
 // HandleAction through specific mid-game states (declaration prompt, belot
 // prompt) without scripting an entire match. Tests using this helper must
-// call StartGame first to register the session and set timer config.
+// call StartMatch first to register the lm and set timer config.
 func (m *Manager) SetGameStateForTest(roomID uint, gs *game.GameState) {
 	m.mu.RLock()
-	session, ok := m.sessions[roomID]
+	lm, ok := m.sessions[roomID]
 	m.mu.RUnlock()
 	if !ok {
 		return
 	}
-	session.mu.Lock()
-	session.gameState = gs
-	session.mu.Unlock()
+	lm.mu.Lock()
+	lm.gameState = gs
+	lm.mu.Unlock()
 }
 
 // TriggerTimerExpiryForTest cancels any pending turn timer and re-arms a
 // short-duration timer for the given expectedSeat, then waits for it to fire.
 // Used by tests that drive the auto-action code path on an injected game state
-// where the StartGame-captured expectedSeat would not match the injected
+// where the StartMatch-captured expectedSeat would not match the injected
 // ActivePlayerSeat. The caller should sleep until the auto-action settles
 // before snapshotting state.
 func (m *Manager) TriggerTimerExpiryForTest(roomID uint, expectedSeat int, fireAfter time.Duration) {
 	m.mu.RLock()
-	session, ok := m.sessions[roomID]
+	lm, ok := m.sessions[roomID]
 	m.mu.RUnlock()
 	if !ok {
 		return
 	}
-	session.mu.Lock()
-	session.cancelTurnTimer()
-	gen := session.timerGeneration
-	session.turnTimer = time.AfterFunc(fireAfter, func() {
-		m.handleTimerExpiry(session, gen, expectedSeat)
+	lm.mu.Lock()
+	lm.cancelTurnTimer()
+	gen := lm.timerGeneration
+	lm.turnTimer = time.AfterFunc(fireAfter, func() {
+		m.handleTimerExpiry(lm, gen, expectedSeat)
 	})
-	session.mu.Unlock()
+	lm.mu.Unlock()
 }

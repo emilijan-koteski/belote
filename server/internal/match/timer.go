@@ -1,4 +1,4 @@
-package session
+package match
 
 // cancelTurnTimer stops the current turn timer if active. Safe to call when nil.
 // Must be called under session.mu.Lock().
@@ -7,7 +7,7 @@ package session
 // time.AfterFunc but blocked on session.mu fails the staleness check in
 // handleTimerExpiry. This makes "cancel == invalidate stale callbacks" a
 // property of this function rather than a discipline imposed on every caller.
-func (s *Session) cancelTurnTimer() {
+func (s *LiveMatch) cancelTurnTimer() {
 	s.timerGeneration++
 	if s.turnTimer != nil {
 		s.turnTimer.Stop()
@@ -20,7 +20,7 @@ func (s *Session) cancelTurnTimer() {
 // callback that already passed `time.AfterFunc` but is blocked on session.mu
 // fails its staleness check. Safe to call when nil. Must be called under
 // session.mu.Lock().
-func (s *Session) cancelSeatReconnectTimer(seat int) {
+func (s *LiveMatch) cancelSeatReconnectTimer(seat int) {
 	if seat < 0 || seat >= 4 {
 		return
 	}
@@ -34,7 +34,7 @@ func (s *Session) cancelSeatReconnectTimer(seat int) {
 // cancelAllReconnectTimers stops every per-seat reconnect timer. Used by
 // session teardown + match-end paths so no stale callback can fire after the
 // session is unreachable. Must be called under session.mu.Lock().
-func (s *Session) cancelAllReconnectTimers() {
+func (s *LiveMatch) cancelAllReconnectTimers() {
 	for seat := 0; seat < 4; seat++ {
 		s.cancelSeatReconnectTimer(seat)
 	}

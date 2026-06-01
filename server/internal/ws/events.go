@@ -31,7 +31,7 @@ const ActionSurrenderAccept = "action:surrender_accept"
 const ActionSurrenderDecline = "action:surrender_decline"
 
 // --- Game state events (server -> client) ---
-const EventGameState = "event:game_state"
+const EventMatchState = "event:match_state"
 const EventCardPlayed = "event:card_played"
 const EventTrickResolved = "event:trick_resolved"
 const EventHandScored = "event:hand_scored"
@@ -39,8 +39,8 @@ const EventMatchEnd = "event:match_end"
 const EventTrumpSelected = "event:trump_selected"
 const EventDeclarationsResolved = "event:declarations_resolved"
 const EventBelotAnnounced = "event:belot_announced"
-const EventGamePaused = "event:game_paused"
-const EventGameResumed = "event:game_resumed"
+const EventMatchPaused = "event:match_paused"
+const EventMatchResumed = "event:match_resumed"
 const EventAutoAction = "event:auto_action"
 
 // --- Game event payload structs ---
@@ -70,14 +70,14 @@ type BelotAnnouncedPayload struct {
 	CardID     string `json:"cardId"`
 }
 
-// GamePausedPayload is the typed payload for EventGamePaused events.
-type GamePausedPayload struct {
+// MatchPausedPayload is the typed payload for EventMatchPaused events.
+type MatchPausedPayload struct {
 	PausedBy      int     `json:"pausedBy"`
 	PausedPlayers [4]bool `json:"pausedPlayers"`
 }
 
-// GameResumedPayload is the typed payload for EventGameResumed events.
-type GameResumedPayload struct {
+// MatchResumedPayload is the typed payload for EventMatchResumed events.
+type MatchResumedPayload struct {
 	ResumedBy     int  `json:"resumedBy"`
 	OwnerOverride bool `json:"ownerOverride"`
 }
@@ -95,7 +95,7 @@ const (
 
 // AutoActionPayload is the typed payload for EventAutoAction events.
 // Informational one-shot — clients use it to surface a toast naming the
-// timed-out player. Authoritative state still rides EventGameState.
+// timed-out player. Authoritative state still rides EventMatchState.
 type AutoActionPayload struct {
 	PlayerSeat int            `json:"playerSeat"`
 	Type       AutoActionType `json:"type"`
@@ -182,13 +182,13 @@ const ErrorNotRoomOwner = "error:not_room_owner"
 const ErrorPlayerDisconnected = "error:player_disconnected"
 const ErrorSurrenderExhausted = "error:surrender_exhausted"
 
-// ErrorGameStartFailed is broadcast to the four would-be participants of an
+// ErrorMatchStartFailed is broadcast to the four would-be participants of an
 // auto-start that reached a "ready to start" state in the room transaction
-// but whose subsequent gameStarter.StartGame call returned an error. Story
+// but whose subsequent matchStarter.StartMatch call returned an error. Story
 // 8.5-1 AC2 — instead of stranding the room in a permanent "playing" state
 // with no live session, the room is reverted to "waiting" and clients are
 // told to stay on the room-lobby page rather than navigate to /game/{id}.
-const ErrorGameStartFailed = "error:game_start_failed"
+const ErrorMatchStartFailed = "error:match_start_failed"
 
 // --- Room events ---
 const SystemRoomCreated = "system:room_created"
@@ -209,7 +209,7 @@ type RoomKickedPayload struct {
 
 // --- Seat and game events ---
 const SystemSeatUpdated = "system:seat_updated"
-const SystemGameStarted = "system:game_started"
+const SystemMatchStarted = "system:match_started"
 
 // --- Chat events ---
 const ActionChatMessage = "action:chat_message"
@@ -264,9 +264,8 @@ type EmotePayload struct {
 
 // ChatMessageRequest is the typed payload for ActionChatMessage (client → server).
 type ChatMessageRequest struct {
-	Channel string `json:"channel"`           // "global" | "match" | "room"
-	MatchID *uint  `json:"matchId,omitempty"` // required when channel == "match"
-	RoomID  *uint  `json:"roomId,omitempty"`  // required when channel == "room"
+	Channel string `json:"channel"`          // "lobby" | "match" | "room"
+	RoomID  *uint  `json:"roomId,omitempty"` // required when channel == "match" or "room"
 	Text    string `json:"text"`
 }
 
@@ -276,7 +275,7 @@ type ChatMessagePayload struct {
 	Username  string `json:"username"`
 	Message   string `json:"message"`
 	Timestamp string `json:"timestamp"` // ISO 8601 (RFC3339) UTC
-	Scope     string `json:"scope"`     // "global" | "match" | "room"
+	Scope     string `json:"scope"`     // "lobby" | "match" | "room"
 }
 
 // --- General error events ---

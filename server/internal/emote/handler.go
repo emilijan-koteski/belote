@@ -23,7 +23,7 @@ type Broadcaster interface {
 
 // GameMembership resolves the four match participants for a sender by their
 // userID. The emote payload carries no matchID, so the handler relies on
-// userToRoom indexing inside the session manager — wired to *session.Manager
+// userToRoom indexing inside the match manager — wired to *match.Manager
 // in main.go.
 type GameMembership interface {
 	MatchParticipantsByUser(userID uint) (participants [4]uint, seat int, ok bool)
@@ -51,7 +51,7 @@ func NewHandler(hub Broadcaster, game GameMembership) *Handler {
 }
 
 // HandleAction is the action handler entry point. Composed with
-// session.Manager.HandleAction in main.go via a dispatch closure.
+// match.Manager.HandleAction in main.go via a dispatch closure.
 // Returns silently for any msg.Type other than ws.ActionEmote so the
 // composite caller can route every action through it without filtering.
 func (h *Handler) HandleAction(client *ws.Client, msg ws.WSMessage) {
@@ -97,7 +97,7 @@ func (h *Handler) HandleAction(client *ws.Client, msg ws.WSMessage) {
 }
 
 // RemoveUser deletes the per-user rate-limit entry, bounding the map to
-// current-active users (not lifetime users). Called via session.Manager's
+// current-active users (not lifetime users). Called via match.Manager's
 // UserRemovedHook on session teardown (D105 + D106).
 func (h *Handler) RemoveUser(userID uint) {
 	h.mu.Lock()

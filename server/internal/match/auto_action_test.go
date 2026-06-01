@@ -1,4 +1,4 @@
-package session_test
+package match_test
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/emilijan/beljot/server/internal/game"
 	"github.com/emilijan/beljot/server/internal/game/testfixtures"
-	"github.com/emilijan/beljot/server/internal/session"
+	"github.com/emilijan/beljot/server/internal/match"
 	"github.com/emilijan/beljot/server/internal/ws"
 )
 
@@ -36,7 +36,7 @@ func TestAutoActionTypeFor(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := session.AutoActionTypeFor(tc.actionType)
+			got, ok := match.AutoActionTypeFor(tc.actionType)
 			assert.Equal(t, tc.wantOK, ok)
 			assert.Equal(t, tc.wantType, got)
 		})
@@ -54,10 +54,10 @@ func TestPerMoveTimer_BiddingPhaseAutoPasses(t *testing.T) {
 	defer hub.Shutdown()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 
 	// 1-second timer so it expires quickly
-	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 1, 10, 120))
+	require.NoError(t, mgr.StartMatch(100, "bitola", "1001", defaultPlayers(), "per-move", 1, 10, 120))
 
 	state := mgr.GetStateSnapshot(100)
 	require.NotNil(t, state)
@@ -96,12 +96,12 @@ func TestAutoAction_SkipDeclare_ChainsToAutoPlayWithoutExtension(t *testing.T) {
 	defer hub.Shutdown()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
+	mgr := match.NewManager(hub, repo)
 	// 60-second timerDurationSec — if the bug regressed (fresh expiry on
 	// timed-out seat), that fresh expiry would land ~60s in the future, far
 	// past the chained next-seat expiry (which sits ~60s after the chain
 	// runs but starts on the seat that just received the play, not seat 1).
-	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 60, 10, 120))
+	require.NoError(t, mgr.StartMatch(100, "bitola", "1001", defaultPlayers(), "per-move", 60, 10, 120))
 
 	// Inject a declaration-prompt state on seat 1 with an already-elapsed
 	// expiry. The next TriggerTimerExpiryForTest fires the auto-action.
@@ -146,8 +146,8 @@ func TestAutoAction_ChainedBelotPrompt_AdvancesPastDoomedSeat(t *testing.T) {
 	defer hub.Shutdown()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
-	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 60, 10, 120))
+	mgr := match.NewManager(hub, repo)
+	require.NoError(t, mgr.StartMatch(100, "bitola", "1001", defaultPlayers(), "per-move", 60, 10, 120))
 
 	// Seat 0 with hearts trump holds KH+QH. Force AutoPlay to land on KH by
 	// stripping all of seat 0's other cards down to just K and Q. Set
@@ -205,8 +205,8 @@ func TestAutoAction_SkipBelot_AdvancesSeatAndArmsFreshTimer(t *testing.T) {
 	defer hub.Shutdown()
 
 	repo := newMockMatchRepo()
-	mgr := session.NewManager(hub, repo)
-	require.NoError(t, mgr.StartGame(100, "bitola", "1001", defaultPlayers(), "per-move", 60, 10, 120))
+	mgr := match.NewManager(hub, repo)
+	require.NoError(t, mgr.StartMatch(100, "bitola", "1001", defaultPlayers(), "per-move", 60, 10, 120))
 
 	// Set up a belot-prompt state on seat 1, using diamonds trump so seat 1's
 	// fixture hand (KD, QD) qualifies. Seat 1 just played KD; PendingBelotSeat
