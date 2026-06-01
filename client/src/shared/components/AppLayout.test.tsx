@@ -24,10 +24,6 @@ function renderWithRouter(initialPath: string) {
         <Route element={<AppLayout />}>
           <Route path="/lobby" element={<div data-testid="lobby-content">Lobby</div>} />
           <Route path="/profile" element={<div data-testid="profile-content">Profile</div>} />
-          <Route
-            path="/leaderboard"
-            element={<div data-testid="leaderboard-content">Leaderboard</div>}
-          />
           <Route path="/rules" element={<div data-testid="rules-content">Rules</div>} />
         </Route>
       </Routes>
@@ -60,7 +56,6 @@ describe("AppLayout", () => {
     expect(screen.getByTestId("app-nav")).toBeInTheDocument();
     expect(screen.getByTestId("app-name")).toHaveTextContent("Beljot");
     expect(screen.getByTestId("nav-play")).toHaveTextContent("Play");
-    expect(screen.getByTestId("nav-leaderboard")).toHaveTextContent("Leaderboard");
     expect(screen.getByTestId("nav-profile")).toHaveTextContent("Profile");
     expect(screen.getByTestId("nav-rules")).toHaveTextContent("Rules");
   });

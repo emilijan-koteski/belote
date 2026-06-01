@@ -9,7 +9,7 @@ import { HeroBlock } from "@/features/lobby/components/HeroBlock";
 import { LobbyChatDock } from "@/features/lobby/components/LobbyChatDock";
 import { RoomGrid } from "@/features/lobby/components/RoomGrid";
 import { Toast } from "@/features/lobby/components/Toast";
-import { CreateRoomModal } from "@/features/lobby/CreateRoomModal";
+import { CreateRoomModal } from "@/features/room/CreateRoomModal";
 import { FetchError } from "@/shared/api/axiosClient";
 import {
   useJoinRoomMutation,
@@ -85,11 +85,11 @@ export function LobbyPage() {
 
   // Routes a quick-play response (from either Quick Play or a quick-join) to the
   // matchmaking screen, or straight to the game if this entry filled the table.
-  function goToMatchmaking(result: { room: Room; gameStarted: boolean }) {
-    if (result.gameStarted) {
-      // `fromRoom: true` triggers GamePage's "Game is starting…" splash so the
+  function goToMatchmaking(result: { room: Room; matchStarted: boolean }) {
+    if (result.matchStarted) {
+      // `fromRoom: true` triggers MatchPage's "Game is starting…" splash so the
       // auto-start has the same deliberate beat as a normal lobby.
-      navigate(`/game/${result.room.id}`, { state: { fromRoom: true } });
+      navigate(`/match/${result.room.id}`, { state: { fromRoom: true } });
     } else {
       navigate(`/matchmaking/${result.room.id}`);
     }

@@ -20,7 +20,6 @@ export function LandingFeatures() {
   };
   const prof = {
     member: t("landing.prof.member"),
-    streak: t("landing.prof.streak"),
     games: t("landing.prof.games"),
     winrate: t("landing.prof.winrate"),
     wins: t("landing.prof.wins"),
@@ -39,7 +38,7 @@ export function LandingFeatures() {
           title={t("landing.feat.f1title")}
           body={t("landing.feat.f1body")}
         >
-          <div className="flex w-full max-w-[360px] flex-col gap-3.5">
+          <div className="flex w-full max-w-90 flex-col gap-3.5">
             <RoomCard
               width={360}
               title={t("landing.room.r1title")}
@@ -76,7 +75,6 @@ export function LandingFeatures() {
 
         <FeatureRow
           reverse
-          id="leaderboard"
           tag={t("landing.feat.f3tag")}
           title={t("landing.feat.f3title")}
           body={t("landing.feat.f3body")}

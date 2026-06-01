@@ -35,7 +35,7 @@ const ORBIT_OFFSETS = [
  * brass ring while the three other seats orbit around them, filling in with
  * real opponents as they join. Pure presentational — all room/WS plumbing
  * lives in MatchmakingPage. Team colour is viewer-relative (gold = your side,
- * silver = opponents), matching RoomLobby's seat convention.
+ * silver = opponents), matching RoomPage's seat convention.
  */
 export function MatchmakingDiagram({
   found,
@@ -78,8 +78,9 @@ export function MatchmakingDiagram({
       {/* Fixed-rules + elapsed strip */}
       <div className="mt-4 flex items-center gap-3">
         <Badge tone="neutral" icon={<Trophy className="size-3 text-(--accent)" />}>
-          {t("lobby.card.variantBitola")} · {t("lobby.card.matchMode1001")}
+          {t("lobby.card.variantBitola")}
         </Badge>
+        <Badge tone="neutral">{t("lobby.card.matchMode1001")}</Badge>
         <Badge tone="accent" icon={<Clock className="size-3 text-(--accent)" />}>
           {t("lobby.card.relaxed")}
         </Badge>

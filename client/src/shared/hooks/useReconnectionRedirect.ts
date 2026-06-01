@@ -1,27 +1,27 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 
-import { useGameStore } from "@/shared/stores/gameStore";
+import { useMatchStore } from "@/shared/stores/matchStore";
 
 /**
  * Redirects to the game page when game state is received while not on the game page.
  * Handles the case where a disconnected player refreshes their browser and lands on
- * the lobby — the server sends event:game_state on WS reconnect, and this hook
+ * the lobby — the server sends event:match_state on WS reconnect, and this hook
  * navigates them back to the active game.
  */
 export function useReconnectionRedirect(): void {
   const navigate = useNavigate();
   const location = useLocation();
-  const gameState = useGameStore((s) => s.gameState);
+  const matchState = useMatchStore((s) => s.matchState);
 
   useEffect(() => {
     if (
-      gameState &&
-      gameState.roomId &&
-      gameState.phase !== "match_end" &&
-      !location.pathname.startsWith("/game/")
+      matchState &&
+      matchState.roomId &&
+      matchState.phase !== "match_end" &&
+      !location.pathname.startsWith("/match/")
     ) {
-      navigate(`/game/${gameState.roomId}`, { replace: true });
+      navigate(`/match/${matchState.roomId}`, { replace: true });
     }
-  }, [gameState, location.pathname, navigate]);
+  }, [matchState, location.pathname, navigate]);
 }

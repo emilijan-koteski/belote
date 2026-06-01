@@ -40,7 +40,7 @@ export function JoinByCodeTile() {
 
   return (
     <div
-      className="bg-surface flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-border pr-2.5 pl-4.5"
+      className="bg-surface flex items-center gap-2.5 rounded-lg border border-border pr-2.5 pl-4.5"
       data-testid="join-by-code"
     >
       <KeyRound className="text-ink-dim size-4 shrink-0" strokeWidth={1.8} />

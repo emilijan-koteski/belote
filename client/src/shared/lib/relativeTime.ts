@@ -124,7 +124,13 @@ export function ageCompact(iso: string | number | Date, now: number = Date.now()
   const d = dayjs(iso);
   if (!d.isValid()) return "";
   const diff = now - d.valueOf();
-  if (diff < MINUTE_MS) return "now";
+  if (diff < MINUTE_MS) {
+    // Localized "just now" — read the active dayjs locale's `s` token (set in
+    // the updateLocale calls above: en "just now", mk "штотуку", hr/sr
+    // "upravo sad") so the compact form is localized, not a hardcoded "now".
+    const justNow = dayjs.Ls[dayjs.locale()]?.relativeTime?.s;
+    return typeof justNow === "string" ? justNow : "now";
+  }
   if (diff < HOUR_MS) return `${Math.floor(diff / MINUTE_MS)}m`;
   if (diff < DAY_MS) return `${Math.floor(diff / HOUR_MS)}h`;
   if (diff < SEVEN_DAYS_MS) return `${Math.floor(diff / DAY_MS)}d`;

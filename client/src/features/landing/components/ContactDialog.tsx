@@ -11,7 +11,7 @@ import {
 } from "@/shared/components/ui/dialog";
 
 // Footer "Contact" — opens a small dialog with the maker's email + LinkedIn
-// (same profile the auth pages credit) and a DEMO/beta disclaimer. The trigger
+// (same profile the auth pages credit) and a beta disclaimer. The trigger
 // renders as a plain link styled to sit inside the footer link row.
 
 const EMAIL = "emilijankoteski@pm.me";

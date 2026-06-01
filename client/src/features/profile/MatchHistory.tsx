@@ -106,7 +106,7 @@ function HandsGrid({ hands, viewerTeamIndex }: HandsGridProps) {
 
   return (
     <div className="overflow-x-auto" data-testid="match-history-hands-grid">
-      <div className="min-w-[620px]">
+      <div className="min-w-155">
         <div
           className="text-brass-deep grid items-center gap-3 px-2.5 py-1.5 font-mono text-[10px] font-semibold tracking-[1.5px] uppercase"
           style={{ gridTemplateColumns: cols }}
@@ -265,7 +265,7 @@ function MatchRow({ match, username, isOpen, onToggle }: MatchRowProps) {
 
   return (
     <li
-      className="bg-surface border-border overflow-hidden rounded-[var(--radius-lg)] border transition-[border-color,box-shadow] hover:border-[var(--border-2)] hover:shadow-[0_8px_22px_-10px_rgba(14,58,36,0.30)]"
+      className="bg-surface border-border overflow-hidden rounded-lg border transition-[border-color,box-shadow] hover:border-border-2 hover:shadow-[0_8px_22px_-10px_rgba(14,58,36,0.30)]"
       data-testid="match-history-row"
       data-match-id={match.id}
     >
@@ -280,7 +280,7 @@ function MatchRow({ match, username, isOpen, onToggle }: MatchRowProps) {
         }
       >
         {/* Date */}
-        <div className="flex min-w-[88px] flex-col gap-0.5">
+        <div className="flex min-w-22 flex-col gap-0.5">
           <span className="text-ink font-display text-[15px] font-semibold tracking-[-0.1px]">
             {formatLocalizedDate(match.completedAt, t, "short")}
           </span>
@@ -398,7 +398,7 @@ export function MatchHistory({ userId, counts }: MatchHistoryProps) {
       <section data-testid="match-history">
         {header}
         <div
-          className="bg-surface border-border space-y-3 rounded-[var(--radius-lg)] border border-dashed p-10 text-center text-sm"
+          className="bg-surface border-border space-y-3 rounded-lg border border-dashed p-10 text-center text-sm"
           data-testid="match-history-empty"
         >
           <p className="text-ink-dim m-0">{t("profile.matchHistory.empty")}</p>
@@ -428,9 +428,9 @@ export function MatchHistory({ userId, counts }: MatchHistoryProps) {
   if (query.isPending) {
     body = (
       <div className="space-y-2.5" data-testid="match-history-loading">
-        <div className="bg-surface h-20 animate-pulse rounded-[var(--radius-lg)]" />
-        <div className="bg-surface h-20 animate-pulse rounded-[var(--radius-lg)]" />
-        <div className="bg-surface h-20 animate-pulse rounded-[var(--radius-lg)]" />
+        <div className="bg-surface h-20 animate-pulse rounded-lg" />
+        <div className="bg-surface h-20 animate-pulse rounded-lg" />
+        <div className="bg-surface h-20 animate-pulse rounded-lg" />
       </div>
     );
   } else if (query.isError) {
@@ -442,7 +442,7 @@ export function MatchHistory({ userId, counts }: MatchHistoryProps) {
   } else if (items.length === 0) {
     body = (
       <div
-        className="bg-surface border-border rounded-[var(--radius-lg)] border border-dashed p-10 text-center text-sm"
+        className="bg-surface border-border rounded-lg border border-dashed p-10 text-center text-sm"
         data-testid="match-history-empty-filtered"
       >
         <p className="text-ink-dim m-0">{t("profile.matchHistory.emptyFiltered")}</p>
@@ -469,7 +469,7 @@ export function MatchHistory({ userId, counts }: MatchHistoryProps) {
             type="button"
             onClick={() => query.fetchNextPage()}
             disabled={query.isFetchingNextPage}
-            className="bg-surface border-border text-ink hover:bg-surface-elevated mt-2.5 w-full rounded-[var(--radius-lg)] border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
+            className="bg-surface border-border text-ink hover:bg-surface-elevated mt-2.5 w-full rounded-lg border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
             data-testid="match-history-load-more"
           >
             {query.isFetchingNextPage

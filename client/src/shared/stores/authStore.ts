@@ -2,8 +2,8 @@ import { create } from "zustand";
 
 import { logout as logoutApi } from "@/shared/api/auth";
 import { useChatStore } from "@/shared/stores/chatStore";
-import { useGameStore } from "@/shared/stores/gameStore";
-import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
+import { useMatchStore } from "@/shared/stores/matchStore";
+import { useRoomStore } from "@/shared/stores/roomStore";
 import type { User } from "@/shared/types/apiTypes";
 
 interface AuthState {
@@ -31,9 +31,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // subscribers to authStore.token transitions don't observe stale game
     // data. Single canonical logout point — both manual logout and the
     // axiosClient 401 interceptor inherit this ordering.
-    useGameStore.getState().clearGame();
-    useRoomLobbyStore.getState().reset();
-    useChatStore.getState().clearGlobal();
+    useMatchStore.getState().clearGame();
+    useRoomStore.getState().reset();
+    useChatStore.getState().clearLobby();
     useChatStore.getState().clearMatch();
     useChatStore.getState().clearRoom();
     set({ token: null, user: null, isLoading: false });

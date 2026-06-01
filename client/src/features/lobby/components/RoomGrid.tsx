@@ -24,7 +24,7 @@ export function RoomGrid({ rooms, onJoin, hasSearch, onClearSearch }: Props) {
     return (
       <div
         data-testid={hasSearch ? "room-list-empty-search" : "room-list-empty"}
-        className="bg-surface flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-border-2 px-5 py-14 text-center"
+        className="bg-surface flex flex-col items-center gap-3 rounded-lg border border-dashed border-border-2 px-5 py-14 text-center"
       >
         <span className="bg-accent-soft text-accent flex size-14 items-center justify-center rounded-full">
           <DoorOpen className="size-5.5" />
@@ -32,7 +32,7 @@ export function RoomGrid({ rooms, onJoin, hasSearch, onClearSearch }: Props) {
         <h3 className="font-display text-ink m-0 text-lg font-semibold">
           {t("lobby.empty.title")}
         </h3>
-        <p className="text-ink-dim m-0 max-w-[360px] text-xs">
+        <p className="text-ink-dim m-0 max-w-90 text-xs">
           {t("lobby.empty.description")}
         </p>
         {hasSearch && onClearSearch && (

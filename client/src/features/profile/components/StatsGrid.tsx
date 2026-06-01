@@ -26,7 +26,7 @@ function StatTile({
     tone === "accent" ? "var(--accent)" : tone === "muted" ? "var(--ink-dim)" : "var(--ink)";
   return (
     <div
-      className="bg-surface border-border flex flex-col gap-1 rounded-[var(--radius-lg)] border p-5"
+      className="bg-surface border-border flex flex-col gap-1 rounded-lg border p-5"
       data-testid={testId}
       data-value={String(value)}
     >
@@ -51,7 +51,7 @@ function OutcomeSplitBar({ wins, losses, abandoned }: Omit<StatsGridProps, "game
 
   return (
     <div
-      className="bg-surface border-border mt-3 flex flex-col gap-2.5 rounded-[var(--radius-lg)] border px-5 py-4"
+      className="bg-surface border-border mt-3 flex flex-col gap-2.5 rounded-lg border px-5 py-4"
       data-testid="profile-outcome-split"
     >
       <div className="text-ink-dim flex flex-wrap items-center gap-3.5 text-xs">
@@ -83,7 +83,7 @@ function OutcomeSplitBar({ wins, losses, abandoned }: Omit<StatsGridProps, "game
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="size-2 rounded-[2px]" style={{ background: color }} />
+      <span className="size-2 rounded-xs" style={{ background: color }} />
       <span className="text-ink-dim">{label}</span>
     </span>
   );

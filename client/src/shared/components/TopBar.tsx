@@ -14,13 +14,12 @@ import { useAuthStore } from "@/shared/stores/authStore";
 
 const navItems = [
   { path: "/lobby", labelKey: "nav.play" },
-  { path: "/leaderboard", labelKey: "nav.leaderboard" },
   { path: "/profile", labelKey: "nav.profile" },
   { path: "/rules", labelKey: "nav.rules" },
 ] as const;
 
 type TopBarProps = {
-  /** Show nav links (Play / Leaderboard / Profile / Rules). Default false. */
+  /** Show nav links (Play / Profile / Rules). Default false. */
   showNav?: boolean;
   /** Show username pill + logout dropdown. Default false. */
   showUserMenu?: boolean;

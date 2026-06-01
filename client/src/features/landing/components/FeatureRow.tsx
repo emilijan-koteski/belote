@@ -24,7 +24,7 @@ export function FeatureRow({ tag, title, body, reverse = false, id, children }: 
         <h3 className="font-display text-ink mb-3.5 text-[clamp(26px,2.6vw,32px)] font-bold tracking-[-0.5px]">
           {title}
         </h3>
-        <p className="text-ink-dim max-w-[460px] text-base leading-[1.65]">{body}</p>
+        <p className="text-ink-dim max-w-115 text-base leading-[1.65]">{body}</p>
       </div>
       <div className={cn("flex justify-center", reverse ? "md:order-1" : "md:order-2")}>
         {children}

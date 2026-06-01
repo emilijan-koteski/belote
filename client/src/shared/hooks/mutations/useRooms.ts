@@ -11,7 +11,7 @@ import {
   quickJoin,
   quickPlay,
   selectSeat,
-  startGame,
+  startMatch,
   swapSeats,
   transferOwnership,
 } from "@/shared/api/rooms";
@@ -71,9 +71,9 @@ export function useTransferOwnershipMutation() {
   });
 }
 
-export function useStartGameMutation() {
+export function useStartMatchMutation() {
   return useMutation({
-    mutationFn: (roomId: number) => startGame(roomId),
+    mutationFn: (roomId: number) => startMatch(roomId),
   });
 }
 

@@ -63,15 +63,15 @@ export const sr: RulesLangData = {
       id: "goal",
       label: "Cilj",
       title: "Trkaj se s timom do 1001",
-      lede: "Ti i tvoj partner delite jedan rezultat. Prvi tim do 1001 osvaja partiju.",
+      lede: "Ti i tvoj partner delite jedan rezultat. Prvi tim do 1001 osvaja meč.",
       blocks: [
         {
           kind: "p",
-          text: "Sediš naspram svog partnera, vas dvoje protiv para s obe strane. Delite jedan zajednički rezultat i ništa se ne resetuje između odigranih ruku — poeni se samo gomilaju dok neko ne pređe 1001. Većina partija završi za 6 do 12 ruku.",
+          text: "Sediš naspram svog partnera, vas dvoje protiv para s obe strane. Delite jedan zajednički rezultat i ništa se ne resetuje između odigranih ruku — poeni se samo gomilaju dok neko ne pređe 1001. Većina mečeva završi za 6 do 12 ruku.",
         },
         {
           kind: "p",
-          text: "Postoje dva načina da osvojiš poene. Osvoji štihove i skupljaš poene ispisane na svakoj karti koju uzmeš. Drži prave karte i možeš da najaviš kombinacije — niz od četiri u jednoj boji, ili Kralja i Babu u adutu zajedno — za bonus povrh toga. Štihovi su tvoj stalni prihod; najave su veliki preokreti koji znaju da promene tok cele partije.",
+          text: "Postoje dva načina da osvojiš poene. Osvoji štihove i skupljaš poene ispisane na svakoj karti koju uzmeš. Drži prave karte i možeš da najaviš kombinacije — niz od četiri u jednoj boji, ili Kralja i Babu u adutu zajedno — za bonus povrh toga. Štihovi su tvoj stalni prihod; najave su veliki preokreti koji znaju da promene tok celog meča.",
         },
       ],
     },
@@ -204,14 +204,14 @@ export const sr: RulesLangData = {
         },
         {
           kind: "note",
-          text: "Ruke se igraju dok bar jedan tim ne sedne na 1001 ili više na kraju ruke. Ako oba tima pređu granicu u istoj ruci, strana koja je te ruke uzela adut osvaja partiju.",
+          text: "Ruke se igraju dok bar jedan tim ne sedne na 1001 ili više na kraju ruke. Ako oba tima pređu granicu u istoj ruci, strana koja je te ruke uzela adut osvaja meč.",
         },
       ],
     },
   ],
 
   ui: {
-    heroEyebrow: "Kako se igra · čitanje od 6 minuta",
+    heroEyebrow: "Pravila · čitanje od 6 minuta",
     heroTitle: "Nauči Beljot u jednom sedenju",
     heroIntro:
       "Beljot je timska igra s kartama za četiri igrača sa špilom od 32 karte. Šest kratkih poglavlja u nastavku vode te od prvog deljenja sve do pobedničkog rezultata — sve što ti treba da se snađeš za stolom. Čitaj redom, ili skoči na ono što ti treba preko sadržaja levo.",
@@ -222,7 +222,6 @@ export const sr: RulesLangData = {
       { label: "Trka do", value: "1001", caption: "poena za pobedu" },
     ],
     tocTitle: "Sadržaj",
-    readTime: "Oko 6 minuta čitanja",
     footerTitle: "Spreman za prvu ruku?",
     footerBody:
       "Ovaj vodič prati te i u igru. Tokom ruke, pritisni dugme sa upitnikom u donjem desnom uglu i istih šest poglavlja se otvara — bez pauziranja igre.",
@@ -238,7 +237,7 @@ export const sr: RulesLangData = {
     colPower: "Snaga",
     meldKinds: { belot: "Par u adutu", set: "Kare", run: "Niz" },
     ovReference: "Uputstvo",
-    ovTitle: "Kako se igra Beljot",
+    ovTitle: "Pravila Beljota",
     ovChapters: "Poglavlja",
     ovFullRef: "Potpuno uputstvo:",
     ovClose: "Zatvori",

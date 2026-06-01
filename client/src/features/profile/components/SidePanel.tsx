@@ -20,7 +20,7 @@ export function SidePanel({ eyebrow, title, children, className, testId }: SideP
   return (
     <section
       className={cn(
-        "bg-surface border-border flex flex-col rounded-[var(--radius-lg)] border",
+        "bg-surface border-border flex flex-col rounded-lg border",
         className,
       )}
       data-testid={testId}

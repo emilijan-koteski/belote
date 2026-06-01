@@ -5,7 +5,7 @@ import { LanguageSelector } from "@/shared/components/LanguageSelector";
 import { buttonVariants } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/utils";
 
-// Parchment sticky header for public content pages (Rules / Leaderboard) when
+// Parchment sticky header for public content pages (Rules) when
 // viewed by a logged-out visitor. Mirrors the app TopBar's chrome but offers
 // sign-in CTAs instead of the authed nav/user menu. The logo links home.
 
@@ -13,7 +13,7 @@ export function PublicTopBar() {
   const { t } = useTranslation();
   return (
     <nav
-      className="border-border sticky top-0 z-50 flex h-[60px] items-center border-b bg-[rgba(245,242,232,0.85)] px-7 backdrop-blur-md"
+      className="border-border sticky top-0 z-50 flex h-15 items-center border-b bg-[rgba(245,242,232,0.85)] px-7 backdrop-blur-md"
       data-testid="public-nav"
     >
       <Link to="/" className="flex items-center gap-2.5" data-testid="public-logo">

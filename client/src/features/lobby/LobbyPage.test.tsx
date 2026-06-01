@@ -52,7 +52,7 @@ function renderLobbyPage() {
   mockGetLobbyStats.mockResolvedValue({
     inLobby: 0,
     inRoom: 0,
-    inGame: 0,
+    inMatch: 0,
     online: 0,
     registered: 0,
   });
@@ -120,7 +120,7 @@ describe("LobbyPage", () => {
     mockQuickPlay.mockResolvedValueOnce({
       room: { id: 42, isQuickPlay: true },
       seat: 0,
-      gameStarted: false,
+      matchStarted: false,
     });
     renderLobbyPage();
 
@@ -136,12 +136,12 @@ describe("LobbyPage", () => {
     });
   });
 
-  it("navigates straight to the game when quickPlay reports gameStarted", async () => {
+  it("navigates straight to the game when quickPlay reports matchStarted", async () => {
     const user = userEvent.setup();
     mockQuickPlay.mockResolvedValueOnce({
       room: { id: 77, isQuickPlay: true },
       seat: 3,
-      gameStarted: true,
+      matchStarted: true,
     });
     renderLobbyPage();
 
@@ -149,7 +149,7 @@ describe("LobbyPage", () => {
     await user.click(quickPlayCard);
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/game/77", { state: { fromRoom: true } });
+      expect(mockNavigate).toHaveBeenCalledWith("/match/77", { state: { fromRoom: true } });
     });
   });
 
@@ -179,7 +179,7 @@ describe("LobbyPage", () => {
     mockQuickJoin.mockResolvedValueOnce({
       room: { id: 5, isQuickPlay: true },
       seat: 1,
-      gameStarted: false,
+      matchStarted: false,
     });
     renderLobbyPage();
 

@@ -17,15 +17,15 @@ import { toast } from "sonner";
 import { queryClient } from "@/shared/api/queryClient";
 import { queryKeys } from "@/shared/api/queryKeys";
 import { useChatStore } from "@/shared/stores/chatStore";
-import { useGameStore } from "@/shared/stores/gameStore";
-import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
+import { useMatchStore } from "@/shared/stores/matchStore";
+import { useRoomStore } from "@/shared/stores/roomStore";
 import type { Room } from "@/shared/types/apiTypes";
-import type { GameState } from "@/shared/types/gameTypes";
+import type { MatchState } from "@/shared/types/matchTypes";
 import type { WsMessage } from "@/shared/types/wsEvents";
 
 import { __resetWsDispatchStateForTests, useWsDispatch } from "./useWsDispatch";
 
-const mockGameState: GameState = {
+const mockMatchState: MatchState = {
   id: 1,
   roomId: 100,
   variant: "bitola",
@@ -114,9 +114,9 @@ const mockGameState: GameState = {
 describe("useWsDispatch", () => {
   beforeEach(() => {
     queryClient.clear();
-    useGameStore.getState().reset();
-    useRoomLobbyStore.getState().reset();
-    useChatStore.setState({ globalMessages: [], matchMessages: [], roomMessages: [] });
+    useMatchStore.getState().reset();
+    useRoomStore.getState().reset();
+    useChatStore.setState({ lobbyMessages: [], matchMessages: [], roomMessages: [] });
     __resetWsDispatchStateForTests();
     vi.restoreAllMocks();
   });
@@ -290,28 +290,28 @@ describe("useWsDispatch", () => {
     expect(queryClient.getQueryData(queryKeys.rooms.list("waiting"))).toBeUndefined();
   });
 
-  it("dispatches event:game_state to gameStore", () => {
+  it("dispatches event:match_state to matchStore", () => {
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
     dispatch({
-      type: "event:game_state",
-      payload: mockGameState,
+      type: "event:match_state",
+      payload: mockMatchState,
     });
 
-    const state = useGameStore.getState();
-    expect(state.gameState).not.toBeNull();
-    expect(state.gameState?.phase).toBe("playing");
-    expect(state.gameState?.roomId).toBe(100);
+    const state = useMatchStore.getState();
+    expect(state.matchState).not.toBeNull();
+    expect(state.matchState?.phase).toBe("playing");
+    expect(state.matchState?.roomId).toBe(100);
     expect(state.roomId).toBe(100);
   });
 
-  it("clears stale declarationReveal and belotReveal on a reconnect-style event:game_state", () => {
+  it("clears stale declarationReveal and belotReveal on a reconnect-style event:match_state", () => {
     // Seed both reveal fields as if a player disconnected mid-reveal.
     // No preceding event:declarations_resolved / event:belot_announced is
     // dispatched here — that mirrors the server's reconnect behaviour
     // (reveal events are not replayed on reconnect, only the snapshot is).
-    useGameStore.setState({
+    useMatchStore.setState({
       declarationReveal: {
         winnerTeam: 0,
         declarations: [
@@ -334,19 +334,19 @@ describe("useWsDispatch", () => {
     const dispatch = result.current;
 
     dispatch({
-      type: "event:game_state",
-      payload: mockGameState,
+      type: "event:match_state",
+      payload: mockMatchState,
     });
 
-    const state = useGameStore.getState();
+    const state = useMatchStore.getState();
     expect(state.declarationReveal).toBeNull();
     expect(state.belotReveal).toBeNull();
-    expect(state.gameState).not.toBeNull();
+    expect(state.matchState).not.toBeNull();
   });
 
-  it("preserves declarationReveal across the trailing event:game_state in normal flow", () => {
+  it("preserves declarationReveal across the trailing event:match_state in normal flow", () => {
     // Server flow (manager.go:513→554): event:declarations_resolved is
-    // emitted, then event:game_state is broadcast for state sync. The
+    // emitted, then event:match_state is broadcast for state sync. The
     // trailing snapshot must NOT wipe the reveal that just rendered, or
     // the user never sees declarations.
     const { result } = renderHook(() => useWsDispatch());
@@ -366,21 +366,21 @@ describe("useWsDispatch", () => {
         ],
       },
     });
-    expect(useGameStore.getState().declarationReveal).not.toBeNull();
+    expect(useMatchStore.getState().declarationReveal).not.toBeNull();
 
     dispatch({
-      type: "event:game_state",
-      payload: mockGameState,
+      type: "event:match_state",
+      payload: mockMatchState,
     });
 
-    const state = useGameStore.getState();
+    const state = useMatchStore.getState();
     expect(state.declarationReveal).not.toBeNull();
-    expect(state.gameState).not.toBeNull();
+    expect(state.matchState).not.toBeNull();
   });
 
-  it("preserves belotReveal across the trailing event:game_state in normal flow", () => {
+  it("preserves belotReveal across the trailing event:match_state in normal flow", () => {
     // Server flow (manager.go:609→614): event:belot_announced is emitted,
-    // then event:game_state is broadcast. Same suppression contract as
+    // then event:match_state is broadcast. Same suppression contract as
     // declarations_resolved.
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -393,21 +393,21 @@ describe("useWsDispatch", () => {
         cardId: "QS",
       },
     });
-    expect(useGameStore.getState().belotReveal).not.toBeNull();
+    expect(useMatchStore.getState().belotReveal).not.toBeNull();
 
     dispatch({
-      type: "event:game_state",
-      payload: mockGameState,
+      type: "event:match_state",
+      payload: mockMatchState,
     });
 
-    const state = useGameStore.getState();
+    const state = useMatchStore.getState();
     expect(state.belotReveal).not.toBeNull();
-    expect(state.gameState).not.toBeNull();
+    expect(state.matchState).not.toBeNull();
   });
 
-  it("clears reveals on a second event:game_state — the suppression is single-shot", () => {
+  it("clears reveals on a second event:match_state — the suppression is single-shot", () => {
     // After the trailing snapshot consumes the suppression flag, a later
-    // standalone event:game_state (e.g., a reconnect snapshot arriving
+    // standalone event:match_state (e.g., a reconnect snapshot arriving
     // after a stale reveal payload was set) must still clear.
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -426,17 +426,17 @@ describe("useWsDispatch", () => {
         ],
       },
     });
-    dispatch({ type: "event:game_state", payload: mockGameState });
+    dispatch({ type: "event:match_state", payload: mockMatchState });
     // First snapshot suppressed the clear; reveal still set.
-    expect(useGameStore.getState().declarationReveal).not.toBeNull();
+    expect(useMatchStore.getState().declarationReveal).not.toBeNull();
 
-    dispatch({ type: "event:game_state", payload: mockGameState });
+    dispatch({ type: "event:match_state", payload: mockMatchState });
     // Second standalone snapshot now clears.
-    expect(useGameStore.getState().declarationReveal).toBeNull();
+    expect(useMatchStore.getState().declarationReveal).toBeNull();
   });
 
-  it("dispatches event:card_played to gameStore", () => {
-    useGameStore.getState().setGameState(mockGameState);
+  it("dispatches event:card_played to matchStore", () => {
+    useMatchStore.getState().setMatchState(mockMatchState);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -446,9 +446,9 @@ describe("useWsDispatch", () => {
       payload: { playerSeat: 1, cardId: "7H", autoPlayed: false },
     });
 
-    const state = useGameStore.getState();
-    expect(state.gameState?.currentTrick).toHaveLength(1);
-    expect(state.gameState?.currentTrick[0]!.playerSeat).toBe(1);
+    const state = useMatchStore.getState();
+    expect(state.matchState?.currentTrick).toHaveLength(1);
+    expect(state.matchState?.currentTrick[0]!.playerSeat).toBe(1);
   });
 
   it("snapshots the full trick into pendingResolvedTrick on event:trick_resolved", () => {
@@ -457,7 +457,7 @@ describe("useWsDispatch", () => {
     // dispatcher must snapshot all four cards into pendingResolvedTrick
     // BEFORE clearing currentTrick, otherwise the collect animation can't
     // run because TrickArea sees currentTrick jump 3 → 0.
-    useGameStore.getState().setGameState(mockGameState);
+    useMatchStore.getState().setMatchState(mockMatchState);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -479,7 +479,7 @@ describe("useWsDispatch", () => {
       type: "event:card_played",
       payload: { playerSeat: 3, cardId: "9C", autoPlayed: false },
     });
-    expect(useGameStore.getState().gameState?.currentTrick).toHaveLength(4);
+    expect(useMatchStore.getState().matchState?.currentTrick).toHaveLength(4);
 
     // Now the resolve event clears the trick.
     dispatch({
@@ -487,9 +487,9 @@ describe("useWsDispatch", () => {
       payload: { winnerSeat: 2, winnerTeam: 0, cards: ["KS", "7H", "AD", "9C"] },
     });
 
-    const state = useGameStore.getState();
+    const state = useMatchStore.getState();
     // Live trick zeroed (server cleared it).
-    expect(state.gameState?.currentTrick).toHaveLength(0);
+    expect(state.matchState?.currentTrick).toHaveLength(0);
     // Snapshot has all four cards + winner — drives the collect flight.
     expect(state.pendingResolvedTrick).not.toBeNull();
     expect(state.pendingResolvedTrick?.trick).toHaveLength(4);
@@ -500,7 +500,7 @@ describe("useWsDispatch", () => {
     // Reconnect-style edge case: the snapshot should only fire when there's
     // actually a trick to capture. An empty currentTrick means we'd render
     // nothing in the collect animation, so we don't bother.
-    useGameStore.getState().setGameState(mockGameState);
+    useMatchStore.getState().setMatchState(mockMatchState);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -510,11 +510,11 @@ describe("useWsDispatch", () => {
       payload: { winnerSeat: 1, winnerTeam: 1, cards: [] },
     });
 
-    expect(useGameStore.getState().pendingResolvedTrick).toBeNull();
+    expect(useMatchStore.getState().pendingResolvedTrick).toBeNull();
   });
 
-  it("dispatches event:hand_scored to gameStore and sets scoreRevealData", () => {
-    useGameStore.getState().setGameState(mockGameState);
+  it("dispatches event:hand_scored to matchStore and sets scoreRevealData", () => {
+    useMatchStore.getState().setMatchState(mockMatchState);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -540,17 +540,17 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const state = useGameStore.getState();
-    expect(state.gameState?.teamScores[0]).toBe(70);
-    expect(state.gameState?.teamScores[1]).toBe(92);
+    const state = useMatchStore.getState();
+    expect(state.matchState?.teamScores[0]).toBe(70);
+    expect(state.matchState?.teamScores[1]).toBe(92);
     expect(state.scoreRevealData).not.toBeNull();
     expect(state.scoreRevealData?.teamACardPoints).toBe(70);
     expect(state.scoreRevealData?.capot).toBe(false);
   });
 
   it("zeroes handPoints and declarationPoints on event:hand_scored to clear stale potential", () => {
-    useGameStore.getState().setGameState({
-      ...mockGameState,
+    useMatchStore.getState().setMatchState({
+      ...mockMatchState,
       handPoints: [70, 82],
       declarationPoints: [0, 50],
     });
@@ -579,13 +579,13 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const state = useGameStore.getState();
-    expect(state.gameState?.handPoints).toEqual([0, 0]);
-    expect(state.gameState?.declarationPoints).toEqual([0, 0]);
+    const state = useMatchStore.getState();
+    expect(state.matchState?.handPoints).toEqual([0, 0]);
+    expect(state.matchState?.declarationPoints).toEqual([0, 0]);
   });
 
-  it("dispatches event:match_end to gameStore", () => {
-    useGameStore.getState().setGameState(mockGameState);
+  it("dispatches event:match_end to matchStore", () => {
+    useMatchStore.getState().setMatchState(mockMatchState);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -600,14 +600,14 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const state = useGameStore.getState();
-    expect(state.gameState?.phase).toBe("match_end");
-    expect(state.gameState?.teamScores[0]).toBe(1020);
-    expect(state.gameState?.teamScores[1]).toBe(850);
+    const state = useMatchStore.getState();
+    expect(state.matchState?.phase).toBe("match_end");
+    expect(state.matchState?.teamScores[0]).toBe(1020);
+    expect(state.matchState?.teamScores[1]).toBe(850);
     expect(state.matchEndData?.matchDurationSec).toBe(300);
   });
 
-  it("dispatches event:trump_selected to gameStore.trumpReveal", () => {
+  it("dispatches event:trump_selected to matchStore.trumpReveal", () => {
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
@@ -616,7 +616,7 @@ describe("useWsDispatch", () => {
       payload: { playerSeat: 2, trumpSuit: "S", cardId: "7S" },
     });
 
-    const reveal = useGameStore.getState().trumpReveal;
+    const reveal = useMatchStore.getState().trumpReveal;
     expect(reveal).not.toBeNull();
     expect(reveal?.playerSeat).toBe(2);
     expect(reveal?.trumpSuit).toBe("S");
@@ -637,14 +637,14 @@ describe("useWsDispatch", () => {
       payload: { playerSeat: 2, trumpSuit: "S", cardId: "X" },
     });
 
-    expect(useGameStore.getState().trumpReveal).toBeNull();
+    expect(useMatchStore.getState().trumpReveal).toBeNull();
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
   });
 
   // --- Room lobby event dispatch tests ---
 
-  it("dispatches system:player_joined to roomLobbyStore", () => {
+  it("dispatches system:player_joined to roomStore", () => {
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
@@ -658,16 +658,16 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const state = useRoomLobbyStore.getState();
+    const state = useRoomStore.getState();
     expect(state.players).toHaveLength(1);
     expect(state.players[0]!.userId).toBe(42);
     expect(state.players[0]!.username).toBe("Alice");
     expect(state.players[0]!.id).toBe(42); // Uses userId, not hardcoded 0 (D24 fix)
   });
 
-  it("dispatches system:player_left to roomLobbyStore", () => {
+  it("dispatches system:player_left to roomStore", () => {
     // Pre-populate a player
-    useRoomLobbyStore.getState().addPlayer(
+    useRoomStore.getState().addPlayer(
       {
         id: 42,
         roomId: 10,
@@ -693,11 +693,11 @@ describe("useWsDispatch", () => {
       },
     });
 
-    expect(useRoomLobbyStore.getState().players).toHaveLength(0);
+    expect(useRoomStore.getState().players).toHaveLength(0);
   });
 
-  it("dispatches system:seat_updated to roomLobbyStore", () => {
-    useRoomLobbyStore.getState().addPlayer(
+  it("dispatches system:seat_updated to roomStore", () => {
+    useRoomStore.getState().addPlayer(
       {
         id: 42,
         roomId: 10,
@@ -725,24 +725,24 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const player = useRoomLobbyStore.getState().players[0]!;
+    const player = useRoomStore.getState().players[0]!;
     expect(player.seat).toBe(2);
     expect(player.team).toBe("teamA");
   });
 
-  it("dispatches system:game_started to roomLobbyStore", () => {
+  it("dispatches system:match_started to roomStore", () => {
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
     dispatch({
-      type: "system:game_started",
+      type: "system:match_started",
       payload: { roomId: 10 },
     });
 
-    expect(useRoomLobbyStore.getState().gameStarted).toBe(true);
+    expect(useRoomStore.getState().matchStarted).toBe(true);
   });
 
-  it("appends system:chat_message with scope=global to chatStore", () => {
+  it("appends system:chat_message with scope=lobby to chatStore", () => {
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
@@ -753,23 +753,23 @@ describe("useWsDispatch", () => {
         username: "alice",
         message: "hello world",
         timestamp: "2026-04-18T10:00:00Z",
-        scope: "global",
+        scope: "lobby",
       },
     });
 
-    const messages = useChatStore.getState().globalMessages;
+    const messages = useChatStore.getState().lobbyMessages;
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({
       userId: 7,
       username: "alice",
       message: "hello world",
-      scope: "global",
+      scope: "lobby",
     });
   });
 
   it("appends system:chat_message with scope=match to chatStore.matchMessages when in a match", () => {
-    // Dispatcher requires gameStore.roomId to be set (defence in depth)
-    useGameStore.setState({ roomId: 42 });
+    // Dispatcher requires matchStore.roomId to be set (defence in depth)
+    useMatchStore.setState({ roomId: 42 });
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -793,13 +793,13 @@ describe("useWsDispatch", () => {
       message: "team only",
       scope: "match",
     });
-    expect(state.globalMessages).toHaveLength(0);
+    expect(state.lobbyMessages).toHaveLength(0);
   });
 
-  it("drops scope=match payloads when gameStore.roomId is null (no active match)", () => {
+  it("drops scope=match payloads when matchStore.roomId is null (no active match)", () => {
     // roomId=null is the default from beforeEach reset — a match payload
     // arriving after clearGame must not leak into the next match's history.
-    expect(useGameStore.getState().roomId).toBeNull();
+    expect(useMatchStore.getState().roomId).toBeNull();
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -819,8 +819,8 @@ describe("useWsDispatch", () => {
   });
 
   it("appends system:chat_message with scope=room to chatStore.roomMessages when in a room", () => {
-    // Dispatcher requires roomLobbyStore.currentRoomId to be set (defence in depth)
-    useRoomLobbyStore.setState({ currentRoomId: 5 });
+    // Dispatcher requires roomStore.currentRoomId to be set (defence in depth)
+    useRoomStore.setState({ currentRoomId: 5 });
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -844,15 +844,15 @@ describe("useWsDispatch", () => {
       message: "room ping",
       scope: "room",
     });
-    expect(state.globalMessages).toHaveLength(0);
+    expect(state.lobbyMessages).toHaveLength(0);
     expect(state.matchMessages).toHaveLength(0);
   });
 
-  it("drops scope=room payloads when roomLobbyStore.currentRoomId is null", () => {
+  it("drops scope=room payloads when roomStore.currentRoomId is null", () => {
     // currentRoomId=null is the default from beforeEach reset — a stale room
     // payload arriving after leaving the room must not leak into the next
     // room's history.
-    expect(useRoomLobbyStore.getState().currentRoomId).toBeNull();
+    expect(useRoomStore.getState().currentRoomId).toBeNull();
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -882,12 +882,12 @@ describe("useWsDispatch", () => {
         username: "alice",
         message: "global-only",
         timestamp: "2026-04-18T10:00:00Z",
-        scope: "global",
+        scope: "lobby",
       },
     });
 
     expect(useChatStore.getState().matchMessages).toHaveLength(0);
-    expect(useChatStore.getState().globalMessages).toHaveLength(1);
+    expect(useChatStore.getState().lobbyMessages).toHaveLength(1);
   });
 
   it("ignores malformed system:chat_message payloads (defensive validation)", () => {
@@ -899,10 +899,10 @@ describe("useWsDispatch", () => {
       null,
       undefined,
       {},
-      { userId: "not-a-number", username: "x", message: "x", timestamp: "x", scope: "global" },
-      { userId: 1, username: null, message: "x", timestamp: "x", scope: "global" },
-      { userId: 1, username: "x", message: 42, timestamp: "x", scope: "global" },
-      { userId: 1, username: "x", message: "x", timestamp: undefined, scope: "global" },
+      { userId: "not-a-number", username: "x", message: "x", timestamp: "x", scope: "lobby" },
+      { userId: 1, username: null, message: "x", timestamp: "x", scope: "lobby" },
+      { userId: 1, username: "x", message: 42, timestamp: "x", scope: "lobby" },
+      { userId: 1, username: "x", message: "x", timestamp: undefined, scope: "lobby" },
       { userId: 1, username: "x", message: "x", timestamp: "x" /* no scope */ },
     ];
 
@@ -910,13 +910,13 @@ describe("useWsDispatch", () => {
       dispatch({ type: "system:chat_message", payload });
     }
 
-    expect(useChatStore.getState().globalMessages).toHaveLength(0);
+    expect(useChatStore.getState().lobbyMessages).toHaveLength(0);
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
   });
 
-  it("dispatches system:room_kicked to roomLobbyStore when currentRoomId matches", () => {
-    useRoomLobbyStore.getState().setCurrentRoomId(5);
+  it("dispatches system:room_kicked to roomStore when currentRoomId matches", () => {
+    useRoomStore.getState().setCurrentRoomId(5);
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
@@ -925,11 +925,11 @@ describe("useWsDispatch", () => {
       payload: { roomId: 5, reason: "kicked_by_owner" },
     });
 
-    expect(useRoomLobbyStore.getState().kickedFromRoomId).toBe(5);
+    expect(useRoomStore.getState().kickedFromRoomId).toBe(5);
   });
 
   it("ignores system:room_kicked for a different room", () => {
-    useRoomLobbyStore.getState().setCurrentRoomId(9);
+    useRoomStore.getState().setCurrentRoomId(9);
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
@@ -938,7 +938,7 @@ describe("useWsDispatch", () => {
       payload: { roomId: 5, reason: "kicked_by_owner" },
     });
 
-    expect(useRoomLobbyStore.getState().kickedFromRoomId).toBeNull();
+    expect(useRoomStore.getState().kickedFromRoomId).toBeNull();
   });
 
   it("ignores system:room_kicked when currentRoomId is null", () => {
@@ -946,7 +946,7 @@ describe("useWsDispatch", () => {
     // kickedFromRoomId here would persist as a sticky flag and trip on a
     // later re-entry to the same room — so the dispatcher requires a
     // positive room match.
-    expect(useRoomLobbyStore.getState().currentRoomId).toBeNull();
+    expect(useRoomStore.getState().currentRoomId).toBeNull();
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
@@ -955,13 +955,13 @@ describe("useWsDispatch", () => {
       payload: { roomId: 5, reason: "kicked_by_owner" },
     });
 
-    expect(useRoomLobbyStore.getState().kickedFromRoomId).toBeNull();
+    expect(useRoomStore.getState().kickedFromRoomId).toBeNull();
   });
 
   // --- Surrender (Story 8.2) ---
 
-  it("dispatches event:surrender_proposed to gameStore.surrenderProposed", () => {
-    useGameStore.getState().setGameState(mockGameState);
+  it("dispatches event:surrender_proposed to matchStore.surrenderProposed", () => {
+    useMatchStore.getState().setMatchState(mockMatchState);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -976,16 +976,16 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const state = useGameStore.getState();
+    const state = useMatchStore.getState();
     expect(state.surrenderProposed).not.toBeNull();
     expect(state.surrenderProposed?.proposerSeat).toBe(0);
     expect(state.surrenderProposed?.partnerSeat).toBe(2);
   });
 
   it("ignores event:surrender_proposed when no active game state", () => {
-    // Defence in depth — gameState=null means no active match, so the
+    // Defence in depth — matchState=null means no active match, so the
     // proposal must not surface in the store.
-    expect(useGameStore.getState().gameState).toBeNull();
+    expect(useMatchStore.getState().matchState).toBeNull();
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -1000,11 +1000,11 @@ describe("useWsDispatch", () => {
       },
     });
 
-    expect(useGameStore.getState().surrenderProposed).toBeNull();
+    expect(useMatchStore.getState().surrenderProposed).toBeNull();
   });
 
-  it("dispatches event:surrender_declined to gameStore.surrenderDeclined", () => {
-    useGameStore.getState().setGameState(mockGameState);
+  it("dispatches event:surrender_declined to matchStore.surrenderDeclined", () => {
+    useMatchStore.getState().setMatchState(mockMatchState);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -1014,14 +1014,14 @@ describe("useWsDispatch", () => {
       payload: { proposerSeat: 0, decliningSeat: 2 },
     });
 
-    const declined = useGameStore.getState().surrenderDeclined;
+    const declined = useMatchStore.getState().surrenderDeclined;
     expect(declined).not.toBeNull();
     expect(declined?.proposerSeat).toBe(0);
     expect(declined?.decliningSeat).toBe(2);
   });
 
   it("fires info toast for event:auto_action of type pass_trump", () => {
-    useGameStore.getState().setGameState(mockGameState);
+    useMatchStore.getState().setMatchState(mockMatchState);
     const { result } = renderHook(() => useWsDispatch());
     result.current({
       type: "event:auto_action",
@@ -1031,7 +1031,7 @@ describe("useWsDispatch", () => {
   });
 
   it("fires info toast for event:auto_action of type skip_declare", () => {
-    useGameStore.getState().setGameState(mockGameState);
+    useMatchStore.getState().setMatchState(mockMatchState);
     const { result } = renderHook(() => useWsDispatch());
     result.current({
       type: "event:auto_action",
@@ -1041,7 +1041,7 @@ describe("useWsDispatch", () => {
   });
 
   it("fires info toast for event:auto_action of type skip_belot", () => {
-    useGameStore.getState().setGameState(mockGameState);
+    useMatchStore.getState().setMatchState(mockMatchState);
     const { result } = renderHook(() => useWsDispatch());
     result.current({
       type: "event:auto_action",
@@ -1050,7 +1050,7 @@ describe("useWsDispatch", () => {
     expect(toast.info).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores event:auto_action when gameState is null", () => {
+  it("ignores event:auto_action when matchState is null", () => {
     const { result } = renderHook(() => useWsDispatch());
     result.current({
       type: "event:auto_action",
@@ -1060,7 +1060,7 @@ describe("useWsDispatch", () => {
   });
 
   it("ignores malformed event:auto_action payloads", () => {
-    useGameStore.getState().setGameState(mockGameState);
+    useMatchStore.getState().setMatchState(mockMatchState);
     const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { result } = renderHook(() => useWsDispatch());
     result.current({
@@ -1088,7 +1088,7 @@ describe("useWsDispatch", () => {
   });
 
   it("propagates outcomeReason+surrenderedBySeat through event:match_end", () => {
-    useGameStore.getState().setGameState(mockGameState);
+    useMatchStore.getState().setMatchState(mockMatchState);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -1105,7 +1105,7 @@ describe("useWsDispatch", () => {
       },
     });
 
-    const data = useGameStore.getState().matchEndData;
+    const data = useMatchStore.getState().matchEndData;
     expect(data?.outcomeReason).toBe("surrender");
     expect(data?.surrenderedBySeat).toBe(0);
   });
@@ -1139,8 +1139,8 @@ describe("useWsDispatch", () => {
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
 
-  it("writes ERROR_SURRENDER_EXHAUSTED to gameStore.lastError", () => {
-    expect(useGameStore.getState().lastError).toBeNull();
+  it("writes ERROR_SURRENDER_EXHAUSTED to matchStore.lastError", () => {
+    expect(useMatchStore.getState().lastError).toBeNull();
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
@@ -1149,35 +1149,35 @@ describe("useWsDispatch", () => {
       payload: { code: "SURRENDER_EXHAUSTED", message: "already used" },
     });
 
-    expect(useGameStore.getState().lastError).toBe("error:surrender_exhausted");
+    expect(useMatchStore.getState().lastError).toBe("error:surrender_exhausted");
   });
 
-  // --- Story 8.5-1 AC2: error:game_start_failed ---
+  // --- Story 8.5-1 AC2: error:match_start_failed ---
 
-  it("dispatches error:game_start_failed via toast and writes lastError", () => {
-    expect(useGameStore.getState().lastError).toBeNull();
+  it("dispatches error:match_start_failed via toast and writes lastError", () => {
+    expect(useMatchStore.getState().lastError).toBeNull();
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
     dispatch({
-      type: "error:game_start_failed",
+      type: "error:match_start_failed",
       payload: {
         roomId: 42,
         message: "Failed to start the game. Please try again.",
       },
     });
 
-    expect(useGameStore.getState().lastError).toBe("error:game_start_failed");
+    expect(useMatchStore.getState().lastError).toBe("error:match_start_failed");
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores malformed error:game_start_failed payloads", () => {
+  it("ignores malformed error:match_start_failed payloads", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
 
     dispatch({
-      type: "error:game_start_failed",
+      type: "error:match_start_failed",
       payload: { unrelatedField: true } as unknown as { roomId?: number; message?: string },
     });
 
@@ -1188,8 +1188,8 @@ describe("useWsDispatch", () => {
 
   // --- Emote (Story 8.3) ---
 
-  it("writes a valid system:emote payload to gameStore.activeEmotes", () => {
-    useGameStore.getState().setGameState(mockGameState);
+  it("writes a valid system:emote payload to matchStore.activeEmotes", () => {
+    useMatchStore.getState().setMatchState(mockMatchState);
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -1199,14 +1199,14 @@ describe("useWsDispatch", () => {
       payload: { playerSeat: 2, emote: "thumbs_up" },
     });
 
-    const slot = useGameStore.getState().activeEmotes[2];
+    const slot = useMatchStore.getState().activeEmotes[2];
     expect(slot).not.toBeNull();
     expect(slot?.emote).toBe("thumbs_up");
     expect(typeof slot?.receivedAt).toBe("number");
   });
 
   it("ignores malformed system:emote payloads (defensive validation)", () => {
-    useGameStore.getState().setGameState(mockGameState);
+    useMatchStore.getState().setMatchState(mockMatchState);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -1228,7 +1228,7 @@ describe("useWsDispatch", () => {
     }
 
     // No slots written.
-    expect(useGameStore.getState().activeEmotes).toEqual({
+    expect(useMatchStore.getState().activeEmotes).toEqual({
       0: null,
       1: null,
       2: null,
@@ -1239,7 +1239,7 @@ describe("useWsDispatch", () => {
   });
 
   it("ignores system:emote when no active game state (defence in depth)", () => {
-    expect(useGameStore.getState().gameState).toBeNull();
+    expect(useMatchStore.getState().matchState).toBeNull();
 
     const { result } = renderHook(() => useWsDispatch());
     const dispatch = result.current;
@@ -1249,7 +1249,7 @@ describe("useWsDispatch", () => {
       payload: { playerSeat: 0, emote: "clap" },
     });
 
-    expect(useGameStore.getState().activeEmotes).toEqual({
+    expect(useMatchStore.getState().activeEmotes).toEqual({
       0: null,
       1: null,
       2: null,

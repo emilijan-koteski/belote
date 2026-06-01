@@ -14,11 +14,11 @@ const PEEK_MS = 2000;
 const PEEK_MAX_CHARS = 90;
 const MAX_MESSAGE_LENGTH = 500;
 
-type Variant = "global" | "room" | "match";
+type Variant = "lobby" | "room" | "match";
 
 interface ChatDockBaseProps {
   /** Extra class(es) applied to the dock root(s) — used by the in-game wrapper
-   *  to attach the `.chat-dock-game` skin. */
+   *  to attach the `.chat-dock-match` skin. */
   className?: string;
   /** Resolve a sender's username color (team tinting). When omitted, usernames
    *  render in the default muted style (lobby/global chat has no teams). */
@@ -32,7 +32,7 @@ interface ChatDockBaseProps {
 
 type ChatDockProps = ChatDockBaseProps &
   (
-    | { variant: "global"; roomId?: never }
+    | { variant: "lobby"; roomId?: never }
     | { variant: "room"; roomId: number }
     | { variant: "match"; roomId: number }
   );
@@ -57,7 +57,7 @@ type ChatDockProps = ChatDockBaseProps &
  * and data-testids while staying scoped to their own channel. Per-channel
  * sender coloring is supplied by the wrapper via `resolveNameColor`, keeping
  * this component free of any lobby- or game-specific store coupling. The felt
- * theme is purely a CSS re-skin (`.chat-dock-game`), not a code branch.
+ * theme is purely a CSS re-skin (`.chat-dock-match`), not a code branch.
  */
 export function ChatDock(props: ChatDockProps) {
   const { variant, resolveNameColor, className } = props;
@@ -68,14 +68,14 @@ export function ChatDock(props: ChatDockProps) {
       ? s.matchMessages
       : variant === "room"
         ? s.roomMessages
-        : s.globalMessages,
+        : s.lobbyMessages,
   );
   const markSent = useChatStore((s) =>
     variant === "match"
       ? s.markSentMatch
       : variant === "room"
         ? s.markSentRoom
-        : s.markSentGlobal,
+        : s.markSentLobby,
   );
   const me = useAuthStore((s) => s.user);
   const sendWs = useWsSendMessage();
@@ -146,10 +146,10 @@ export function ChatDock(props: ChatDockProps) {
     const trimmed = text.slice(0, MAX_MESSAGE_LENGTH);
     const payload: ChatMessageRequest =
       props.variant === "match"
-        ? { channel: "match", matchId: props.roomId, text: trimmed }
+        ? { channel: "match", roomId: props.roomId, text: trimmed }
         : props.variant === "room"
           ? { channel: "room", roomId: props.roomId, text: trimmed }
-          : { channel: "global", text: trimmed };
+          : { channel: "lobby", text: trimmed };
     sendWs(ACTION_CHAT_MESSAGE, payload);
     markSent();
     setDraft("");
@@ -160,9 +160,9 @@ export function ChatDock(props: ChatDockProps) {
   const testIdRoot =
     variant === "match" ? "match-chat" : variant === "room" ? "room-chat" : "lobby-chat";
 
-  // Felt theme is a pure CSS re-skin: `.chat-dock-game` re-points the accent +
+  // Felt theme is a pure CSS re-skin: `.chat-dock-match` re-points the accent +
   // surface tokens, and `backdrop-blur` frosts the translucent panel/FAB/peek.
-  const skin = variant === "match" ? "chat-dock-game" : "";
+  const skin = variant === "match" ? "chat-dock-match" : "";
   const frosted = variant === "match" ? "backdrop-blur-md" : "";
 
   // ── Closed state ──────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ export function ChatDock(props: ChatDockProps) {
           <div
             data-testid={`${testIdRoot}-peek`}
             className={cn(
-              "bg-surface-elevated max-w-[260px] rounded-2xl border border-border px-3 py-2 shadow-[var(--chat-shadow-fab)] [animation:card-in_.2s_ease_both]",
+              "bg-surface-elevated max-w-65 rounded-2xl border border-border px-3 py-2 shadow-(--chat-shadow-fab) animate-[card-in_.2s_ease_both]",
               frosted,
             )}
           >
@@ -201,15 +201,15 @@ export function ChatDock(props: ChatDockProps) {
             "bg-surface text-ink relative inline-flex size-14 items-center justify-center rounded-full transition-transform hover:-translate-y-0.5",
             frosted,
             unread > 0
-              ? "border border-[var(--brass)] shadow-[0_0_0_3px_var(--brass-soft),0_10px_28px_-10px_rgba(14,58,36,0.35)]"
-              : "border-border-2 border shadow-[var(--chat-shadow-fab)]",
+              ? "border border-brass shadow-[0_0_0_3px_var(--brass-soft),0_10px_28px_-10px_rgba(14,58,36,0.35)]"
+              : "border-border-2 border shadow-(--chat-shadow-fab)",
           )}
         >
           <MessageSquare className="size-5.5" strokeWidth={1.8} />
           {unread > 0 && (
             <span
               data-testid={`${testIdRoot}-unread`}
-              className="bg-[var(--brass)] text-[var(--brass-ink)] border-surface absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 px-1.5 text-[11px] font-bold leading-none tabular-nums shadow-[0_0_10px_rgba(201,168,118,0.55)]"
+              className="bg-brass text-brass-ink border-surface absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 px-1.5 text-[11px] font-bold leading-none tabular-nums shadow-[0_0_10px_rgba(201,168,118,0.55)]"
             >
               {unread > 99 ? "99+" : unread}
             </span>
@@ -224,7 +224,7 @@ export function ChatDock(props: ChatDockProps) {
     <aside
       data-testid={`${testIdRoot}-dock`}
       className={cn(
-        "bg-surface fixed right-4.5 bottom-4.5 z-40 flex h-[480px] w-[340px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border shadow-[var(--chat-shadow-panel)] [animation:card-in_.18s_ease_both]",
+        "bg-surface fixed right-4.5 bottom-4.5 z-40 flex h-120 w-85 flex-col overflow-hidden rounded-lg border border-border shadow-(--chat-shadow-panel) animate-[card-in_.18s_ease_both]",
         frosted,
         skin,
         className,
@@ -286,11 +286,11 @@ export function ChatDock(props: ChatDockProps) {
 function i18nKeys(variant: Variant) {
   if (variant === "match") {
     return {
-      openLabel: "game.chat.toggleOpen",
-      closeLabel: "game.chat.toggleClose",
-      sendLabel: "game.chat.sendLabel",
-      title: "game.chat.title",
-      placeholder: "game.chat.placeholder",
+      openLabel: "match.chat.toggleOpen",
+      closeLabel: "match.chat.toggleClose",
+      sendLabel: "match.chat.sendLabel",
+      title: "match.chat.title",
+      placeholder: "match.chat.placeholder",
     };
   }
   if (variant === "room") {

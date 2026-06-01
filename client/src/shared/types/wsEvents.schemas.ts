@@ -32,11 +32,11 @@ import type {
   BelotAnnouncedPayload,
   CardPlayedPayload,
   DeclarationsResolvedPayload,
-  GamePausedPayload,
-  GameResumedPayload,
   HandScoredPayload,
   MatchAbandonedPayload,
   MatchEndPayload,
+  MatchPausedPayload,
+  MatchResumedPayload,
   PlayerDisconnectedPayload,
   PlayerReconnectedPayload,
   SurrenderDeclinedPayload,
@@ -45,7 +45,7 @@ import type {
   TrumpSelectedPayload,
 } from "./wsEvents";
 
-// --- Card / declaration sub-schemas (used by GameState + DeclarationsResolved) ---
+// --- Card / declaration sub-schemas (used by MatchState + DeclarationsResolved) ---
 
 const CardSchema = z.strictObject({
   rank: z.string(),
@@ -74,11 +74,11 @@ const TrickCardSchema = z.strictObject({
   playerSeat: z.number(),
 });
 
-// EventGameStateSchema mirrors `game.GameState` in server/internal/game/state.go.
-// The server emits this on every state-affecting event so the client can sync.
+// EventMatchStateSchema mirrors `game.MatchState` in server/internal/game/state.go.
+// The server emits this on every match-state-affecting event so the client can sync.
 // Strict-object: any new field on the Go side fails this parse until the
 // schema lands too.
-export const EventGameStateSchema = z.strictObject({
+export const EventMatchStateSchema = z.strictObject({
   id: z.number(),
   roomId: z.number(),
   variant: z.string(),
@@ -107,9 +107,9 @@ export const EventGameStateSchema = z.strictObject({
   pendingBelotSeat: z.number().nullable(),
   belotAnnounced: z.boolean(),
   winnerTeam: z.number().nullable(),
-  // LastHandResult uses the same shape as the typed payload, but on GameState
+  // LastHandResult uses the same shape as the typed payload, but on MatchState
   // it can be nil between hands. Inline-declared rather than reusing
-  // HandScoredPayloadSchema because GameState's lastHandResult does NOT
+  // HandScoredPayloadSchema because MatchState's lastHandResult does NOT
   // include match-score keys (those live on TeamScores).
   lastHandResult: z
     .strictObject({
@@ -238,12 +238,12 @@ export const BelotAnnouncedPayloadSchema = z.strictObject({
   cardId: z.string(),
 });
 
-export const GamePausedPayloadSchema = z.strictObject({
+export const MatchPausedPayloadSchema = z.strictObject({
   pausedBy: z.number(),
   pausedPlayers: z.tuple([z.boolean(), z.boolean(), z.boolean(), z.boolean()]),
 });
 
-export const GameResumedPayloadSchema = z.strictObject({
+export const MatchResumedPayloadSchema = z.strictObject({
   resumedBy: z.number(),
   ownerOverride: z.boolean(),
 });
@@ -334,17 +334,17 @@ type _BelotAnnouncedConformance = MutualExtends<
 >;
 const _belotAnnouncedConforms: _BelotAnnouncedConformance = true;
 
-type _GamePausedConformance = MutualExtends<
-  z.infer<typeof GamePausedPayloadSchema>,
-  GamePausedPayload
+type _MatchPausedConformance = MutualExtends<
+  z.infer<typeof MatchPausedPayloadSchema>,
+  MatchPausedPayload
 >;
-const _gamePausedConforms: _GamePausedConformance = true;
+const _matchPausedConforms: _MatchPausedConformance = true;
 
-type _GameResumedConformance = MutualExtends<
-  z.infer<typeof GameResumedPayloadSchema>,
-  GameResumedPayload
+type _MatchResumedConformance = MutualExtends<
+  z.infer<typeof MatchResumedPayloadSchema>,
+  MatchResumedPayload
 >;
-const _gameResumedConforms: _GameResumedConformance = true;
+const _matchResumedConforms: _MatchResumedConformance = true;
 
 type _AutoActionConformance = MutualExtends<
   z.infer<typeof AutoActionPayloadSchema>,
@@ -388,8 +388,8 @@ export const _conformanceWitnesses = {
   _trumpSelectedConforms,
   _declarationsResolvedConforms,
   _belotAnnouncedConforms,
-  _gamePausedConforms,
-  _gameResumedConforms,
+  _matchPausedConforms,
+  _matchResumedConforms,
   _autoActionConforms,
   _playerDisconnectedConforms,
   _playerReconnectedConforms,

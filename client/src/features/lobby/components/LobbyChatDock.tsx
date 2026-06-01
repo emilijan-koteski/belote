@@ -6,5 +6,5 @@ import { ChatDock } from "@/features/chat/ChatDock";
  * room flow redesign introduced a room-scoped twin.
  */
 export function LobbyChatDock() {
-  return <ChatDock variant="global" />;
+  return <ChatDock variant="lobby" />;
 }

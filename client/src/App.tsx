@@ -3,15 +3,14 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { AuthLayout } from "@/features/auth/AuthLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RegisterPage } from "@/features/auth/RegisterPage";
-import { GamePage } from "@/features/game/GamePage";
 import { LandingPage } from "@/features/landing/LandingPage";
-import { LeaderboardPage } from "@/features/leaderboard/LeaderboardPage";
 import { PrivacyPage } from "@/features/legal/PrivacyPage";
 import { TermsPage } from "@/features/legal/TermsPage";
 import { LobbyPage } from "@/features/lobby/LobbyPage";
 import { MatchmakingPage } from "@/features/lobby/MatchmakingPage";
-import { RoomLobby } from "@/features/lobby/RoomLobby";
+import { MatchPage } from "@/features/match/MatchPage";
 import { ProfilePage } from "@/features/profile/ProfilePage";
+import { RoomPage } from "@/features/room/RoomPage";
 import { RulesPage } from "@/features/rules/RulesPage";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { GuestRoute } from "@/shared/components/GuestRoute";
@@ -50,16 +49,15 @@ function AppRoutes() {
           and authed users alike. The layout adapts to auth state. */}
       <Route element={<PublicContentLayout />}>
         <Route path="/rules" element={<RulesPage />} />
-        <Route path="/leaderboard" element={<LeaderboardPage />} />
       </Route>
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/lobby" element={<LobbyPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/rooms/:id" element={<RoomLobby />} />
+          <Route path="/rooms/:id" element={<RoomPage />} />
           <Route path="/matchmaking/:id" element={<MatchmakingPage />} />
         </Route>
-        <Route path="/game/:roomId" element={<GamePage />} />
+        <Route path="/match/:roomId" element={<MatchPage />} />
       </Route>
       <Route path="*" element={<AuthAwareRedirect />} />
     </Routes>

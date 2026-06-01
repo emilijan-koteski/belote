@@ -8,7 +8,7 @@ import { StatPill } from "@/features/lobby/components/StatPill";
 import type { LobbyStats } from "@/shared/api/lobby";
 
 type Props = {
-  /** Total open table count, rendered next to the title in tabular nums. */
+  /** Total open room count, rendered next to the title in tabular nums. */
   openCount: number;
   stats: LobbyStats | undefined;
   onQuickPlay: () => void;
@@ -55,8 +55,8 @@ export function HeroBlock({
           />
           <StatPill
             icon={<Gamepad2 className={ICON_CLS} />}
-            label={t("lobby.stats.inGame")}
-            value={stats?.inGame ?? "—"}
+            label={t("lobby.stats.inMatch")}
+            value={stats?.inMatch ?? "—"}
             tone="accent"
             testId="stats-in-game"
           />

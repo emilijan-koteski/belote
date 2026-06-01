@@ -44,7 +44,7 @@ export function transferOwnership(roomId: number, userId: number): Promise<{ own
   return axiosClient.post(`/rooms/${roomId}/transfer-ownership`, { userId });
 }
 
-export function startGame(roomId: number): Promise<Room> {
+export function startMatch(roomId: number): Promise<Room> {
   return axiosClient.post(`/rooms/${roomId}/start`);
 }
 

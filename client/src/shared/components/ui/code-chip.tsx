@@ -89,7 +89,7 @@ export function CodeChip({
           dense ? "px-2 py-1 text-[9.5px]" : "px-2.5 py-2 text-[10px]",
           copied
             ? "bg-transparent text-accent-deep"
-            : "bg-[var(--brass-soft)] text-brass-deep border-r border-border",
+            : "bg-brass-soft text-brass-deep border-r border-border",
         )}
         style={{ letterSpacing: 1.6 }}
       >

@@ -203,7 +203,7 @@ export const en: RulesLangData = {
   ],
 
   ui: {
-    heroEyebrow: "How to play · 6-minute read",
+    heroEyebrow: "Rules · 6-minute read",
     heroTitle: "Learn Beljot in one sitting",
     heroIntro:
       "Beljot is a partnership card game for four players with a 32-card deck. The six short chapters below take you from the deal all the way to the winning score — everything you need to hold your own at the table. Read straight through, or jump to whatever you need with the contents on the left.",
@@ -214,7 +214,6 @@ export const en: RulesLangData = {
       { label: "Race to", value: "1001", caption: "points to win" },
     ],
     tocTitle: "Table of contents",
-    readTime: "About 6 minutes to read",
     footerTitle: "Ready for your first hand?",
     footerBody:
       "This guide tags along into the game, too. Mid-hand, tap the question mark in the bottom-right corner and these same six chapters slide open — no need to pause the play.",
@@ -230,7 +229,7 @@ export const en: RulesLangData = {
     colPower: "Power",
     meldKinds: { belot: "Trump pair", set: "Four of a kind", run: "Run" },
     ovReference: "Reference",
-    ovTitle: "How to play Beljot",
+    ovTitle: "Beljot rules",
     ovChapters: "Chapters",
     ovFullRef: "Full reference:",
     ovClose: "Close",

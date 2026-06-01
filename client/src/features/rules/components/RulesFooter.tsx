@@ -31,7 +31,7 @@ export function RulesFooter() {
         type="button"
         onClick={() => navigate("/lobby")}
         data-testid="rules-play-cta"
-        className="inline-flex cursor-pointer items-center gap-2 rounded-[10px] border border-transparent px-[18px] py-[11px] text-sm font-semibold transition-transform active:scale-[0.98]"
+        className="inline-flex cursor-pointer items-center gap-2 rounded-[10px] border border-transparent px-4.5 py-2.75 text-sm font-semibold transition-transform active:scale-[0.98]"
         style={{
           background: "var(--accent)",
           color: "var(--accent-ink)",

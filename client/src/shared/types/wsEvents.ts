@@ -70,7 +70,7 @@ export type AnnounceBelotPayload = Record<string, never>;
 export type DeclineBelotPayload = Record<string, never>;
 
 // --- Game state events (server -> client) ---
-export const EVENT_GAME_STATE = "event:game_state" as const;
+export const EVENT_MATCH_STATE = "event:match_state" as const;
 export const EVENT_CARD_PLAYED = "event:card_played" as const;
 export const EVENT_TRICK_RESOLVED = "event:trick_resolved" as const;
 export const EVENT_HAND_SCORED = "event:hand_scored" as const;
@@ -78,13 +78,13 @@ export const EVENT_MATCH_END = "event:match_end" as const;
 export const EVENT_TRUMP_SELECTED = "event:trump_selected" as const;
 export const EVENT_DECLARATIONS_RESOLVED = "event:declarations_resolved" as const;
 export const EVENT_BELOT_ANNOUNCED = "event:belot_announced" as const;
-export const EVENT_GAME_PAUSED = "event:game_paused" as const;
-export const EVENT_GAME_RESUMED = "event:game_resumed" as const;
+export const EVENT_MATCH_PAUSED = "event:match_paused" as const;
+export const EVENT_MATCH_RESUMED = "event:match_resumed" as const;
 export const EVENT_AUTO_ACTION = "event:auto_action" as const;
 
-// Game state payload types will be expanded in Story 4.2 when the session manager
-// defines the exact shape of game state broadcasts. For now, typed as unknown.
-export interface GameStatePayload {
+// Match state payload types will be expanded in Story 4.2 when the session manager
+// defines the exact shape of match state broadcasts. For now, typed as unknown.
+export interface MatchStatePayload {
   [key: string]: unknown;
 }
 
@@ -135,7 +135,7 @@ export interface TrumpSelectedPayload {
   playerSeat: number;
   trumpSuit: string;
   // Originally face-up trump candidate the picker absorbed. The post-pick
-  // GameState clears trumpCandidate, so this event is the only carrier.
+  // MatchState clears trumpCandidate, so this event is the only carrier.
   cardId: string;
 }
 
@@ -155,12 +155,12 @@ export interface BelotAnnouncedPayload {
   cardId: string;
 }
 
-export interface GamePausedPayload {
+export interface MatchPausedPayload {
   pausedBy: number;
   pausedPlayers: [boolean, boolean, boolean, boolean];
 }
 
-export interface GameResumedPayload {
+export interface MatchResumedPayload {
   resumedBy: number;
   ownerOverride: boolean;
 }
@@ -227,9 +227,9 @@ export const ERROR_SURRENDER_EXHAUSTED = "error:surrender_exhausted" as const;
 // whose gameStarter.StartGame call returned an error. The room is reverted to
 // "waiting" server-side; clients should surface a toast and stay on the
 // room-lobby page rather than navigate to /game/{id}.
-export const ERROR_GAME_START_FAILED = "error:game_start_failed" as const;
+export const ERROR_MATCH_START_FAILED = "error:match_start_failed" as const;
 
-export interface GameErrorPayload {
+export interface MatchErrorPayload {
   code: string;
   message: string;
 }
@@ -301,7 +301,7 @@ export interface PlayerLeftPayload {
 
 // --- Seat and game events ---
 export const SYSTEM_SEAT_UPDATED = "system:seat_updated" as const;
-export const SYSTEM_GAME_STARTED = "system:game_started" as const;
+export const SYSTEM_MATCH_STARTED = "system:match_started" as const;
 
 export const SYSTEM_ROOM_OWNER_CHANGED = "system:room_owner_changed" as const;
 
@@ -324,7 +324,7 @@ export interface SeatUpdatedPayload {
   previousSeat: number | null;
 }
 
-export interface GameStartedPayload {
+export interface MatchStartedPayload {
   roomId: number;
 }
 
@@ -361,9 +361,8 @@ export interface EmotePayload {
 }
 
 export interface ChatMessageRequest {
-  channel: "global" | "match" | "room";
-  matchId?: number; // required when channel === "match"
-  roomId?: number; // required when channel === "room"
+  channel: "lobby" | "match" | "room";
+  roomId?: number; // required when channel === "match" or channel === "room"
   text: string;
 }
 
@@ -372,7 +371,7 @@ export interface ChatMessagePayload {
   username: string;
   message: string;
   timestamp: string;
-  scope: "global" | "match" | "room";
+  scope: "lobby" | "match" | "room";
 }
 
 // --- General error events ---

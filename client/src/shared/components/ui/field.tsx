@@ -31,7 +31,7 @@ export function Field({
 }: FieldProps) {
   const hasError = Boolean(error);
   return (
-    <div className={cn("flex flex-col gap-[7px]", className)}>
+    <div className={cn("flex flex-col gap-1.75", className)}>
       <div className="flex items-baseline justify-between gap-2">
         <label
           htmlFor={htmlFor}

@@ -21,7 +21,7 @@ export function StreakCallout({ streak }: StreakCalloutProps) {
 
   return (
     <div
-      className="border-border mb-5 flex items-center gap-3.5 rounded-[var(--radius-lg)] border p-3.5"
+      className="border-border mb-5 flex items-center gap-3.5 rounded-lg border p-3.5"
       style={{
         background: isWin ? "var(--accent-soft)" : "var(--surface)",
         borderColor: isWin ? "rgba(25,101,54,0.33)" : "var(--border)",
@@ -37,7 +37,7 @@ export function StreakCallout({ streak }: StreakCalloutProps) {
           color: isWin ? "var(--accent-ink)" : "var(--ink)",
         }}
       >
-        {isWin ? <Sparkles className="size-[18px]" /> : <Snowflake className="size-[18px]" />}
+        {isWin ? <Sparkles className="size-4.5" /> : <Snowflake className="size-4.5" />}
       </span>
       <div className="flex min-w-0 flex-col gap-0.5">
         <span

@@ -15,7 +15,7 @@ export function ChapterIndex({ activeId, onJump }: Props) {
   return (
     <aside
       data-testid="rules-chapter-index"
-      className="sticky top-[84px] hidden w-[220px] shrink-0 flex-col gap-1 self-start py-1 lg:flex"
+      className="sticky top-21 hidden w-55 shrink-0 flex-col gap-1 self-start py-1 lg:flex"
     >
       <div
         className="font-mono px-3 pb-2"
@@ -66,13 +66,6 @@ export function ChapterIndex({ activeId, onJump }: Props) {
           </button>
         );
       })}
-
-      <div
-        className="mt-2.5 border-border px-3 py-2.5"
-        style={{ borderTop: "1px solid var(--border)", fontSize: 11.5, color: "var(--ink-mute)", lineHeight: 1.5 }}
-      >
-        <span style={{ color: "var(--ink)", fontWeight: 600 }}>{ui.readTime}</span>
-      </div>
     </aside>
   );
 }

@@ -3,7 +3,7 @@ import { axiosClient } from "@/shared/api/axiosClient";
 export interface LobbyStats {
   inLobby: number;
   inRoom: number;
-  inGame: number;
+  inMatch: number;
   online: number;
   registered: number;
 }

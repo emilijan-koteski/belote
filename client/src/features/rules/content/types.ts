@@ -58,7 +58,6 @@ export type RulesUi = {
   heroIntro: string;
   facts: Fact[];
   tocTitle: string;
-  readTime: string;
   footerTitle: string;
   footerBody: string;
   footerCta: string;

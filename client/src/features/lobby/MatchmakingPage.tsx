@@ -9,7 +9,7 @@ import { useLeaveRoomMutation } from "@/shared/hooks/mutations/useRooms";
 import { useRoomDetailQuery } from "@/shared/hooks/queries/useRooms";
 import { useWsConnectionState } from "@/shared/providers/WebSocketContext";
 import { useAuthStore } from "@/shared/stores/authStore";
-import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
+import { useRoomStore } from "@/shared/stores/roomStore";
 
 function formatElapsed(totalSeconds: number): string {
   const mm = Math.floor(totalSeconds / 60);
@@ -18,12 +18,12 @@ function formatElapsed(totalSeconds: number): string {
 }
 
 /**
- * The Quick Play waiting screen (`/matchmaking/:id`). Reuses RoomLobby's
- * data/realtime plumbing — `useRoomDetailQuery` seeds `roomLobbyStore`, WS
+ * The Quick Play waiting screen (`/matchmaking/:id`). Reuses RoomPage's
+ * data/realtime plumbing — `useRoomDetailQuery` seeds `roomStore`, WS
  * events flow into the store via `useWsDispatch`, and the page derives the
  * seated count for the orbit. When the last seat fills the server broadcasts
- * `system:game_started`, flipping the store flag that navigates everyone to the
- * game. Unlike RoomLobby this surface never shows a seat grid: it's the
+ * `system:match_started`, flipping the store flag that navigates everyone to the
+ * game. Unlike RoomPage this surface never shows a seat grid: it's the
  * dedicated matchmaking experience for `isQuickPlay` rooms.
  */
 export function MatchmakingPage() {
@@ -37,10 +37,10 @@ export function MatchmakingPage() {
   const wsState = useWsConnectionState();
   const prevWsStateRef = useRef(wsState);
 
-  const storeRoom = useRoomLobbyStore((s) => s.room);
-  const storePlayers = useRoomLobbyStore((s) => s.players);
-  const gameStarted = useRoomLobbyStore((s) => s.gameStarted);
-  const kickedFromRoomId = useRoomLobbyStore((s) => s.kickedFromRoomId);
+  const storeRoom = useRoomStore((s) => s.room);
+  const storePlayers = useRoomStore((s) => s.players);
+  const matchStarted = useRoomStore((s) => s.matchStarted);
+  const kickedFromRoomId = useRoomStore((s) => s.kickedFromRoomId);
 
   const hasLeftRef = useRef(false);
   const hasJoinedRef = useRef(false);
@@ -73,12 +73,12 @@ export function MatchmakingPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Seed roomLobbyStore from the REST fetch. setCurrentRoomId is mandatory —
+  // Seed roomStore from the REST fetch. setCurrentRoomId is mandatory —
   // useWsDispatch drops every room event whose roomId !== store.currentRoomId,
   // so without it the orbit would never fill.
   useEffect(() => {
     if (roomQuery.data) {
-      const store = useRoomLobbyStore.getState();
+      const store = useRoomStore.getState();
       store.setRoom(roomQuery.data.room);
       store.setPlayers(roomQuery.data.players);
       store.setCurrentRoomId(roomQuery.data.room.id);
@@ -100,11 +100,11 @@ export function MatchmakingPage() {
 
   // Match started — navigate everyone to the game with the starting splash.
   useEffect(() => {
-    if (gameStarted && id) {
+    if (matchStarted && id) {
       hasLeftRef.current = true;
-      navigate(`/game/${id}`, { state: { fromRoom: true } });
+      navigate(`/match/${id}`, { state: { fromRoom: true } });
     }
-  }, [gameStarted, id, navigate]);
+  }, [matchStarted, id, navigate]);
 
   // Cross-redirect guards, gated on a FRESH post-mount fetch (never the lagging
   // store or a stale cached snapshot). A custom room belongs on /rooms/:id; a
@@ -140,26 +140,26 @@ export function MatchmakingPage() {
   const status = storeRoom?.status ?? roomQuery.data?.room.status ?? null;
   const isClosed = status === "completed" || status === "cancelled" || status === "finished";
   useEffect(() => {
-    if (isClosed && !gameStarted) {
+    if (isClosed && !matchStarted) {
       hasLeftRef.current = true;
       navigate("/lobby", { replace: true });
     }
-  }, [isClosed, gameStarted, navigate]);
+  }, [isClosed, matchStarted, navigate]);
 
   // Kicked (defensive — Quick Play has no kick affordance, but the WS path
   // exists): toast + redirect, suppressing the cleanup leave.
   useEffect(() => {
     if (kickedFromRoomId !== null && id && kickedFromRoomId === Number(id)) {
       hasLeftRef.current = true;
-      useRoomLobbyStore.getState().setKickedFromRoom(null);
+      useRoomStore.getState().setKickedFromRoom(null);
       navigate("/lobby");
     }
   }, [kickedFromRoomId, id, navigate]);
 
-  // Reset the store on unmount / :id change (mirrors RoomLobby).
+  // Reset the store on unmount / :id change (mirrors RoomPage).
   useEffect(() => {
     return () => {
-      useRoomLobbyStore.getState().reset();
+      useRoomStore.getState().reset();
     };
   }, [id]);
 
@@ -180,8 +180,8 @@ export function MatchmakingPage() {
       await leaveRoomMutation.mutateAsync(Number(id));
     } catch (err) {
       // The room flipped to "playing" between click and leave tx — stay put and
-      // let the game_started flag drive navigation to the game.
-      if (err instanceof FetchError && err.code === "GAME_ALREADY_STARTED") {
+      // let the match_started flag drive navigation to the game.
+      if (err instanceof FetchError && err.code === "MATCH_ALREADY_STARTED") {
         hasLeftRef.current = false;
         toast.error(t("room.errors.alreadyStarted"));
         return;

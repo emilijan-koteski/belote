@@ -40,7 +40,7 @@ export function Segmented<T extends string>({
       aria-label={ariaLabel}
       data-testid={testId}
       className={cn(
-        "bg-surface-sunken border-border flex rounded-[10px] border p-[3px]",
+        "bg-surface-sunken border-border flex rounded-[10px] border p-0.75",
         className,
       )}
     >

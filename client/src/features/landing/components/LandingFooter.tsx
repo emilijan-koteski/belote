@@ -4,8 +4,8 @@ import { Link } from "react-router";
 import { BrandLockup } from "@/features/landing/components/BrandLockup";
 import { ContactDialog } from "@/features/landing/components/ContactDialog";
 
-// Felt footer — brand, a row of links, and the copyright. Rules + Leaderboard
-// reach the public reference pages; Privacy + Terms the public legal pages;
+// Felt footer — brand, a row of links, and the copyright. Rules reaches the
+// public reference page; Privacy + Terms the public legal pages;
 // Contact opens a dialog.
 
 export function LandingFooter() {
@@ -13,7 +13,6 @@ export function LandingFooter() {
 
   const links: Array<{ label: string; to: string }> = [
     { label: t("landing.foot.rules"), to: "/rules" },
-    { label: t("landing.foot.leaderboard"), to: "/leaderboard" },
     { label: t("landing.foot.privacy"), to: "/privacy" },
     { label: t("landing.foot.terms"), to: "/terms" },
   ];

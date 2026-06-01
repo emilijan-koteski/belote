@@ -73,11 +73,11 @@ export interface RoomDetail {
 
 export interface SelectSeatResponse {
   players: RoomPlayer[];
-  gameStarted: boolean;
+  matchStarted: boolean;
 }
 
 export interface QuickPlayResponse {
   room: Room;
   seat: number;
-  gameStarted: boolean;
+  matchStarted: boolean;
 }

@@ -45,7 +45,7 @@ export function RulesPage() {
   return (
     <RulesProvider value={content}>
       <div
-        className="mx-auto flex max-w-[1080px] items-start gap-10 px-7 py-10"
+        className="mx-auto flex max-w-270 items-start gap-10 px-7 py-10"
         data-testid="rules-page"
       >
         <ChapterIndex activeId={activeId} onJump={jump} />

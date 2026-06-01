@@ -4,7 +4,6 @@
 
 export type ProfileLabels = {
   member: string;
-  streak: string;
   games: string;
   winrate: string;
   wins: string;
@@ -30,7 +29,7 @@ export function ProfileCard({ labels }: { labels: ProfileLabels }) {
   ];
 
   return (
-    <div className="bg-surface-elevated border-border w-full max-w-[380px] overflow-hidden rounded-[18px] border shadow-[0_18px_40px_-22px_rgba(14,58,36,0.45)]">
+    <div className="bg-surface-elevated border-border w-full max-w-95 overflow-hidden rounded-[18px] border shadow-[0_18px_40px_-22px_rgba(14,58,36,0.45)]">
       {/* identity */}
       <div className="flex items-center gap-3 px-4.5 pt-4.5 pb-4">
         <span
@@ -47,13 +46,6 @@ export function ProfileCard({ labels }: { labels: ProfileLabels }) {
           <div className="font-display text-ink text-[17px] font-semibold">kiro</div>
           <div className="text-ink-mute text-xs">{labels.member}</div>
         </div>
-        <span
-          className="text-accent ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-          style={{ background: "var(--accent-soft)", border: "1px solid rgba(25,101,54,0.28)" }}
-        >
-          <span className="bg-accent size-[7px] rounded-full" />
-          {labels.streak}
-        </span>
       </div>
 
       {/* career stats */}
@@ -86,7 +78,7 @@ export function ProfileCard({ labels }: { labels: ProfileLabels }) {
             }
           >
             <span
-              className="min-w-[52px] rounded-md px-2 py-1 text-center text-[11px] font-bold"
+              className="min-w-13 rounded-md px-2 py-1 text-center text-[11px] font-bold"
               style={
                 m.won
                   ? { background: "var(--accent-soft)", color: "var(--accent)" }

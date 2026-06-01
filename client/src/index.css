@@ -164,7 +164,7 @@
   --suit-black: #16241c;
 
   /* ── Chat dock shadows — themeable so the felt-scoped dock can swap them
-       for a heavier black drop shadow (see `.chat-dock-game`). ─────────── */
+       for a heavier black drop shadow (see `.chat-dock-match`). ─────────── */
   --chat-shadow-panel: 0 24px 60px -20px rgba(14, 58, 36, 0.3);
   --chat-shadow-fab: 0 8px 22px -10px rgba(14, 58, 36, 0.3);
 
@@ -419,7 +419,7 @@
    so we re-point the accent family to brass here. Only rendered inside
    `.game-table`, so `--panel-deeper` / `--brass*` resolve from that scope.
    ────────────────────────────────────────────────────────────────────── */
-.chat-dock-game {
+.chat-dock-match {
   --surface: var(--panel-deeper); /* frosted dark panel */
   --surface-2: rgba(255, 255, 255, 0.04); /* bubble / input fill */
   --border: rgba(180, 220, 200, 0.12); /* felt-tinted hairline */

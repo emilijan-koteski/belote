@@ -63,15 +63,11 @@ describe("LandingPage", () => {
     renderAt("/");
 
     expect(screen.getByRole("link", { name: "Rules" })).toHaveAttribute("href", "/rules");
-    expect(screen.getByRole("link", { name: "Leaderboard" })).toHaveAttribute(
-      "href",
-      "/leaderboard",
-    );
     expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
     expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
   });
 
-  it("opens a contact dialog with email, LinkedIn and a demo disclaimer", async () => {
+  it("opens a contact dialog with email, LinkedIn and a beta disclaimer", async () => {
     const user = userEvent.setup();
     renderAt("/");
 
@@ -85,6 +81,6 @@ describe("LandingPage", () => {
       "href",
       "https://www.linkedin.com/in/emilijan-koteski/",
     );
-    expect(screen.getByText(/demo \/ beta/i)).toBeInTheDocument();
+    expect(screen.getByText(/beta build/i)).toBeInTheDocument();
   });
 });

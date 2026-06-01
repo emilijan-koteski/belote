@@ -81,7 +81,7 @@ describe("RulesPage", () => {
       await i18n.changeLanguage("mk");
     });
     expect(
-      screen.getByRole("heading", { level: 1, name: "Научи Beljot во едно седење" }),
+      screen.getByRole("heading", { level: 1, name: "Научи Бељот во неколку минути" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Трка до 1001 со твојот тим" })).toBeInTheDocument();
   });

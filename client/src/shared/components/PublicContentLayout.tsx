@@ -6,7 +6,7 @@ import { WebSocketProvider } from "@/shared/providers/WebSocketProvider";
 import { useAuthStore } from "@/shared/stores/authStore";
 
 /**
- * Layout for reference pages reachable by EVERYONE — Rules and Leaderboard.
+ * Layout for reference pages reachable by EVERYONE — e.g. the Rules page.
  *
  * Authed visitors get the full app shell (nav + user menu) wrapped in the
  * WebSocketProvider so live presence is preserved; the brief reconnect on

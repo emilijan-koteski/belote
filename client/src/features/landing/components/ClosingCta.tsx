@@ -15,10 +15,10 @@ export function ClosingCta() {
             {t("landing.cta.eyebrow")}
           </Eyebrow>
         </div>
-        <h2 className="font-display text-ink mx-auto mb-5 max-w-[760px] text-[clamp(38px,4.6vw,54px)] font-bold tracking-[-1.4px]">
+        <h2 className="font-display text-ink mx-auto mb-5 max-w-190 text-[clamp(38px,4.6vw,54px)] font-bold tracking-[-1.4px]">
           {t("landing.cta.title")}
         </h2>
-        <p className="text-ink-dim mx-auto mb-8 max-w-[520px] text-[18px] leading-[1.6]">
+        <p className="text-ink-dim mx-auto mb-8 max-w-130 text-[18px] leading-[1.6]">
           {t("landing.cta.body")}
         </p>
         <LandingCta to="/register" size="lg" testId="landing-cta">

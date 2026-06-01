@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FetchError } from "@/shared/api/axiosClient";
 import { queryKeys } from "@/shared/api/queryKeys";
 import { useAuthStore } from "@/shared/stores/authStore";
-import { useRoomLobbyStore } from "@/shared/stores/roomLobbyStore";
+import { useRoomStore } from "@/shared/stores/roomStore";
 import { createTestQueryClient, QueryWrapper } from "@/test-utils";
 
 import { MatchmakingPage } from "./MatchmakingPage";
@@ -88,7 +88,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.clearAllMocks();
   useAuthStore.setState({ user: null, token: null });
-  useRoomLobbyStore.getState().reset();
+  useRoomStore.getState().reset();
 });
 
 describe("MatchmakingPage", () => {
@@ -121,10 +121,10 @@ describe("MatchmakingPage", () => {
     await waitFor(() => expect(screen.getByTestId("matchmaking-diagram")).toBeInTheDocument());
 
     act(() => {
-      useRoomLobbyStore.getState().setGameStarted(true);
+      useRoomStore.getState().setMatchStarted(true);
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith("/game/1", { state: { fromRoom: true } });
+    expect(mockNavigate).toHaveBeenCalledWith("/match/1", { state: { fromRoom: true } });
   });
 
   it("redirects a non-quick-play room to the in-room lobby", async () => {
@@ -163,7 +163,7 @@ describe("MatchmakingPage", () => {
   it("keeps the player on cancel when the game already started", async () => {
     const user = userEvent.setup();
     mockLeaveRoom.mockRejectedValue(
-      new FetchError(409, "GAME_ALREADY_STARTED", "the game has already started"),
+      new FetchError(409, "MATCH_ALREADY_STARTED", "the match has already started"),
     );
     mockGetRoom.mockResolvedValue({
       room: qpRoom,

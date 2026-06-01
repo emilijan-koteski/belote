@@ -1,4 +1,4 @@
-import { ChevronDown, Search, X } from "lucide-react";
+import { ArrowDownWideNarrow, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/shared/lib/utils";
@@ -91,7 +91,7 @@ export function FilterRail({
           className="bg-surface-elevated text-ink inline-flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-1.5 text-xs font-medium"
         >
           {sort === "newest" ? t("lobby.sort.newest") : t("lobby.sort.filling")}
-          <ChevronDown className="size-3.5" />
+          <ArrowDownWideNarrow className="size-3.5" />
         </button>
       </div>
     </div>
